@@ -431,7 +431,7 @@ export function StudentDashboard() {
 						<section className="ld-panel">
 							<div className="ld-card-head">
 								<h2>{t('sd.myCourses')}</h2>
-								<span className="ld-chip">{t('sd.classes', { n: String(myCourses.length) })}</span>
+								<span className="ld-chip">{myCourses.length === 1 ? t('sd.classOne') : t('sd.classes', { n: String(myCourses.length) })}</span>
 							</div>
 							{myCourses.length === 0 ? (
 								<div className="ld-empty">
@@ -567,7 +567,7 @@ export function StudentDashboard() {
 						<section className="ld-panel" id="jelajahi">
 							<div className="ld-card-head">
 								<h2>{t('sd.explore')}</h2>
-								<span className="ld-chip">{t('sd.available', { n: String(catalog.length) })}</span>
+								<span className="ld-chip">{catalog.length === 1 ? t('sd.availableOne') : t('sd.available', { n: String(catalog.length) })}</span>
 							</div>
 							<label className="ld-search-bar">
 								<Search size={16} strokeWidth={1.75} aria-hidden />

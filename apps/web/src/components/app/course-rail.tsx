@@ -22,7 +22,6 @@ import {
 	courseSectionPath,
 	FACULTY_COURSE_SECTIONS,
 	SECTION_LABEL,
-	SECTION_LABEL_STUDENT,
 	sectionFromPath,
 	STUDENT_COURSE_SECTIONS,
 	type CourseSection,
@@ -31,6 +30,7 @@ import { courseRouteId } from '@/lib/course-route';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { useAuth } from '@/hooks/use-auth';
 import pb from '@/lib/pocketbase-client';
+import { useT } from '@/lib/i18n';
 
 const ICONS: Record<CourseSection, typeof LayoutDashboard> = {
 	ringkasan: LayoutDashboard,
@@ -60,6 +60,7 @@ export function CourseRail({
 	isStudent: boolean;
 	isOwner: boolean;
 }) {
+	const t = useT();
 	const id = routeId || '';
 	const baseSections = isStudent ? STUDENT_COURSE_SECTIONS : FACULTY_COURSE_SECTIONS;
 	const sections = baseSections.filter((section) => {
@@ -68,12 +69,12 @@ export function CourseRail({
 	});
 
 	return (
-		<aside className="ld-course-rail" aria-label="Navigasi mata kuliah">
+		<aside className="ld-course-rail" aria-label={isStudent ? t('student.courseRail.navigation') : 'Navigasi mata kuliah'}>
 			{isStudent ? (
 				<div className="ld-course-rail-head">
-					<span>Ruang belajar</span>
-					<strong>{course?.title || 'Memuat…'}</strong>
-					<small>{course?.code || 'Kode belum diisi'}</small>
+					<span>{t('student.common.studySpace')}</span>
+					<strong>{course?.title || t('student.courses.loading')}</strong>
+					<small>{course?.code || t('student.common.noCode')}</small>
 				</div>
 			) : (
 				<CourseSwitcher course={course} routeId={id} />
@@ -83,7 +84,7 @@ export function CourseRail({
 					const Icon = ICONS[section];
 					const to = id ? courseSectionPath(id, section) : '#';
 					const label = isStudent
-						? SECTION_LABEL_STUDENT[section] || SECTION_LABEL[section]
+						? t(`student.courseRail.${section}`)
 						: SECTION_LABEL[section];
 					return (
 						<NavLink

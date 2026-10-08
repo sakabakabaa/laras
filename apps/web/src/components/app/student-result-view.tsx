@@ -25,13 +25,13 @@ import {
 	activityTypeOf,
 	deadlineLabel,
 	studentGradeLabel,
-	SUBMISSION_STATUS_LABEL,
 	submissionFileUrl,
 	studentWorkPath,
 	type Assignment,
 	type AssignmentSubmission,
 	type SubmissionStatus,
 } from '@/lib/assignments';
+import { useLanguage, useT } from '@/lib/i18n';
 import type { Course, CourseResource } from '@/lib/learning';
 import { instructionLines } from '@/components/app/student-answer-sheet';
 import { buildMarkedSegments, type EvalSeverity } from '@/lib/ai-evaluation';
@@ -41,15 +41,11 @@ import {
 	type StudentRecommendation,
 } from '@/lib/student-feedback';
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-
-function formatStamp(iso?: string) {
+function formatStamp(iso: string | undefined, locale: string) {
 	if (!iso) return '';
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return '';
-	const hh = String(date.getHours()).padStart(2, '0');
-	const mm = String(date.getMinutes()).padStart(2, '0');
-	return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}, ${hh}.${mm}`;
+	return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
 function wordCount(text: string) {
@@ -75,22 +71,25 @@ export function StudentResultView({
 	linkedPractice?: Assignment | null;
 	onBack: () => void;
 }) {
+	const t = useT();
+	const language = useLanguage();
+	const locale = language === 'de' ? 'de-DE' : language === 'en' ? 'en-GB' : 'id-ID';
 	const formative = activityTypeOf(assignment) === 'formative';
 	const status = (submission.status || 'submitted') as SubmissionStatus;
 	const graded = status === 'graded';
 	const letter = graded && submission.grade != null ? studentGradeLabel(submission.grade) : '';
 	const week = assignment.expand?.session?.week;
-	const courseBadge = (course.code || course.title || 'Mata kuliah').toUpperCase();
+	const courseBadge = (course.code || course.title || t('student.common.course')).toUpperCase();
 	const answer = submission.content || '';
-	const collected = formatStamp(submission.updated);
-	const gradedAt = formatStamp(submission.gradedAt || submission.updated);
-	const deadline = assignment.deadline ? formatStamp(assignment.deadline) || deadlineLabel(assignment.deadline) : '';
+	const collected = formatStamp(submission.updated, locale);
+	const gradedAt = formatStamp(submission.gradedAt || submission.updated, locale);
+	const deadline = assignment.deadline ? formatStamp(assignment.deadline, locale) || deadlineLabel(assignment.deadline) : '';
 	const note = studentGeneralNote(submission.feedback || '');
 	const instructions = instructionLines(
 		assignment.requirements || assignment.instructions,
-		'Ikuti instruksi tugas dari dosen.',
+		t('student.result.defaultInstructions'),
 	);
-	const formatLabel = assignment.mode === 'collaborative' ? 'Kelompok' : 'Individual';
+	const formatLabel = assignment.mode === 'collaborative' ? t('student.result.group') : t('student.result.individual');
 
 	const [apiRecs, setApiRecs] = useState<StudentRecommendation[] | null>(null);
 	const [instructionsOpen, setInstructionsOpen] = useState(false);
@@ -169,17 +168,17 @@ export function StudentResultView({
 	}
 
 	return (
-		<section className="srs" aria-label="Hasil tugas">
+		<section className="srs" aria-label={t('student.result.title')}>
 			<button type="button" className="srs-back" onClick={onBack}>
-				<ArrowLeft size={15} /> Kembali ke daftar tugas
+				<ArrowLeft size={15} /> {t('worksheet.backToTasks')}
 			</button>
 
 			<header className="srs-head">
 				<h1>{assignment.title}</h1>
 				<div className="srs-badges">
 					<span>{courseBadge}</span>
-					{week ? <span>Minggu {week}</span> : null}
-					<span className="blue">{formative ? 'Latihan formatif' : 'Tugas formal'}</span>
+					{week ? <span>{t('worksheet.week', { week: String(week) })}</span> : null}
+					<span className="blue">{formative ? t('worksheet.formativeExercise') : t('worksheet.formalTask')}</span>
 				</div>
 			</header>
 
@@ -194,7 +193,7 @@ export function StudentResultView({
 								onClick={() => setInstructionsOpen((open) => !open)}
 							>
 								<FileText size={16} />
-								<span>Instruksi tugas</span>
+								<span>{t('student.result.instructions')}</span>
 								<ChevronDown size={16} className={instructionsOpen ? 'open' : ''} />
 							</button>
 							{instructionsOpen ? (
@@ -214,12 +213,12 @@ export function StudentResultView({
 						<article className="srs-card">
 							<div className="srs-answer-head">
 								<h2>
-									<FileText size={16} /> Jawaban yang dikumpulkan
+										<FileText size={16} /> {t('student.result.submittedAnswer')}
 								</h2>
 								<div className="srs-answer-meta">
 									{answer ? (
 										<span>
-											{words} kata{collected ? ` · Dikumpulkan ${collected}` : ''}
+												{t('student.result.wordCount', { n: String(words) })}{collected ? ` · ${t('student.result.submittedAt')} ${collected}` : ''}
 										</span>
 									) : null}
 								</div>
@@ -252,10 +251,10 @@ export function StudentResultView({
 								<ul className="srs-files">
 									{submission.files.map((file) => (
 										<li key={file}>
-							<a href={submissionFileUrl(submission, file)} target="_blank" rel="noreferrer" title={`Lihat ${file} di tab baru`}>
+							<a href={submissionFileUrl(submission, file)} target="_blank" rel="noreferrer" title={`${t('student.result.openInNewTab')} ${file}`}>
 								<Eye size={14} aria-hidden="true" />
 								<span className="srs-file-name">{file}</span>
-								<span className="srs-file-view">Lihat</span>
+								<span className="srs-file-view">{t('student.result.view')}</span>
 							</a>
 										</li>
 									))}
@@ -267,17 +266,17 @@ export function StudentResultView({
 									<div>
 										{majorCount > 0 ? (
 											<span className="major">
-												<CircleAlert size={13} /> {majorCount} perlu diperbaiki
+												<CircleAlert size={13} /> {t('student.result.needsCorrection', { n: String(majorCount) })}
 											</span>
 										) : null}
 										{minorCount > 0 ? (
 											<span className="minor">
-												<AlertTriangle size={13} /> {minorCount} saran
+												<AlertTriangle size={13} /> {t('student.result.suggestions', { n: String(minorCount) })}
 											</span>
 										) : null}
 									</div>
 									<button type="button" onClick={() => focusRecommendations()}>
-										<Info size={13} /> Lihat rekomendasi AI terkait teks
+									<Info size={13} /> {t('student.result.viewAiRecommendations')}
 									</button>
 								</div>
 							)}
@@ -293,17 +292,17 @@ export function StudentResultView({
 								onClick={() => setRecsOpen((open) => !open)}
 							>
 								<Sparkles size={16} />
-								<span>Rekomendasi AI</span>
+								<span>{t('student.result.aiRecommendations')}</span>
 								<Info size={14} className="srs-info" />
 								<span className="srs-rec-counts">
 									{majorCount > 0 ? (
 										<em className="major">
-											<CircleAlert size={12} /> {majorCount} perlu diperbaiki
+											<CircleAlert size={12} /> {t('student.result.needsCorrection', { n: String(majorCount) })}
 										</em>
 									) : null}
 									{minorCount > 0 ? (
 										<em className="minor">
-											<AlertTriangle size={12} /> {minorCount} saran
+											<AlertTriangle size={12} /> {t('student.result.suggestions', { n: String(minorCount) })}
 										</em>
 									) : null}
 								</span>
@@ -346,8 +345,8 @@ export function StudentResultView({
 
 					{materials.length > 0 && (
 						<article className="srs-card">
-							<h2>
-								<ClipboardList size={16} /> Materi pendukung
+								<h2>
+									<ClipboardList size={16} /> {t('student.result.supportingMaterials')}
 							</h2>
 							<ul className="srs-materials">
 								{materials.map((item) => (
@@ -356,7 +355,7 @@ export function StudentResultView({
 										<strong>{item.title}</strong>
 										{item.href ? (
 											<a href={item.href} target="_blank" rel="noreferrer">
-												Buka
+												{t('student.result.open')}
 											</a>
 										) : null}
 									</li>
@@ -369,8 +368,8 @@ export function StudentResultView({
 						<Link to={practicePath} className="srs-practice srs-next-action" onClick={onBack}>
 							<Repeat size={16} />
 							<span>
-								<strong>Langkah berikutnya</strong>
-								<em>Latihan persiapan tersedia untuk tugas ini.</em>
+									<strong>{t('student.result.nextStep')}</strong>
+									<em>{t('student.result.practiceAvailable')}</em>
 							</span>
 							<ArrowRight size={16} />
 						</Link>
@@ -378,8 +377,8 @@ export function StudentResultView({
 						<div className="srs-practice srs-next-action done">
 							<CheckCircle2 size={16} />
 							<span>
-								<strong>Tugas selesai</strong>
-								<em>Umpan balik dosen sudah diterbitkan. Kerjakan tugas lain atau latihan formatif.</em>
+								<strong>{t('student.result.taskComplete')}</strong>
+								<em>{t('student.result.feedbackPublished')}</em>
 							</span>
 						</div>
 					) : null}
@@ -387,33 +386,33 @@ export function StudentResultView({
 
 				<aside className="srs-side">
 					<article className="srs-card srs-status-card">
-						<h2>Status dan informasi</h2>
+						<h2>{t('student.result.statusInfo')}</h2>
 						<span className={`srs-status ${graded ? 'graded' : 'pending'}`}>
 							{graded ? <CheckCircle2 size={15} /> : <Info size={15} />}
-							{graded ? 'Dinilai' : SUBMISSION_STATUS_LABEL[status]}
+							{graded ? t('worksheet.status.graded') : t(`worksheet.status.${status === 'draft' ? 'draft' : status === 'revision' ? 'revision' : status === 'late' ? 'late' : 'submitted'}`)}
 						</span>
 						<dl>
 							<div>
 								<dt>
-									<Calendar size={14} /> Dikumpulkan
+									<Calendar size={14} /> {t('student.result.submitted')}
 								</dt>
 								<dd>{collected || '—'}</dd>
 							</div>
 							<div>
 								<dt>
-									<Calendar size={14} /> Batas pengumpulan
+									<Calendar size={14} /> {t('student.result.deadline')}
 								</dt>
-								<dd>{deadline || 'Tidak ada batas'}</dd>
+								<dd>{deadline || t('student.result.noDeadline')}</dd>
 							</div>
 							<div>
 								<dt>
-									<FileText size={14} /> Jenis tugas
+									<FileText size={14} /> {t('student.result.taskType')}
 								</dt>
-								<dd>{formative ? 'Latihan formatif' : 'Tugas formal'}</dd>
+							<dd>{formative ? t('worksheet.formativeExercise') : t('worksheet.formalTask')}</dd>
 							</div>
 							<div>
 								<dt>
-									<BookOpen size={14} /> Format kerja
+									<BookOpen size={14} /> {t('student.result.workFormat')}
 								</dt>
 								<dd>{formatLabel}</dd>
 							</div>
@@ -421,30 +420,30 @@ export function StudentResultView({
 					</article>
 
 					<article className="srs-card srs-grade">
-						<h2>Hasil penilaian dosen</h2>
+						<h2>{t('student.result.lecturerGrade')}</h2>
 						<div className="srs-grade-main">
 							<span className="srs-grade-ico" aria-hidden="true">
 								<GraduationCap size={26} />
 							</span>
 							<div>
-								<small>Nilai</small>
-								{letter ? <em>{letter}</em> : <p className="srs-wait">Menunggu penilaian</p>}
+								<small>{t('student.result.grade')}</small>
+								{letter ? <em>{letter}</em> : <p className="srs-wait">{t('student.grades.pending')}</p>}
 							</div>
 						</div>
 						{graded ? (
 							<div className="srs-grade-side">
 								<Calendar size={15} />
 								<div>
-									<strong>Penilaian selesai</strong>
-									<span>{gradedAt || 'Sudah dinilai'}</span>
+									<strong>{t('student.result.assessmentComplete')}</strong>
+									<span>{gradedAt || t('worksheet.status.graded')}</span>
 								</div>
 							</div>
 						) : (
 							<div className="srs-grade-side pending">
 								<Info size={15} />
 								<div>
-									<strong>Menunggu penilaian</strong>
-									<span>Umpan balik dosen belum dipublikasikan.</span>
+								<strong>{t('student.grades.pending')}</strong>
+								<span>{t('student.result.feedbackPending')}</span>
 								</div>
 							</div>
 						)}
@@ -452,17 +451,17 @@ export function StudentResultView({
 
 					<article className="srs-card">
 						<h2>
-							<MessageCircle size={16} /> Catatan dosen
+							<MessageCircle size={16} /> {t('student.result.lecturerNotes')}
 						</h2>
 						<div className="srs-note">
 							{note ? (
 								<p>{note}</p>
 							) : recommendations.length > 0 ? (
 								<p className="empty">
-									Tidak ada catatan tambahan — saran perbaikan tersedia pada jawaban di samping.
+									{t('student.result.noExtraNotes')}
 								</p>
 							) : (
-								<p className="empty">Dosen belum menuliskan catatan perbaikan.</p>
+								<p className="empty">{t('student.result.noLecturerNotes')}</p>
 							)}
 						</div>
 					</article>

@@ -261,7 +261,7 @@ export function AppShell({
 				<div className={`ld-body${rail ? ' has-rail' : ''}${hideSidebar ? ' no-sidebar' : ''}`}>
 					{!hideSidebar && <aside className={`ld-sidebar ${mobileOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}${animating ? ' ld-animating' : ''}`}>
 						<div className="ld-sidebar-brand">
-							<button type="button" ref={sidebarCloseRef} className="ld-sidebar-close" aria-label="Tutup navigasi" onClick={() => setMobileOpen(false)}>
+							<button type="button" ref={sidebarCloseRef} className="ld-sidebar-close" aria-label={t('nav.closeNav')} onClick={() => setMobileOpen(false)}>
 								<X size={20} />
 							</button>
 						</div>
@@ -286,20 +286,20 @@ export function AppShell({
 						</nav>
 
 						{!rail && <div className="ld-sidebar-foot">
-							<button type="button" className="ld-nav-link ld-collapse-toggle" onClick={toggleCollapsed} title={collapsed ? 'Tampilkan menu' : 'Sembunyikan menu'} aria-label={collapsed ? 'Tampilkan menu sidebar' : 'Sembunyikan menu sidebar'}>
+							<button type="button" className="ld-nav-link ld-collapse-toggle" onClick={toggleCollapsed} title={collapsed ? t('nav.showMenu') : t('nav.hideMenu')} aria-label={collapsed ? t('nav.showMenu') : t('nav.hideMenu')}>
 								{collapsed ? <PanelLeftOpen size={18} strokeWidth={1.75} /> : <PanelLeftClose size={18} strokeWidth={1.75} />}
-								<span>{collapsed ? 'Tampilkan' : 'Sembunyikan'}</span>
+								<span>{collapsed ? t('nav.showShort') : t('nav.hideShort')}</span>
 							</button>
 						</div>}
 					</aside>}
 
-					{!hideSidebar && mobileOpen && <button type="button" className="ld-scrim" aria-label="Tutup navigasi" onClick={() => setMobileOpen(false)} />}
+					{!hideSidebar && mobileOpen && <button type="button" className="ld-scrim" aria-label={t('nav.closeNav')} onClick={() => setMobileOpen(false)} />}
 					{rail}
 
 					<div className="ld-main">
 						<main className="ld-content">
 							{back && <Link to={home} className="ld-back">
-									← Kembali
+									← {t('shell.back')}
 								</Link>}
 							{!hideHeading && <div className="ld-page-head">
 									<span className="ld-eyebrow">{eyebrow}</span>

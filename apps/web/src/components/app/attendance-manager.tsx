@@ -12,6 +12,7 @@ import { useCourseSections } from '@/hooks/use-course-sections';
 import { useSessionAttendance, useMyAttendance, type AttendanceStatus, type AttendanceRecord } from '@/hooks/use-attendance';
 import type { ClassSession, CourseRosterEntry } from '@/lib/learning';
 import { dateLabel, errorMessage } from '@/lib/learning';
+import { useLanguage, useT } from '@/lib/i18n';
 
 type Props = {
 	courseId: string;
@@ -304,7 +305,14 @@ function LecturerAttendance({
 // ── Student self-view ─────────────────────────────────────────
 
 function StudentAttendance({ courseId }: { courseId: string }) {
+	const t = useT();
+	const language = useLanguage();
 	const { rows, loading, error } = useMyAttendance(courseId);
+	const statusLabel = (status: AttendanceStatus) => t(`student.attendance.${status}`);
+	const localizedDate = (value: string) => {
+		const date = new Date(value);
+		return Number.isNaN(date.getTime()) ? dateLabel(value) : new Intl.DateTimeFormat(language === 'de' ? 'de-DE' : language === 'en' ? 'en-GB' : 'id-ID', { dateStyle: 'medium' }).format(date);
+	};
 
 	const summary = useMemo(() => {
 		const counts: Record<AttendanceStatus, number> = { present: 0, late: 0, absent: 0, excused: 0 };
@@ -316,11 +324,10 @@ function StudentAttendance({ courseId }: { courseId: string }) {
 		<div className="ld-attendance">
 			<div className="ld-attendance-head">
 				<div>
-					<span className="ld-eyebrow">Absensi</span>
-					<h2 className="ld-attendance-title">Kehadiran saya</h2>
+					<span className="ld-eyebrow">{t('student.attendance.eyebrow')}</span>
+					<h2 className="ld-attendance-title">{t('student.attendance.title')}</h2>
 					<p className="ld-attendance-sub">
-						Riwayat kehadiran Anda pada mata kuliah ini. Absensi terpisah dari
-						nilai dan pengumpulan tugas.
+						{t('student.attendance.description')}
 					</p>
 				</div>
 			</div>
@@ -333,22 +340,22 @@ function StudentAttendance({ courseId }: { courseId: string }) {
 
 			{loading ? (
 				<div className="ld-loading">
-					<LoaderCircle size={24} className="spin" /> Memuat absensi…
+					<LoaderCircle size={24} className="spin" /> {t('student.attendance.loading')}
 				</div>
 			) : rows.length === 0 ? (
 				<div className="ld-empty">
 					<div className="ld-empty-icon">
 						<ClipboardList size={26} strokeWidth={1.4} />
 					</div>
-					<h3>Belum ada catatan kehadiran</h3>
-					<p>Dosen belum mencatat kehadiran untuk pertemuan mana pun.</p>
+					<h3>{t('student.attendance.emptyTitle')}</h3>
+					<p>{t('student.attendance.emptyDescription')}</p>
 				</div>
 			) : (
 				<>
 					<div className="ld-attendance-summary">
 						{STATUS_ORDER.map((s) => (
 							<span key={s} className={`ld-att-sum-chip ${s}`}>
-								<strong>{summary[s]}</strong> {STATUS_LABEL[s]}
+								<strong>{summary[s]}</strong> {statusLabel(s)}
 							</span>
 						))}
 					</div>
@@ -356,9 +363,9 @@ function StudentAttendance({ courseId }: { courseId: string }) {
 						<table className="ld-attendance-table">
 							<thead>
 								<tr>
-									<th className="ld-att-th-week">Pertemuan</th>
-									<th className="ld-att-th-date">Tanggal</th>
-									<th className="ld-att-th-status">Kehadiran</th>
+									<th className="ld-att-th-week">{t('student.attendance.session')}</th>
+									<th className="ld-att-th-date">{t('student.attendance.date')}</th>
+									<th className="ld-att-th-status">{t('student.attendance.attendance')}</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -366,21 +373,21 @@ function StudentAttendance({ courseId }: { courseId: string }) {
 									const session = r.expand?.session;
 									return (
 										<tr key={r.id} className="ld-att-tr">
-											<td className="ld-att-td-week" data-label="Pertemuan">
+							<td className="ld-att-td-week" data-label={t('student.attendance.session')}>
 												{session ? (
 													<>
-														<small>Minggu {String(session.week || '—').padStart(2, '0')}</small>
+										<small>{t('worksheet.week', { week: String(session.week || '—').padStart(2, '0') })}</small>
 														<strong>{session.title}</strong>
 													</>
 												) : (
-													<strong>Pertemuan tidak tersedia</strong>
+								<strong>{t('student.attendance.sessionUnavailable')}</strong>
 												)}
 											</td>
-											<td className="ld-att-td-date" data-label="Tanggal">
-												{session?.date ? dateLabel(session.date) : '—'}
+							<td className="ld-att-td-date" data-label={t('student.attendance.date')}>
+								{session?.date ? localizedDate(session.date) : '—'}
 											</td>
-											<td className="ld-att-td-status" data-label="Kehadiran">
-												<span className={`ld-att-pill ${r.status}`}>{STATUS_LABEL[r.status]}</span>
+							<td className="ld-att-td-status" data-label={t('student.attendance.attendance')}>
+								<span className={`ld-att-pill ${r.status}`}>{statusLabel(r.status)}</span>
 											</td>
 										</tr>
 									);

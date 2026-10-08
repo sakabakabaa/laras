@@ -6,11 +6,13 @@ import { useAuth } from '@/hooks/use-auth';
 import type { Course } from '@/lib/learning';
 import { courseRouteId } from '@/lib/course-route';
 import { courseSectionPath } from '@/lib/course-sections';
+import { useT } from '@/lib/i18n';
 import { CourseThumb } from '@/components/app/course-thumb';
 import { useAssistantPageContext } from '@/components/app/assistant-page-context-provider';
 import '@/styles/course-analytics.css';
 
 export function AnalyticsIndex() {
+	const t = useT();
 	const { user } = useAuth();
 	const isStudent = (user as { role?: string } | null)?.role === 'student';
 	const [courses, setCourses] = useState<Course[] | null>(null);
@@ -47,44 +49,44 @@ export function AnalyticsIndex() {
 				});
 				if (alive) setCourses(rows);
 			} catch {
-				if (alive) setError('Daftar mata kuliah gagal dimuat.');
+				if (alive) setError(t('student.analytics.loadError'));
 			}
 		})();
 		return () => {
 			alive = false;
 		};
-	}, [user?.id, isStudent]);
+	}, [user?.id, isStudent, t]);
 
 	return (
 		<section className="an-index">
 			<header className="an-index-head">
 				<div>
-					<p className="ld-eyebrow">Analitik</p>
-					<h1>Analitik mata kuliah</h1>
+					<p className="ld-eyebrow">{t('student.analytics.eyebrow')}</p>
+					<h1>{t('student.analytics.title')}</h1>
 					<p>
 						{isStudent
-							? 'Pilih mata kuliah untuk melihat kemajuan Anda. Data teman sekelas tidak ditampilkan.'
+							? t('student.analytics.description')
 							: 'Pilih mata kuliah untuk melihat pengumpulan, penilaian, Sub-CPMK, dan sinyal kesulitan.'}
 					</p>
 				</div>
 			</header>
 			{courses === null && !error ? (
 				<div className="an-loading">
-					<LoaderCircle size={20} className="spin" /> Memuat mata kuliah...
+					<LoaderCircle size={20} className="spin" /> {t('student.courses.loading')}
 				</div>
 			) : error ? (
 				<div className="ld-alert" role="alert">{error}</div>
 			) : courses == null || courses.length === 0 ? (
 				<div className="an-empty an-empty-page">
 					<BarChart3 size={22} />
-					<strong>{isStudent ? 'Belum ada mata kuliah' : 'Belum ada mata kuliah yang Anda ampu'}</strong>
+					<strong>{t('student.analytics.emptyTitle')}</strong>
 					<p>
 						{isStudent
-							? 'Setelah Anda terdaftar di sebuah kelas, analitik pribadi akan muncul di sini.'
+						? t('student.analytics.emptyDescription')
 							: 'Buat mata kuliah terlebih dahulu. Analitik terisi dari pertemuan, tugas, dan pengumpulan yang sudah ada — tidak ada angka yang dikarang.'}
 					</p>
 					<Link to="/app/courses" className="an-open">
-						Ke mata kuliah <ChevronRight size={16} />
+						{t('student.analytics.openCourses')} <ChevronRight size={16} />
 					</Link>
 				</div>
 			) : (
@@ -93,12 +95,12 @@ export function AnalyticsIndex() {
 						<li key={course.id}>
 							<CourseThumb course={course} className="an-course-thumb" />
 							<div>
-								<small>{course.code || 'Kode belum diisi'}</small>
+							<small>{course.code || t('student.common.noCode')}</small>
 								<strong>{course.title}</strong>
-								<span>{[course.semester, course.academicYear].filter(Boolean).join(' · ') || 'Semester belum diisi'}</span>
+								<span>{[course.semester, course.academicYear].filter(Boolean).join(' · ') || t('student.common.noSemester')}</span>
 							</div>
 							<Link to={courseSectionPath(courseRouteId(course), 'analitik')} className="an-open">
-								Lihat analitik <ChevronRight size={16} />
+								{t('student.analytics.view')} <ChevronRight size={16} />
 							</Link>
 						</li>
 					))}

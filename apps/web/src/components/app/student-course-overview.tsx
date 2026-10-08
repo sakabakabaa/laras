@@ -24,8 +24,6 @@ import { dateLabel, isSessionDone } from '@/lib/learning';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import {
 	activityTypeOf,
-	deadlineHint,
-	deadlineLabel,
 	isPastDeadline,
 	studentGradeLabel,
 	studentWorkPath,
@@ -37,6 +35,7 @@ import { useCourseResources } from '@/hooks/use-course-resources';
 import { courseSectionPath } from '@/lib/course-sections';
 import { useMySection } from '@/components/app/course-sections';
 import { useCourseSections } from '@/hooks/use-course-sections';
+import { useLanguage, useT } from '@/lib/i18n';
 
 /**
  * A unified materi row: native `course_resources` (file or link) plus
@@ -78,6 +77,8 @@ type Props = {
  * PocketBase collections and cached hooks; nothing is mutated here.
  */
 export function StudentCourseOverview({ course, routeId, sessions }: Props) {
+	const t = useT();
+	const language = useLanguage();
 	const [descOpen, setDescOpen] = useState(false);
 	const { sections } = useCourseSections(course.id);
 	const mySection = useMySection(course.id);
@@ -196,11 +197,17 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 	}, [materi, nextSession]);
 
 	const loading = assignmentsLoading || mySubmissions.loading || libraryQuery.loading;
+	const localizedDate = (value: string) => {
+		const date = new Date(value);
+		return Number.isNaN(date.getTime())
+			? value ? t('student.overview.dateMissing') : dateLabel(value)
+			: new Intl.DateTimeFormat(language === 'de' ? 'de-DE' : language === 'en' ? 'en-GB' : 'id-ID', { dateStyle: 'medium' }).format(date);
+	};
 
 	if (loading) {
 		return (
 			<div className="ld-loading">
-				<LoaderCircle size={24} className="spin" /> Memuat ringkasan...
+				<LoaderCircle size={24} className="spin" /> {t('student.overview.loading')}
 			</div>
 		);
 	}
@@ -210,7 +217,7 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 			{/* ── Course identity & progress ─────────────────────── */}
 			<section className="sco-hero">
 				<div className="sco-hero-copy">
-					<span className="ld-eyebrow">Ringkasan mata kuliah</span>
+					<span className="ld-eyebrow">{t('student.overview.eyebrow')}</span>
 					<h1>{course.title}</h1>
 					{course.description ? (
 						<div className="sco-desc-wrap">
@@ -220,18 +227,18 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 								aria-expanded={descOpen}
 								onClick={() => setDescOpen((o) => !o)}
 							>
-								<span>Deskripsi mata kuliah</span>
+								<span>{t('student.overview.description')}</span>
 								<ChevronDown size={16} className={`sco-desc-chev${descOpen ? ' open' : ''}`} />
 							</button>
 							{descOpen && <p className="sco-hero-desc">{course.description}</p>}
 						</div>
 					) : (
-						<p className="sco-hero-desc">Deskripsi mata kuliah belum diterbitkan dosen.</p>
+						<p className="sco-hero-desc">{t('student.overview.noDescription')}</p>
 					)}
 					<div className="sco-hero-meta">
 						{hasSections && (
-							<span className="sco-section-badge" title="Kelas Anda pada mata kuliah ini">
-								<Layers size={14} /> {mySection.name || 'Belum ada kelas'}
+							<span className="sco-section-badge" title={t('student.overview.yourClass')}>
+								<Layers size={14} /> {mySection.name || t('student.overview.noClass')}
 							</span>
 						)}
 						{course.lecturerName && (
@@ -254,7 +261,7 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 					</div>
 				</div>
 				<div className="sco-progress-card">
-					<div className="sco-progress-ring" role="img" aria-label={`Progres sesi ${progressPct}%`}>
+					<div className="sco-progress-ring" role="img" aria-label={`${t('student.overview.sessionProgress')} ${progressPct}%`}>
 						<svg viewBox="0 0 48 48" aria-hidden>
 							<circle cx="24" cy="24" r="20" className="cw-ring-bg" />
 							<circle
@@ -268,10 +275,10 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 						<span>{progressPct}%</span>
 					</div>
 					<div className="sco-progress-meta">
-						<span className="ld-eyebrow">Progres sesi</span>
-						<strong>{sessionsDone} dari {mySessions.length} sesi selesai</strong>
+						<span className="ld-eyebrow">{t('student.overview.sessionProgress')}</span>
+						<strong>{t('student.overview.sessionsDone', { done: String(sessionsDone), total: String(mySessions.length) })}</strong>
 						<Link to={courseSectionPath(routeId, 'mata-kuliah')} className="ld-text-btn">
-							Lihat sesi <ArrowRight size={13} />
+							{t('student.overview.viewSessions')} <ArrowRight size={13} />
 						</Link>
 					</div>
 				</div>
@@ -283,20 +290,20 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 					<section className="ld-panel sco-panel">
 						<div className="ld-card-head">
 							<h2>
-								<CalendarDays size={16} className="ld-spark" /> Pertemuan berikutnya
+								<CalendarDays size={16} className="ld-spark" /> {t('student.overview.nextSession')}
 							</h2>
 							<Link to={courseSectionPath(routeId, 'mata-kuliah')} className="ld-link-muted">
-								Semua sesi
+								{t('student.overview.allSessions')}
 							</Link>
 						</div>
 						{nextSession ? (
 							<div className="sco-next">
 								<span className="sco-next-week">
-									Minggu
+								{t('student.overview.week')}
 									<strong>{String(nextSession.week || '—').padStart(2, '0')}</strong>
 								</span>
 								<div className="sco-next-body">
-									<small>{dateLabel(nextSession.date)}{nextSession.completed ? ' · Selesai' : ''}</small>
+										<small>{localizedDate(nextSession.date)}{nextSession.completed ? ` · ${t('student.overview.completed')}` : ''}</small>
 									<h3>{nextSession.title}</h3>
 									{nextSession.topic && <p>{nextSession.topic}</p>}
 									{nextSession.notes && <p className="sco-next-notes">{nextSession.notes}</p>}
@@ -320,14 +327,14 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 									)}
 									{nextSession.references && (
 										<p className="sco-next-prep">
-											<small>Bahan persiapan</small>
+											<small>{t('student.overview.preparation')}</small>
 											{nextSession.references}
 										</p>
 									)}
 								</div>
 							</div>
 						) : (
-							<p className="ld-empty-sm">Belum ada pertemuan dijadwalkan untuk mata kuliah ini.</p>
+							<p className="ld-empty-sm">{t('student.overview.noSessions')}</p>
 						)}
 					</section>
 
@@ -335,21 +342,22 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 					<section className="ld-panel sco-panel">
 						<div className="ld-card-head">
 							<h2>
-								<ClipboardList size={16} className="ld-spark" /> Tugas & latihan aktif
+								<ClipboardList size={16} className="ld-spark" /> {t('student.overview.activeWork')}
 							</h2>
 							<Link to={courseSectionPath(routeId, 'tugas')} className="ld-link-muted">
-								Semua tugas
+								{t('student.overview.allTasks')}
 							</Link>
 						</div>
 						{outstanding.length === 0 && formative.length === 0 ? (
 							<p className="ld-empty-sm">
-								Tidak ada tugas atau latihan aktif saat ini. Cek kembali nanti.
+								{t('student.overview.noActiveWork')}
 							</p>
 						) : (
 							<ul className="sco-task-list">
-								{outstanding.map((a) => {
-									const sub = subByAssignment.get(a.id);
-									const past = isPastDeadline(a.deadline);
+				{outstanding.map((a) => {
+					const sub = subByAssignment.get(a.id);
+					const past = isPastDeadline(a.deadline);
+					const daysUntilDeadline = a.deadline ? Math.ceil((new Date(a.deadline).getTime() - Date.now()) / 86_400_000) : null;
 									const revision = sub?.status === 'revision';
 									const draft = sub?.status === 'draft';
 									return (
@@ -361,23 +369,23 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 												<span className="sco-task-info">
 													<small>
 														{revision
-															? 'Perlu revisi'
+										? t('worksheet.status.revision')
 															: draft
-																? 'Draf tersimpan'
+											? t('sd.kind.draft')
 																: past
-																	? 'Batas waktu terlewat'
-																	: 'Tugas formal'}
-														{a.deadline && ` · ${deadlineLabel(a.deadline)}`}
+											? t('student.overview.deadlinePassed')
+											: t('worksheet.formalTask')}
+										{a.deadline && ` · ${new Intl.DateTimeFormat(language === 'de' ? 'de-DE' : language === 'en' ? 'en-GB' : 'id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(a.deadline))}`}
 													</small>
 													<strong>{a.title}</strong>
 													{a.deadline && (
-														<em className={past && !revision ? 'overdue' : ''}>
-															{deadlineHint(a.deadline)}
-														</em>
+								<em className={past && !revision ? 'overdue' : ''}>
+										{past ? t('student.overview.overdue') : daysUntilDeadline != null && daysUntilDeadline <= 1 ? t('student.overview.dueToday') : t('student.overview.dueIn', { n: String(daysUntilDeadline ?? 0) })}
+									</em>
 													)}
 												</span>
 												<span className="sco-task-cta">
-													{revision ? 'Perbaiki' : draft ? 'Lanjutkan' : 'Mulai'}
+								{revision ? t('sd.cta.revision') : draft ? t('sd.cta.draft') : t('sd.cta.assigned')}
 													<ArrowRight size={14} />
 												</span>
 											</Link>
@@ -392,12 +400,12 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 										>
 											<span className="sco-task-info">
 												<small>
-													<Repeat size={11} /> Latihan formatif · tanpa nilai
+									<Repeat size={11} /> {t('worksheet.formativeExercise')} · {t('student.overview.ungraded')}
 												</small>
 												<strong>{a.title}</strong>
 											</span>
 											<span className="sco-task-cta">
-												Latihan
+								{t('sd.cta.practice')}
 												<ArrowRight size={14} />
 											</span>
 										</Link>
@@ -411,14 +419,14 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 					<section className="ld-panel sco-panel">
 						<div className="ld-card-head">
 							<h2>
-								<Library size={16} className="ld-spark" /> Materi terbaru
+								<Library size={16} className="ld-spark" /> {t('student.overview.recentMaterials')}
 							</h2>
 							<Link to={courseSectionPath(routeId, 'berkas')} className="ld-link-muted">
-								Semua materi
+								{t('student.overview.allMaterials')}
 							</Link>
 						</div>
 						{materi.length === 0 ? (
-							<p className="ld-empty-sm">Dosen belum membagikan materi untuk mata kuliah ini.</p>
+							<p className="ld-empty-sm">{t('student.overview.noMaterials')}</p>
 						) : (
 							<ul className="sco-simple-list">
 								{materi.slice(0, 5).map((r) => (
@@ -433,12 +441,12 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 											{r.title}
 										</a>
 										<span className="cw-weight">
-											{r.kind === 'link' ? 'Tautan' : r.source === 'library' ? 'Berkas' : 'Berkas'}
+							{r.kind === 'link' ? t('student.overview.link') : t('student.overview.file')}
 										</span>
 									</li>
 								))}
 								{materi.length > 5 && (
-									<li className="cw-more-li">+{materi.length - 5} materi lainnya</li>
+					<li className="cw-more-li">{t('student.overview.moreMaterials', { n: String(materi.length - 5) })}</li>
 								)}
 							</ul>
 						)}
@@ -450,27 +458,27 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 					<section className="ld-panel sco-panel">
 						<div className="ld-card-head">
 							<h2>
-								<GraduationCap size={16} className="ld-spark" /> Nilai
+								<GraduationCap size={16} className="ld-spark" /> {t('student.overview.grades')}
 							</h2>
 							<Link to={courseSectionPath(routeId, 'nilai')} className="ld-link-muted">
-								Detail
+							{t('student.overview.details')}
 							</Link>
 						</div>
 						<div className="sco-grade-hero">
 							<strong>{avg != null ? studentGradeLabel(avg) : '—'}</strong>
-							<span>{gradeValues.length > 0 ? 'rata-rata' : 'belum ada nilai'}</span>
+							<span>{gradeValues.length > 0 ? t('student.overview.average') : t('student.overview.noGrades')}</span>
 						</div>
 						<ul className="sco-grade-list">
 							<li>
-								<span>Dinilai</span>
+								<span>{t('student.overview.graded')}</span>
 								<strong>{graded.length}</strong>
 							</li>
 							<li>
-								<span>Tugas formal</span>
+								<span>{t('worksheet.formalTask')}</span>
 								<strong>{formal.length}</strong>
 							</li>
 							<li>
-								<span>Belum dikumpulkan</span>
+								<span>{t('worksheet.notSubmitted')}</span>
 								<strong>{outstanding.length}</strong>
 							</li>
 						</ul>
@@ -479,20 +487,20 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 					<section className="ld-panel sco-panel">
 						<div className="ld-card-head">
 							<h2>
-								<Sparkles size={16} className="ld-spark" /> Referensi
+								<Sparkles size={16} className="ld-spark" /> {t('student.overview.references')}
 							</h2>
 						</div>
 						<ul className="sco-ref-list">
 							{(course.rps || course.rpsFile) && (
 								<li>
 									<FileText size={15} />
-									<Link to={courseSectionPath(routeId, 'rps')}>RPS (hanya baca)</Link>
+									<Link to={courseSectionPath(routeId, 'rps')}>{t('student.overview.rps')}</Link>
 								</li>
 							)}
 							{course.syllabus && (
 								<li>
 									<BookOpen size={15} />
-									<Link to={courseSectionPath(routeId, 'silabus')}>Silabus (hanya baca)</Link>
+									<Link to={courseSectionPath(routeId, 'silabus')}>{t('student.overview.syllabus')}</Link>
 								</li>
 							)}
 							{course.rpsFile && (
@@ -504,12 +512,12 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 										rel="noreferrer"
 										download
 									>
-										Unduh PDF RPS
+										{t('student.overview.downloadRps')}
 									</a>
 								</li>
 							)}
 							{!course.rps && !course.syllabus && !course.rpsFile && (
-								<li className="ld-empty-sm">Referensi belum diterbitkan dosen.</li>
+								<li className="ld-empty-sm">{t('student.overview.noReferences')}</li>
 							)}
 						</ul>
 					</section>
@@ -517,11 +525,11 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 					<section className="ld-panel sco-panel">
 						<div className="ld-card-head">
 							<h2>
-								<ClipboardCheck size={16} className="ld-spark" /> Info mata kuliah
+								<ClipboardCheck size={16} className="ld-spark" /> {t('student.overview.courseInfo')}
 							</h2>
 						</div>
 						<Link to={courseSectionPath(routeId, 'info')} className="ld-text-btn">
-							Lihat detail mata kuliah <ArrowRight size={13} />
+							{t('student.overview.viewCourseInfo')} <ArrowRight size={13} />
 						</Link>
 					</section>
 				</aside>

@@ -59,6 +59,7 @@ import { ListeningWorkspace } from '@/components/app/task-workspaces/listening-w
 import { WritingWorkspace } from '@/components/app/task-workspaces/writing-workspace';
 import { CheckAnswerPanel } from '@/components/app/task-workspaces/check-answer-panel';
 import { CardCta } from '@/components/card-cta';
+import { useT } from '@/lib/i18n';
 import { taskKindForShape } from '@/lib/task-types';
 import { confirmDialog } from '@/components/confirm-dialog';
 
@@ -74,6 +75,7 @@ type Props = {
 };
 
 export function CourseAssignments({ courseId, canEdit, isStudent, activityLock }: Props) {
+	const t = useT();
 	const { assignments, loading, error, reload } = useCourseAssignments(courseId);
 	const mySubmissions = useMySubmissions(isStudent ? assignments : []);
 	const submissions = mySubmissions.data ?? [];
@@ -133,7 +135,7 @@ export function CourseAssignments({ courseId, canEdit, isStudent, activityLock }
 	if (loading) {
 		return (
 			<div className="ld-loading">
-				<LoaderCircle size={24} className="spin" /> Memuat tugas...
+				<LoaderCircle size={24} className="spin" /> {isStudent ? t('student.assignments.loading') : 'Memuat tugas...'}
 			</div>
 		);
 	}
@@ -142,11 +144,11 @@ export function CourseAssignments({ courseId, canEdit, isStudent, activityLock }
 		<div className="asg-area">
 			<div className="res-head">
 				<div>
-					<span className="ld-eyebrow">Tugas & Pengumpulan</span>
-					<h2 className="res-title">{isStudent ? 'Tugas mata kuliah' : 'Kelola tugas'}</h2>
+					<span className="ld-eyebrow">{isStudent ? t('student.assignments.eyebrow') : 'Tugas & Pengumpulan'}</span>
+					<h2 className="res-title">{isStudent ? t('student.assignments.title') : 'Kelola tugas'}</h2>
 					<p className="res-sub">
 						{isStudent
-							? 'Baca instruksi, unduh materi, dan kumpulkan pekerjaan Anda sebelum batas waktu.'
+							? t('student.assignments.description')
 							: 'Pantau pengumpulan mahasiswa, beri revisi dan nilai. Pembuatan tugas baru terpusat di Tugas.'}
 					</p>
 				</div>
@@ -164,7 +166,7 @@ export function CourseAssignments({ courseId, canEdit, isStudent, activityLock }
 				<div className="ld-alert" role="alert">
 					{error}{' '}
 					<button type="button" onClick={() => reload()}>
-						Coba lagi
+									{isStudent ? t('student.common.retry') : 'Coba lagi'}
 					</button>
 				</div>
 			)}
@@ -178,14 +180,14 @@ export function CourseAssignments({ courseId, canEdit, isStudent, activityLock }
 			)}
 
 			{assignments.length > 0 && !activityLock && (
-				<div className="asg-chips-row" role="group" aria-label="Saring jenis aktivitas">
-					<span>Jenis</span>
+				<div className="asg-chips-row" role="group" aria-label={isStudent ? t('student.assignments.filterTypes') : 'Saring jenis aktivitas'}>
+					<span>{isStudent ? t('student.assignments.type') : 'Jenis'}</span>
 					<div className="eval-chips">
 						{(
 							[
-								['all', 'Semua', null],
-								['formal', 'Tugas formal', ClipboardCheck],
-								['formative', 'Latihan formatif', Repeat],
+								['all', isStudent ? t('student.assignments.all') : 'Semua', null],
+								['formal', t('worksheet.formalTask'), ClipboardCheck],
+								['formative', t('worksheet.formativeExercise'), Repeat],
 							] as const
 						).map(([value, label, Icon]) => (
 							<button
@@ -207,14 +209,14 @@ export function CourseAssignments({ courseId, canEdit, isStudent, activityLock }
 					<div className="ld-empty-icon">
 						<ClipboardList size={26} strokeWidth={1.4} />
 					</div>
-					<h3>{isStudent ? 'Belum ada tugas' : 'Belum ada tugas.'}</h3>
+					<h3>{isStudent ? t('student.assignments.emptyTitle') : 'Belum ada tugas.'}</h3>
 					<p>
 						{isStudent
 							? typeFilter === 'formative'
-								? 'Belum ada latihan formatif yang diterbitkan untuk mata kuliah ini.'
+								? t('student.assignments.noFormative')
 								: typeFilter === 'formal'
-									? 'Dosen belum menerbitkan tugas formal untuk mata kuliah ini. Cek kembali nanti.'
-									: 'Dosen belum menerbitkan tugas untuk mata kuliah ini. Cek kembali nanti.'
+									? t('student.assignments.noFormal')
+									: t('student.assignments.noTasks')
 							: 'Buat tugas pertama — individual maupun kolaboratif — dengan tahapan, batas waktu, dan lampiran materi.'}
 					</p>
 					{canEdit && (
@@ -498,6 +500,7 @@ function StudentAssignmentLaunch({
 	submission: AssignmentSubmission | null;
 	href: string;
 }) {
+	const t = useT();
 	const formative = activityTypeOf(assignment) === 'formative';
 	const status = (submission?.status || '') as SubmissionStatus | '';
 	const finallySubmitted = Boolean(
@@ -505,24 +508,24 @@ function StudentAssignmentLaunch({
 	);
 	const graded = status === 'graded';
 	const revision = status === 'revision';
-	const label = finallySubmitted ? 'Lihat hasil' : revision ? 'Perbaiki' : 'Kerjakan';
+	const label = finallySubmitted ? t('sd.cta.feedback') : revision ? t('sd.cta.revision') : t('student.assignments.doTask');
 	const statusText = finallySubmitted
 		? graded
 			? submission?.grade != null
-				? `Dinilai · Nilai ${studentGradeLabel(submission.grade)}`
-				: 'Dinilai'
-			: SUBMISSION_STATUS_LABEL[status as SubmissionStatus] || 'Terkumpul'
+				? t('student.assignments.gradedWithScore', { grade: studentGradeLabel(submission.grade) })
+				: t('worksheet.status.graded')
+			: t(`worksheet.status.${status === 'late' ? 'late' : 'submitted'}`)
 		: revision
-			? 'Perlu revisi'
+			? t('worksheet.status.revision')
 			: submission
-				? 'Dalam pengerjaan'
+				? t('worksheet.status.draft')
 				: '';
 	return (
 		<article className={`sas-launch${finallySubmitted ? ' done' : ''}`}>
 			<span>
 				<small>
-					{formative ? 'Latihan formatif' : 'Tugas formal'}
-					{assignment.shape ? ` · ${SHAPE_LABEL[assignment.shape]}` : ''}
+					{formative ? t('worksheet.formativeExercise') : t('worksheet.formalTask')}
+					{assignment.shape ? ` · ${t(`sd.shape.${assignment.shape}`)}` : ''}
 				</small>
 				<strong>{assignment.title}</strong>
 				{statusText && <span className="sas-status">{statusText}</span>}

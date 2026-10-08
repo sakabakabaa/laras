@@ -30,6 +30,7 @@ import { useCourseResources } from '@/hooks/use-course-resources';
 import { ResourceForm } from '@/components/app/resource-form';
 import { confirmDialog } from '@/components/confirm-dialog';
 import { AppModal } from '@/components/app/app-modal';
+import { useT } from '@/lib/i18n';
 import {
 	CATEGORY_LABEL,
 	canPreview,
@@ -94,6 +95,7 @@ type Props = {
 };
 
 export function CourseResources({ courseId, canEdit, isStudent }: Props) {
+	const t = useT();
 	const {
 		resources: nativeResources,
 		sessions,
@@ -216,7 +218,7 @@ export function CourseResources({ courseId, canEdit, isStudent }: Props) {
 	if (loading) {
 		return (
 			<div className="ld-loading">
-				<LoaderCircle size={24} className="spin" /> Memuat sumber daya...
+				<LoaderCircle size={24} className="spin" /> {isStudent ? t('student.resources.loading') : 'Memuat sumber daya...'}
 			</div>
 		);
 	}
@@ -225,13 +227,13 @@ export function CourseResources({ courseId, canEdit, isStudent }: Props) {
 		<div className="res-area">
 			<div className="res-head">
 				<div>
-					<span className="ld-eyebrow">Sumber Daya Mata Kuliah</span>
+					<span className="ld-eyebrow">{isStudent ? t('student.resources.eyebrow') : 'Sumber Daya Mata Kuliah'}</span>
 					<h2 className="res-title">
-						{isStudent ? 'Materi & sumber daya' : 'Kelola sumber daya'}
+						{isStudent ? t('student.resources.title') : 'Kelola sumber daya'}
 					</h2>
 					<p className="res-sub">
 						{isStudent
-							? 'Baca materi yang dosen bagikan untuk mata kuliah ini. Pratinjau tersedia langsung di peramban; unduhan dinonaktifkan untuk mahasiswa.'
+							? t('student.resources.description')
 							: 'Unggah slide, dokumen, media, atau tautan. Berkas dari menu Berkas yang ditautkan ke mata kuliah ini juga tampil otomatis.'}
 					</p>
 				</div>
@@ -264,10 +266,10 @@ export function CourseResources({ courseId, canEdit, isStudent }: Props) {
 					<div className="ld-empty-icon">
 						<FileIcon size={26} strokeWidth={1.4} />
 					</div>
-					<h3>{isStudent ? 'Belum ada materi' : 'Belum ada sumber daya'}</h3>
+					<h3>{isStudent ? t('student.resources.emptyTitle') : 'Belum ada sumber daya'}</h3>
 					<p>
 						{isStudent
-							? 'Dosen belum membagikan materi untuk mata kuliah ini. Cek kembali nanti.'
+							? t('student.resources.emptyDescription')
 							: 'Tambahkan slide, dokumen, media, atau tautan, atau tautkan berkas dari menu Berkas ke mata kuliah ini.'}
 					</p>
 					{canEdit && (
@@ -286,7 +288,7 @@ export function CourseResources({ courseId, canEdit, isStudent }: Props) {
 						<section className="res-group" key={session.id}>
 							<div className="res-group-head">
 								<span className="res-week">
-									Minggu {String(session.week || '—').padStart(2, '0')}
+									{isStudent ? t('worksheet.week', { week: String(session.week || '—').padStart(2, '0') }) : `Minggu ${String(session.week || '—').padStart(2, '0')}`}
 								</span>
 								<h3>{session.title}</h3>
 								<span className="ld-chip">{items.length}</span>
@@ -312,7 +314,7 @@ export function CourseResources({ courseId, canEdit, isStudent }: Props) {
 					{groups.general.length > 0 && (
 						<section className="res-group">
 							<div className="res-group-head">
-								<h3>Umum</h3>
+								<h3>{isStudent ? t('student.resources.general') : 'Umum'}</h3>
 								<span className="ld-chip">{groups.general.length}</span>
 							</div>
 							<ul className="res-list">
@@ -378,6 +380,7 @@ function ResourceRow({
 	onEdit: () => void;
 	onRemove: () => void;
 }) {
+	const t = useT();
 	const isLink = resource.kind === 'link';
 	const isLibrary = resource.source === 'library';
 	const filename = resource.file || '';
@@ -417,9 +420,9 @@ function ResourceRow({
 						type="button"
 						className="ld-text-btn"
 						onClick={onPreview}
-						title="Pratinjau"
+						 title={isStudent ? t('student.resources.preview') : 'Pratinjau'}
 					>
-						Lihat
+						{isStudent ? t('student.resources.view') : 'Lihat'}
 					</button>
 				)}
 				{isLink ? (
@@ -429,7 +432,7 @@ function ResourceRow({
 						target="_blank"
 						rel="noreferrer"
 					>
-						<ExternalLink size={15} /> Buka
+						<ExternalLink size={15} /> {isStudent ? t('student.resources.open') : 'Buka'}
 					</a>
 				) : isStudent ? null : (
 					<a

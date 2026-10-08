@@ -26,15 +26,8 @@ import { useAuth } from '@/hooks/use-auth';
 import pb from '@/lib/pocketbase-client';
 import { courseRouteId } from '@/lib/course-route';
 import type { Course, ClassSession, Enrollment } from '@/lib/learning';
+import { useLanguage, useT } from '@/lib/i18n';
 import '@/styles/academic-calendar.css';
-
-const MONTHS_ID = [
-	'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-	'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-];
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-const DOW_SHORT = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-const DOW_LONG = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 const ALL_CATEGORIES: CalendarCategory[] = ['national', 'collective', 'upi', 'courses'];
 
@@ -76,28 +69,33 @@ function eventsOnDay(events: CalendarEvent[], iso: string): CalendarEvent[] {
 	return events.filter((ev) => (ev.end ? ev.start <= iso && ev.end >= iso : ev.start === iso));
 }
 
-function formatDay(iso: string): string {
-	const d = parseISO(iso);
-	return `${d.getUTCDate()} ${MONTHS_ID[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+function localeOf(language: 'id' | 'en' | 'de') {
+	return language === 'de' ? 'de-DE' : language === 'en' ? 'en-GB' : 'id-ID';
 }
 
-function formatShort(iso: string): string {
+function formatDay(iso: string, language: 'id' | 'en' | 'de'): string {
 	const d = parseISO(iso);
-	return `${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+	return new Intl.DateTimeFormat(localeOf(language), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(d);
 }
 
-function formatRange(start: string, end?: string): string {
-	if (!end || end === start) return formatDay(start);
+function formatShort(iso: string, language: 'id' | 'en' | 'de'): string {
+	const d = parseISO(iso);
+	return new Intl.DateTimeFormat(localeOf(language), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(d);
+}
+
+function formatRange(start: string, end: string | undefined, language: 'id' | 'en' | 'de'): string {
+	if (!end || end === start) return formatDay(start, language);
 	const s = parseISO(start);
 	const e = parseISO(end);
 	if (s.getUTCFullYear() === e.getUTCFullYear() && s.getUTCMonth() === e.getUTCMonth()) {
-		return `${s.getUTCDate()}–${e.getUTCDate()} ${MONTHS_ID[s.getUTCMonth()]} ${s.getUTCFullYear()}`;
+		const month = new Intl.DateTimeFormat(localeOf(language), { month: 'long', timeZone: 'UTC' }).format(s);
+		return `${s.getUTCDate()}–${e.getUTCDate()} ${month} ${s.getUTCFullYear()}`;
 	}
-	return `${formatDay(start)} – ${formatDay(end)}`;
+	return `${formatDay(start, language)} – ${formatDay(end, language)}`;
 }
 
-function weekdayLong(iso: string): string {
-	return DOW_LONG[parseISO(iso).getUTCDay()];
+function weekdayLong(iso: string, language: 'id' | 'en' | 'de'): string {
+	return new Intl.DateTimeFormat(localeOf(language), { weekday: 'long', timeZone: 'UTC' }).format(parseISO(iso));
 }
 
 function monthInRange(year: number, month: number): boolean {
@@ -159,6 +157,11 @@ function monthCells(year: number, month: number): string[] {
 }
 
 export function AcademicCalendar() {
+	const language = useLanguage();
+	const t = useT();
+	const locale = localeOf(language);
+	const monthNames = useMemo(() => Array.from({ length: 12 }, (_, month) => new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, month, 1)))), [locale]);
+	const dowShort = useMemo(() => Array.from({ length: 7 }, (_, day) => new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, 7, 24 + day)))), [locale]);
 	const [enabled, setEnabled] = useState<Record<CalendarCategory, boolean>>({
 		national: true,
 		collective: true,
@@ -356,25 +359,24 @@ export function AcademicCalendar() {
 		if (!ganjilStart || !ganjilEnd || !genapStart || !genapEnd) return null;
 		const ref = today ?? selected;
 		if (ref <= ganjilEnd) {
-			return { label: 'Semester Ganjil · 2026/2027', start: ganjilStart, end: ganjilEnd };
+			return { label: `${t('student.calendar.oddSemester')} · 2026/2027`, start: ganjilStart, end: ganjilEnd };
 		}
-		return { label: 'Semester Genap · 2026/2027', start: genapStart, end: genapEnd };
-	}, [today, selected, ganjilStart, ganjilEnd, genapStart, genapEnd]);
+		return { label: `${t('student.calendar.evenSemester')} · 2026/2027`, start: genapStart, end: genapEnd };
+	}, [today, selected, ganjilStart, ganjilEnd, genapStart, genapEnd, t]);
 
 	return (
 		<section className="ac2">
 			<header className="ac2-head">
 				<div className="ac2-head-copy">
 					<Link to="/app" className="ac2-back">
-						<ArrowLeft size={14} /> Kembali ke dasbor
+						<ArrowLeft size={14} /> {t('student.calendar.back')}
 					</Link>
-					<h1>Kalender Akademik</h1>
-					<p className="ac2-kicker">Tahun Akademik 2026/2027 · Universitas Pendidikan Indonesia</p>
+					<h1>{t('student.calendar.title')}</h1>
+					<p className="ac2-kicker">{t('student.calendar.year')}</p>
 					<p className="ac2-sub">
-						Lihat hari libur nasional, cuti bersama, dan tanggal akademik UPI dalam satu kalender.
-						Setiap tanggal mengikuti sumber resmi — tidak ada peristiwa yang dikarang.
+						{t('student.calendar.description')}
 					</p>
-					<div className="ac2-sources" aria-label="Sumber kalender">
+					<div className="ac2-sources" aria-label={t('student.calendar.sources')}>
 						{CALENDAR_SOURCES.map((src) => (
 							<a key={src.id} href={src.url} target="_blank" rel="noreferrer" title={src.description}>
 								<ExternalLink size={12} />
@@ -391,12 +393,12 @@ export function AcademicCalendar() {
 							aria-expanded={exportOpen}
 							onClick={() => setExportOpen((v) => !v)}
 						>
-							<Download size={15} /> Ekspor <ChevronDown size={14} />
+							<Download size={15} /> {t('student.calendar.export')} <ChevronDown size={14} />
 						</button>
 						{exportOpen && (
 							<div className="ac2-menu" role="menu">
 								<button type="button" role="menuitem" onClick={downloadIcs} disabled={filtered.length === 0}>
-									Unduh .ics ({filtered.length} peristiwa)
+									{t('student.calendar.downloadIcs', { n: String(filtered.length) })}
 								</button>
 							</div>
 						)}
@@ -405,10 +407,10 @@ export function AcademicCalendar() {
 			</header>
 
 			<div className="ac2-toolbar">
-				<div className="ac2-filters" role="group" aria-label="Saring kategori">
+				<div className="ac2-filters" role="group" aria-label={t('student.calendar.filterCategories')}>
 					<button type="button" className={`ac2-check all${allOn ? ' on' : ''}`} aria-pressed={allOn} onClick={toggleAll}>
 						<span className="ac2-box" aria-hidden>{allOn && <Check size={11} strokeWidth={3} />}</span>
-						Semua
+						{t('student.calendar.all')}
 					</button>
 					{ALL_CATEGORIES.map((cat) => {
 						const on = enabled[cat];
@@ -421,13 +423,13 @@ export function AcademicCalendar() {
 								onClick={() => setEnabled((prev) => ({ ...prev, [cat]: !prev[cat] }))}
 							>
 								<span className="ac2-box" aria-hidden>{on && <Check size={11} strokeWidth={3} />}</span>
-								{CATEGORY_META[cat].label}
+								{t(`student.calendar.category.${cat}`)}
 							</button>
 						);
 					})}
 				</div>
-				<div className="ac2-views" role="tablist" aria-label="Tampilan kalender">
-					{([['month', 'Bulan'], ['week', 'Minggu'], ['list', 'Daftar']] as const).map(([id, label]) => (
+				<div className="ac2-views" role="tablist" aria-label={t('student.calendar.views')}>
+					{([['month', t('student.calendar.month')], ['week', t('student.calendar.week')], ['list', t('student.calendar.list')]] as const).map(([id, label]) => (
 						<button
 							key={id}
 							type="button"
@@ -450,7 +452,7 @@ export function AcademicCalendar() {
 								<button
 									type="button"
 									className="ac2-round"
-									aria-label={view === 'week' ? 'Minggu sebelumnya' : 'Bulan sebelumnya'}
+									aria-label={view === 'week' ? t('student.calendar.previousWeek') : t('student.calendar.previousMonth')}
 									disabled={view === 'week' ? !monthInRange(parseISO(addDays(selected, -7)).getUTCFullYear(), parseISO(addDays(selected, -7)).getUTCMonth()) : !canPrev}
 									onClick={() => (view === 'week' ? shiftWeek(-1) : shiftMonth(-1))}
 								>
@@ -458,13 +460,13 @@ export function AcademicCalendar() {
 								</button>
 								<strong>
 									{view === 'week'
-										? `${parseISO(weekDays[0]).getUTCDate()}–${formatDay(weekDays[6])}`
-										: `${MONTHS_ID[cursor.month]} ${cursor.year}`}
+										? `${parseISO(weekDays[0]).getUTCDate()}–${formatDay(weekDays[6], language)}`
+										: `${monthNames[cursor.month]} ${cursor.year}`}
 								</strong>
 								<button
 									type="button"
 									className="ac2-round"
-									aria-label={view === 'week' ? 'Minggu berikutnya' : 'Bulan berikutnya'}
+									aria-label={view === 'week' ? t('student.calendar.nextWeek') : t('student.calendar.nextMonth')}
 									disabled={view === 'week' ? !monthInRange(parseISO(addDays(selected, 7)).getUTCFullYear(), parseISO(addDays(selected, 7)).getUTCMonth()) : !canNext}
 									onClick={() => (view === 'week' ? shiftWeek(1) : shiftMonth(1))}
 								>
@@ -472,21 +474,21 @@ export function AcademicCalendar() {
 								</button>
 							</div>
 							<button type="button" className="ac2-today" onClick={goToday} disabled={!today || !monthInRange(parseISO(today).getUTCFullYear(), parseISO(today).getUTCMonth())}>
-								Hari ini
+								{t('student.calendar.today')}
 							</button>
 						</div>
 
 						{!anyOn && (
 							<div className="ac2-empty banner">
 								<CalendarOff size={18} />
-								<p>Aktifkan minimal satu kategori untuk melihat peristiwa.</p>
+							<p>{t('student.calendar.enableCategory')}</p>
 							</div>
 						)}
 
 						{view === 'month' && (
-							<div className="ac2-month" role="grid" aria-label={`Kalender ${MONTHS_ID[cursor.month]} ${cursor.year}`}>
+						<div className="ac2-month" role="grid" aria-label={t('student.calendar.monthView', { month: monthNames[cursor.month], year: String(cursor.year) })}>
 								<div className="ac2-dow" role="row">
-									{DOW_SHORT.map((d) => <span key={d} role="columnheader">{d}</span>)}
+									{dowShort.map((d) => <span key={d} role="columnheader">{d}</span>)}
 								</div>
 								<div className="ac2-grid">
 									{cells.map((iso) => {
@@ -501,7 +503,7 @@ export function AcademicCalendar() {
 												type="button"
 												role="gridcell"
 												className={`ac2-cell${outside ? ' out' : ''}${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}`}
-												aria-label={dayEvents.length ? `${formatDay(iso)}: ${dayEvents.map((e) => e.title).join(', ')}` : formatDay(iso)}
+											aria-label={dayEvents.length ? `${formatDay(iso, language)}: ${dayEvents.map((e) => e.title).join(', ')}` : formatDay(iso, language)}
 												aria-pressed={isSelected}
 												onClick={() => pickDay(iso)}
 											>
@@ -516,32 +518,32 @@ export function AcademicCalendar() {
 															</span>
 														);
 													})}
-													{dayEvents.length > 2 && <span className="ac2-more">+{dayEvents.length - 2} lagi</span>}
+											{dayEvents.length > 2 && <span className="ac2-more">{t('student.calendar.more', { n: String(dayEvents.length - 2) })}</span>}
 												</span>
 											</button>
 										);
 									})}
 								</div>
-								{anyOn && monthEvents.length === 0 && (
-									<p className="ac2-inline-empty">Tidak ada peristiwa pada bulan ini untuk filter yang aktif.</p>
+				{anyOn && monthEvents.length === 0 && (
+					<p className="ac2-inline-empty">{t('student.calendar.noEventsForFilter')}</p>
 								)}
 							</div>
 						)}
 
 						{view === 'week' && (
-							<div className="ac2-week" role="grid" aria-label="Tampilan minggu">
+							<div className="ac2-week" role="grid" aria-label={t('student.calendar.weekView')}>
 								{weekDays.map((iso) => {
 									const dayEvents = eventsOnDay(filtered, iso);
 									const isSelected = iso === selected;
 									return (
 										<div key={iso} className={`ac2-week-col${isSelected ? ' selected' : ''}${iso === today ? ' today' : ''}`}>
 											<button type="button" className="ac2-week-head" onClick={() => pickDay(iso)}>
-												<span>{DOW_SHORT[mondayIndex(parseISO(iso).getUTCDay())]}</span>
+									<span>{dowShort[mondayIndex(parseISO(iso).getUTCDay())]}</span>
 												<strong>{parseISO(iso).getUTCDate()}</strong>
 											</button>
 											<div className="ac2-week-body">
 												{dayEvents.length === 0 ? (
-													<p className="ac2-week-empty">Tidak ada peristiwa</p>
+								<p className="ac2-week-empty">{t('student.calendar.noEvents')}</p>
 												) : dayEvents.map((ev) => {
 													const Icon = iconFor(ev.category);
 													return (
@@ -559,18 +561,18 @@ export function AcademicCalendar() {
 						)}
 
 						{view === 'list' && (
-							<div className="ac2-list" aria-label={`Daftar ${MONTHS_ID[cursor.month]} ${cursor.year}`}>
+						<div className="ac2-list" aria-label={t('student.calendar.listView', { month: monthNames[cursor.month], year: String(cursor.year) })}>
 								{monthEvents.length === 0 ? (
 									<div className="ac2-empty">
 										<CalendarOff size={20} />
-										<p>Tidak ada peristiwa pada bulan ini untuk filter yang aktif.</p>
+										<p>{t('student.calendar.noEventsForFilter')}</p>
 									</div>
 								) : (
 									<ul>
 										{monthEvents.map((ev) => (
 											<li key={ev.id}>
 												<button type="button" className={`ac2-agenda-card cat-${ev.category}`} onClick={() => pickDay(ev.start)}>
-													<AgendaBody ev={ev} />
+											<AgendaBody ev={ev} language={language} t={t} />
 												</button>
 											</li>
 										))}
@@ -584,26 +586,26 @@ export function AcademicCalendar() {
 				<aside className="ac2-side">
 					<div className="ac2-card ac2-agenda">
 						<div className="ac2-agenda-head">
-							<strong>{weekdayLong(selected)}, {formatDay(selected)}</strong>
-							<span>{selectedEvents.length === 0 ? 'Tidak ada kegiatan' : `${selectedEvents.length} kegiatan`}</span>
+						<strong>{weekdayLong(selected, language)}, {formatDay(selected, language)}</strong>
+						<span>{t('student.calendar.eventCount', { n: String(selectedEvents.length) })}</span>
 						</div>
 						{selectedEvents.length === 0 ? (
 							<div className="ac2-empty compact">
 								<CalendarOff size={18} />
-								<p>Tidak ada peristiwa pada tanggal ini.</p>
+							<p>{t('student.calendar.noEventsForDay')}</p>
 							</div>
 						) : (
 							<ul>
 								{selectedEvents.map((ev) => (
 									<li key={ev.id} className={`ac2-agenda-card cat-${ev.category}`}>
-										<AgendaBody ev={ev} />
+									<AgendaBody ev={ev} language={language} t={t} />
 										{ev.href ? (
 											<Link className="ac2-source-btn" to={ev.href}>
-												Buka mata kuliah <ChevronRight size={13} />
+								{t('student.calendar.openCourse')} <ChevronRight size={13} />
 											</Link>
 										) : (
 											<a className="ac2-source-btn" href={sourceFor(ev.category).url} target="_blank" rel="noreferrer">
-												Lihat sumber <ChevronRight size={13} />
+								{t('student.calendar.viewSource')} <ChevronRight size={13} />
 											</a>
 										)}
 									</li>
@@ -614,18 +616,18 @@ export function AcademicCalendar() {
 
 					<div className="ac2-card ac2-mini">
 						<div className="ac2-mini-nav">
-							<strong>{MONTHS_ID[cursor.month]} {cursor.year}</strong>
+						<strong>{monthNames[cursor.month]} {cursor.year}</strong>
 							<div>
-								<button type="button" aria-label="Bulan sebelumnya" disabled={!canPrev} onClick={() => shiftMonth(-1)}>
+							<button type="button" aria-label={t('student.calendar.previousMonth')} disabled={!canPrev} onClick={() => shiftMonth(-1)}>
 									<ChevronLeft size={14} />
 								</button>
-								<button type="button" aria-label="Bulan berikutnya" disabled={!canNext} onClick={() => shiftMonth(1)}>
+							<button type="button" aria-label={t('student.calendar.nextMonth')} disabled={!canNext} onClick={() => shiftMonth(1)}>
 									<ChevronRight size={14} />
 								</button>
 							</div>
 						</div>
 						<div className="ac2-mini-dow">
-							{DOW_SHORT.map((d) => <span key={d}>{d}</span>)}
+						{dowShort.map((d) => <span key={d}>{d}</span>)}
 						</div>
 						<div className="ac2-mini-grid">
 							{cells.map((iso) => {
@@ -638,7 +640,7 @@ export function AcademicCalendar() {
 										type="button"
 										className={`${outside ? 'out' : ''}${iso === selected ? ' selected' : ''}${iso === today ? ' today' : ''}${marked ? ' marked' : ''}`}
 										onClick={() => pickDay(iso)}
-										aria-label={formatDay(iso)}
+									aria-label={formatDay(iso, language)}
 										aria-pressed={iso === selected}
 									>
 										{d.getUTCDate()}
@@ -650,11 +652,11 @@ export function AcademicCalendar() {
 
 					<div className="ac2-card ac2-semester">
 						{semester && today ? (
-							<SemesterBar semester={semester} today={today} />
+							<SemesterBar semester={semester} today={today} language={language} t={t} />
 						) : (
 							<div className="ac2-empty compact">
 								<CalendarOff size={18} />
-								<p>Rentang semester belum tersedia dari data kalender.</p>
+							<p>{t('student.calendar.semesterUnavailable')}</p>
 							</div>
 						)}
 					</div>
@@ -662,7 +664,7 @@ export function AcademicCalendar() {
 			</div>
 
 			<footer className="ac2-foot">
-				<h2>Sumber &amp; catatan</h2>
+				<h2>{t('student.calendar.sourcesNotes')}</h2>
 				<ul>
 					{CALENDAR_SOURCES.map((src) => (
 						<li key={src.id}>
@@ -673,15 +675,14 @@ export function AcademicCalendar() {
 					))}
 				</ul>
 				<p>
-					Tanggal libur mengikuti SKB Tiga Menteri 2026; tanggal akademik mengikuti Kalender Akademik UPI TA 2026/2027.
-					Kalender ini panduan, bukan dokumen hukum — periksa sumber resmi sebelum menjadwalkan kegiatan penting.
+					{t('student.calendar.disclaimer')}
 				</p>
 			</footer>
 		</section>
 	);
 }
 
-function AgendaBody({ ev }: { ev: CalendarEvent }) {
+function AgendaBody({ ev, language, t }: { ev: CalendarEvent; language: 'id' | 'en' | 'de'; t: (key: string) => string }) {
 	const Icon = iconFor(ev.category);
 	return (
 		<div className="ac2-agenda-body">
@@ -690,7 +691,7 @@ function AgendaBody({ ev }: { ev: CalendarEvent }) {
 			</span>
 			<div>
 				<strong>{ev.title}</strong>
-				<small>{formatRange(ev.start, ev.end)} · {CATEGORY_META[ev.category].short}</small>
+				<small>{formatRange(ev.start, ev.end, language)} · {t(`student.calendar.categoryShort.${ev.category}`)}</small>
 				{ev.note && <em>{ev.note}</em>}
 			</div>
 		</div>
@@ -700,16 +701,20 @@ function AgendaBody({ ev }: { ev: CalendarEvent }) {
 function SemesterBar({
 	semester,
 	today,
+	language,
+	t,
 }: {
 	semester: { label: string; start: string; end: string };
 	today: string;
+	language: 'id' | 'en' | 'de';
+	t: (key: string) => string;
 }) {
 	const start = parseISO(semester.start).getTime();
 	const end = parseISO(semester.end).getTime();
 	const now = parseISO(today).getTime();
 	const span = Math.max(1, end - start);
 	const ratio = Math.min(1, Math.max(0, (now - start) / span));
-	const status = today < semester.start ? 'Belum dimulai' : today > semester.end ? 'Sudah berakhir' : 'Berlangsung';
+	const status = today < semester.start ? t('student.calendar.notStarted') : today > semester.end ? t('student.calendar.ended') : t('student.calendar.inProgress');
 	return (
 		<>
 			<div className="ac2-sem-head">
@@ -722,12 +727,12 @@ function SemesterBar({
 			</div>
 			<div className="ac2-sem-labels">
 				<div>
-					<strong>{formatShort(semester.start)}</strong>
-					<span>Mulai perkuliahan</span>
+					<strong>{formatShort(semester.start, language)}</strong>
+					<span>{t('student.calendar.startOfClasses')}</span>
 				</div>
 				<div>
-					<strong>{formatShort(semester.end)}</strong>
-					<span>Akhir perkuliahan</span>
+					<strong>{formatShort(semester.end, language)}</strong>
+					<span>{t('student.calendar.endOfClasses')}</span>
 				</div>
 			</div>
 		</>

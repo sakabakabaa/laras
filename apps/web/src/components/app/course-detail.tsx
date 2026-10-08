@@ -47,6 +47,7 @@ import type { Course, ClassSession } from '@/lib/learning';
 import { dateLabel, errorMessage } from '@/lib/learning';
 import { invalidate, invalidateCollections, invalidateCourseData } from '@/lib/local-cache';
 import { LIMITS, limitMessage, runeCount } from '@/lib/rps-limits';
+import { useT } from '@/lib/i18n';
 import {
 	courseSectionPath,
 	sectionFromLegacyTab,
@@ -55,6 +56,7 @@ import {
 } from '@/lib/course-sections';
 
 export function CourseDetail({ routeId }: { routeId: string }) {
+	const t = useT();
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const role = (user as { role?: string } | null)?.role || 'faculty';
@@ -333,21 +335,21 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 		<>
 			{loading ? (
 				<div className="ld-loading">
-					<LoaderCircle size={24} className="spin" /> Memuat mata kuliah...
+				<LoaderCircle size={24} className="spin" /> {isStudent ? t('student.courses.loading') : 'Memuat mata kuliah...'}
 				</div>
 			) : !course ? (
 				<div className="ld-empty">
 					<div className="ld-empty-icon">
 						<BookOpenText size={26} strokeWidth={1.4} />
 					</div>
-					<h3>Mata kuliah tidak tersedia</h3>
-					<p>{loadError || error || 'Mata kuliah ini tidak dapat ditemukan.'}</p>
+					<h3>{isStudent ? t('student.courseDetail.notFound') : 'Mata kuliah tidak tersedia'}</h3>
+					<p>{loadError || error || (isStudent ? t('student.courseDetail.notFoundDescription') : 'Mata kuliah ini tidak dapat ditemukan.')}</p>
 					<button
 						type="button"
 						className="ld-btn-primary"
 						onClick={() => navigate('/app')}
 					>
-						Kembali ke mata kuliah
+						{isStudent ? t('student.courseDetail.backToCourses') : 'Kembali ke mata kuliah'}
 					</button>
 				</div>
 			) : (
@@ -355,11 +357,11 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 					<div className="ld-detail-head">
 						<CourseThumb course={course} className="ld-detail-thumb" />
 						<div className="ld-detail-info">
-							<span>{course.code || 'Kode belum diisi'}</span>
+							<span>{course.code || (isStudent ? t('student.common.noCode') : 'Kode belum diisi')}</span>
 							<span className="ld-dot" />
-							<span>{course.semester || 'Semester belum diisi'}</span>
+							<span>{course.semester || (isStudent ? t('student.common.noSemester') : 'Semester belum diisi')}</span>
 							<span className="ld-dot" />
-							<span>{course.academicYear || 'Tahun akademik belum diisi'}</span>
+							<span>{course.academicYear || (isStudent ? t('student.courseDetail.noAcademicYear') : 'Tahun akademik belum diisi')}</span>
 						</div>
 						<div className="ld-detail-actions">
 							<SectionSelector sections={sections} value={sectionFilter} onChange={setSectionFilter} />
@@ -374,11 +376,11 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 										<LoaderCircle size={16} className="spin" />
 									) : enrolled ? (
 										<>
-											<Check size={16} /> Sudah terdaftar
+										<Check size={16} /> {t('student.courseDetail.enrolled')}
 										</>
 									) : (
 										<>
-											<Plus size={16} /> Daftar mata kuliah
+										<Plus size={16} /> {t('student.courseDetail.enroll')}
 										</>
 									)}
 								</button>

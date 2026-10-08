@@ -7,12 +7,14 @@ import { CardCta } from '@/components/card-cta';
 import { StudentSectionChip } from '@/components/app/course-sections';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { courseRouteId } from '@/lib/course-route';
+import { useT } from '@/lib/i18n';
 import pb from '@/lib/pocketbase-client';
 import type { ClassSession, Course, Enrollment } from '@/lib/learning';
 
 type EnrichedEnrollment = Enrollment & { expand?: { course?: Course } };
 
 export function StudentCourses() {
+	const t = useT();
 	const [query, setQuery] = useState('');
 
 	const coursesQuery = useCachedQuery<Course[]>('courses:all:title', () =>
@@ -63,34 +65,34 @@ export function StudentCourses() {
 				<div className="ld-alert" role="alert">
 					{error}{' '}
 					<button type="button" onClick={() => void load()}>
-						Coba lagi
+						{t('student.common.retry')}
 					</button>
 				</div>
 			)}
 			{loading ? (
 				<div className="ld-loading">
-					<LoaderCircle size={24} className="spin" /> Memuat mata kuliah...
+				<LoaderCircle size={24} className="spin" /> {t('student.courses.loading')}
 				</div>
 			) : (
 				<div className="ld-student">
 					<div className="ld-page-head">
-						<span className="ld-eyebrow">Ruang belajar</span>
-						<h1>Mata Kuliah</h1>
+						<span className="ld-eyebrow">{t('student.common.studySpace')}</span>
+						<h1>{t('student.courses.title')}</h1>
 					</div>
-					<section className="ld-panel" aria-label="Mata kuliah yang diikuti">
+					<section className="ld-panel" aria-label={t('student.courses.enrolled')}>
 						<div className="ld-card-head">
-							<h2>Mata kuliah yang diikuti</h2>
-							<span className="ld-chip">{enrolled.length} kelas</span>
+							<h2>{t('student.courses.enrolled')}</h2>
+							<span className="ld-chip">{enrolled.length === 1 ? t('student.courses.classCountOne') : t('student.courses.classCount', { n: String(enrolled.length) })}</span>
 						</div>
 						{enrolled.length === 0 ? (
 							<div className="ld-empty">
 								<div className="ld-empty-icon">
 									<BookOpen size={26} strokeWidth={1.4} />
 								</div>
-								<h3>Belum ada mata kuliah</h3>
-								<p>Daftar mata kuliah dari ruang belajar untuk membuka materi, sesi, dan tugas.</p>
+								<h3>{t('student.courses.emptyTitle')}</h3>
+								<p>{t('student.courses.emptyBody')}</p>
 								<Link to="/app/student" className="ld-btn-primary">
-									Ke ruang belajar
+									{t('student.common.goToStudySpace')}
 								</Link>
 							</div>
 						) : (
@@ -99,14 +101,14 @@ export function StudentCourses() {
 									<Search size={16} strokeWidth={1.75} aria-hidden />
 									<input
 										type="search"
-										placeholder="Cari berdasarkan nama, kode, atau semester..."
+									placeholder={t('student.courses.searchPlaceholder')}
 										value={query}
 										onChange={(event) => setQuery(event.target.value)}
-										aria-label="Cari mata kuliah"
+									aria-label={t('student.courses.searchLabel')}
 									/>
 								</label>
 								{filtered.length === 0 ? (
-									<div className="ld-empty-sm">Tidak ada mata kuliah yang cocok dengan pencarian.</div>
+									<div className="ld-empty-sm">{t('student.courses.noMatch')}</div>
 								) : (
 									<ul className="sd-course-list">
 										{filtered.map((course) => {
@@ -124,7 +126,7 @@ export function StudentCourses() {
 																<StudentSectionChip courseId={course.id} />
 															</div>
 															<small>
-																{course.code || 'Tanpa kode'}
+											{course.code || t('student.common.noCode')}
 																{course.semester ? ` · ${course.semester}` : ''}
 															</small>
 															<div className="sd-course-foot">
@@ -135,11 +137,11 @@ export function StudentCourses() {
 																	<em>{pct}%</em>
 																</div>
 																<span className="sd-sesi-count">
-																	{done}/{total} sesi
+											{t('student.courses.sessionCount', { done: String(done), total: String(total) })}
 																</span>
 															</div>
 														</div>
-														<CardCta to={`/app/courses/${courseRouteId(course)}`} label="Buka" />
+									<CardCta to={`/app/courses/${courseRouteId(course)}`} label={t('sd.open')} />
 													</article>
 												</li>
 											);

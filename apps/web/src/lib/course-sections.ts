@@ -70,7 +70,7 @@ export const SECTION_LABEL: Record<CourseSection, string> = {
 	rps: 'RPS',
 	silabus: 'Silabus',
 	'mata-kuliah': 'Pertemuan',
-	absensi: 'Absensi',
+	absensi: 'Absensi & Keaktivan',
 	tugas: 'Tugas',
 	latihan: 'Latihan',
 	berkas: 'Berkas',

@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import pb from '@/lib/pocketbase-client';
 import { Link } from 'react-router';
 import { ArrowRight, GraduationCap, LoaderCircle } from 'lucide-react';
 import type { Course } from '@/lib/learning';
@@ -25,7 +26,7 @@ type Props = {
  */
 export function StudentGrades({ course }: Props) {
 	const t = useT();
-	const language = useLanguage();
+const language = useLanguage();
 	const dateLabel = (date?: string) => date ? new Intl.DateTimeFormat(language === 'de' ? 'de-DE' : language === 'en' ? 'en-GB' : 'id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(date)) : t('student.grades.noDeadline');
 	const { assignments, loading } = useCourseAssignments(course.id);
 	const studentVisible = useMemo(
@@ -34,6 +35,14 @@ export function StudentGrades({ course }: Props) {
 	);
 	const mySubmissions = useMySubmissions(studentVisible);
 	const submissions = mySubmissions.data ?? [];
+    const [summary, setSummary] = useState<{ published: boolean; final: {value:number|null;letter:string|null}|null; components: {name:string;weight:number;bonus:boolean;score:number|null;detail:string}[] } | null>(null);
+    useEffect(() => {
+        let alive = true;
+        fetch('/api/course-grade-summary',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+pb.authStore.token},body:JSON.stringify({courseId:course.id})})
+            .then(async r => {if(r.ok && alive) setSummary(await r.json());}).catch(()=>{});
+        return () => {alive=false;};
+    },[course.id, mySubmissions.data]);
+
 
 	const subByAssignment = useMemo(() => {
 		const map = new Map<string, AssignmentSubmission>();
@@ -81,7 +90,12 @@ export function StudentGrades({ course }: Props) {
 				</div>
 			</div>
 
-			<div className="sgr-summary">
+			{summary && <section className="ld-panel" style={{padding:20,marginBottom:20}}>
+    <h3>Komponen nilai mata kuliah</h3>
+    <div className="pp-profile-skills">{summary.components.map(c => <article className="pp-profile-skill" key={c.name}><strong>{c.name}</strong><p>{c.score == null ? '—' : (c.bonus ? '+' : '') + c.score}{!c.bonus && ' / 100'}</p><small>{c.bonus ? 'Bonus di luar bobot' : 'Bobot '+c.weight+'%'}</small><p style={{fontSize:12}}>{c.detail}</p></article>)}</div>
+    <p><strong>Nilai akhir: {summary.published && summary.final?.value != null ? summary.final.value + ' · ' + summary.final.letter : 'Belum diterbitkan / belum lengkap'}</strong></p>
+</section>}
+<div className="sgr-summary">
 				<div className="sgr-summary-card">
 					<strong>{avg != null ? studentGradeLabel(avg) : '—'}</strong>
 					<span>{t('student.grades.average')}</span>

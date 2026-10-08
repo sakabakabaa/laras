@@ -16,7 +16,14 @@ export type DraftCpmk = DraftItem & {
 	/** "Kriteria Pencapaian CPMK" text. */
 	criteria?: string;
 };
-export type DraftAssessment = DraftItem & { weight: number | null };
+export type DraftAssessment = DraftItem & { weight: number | null; bonusMax?: number; componentType?: string };
+export const DEFAULT_ASSESSMENTS: DraftAssessment[] = [
+    { code: 'Kehadiran', description: 'Kehadiran pada pertemuan perkuliahan.', weight: 10 },
+    { code: 'Tugas', description: 'Rata-rata tertimbang nilai tugas formal yang diterbitkan.', weight: 30 },
+    { code: 'UTS', description: 'Ujian tengah semester.', weight: 25 },
+    { code: 'UAS', description: 'Ujian akhir semester.', weight: 35 },
+    { code: 'Keaktivan', description: 'Bonus partisipasi di luar bobot 100%; nilai akhir dibatasi 100.', weight: 0, bonusMax: 5 },
+];
 export type DraftSession = {
 	id?: string;
 	week: number;
@@ -158,7 +165,7 @@ export const EMPTY_DRAFT: RpsDraft = {
 	cplItems: [],
 	cpmkItems: [],
 	topicItems: [],
-	assessmentItems: [],
+    assessmentItems: DEFAULT_ASSESSMENTS.map(a => ({ ...a })),
 	sessions: [],
 	collaborativeTasks: [],
 	warnings: [],

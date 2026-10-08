@@ -172,7 +172,7 @@ export type Cpmk = StructuredItem & {
 export type SubCpmk = StructuredItem & { cpmk: string };
 
 /** Assessment carries an optional weight percentage. */
-export type Assessment = StructuredItem & { weight: number | null };
+export type Assessment = StructuredItem & { weight: number | null; componentType?: string; bonusMax?: number };
 
 /** A class session may link to multiple structured records. */
 export type ClassSessionLinks = {

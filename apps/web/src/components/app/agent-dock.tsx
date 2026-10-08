@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Maximize2, Sparkles, X } from 'lucide-react';
 import { AssistantPanel } from '@/components/app/assistant-panel';
@@ -38,6 +38,14 @@ export function AgentPane({
 	seed?: AssistantSeed | null;
 	onSeedConsumed?: () => void;
 }) {
+	const [transitioning, setTransitioning] = useState(false);
+	useLayoutEffect(() => {
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		setTransitioning(true);
+		const timer = window.setTimeout(() => setTransitioning(false), 280);
+		return () => window.clearTimeout(timer);
+	}, [open]);
+
 	useEffect(() => {
 		if (!open) return;
 		const onKey = (e: KeyboardEvent) => {
@@ -50,7 +58,7 @@ export function AgentPane({
 	return (
 		<aside
 			id="ld-agent-panel"
-			className={`ld-agent-panel${open ? ' open' : ''}`}
+			className={`ld-agent-panel${open ? ' open' : ''}${transitioning ? ' transitioning' : ''}`}
 			aria-hidden={!open}
 			inert={!open}
 			aria-label="Asisten dosen"
@@ -70,7 +78,15 @@ export function AgentPane({
 				</div>
 			</header>
 			<div className="ld-agent-body">
-				{open && <AssistantPanel variant="drawer" name={name} seed={seed} onSeedConsumed={onSeedConsumed} />}
+				<AssistantPanel variant="drawer" name={name} seed={seed} onSeedConsumed={onSeedConsumed} />
+				{transitioning && (
+					<div className="ld-agent-skeleton" aria-hidden="true">
+						<div className="ld-agent-skeleton-toolbar"><span /><span /></div>
+						<div className="ld-agent-skeleton-message user"><span /><span /></div>
+						<div className="ld-agent-skeleton-message"><span /><span /><span /></div>
+						<div className="ld-agent-skeleton-composer"><span /><span /></div>
+					</div>
+				)}
 			</div>
 		</aside>
 	);

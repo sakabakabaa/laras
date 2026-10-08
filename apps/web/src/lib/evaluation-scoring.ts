@@ -1,30 +1,4 @@
-/**
- * Phase 3 (evaluasi dosen) — rubric score recalculation for Tugas formal.
- *
- * Pure helpers shared by the lecturer review UI and the server publish route,
- * so the score the lecturer sees is exactly the score the server publishes.
- *
- * Scoring v2 (proportional, capped, length-aware — mirrors formative-scoring):
- * The TOTAL uses a proportional capped model so several real errors on a long
- * answer cannot floor it at 0:
- *   - major: −12 per finding, capped at −60 total
- *   - minor: −3 per finding, capped at −18 total
- *   - length tolerance: longer answers tolerate a few errors
- *   - completion cap: near-empty answers (< 15 words) cannot score high
- *
- * Per-criterion rows stay informational at −20/−8 so the lecturer sees which
- * criterion is weak. General/unmapped findings (no rubric criterion match)
- * never vanish — they contribute to the total through the same proportional
- * pool and appear as a "general notes" row.
- *
- * Rule (transparent, deduction-only, never a guess): every rubric criterion
- * starts at 100; each APPROVED finding (AI approved/edited, or a
- * lecturer-made finding — rejected AI findings never count) reduces it by a
- * fixed penalty (major 20, minor 8), floored at 0. The calculated score is
- * the weighted average across criteria (equal weights when unset). Tasks
- * without stored rubric criteria use one overall deduction score from all
- * approved findings.
- */
+/** Formal scoring v4: explicit achievement scores per criterion, weighted to 100. Error findings provide evidence and never add automatic deductions. Legacy constants remain for the separate formative scorer. */
 import { parseSpeakingConfig, parseWritingConfig, taskKindForShape } from '@/lib/task-types';
 import type { AssignmentShape } from '@/lib/assignments';
 
@@ -52,7 +26,7 @@ export const CONFIDENCE_LOW_THRESHOLD = 0.6;
 
 /** Scoring version recorded on each published evaluation.
  * v3 = weight-sensitive proportional-capped total with a visible factor breakdown. */
-export const CURRENT_SCORING_VERSION = 3;
+export const CURRENT_SCORING_VERSION = 4;
 
 export type RubricCriterion = { id: string; label: string; weight: number };
 
@@ -215,240 +189,33 @@ export function autoAssignCriterion(
 	return best ? best.id : '';
 }
 
-/** Format a penalty/tolerance number for the rationale line (int when clean). */
-function fmt(n: number): string {
-	return Number.isInteger(n) ? String(n) : n.toFixed(1);
-}
-
-/** First word of a criterion label, capitalised — compact factor label. */
-function shortLabel(label: string): string {
-	const text = label.trim().replace(/^jika dimasukkan,?\s*/i, '');
-	const word = (text.split(/\s+/)[0] || text).replace(/[.,;:()]/g, '');
-	return word ? word.charAt(0).toUpperCase() + word.slice(1) : label;
-}
-
-/**
- * Recalculates the rubric scores from the current findings.
- *
- * By default only confirmed findings count (approved/edited/lecturer-made) —
- * the rule the server publishes with. Pass `{ includePending: true }` for the
- * live review panel, where every non-rejected finding (pending AI
- * recommendations included) is reflected so the lecturer sees the provisional
- * impact immediately. Rejected AI findings never count in either mode.
- *
- * Scoring v3 (weight-sensitive proportional-capped):
- * - For each criterion, its findings' proportional penalty (major × 12,
- *   minor × 3) is scaled by `weight / avgWeight` so a heavily-weighted
- *   criterion hurts more than a lightly-weighted one. `avgWeight = weightSum /
- *   criteria.length`, so equal-weight rubrics scale by 1 and produce exactly
- *   the same total as the pre-weighting model — nothing regresses.
- * - General/unmapped findings get a synthetic weight equal to `avgWeight`
- *   (factor 1): they are neither over-penalised nor ignored.
- * - The caps (major 60, minor 18) apply to the TOTAL scaled penalty, so a
- *   long answer with many real errors still cannot floor at 0.
- * - Length tolerance and a completion cap still apply on top.
- * - Per-criterion rows stay informational at −20/−8 so the lecturer sees
- *   which criterion is weak; they do not move the total.
- * - `factors[]` records every arithmetic step (with a signed impact) and
- *   `rationale` summarises it. Both are derived from the exact computation
- *   that produces `total`: summing the factor impacts (then clamping) equals
- *   the published total, so the UI can never disagree with the score.
- */
 export function calculateRubricScores(
-	findings: ScoringFinding[],
-	criteria: RubricCriterion[],
-	options?: { includePending?: boolean; wordCount?: number },
+    findings: ScoringFinding[],
+    criteria: RubricCriterion[],
+    options?: { includePending?: boolean; wordCount?: number; criterionScores?: Record<string, number> },
 ): RubricScores {
-	const counted = findings.filter((f) =>
-		options?.includePending ? f.status !== 'rejected' : isCountedFinding(f.status),
-	);
-	const wordCount = Math.max(0, Math.round(options?.wordCount ?? 0));
-
-	// Length tolerance — longer answers tolerate a few errors.
-	let lengthTolerance = 0;
-	let lengthBand = '';
-	for (const band of LENGTH_TOLERANCE) {
-		if (wordCount >= band.min) {
-			lengthTolerance = band.tolerance;
-			lengthBand = `≥ ${band.min} kata`;
-			break;
-		}
-	}
-
-	// Completion cap — a near-empty answer cannot score high.
-	const completionCap = wordCount < COMPLETION_CAP_WORDS ? COMPLETION_CAP_SCORE : 100;
-
-	// Weight setup. avgWeight normalises so equal weights scale by 1 (matching
-	// the pre-weighting model); a criterion heavier than average scales > 1.
-	const N = criteria.length;
-	const weighted = criteria.map((c) => (c.weight > 0 ? c.weight : 1));
-	const weightSum = weighted.reduce((s, w) => s + w, 0);
-	const avgWeight = N > 0 ? weightSum / N : 1;
-
-	// Per-criterion counts + scaled (pre-cap) contributions.
-	type CriterionStat = {
-		criterion: RubricCriterion;
-		weight: number;
-		factor: number;
-		major: number;
-		minor: number;
-		majorContrib: number;
-		minorContrib: number;
-	};
-	const stats: CriterionStat[] = criteria.map((criterion, i) => {
-		const weight = weighted[i];
-		const factor = weight / avgWeight;
-		const assigned = counted.filter((f) => matchesCriterion(f.criterion, criterion));
-		const major = assigned.filter((f) => f.severity === 'major').length;
-		const minor = assigned.filter((f) => f.severity === 'minor').length;
-		return {
-			criterion,
-			weight,
-			factor,
-			major,
-			minor,
-			majorContrib: major * MAJOR_PER_POINT * factor,
-			minorContrib: minor * MINOR_PER_POINT * factor,
-		};
-	});
-
-	// General findings (no criterion match). Synthetic weight = avgWeight →
-	// factor 1, so they count exactly as they did before weighting.
-	const generalFindings = counted.filter((f) => {
-		if (N === 0) return true;
-		if (!f.criterion || !f.criterion.trim()) return true;
-		return !criteria.some((c) => matchesCriterion(f.criterion, c));
-	});
-	const generalMajor = generalFindings.filter((f) => f.severity === 'major').length;
-	const generalMinor = generalFindings.filter((f) => f.severity === 'minor').length;
-	const generalMajorContrib = generalMajor * MAJOR_PER_POINT;
-	const generalMinorContrib = generalMinor * MINOR_PER_POINT;
-
-	// Total scaled penalties, then the caps apply to the TOTAL.
-	const rawMajorTotal =
-		stats.reduce((s, st) => s + st.majorContrib, 0) + generalMajorContrib;
-	const rawMinorTotal =
-		stats.reduce((s, st) => s + st.minorContrib, 0) + generalMinorContrib;
-	const majorPenalty = Math.min(MAJOR_CAP, rawMajorTotal);
-	const minorPenalty = Math.min(MINOR_CAP, rawMinorTotal);
-
-	const totalMajorCount = counted.filter((f) => f.severity === 'major').length;
-	const totalMinorCount = counted.filter((f) => f.severity === 'minor').length;
-
-	// ── Factors (every step, in evaluation order) ─────────────────────────
-	const factors: ScoreFactor[] = [];
-	factors.push({
-		key: 'base',
-		label: 'Skor dasar',
-		detail: 'Skor awal 100 sebelum penalti dan toleransi.',
-		impact: 100,
-	});
-	if (majorPenalty > 0) {
-		factors.push({
-			key: 'major',
-			label: 'Penalti merah (tertimbang)',
-			detail: `${totalMajorCount} temuan merah × ${MAJOR_PER_POINT} (dibobotkan per kriteria), dibatasi ${MAJOR_CAP}.`,
-			impact: -majorPenalty,
-		});
-	}
-	if (minorPenalty > 0) {
-		factors.push({
-			key: 'minor',
-			label: 'Penalti kuning (tertimbang)',
-			detail: `${totalMinorCount} temuan kuning × ${MINOR_PER_POINT} (dibobotkan per kriteria), dibatasi ${MINOR_CAP}.`,
-			impact: -minorPenalty,
-		});
-	}
-	if (lengthTolerance > 0) {
-		factors.push({
-			key: 'length',
-			label: 'Toleransi panjang jawaban',
-			detail: `${wordCount} kata — ${lengthBand} → +${lengthTolerance} poin.`,
-			impact: lengthTolerance,
-		});
-	}
-
-	const rawBeforeCompletion = 100 - majorPenalty - minorPenalty + lengthTolerance;
-	// Completion cap is a CEILING: when it binds, its impact is the negative
-	// delta to the capped value (not 0, so the cap is visible and the factor
-	// identity holds).
-	const completionImpact = Math.min(0, completionCap - rawBeforeCompletion);
-	if (completionCap < 100) {
-		factors.push({
-			key: 'completion',
-			label: 'Batas kelengkapan',
-			detail: `Jawaban sangat singkat (${wordCount} kata) — skor dibatasi maks ${completionCap}.`,
-			impact: completionImpact,
-		});
-	}
-
-	// Per-criterion breakdown factors (impact 0 — their deduction already lives
-	// in the major/minor penalty factors above; these show how it was distributed).
-	for (const st of stats) {
-		if (st.major === 0 && st.minor === 0) continue;
-		const contrib = st.majorContrib + st.minorContrib;
-		factors.push({
-			key: `criterion-${st.criterion.id}`,
-			label: `Kriteria: ${shortLabel(st.criterion.label)}`,
-			detail: `Bobot ${st.weight}/${weightSum} (faktor ${fmt(st.factor)}) · ${st.major} merah × ${MAJOR_PER_POINT} + ${st.minor} kuning × ${MINOR_PER_POINT} = kontribusi ${fmt(contrib)} (sudah termasuk di penalti merah/kuning).`,
-			impact: 0,
-		});
-	}
-
-	// General-notes breakdown factor (impact 0 — included in the penalties above).
-	if (generalMajor > 0 || generalMinor > 0) {
-		const contrib = generalMajorContrib + generalMinorContrib;
-		factors.push({
-			key: 'general',
-			label: 'Catatan umum (tidak terpetakan ke kriteria)',
-			detail: `${generalMajor} merah · ${generalMinor} kuning · kontribusi ${fmt(contrib)} (faktor 1, sudah termasuk di penalti).`,
-			impact: 0,
-		});
-	}
-
-	const total = clampScore(Math.min(completionCap, rawBeforeCompletion));
-
-	// Rationale — derived from the same values, never recomputed.
-	const parts = ['100 dasar'];
-	if (majorPenalty > 0) parts.push(`−${fmt(majorPenalty)} merah`);
-	if (minorPenalty > 0) parts.push(`−${fmt(minorPenalty)} kuning`);
-	if (lengthTolerance > 0) parts.push(`+${lengthTolerance} panjang`);
-	if (completionImpact < 0) parts.push(`dibatasi ${completionCap}`);
-	const rationale = `${total}/100 = ${parts.join(' · ')}.`;
-
-	// Per-criterion rows (informational, −20/−8 per criterion — unchanged).
-	const rows: RubricScoreRow[] = stats.map((st) => ({
-		id: st.criterion.id,
-		label: st.criterion.label,
-		weight: st.weight,
-		major: st.major,
-		minor: st.minor,
-		score: clampScore(
-			100 - st.major * RUBRIC_MAJOR_PENALTY - st.minor * RUBRIC_MINOR_PENALTY,
-		),
-	}));
-
-	const general = generalMajor > 0 || generalMinor > 0
-		? {
-				major: generalMajor,
-				minor: generalMinor,
-				// Raw general contribution (factor 1); the cap is applied to the
-				// total, so this is what general findings added before the total cap.
-				penalty: generalMajorContrib + generalMinorContrib,
-			}
-		: null;
-
-	return {
-		rows,
-		general,
-		total,
-		hasRubric: N > 0,
-		majorPenalty,
-		minorPenalty,
-		wordCount,
-		lengthTolerance,
-		completionCap,
-		factors,
-		rationale,
-	};
+    const counted = findings.filter(f => options?.includePending ? f.status !== 'rejected' : isCountedFinding(f.status));
+    const rows = criteria.map(c => {
+        const assigned = counted.filter(f => matchesCriterion(f.criterion, c));
+        const major = assigned.filter(f => f.severity === 'major').length;
+        const minor = assigned.filter(f => f.severity === 'minor').length;
+        const explicit = options?.criterionScores?.[c.id];
+        return { ...c, major, minor, score: typeof explicit === 'number' && Number.isFinite(explicit) ? clampScore(explicit) : 0 };
+    });
+    const weightSum = rows.reduce((sum,r) => sum + Math.max(0,r.weight),0);
+    const weighted = weightSum > 0 ? rows.reduce((sum,r) => sum + r.score * Math.max(0,r.weight),0) / weightSum : 0;
+    const generalFindings = counted.filter(f => !criteria.some(c => matchesCriterion(f.criterion,c)));
+    const generalMajor = generalFindings.filter(f => f.severity === 'major').length;
+    const generalMinor = generalFindings.filter(f => f.severity === 'minor').length;
+    // Without a rubric, require an explicit overall lecturer score at publish.
+    const total = clampScore(weighted);
+    const factors: ScoreFactor[] = rows.filter(r => r.weight > 0).map(r => ({
+        key: 'criterion-' + r.id, label: r.label,
+        detail: r.score + '/100 × bobot ' + r.weight + '/' + weightSum,
+        impact: r.score * r.weight / weightSum,
+    }));
+    return { rows, general: generalFindings.length ? { major: generalMajor, minor: generalMinor, penalty: 0 } : null,
+        total, hasRubric: rows.length > 0, majorPenalty: 0, minorPenalty: 0,
+        wordCount: Math.max(0,Math.round(options?.wordCount || 0)), lengthTolerance: 0, completionCap: 100,
+        factors, rationale: weightSum > 0 ? total + '/100 = rata-rata tertimbang skor pencapaian kriteria. Temuan kesalahan mendukung penilaian, tanpa penalti tambahan.' : 'Belum ada rubrik berbobot. Isi nilai keseluruhan secara eksplisit.' };
 }

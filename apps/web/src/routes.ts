@@ -66,6 +66,8 @@ export default [
 	route('api/recovery-email/request-reset', 'routes/api.recovery-email-request-reset.ts'),
 	route('api/recovery-email/reset-password', 'routes/api.recovery-email-reset-password.ts'),
 	route('api/practice-assist', 'routes/api.practice-assist.ts'),
+    route('api/personal-practice', 'routes/api.personal-practice.ts'),
+    route('api/course-grade-summary', 'routes/api.course-grade-summary.ts'),
 	route('api/practice-speaking', 'routes/api.practice-speaking.ts'),
 	route('api/berkas-parse', 'routes/api.berkas-parse.ts'),
 	route('api/berkas-process', 'routes/api.berkas-process.ts'),

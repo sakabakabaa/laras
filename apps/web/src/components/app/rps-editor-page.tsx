@@ -45,7 +45,7 @@ import { errorMessage, isAbortError } from '@/lib/learning';
 import {
 	composeRpsText,
 	draftFromCourse,
-	EMPTY_DRAFT,
+	EMPTY_DRAFT, DEFAULT_ASSESSMENTS,
 	isFieldMissing,
 	missingFields,
 	RPS_STEPS,
@@ -258,11 +258,11 @@ export function RpsEditorPage({ courseId }: { courseId: string | null }) {
 				code: r.code,
 				description: r.description,
 			}));
-			next.assessmentItems = assessments.map((r) => ({
+			next.assessmentItems = (assessments.length ? assessments : DEFAULT_ASSESSMENTS).map((r) => ({
 				id: r.id,
 				code: r.code,
 				description: r.description,
-				weight: r.weight,
+				weight: r.weight, bonusMax: r.bonusMax, componentType: r.componentType,
 			}));
 			next.sessions = sessions.map((s) => ({
 				id: s.id,
@@ -2478,7 +2478,7 @@ function StepAssessment({
 			</label>
 			<div className="pdf-item-group">
 				<div className="pdf-item-head">
-					<strong>Komponen & bobot</strong>
+					<strong>Komponen & bobot</strong><span>Kehadiran, Tugas, UTS, UAS = 100%. Keaktivan berupa bonus poin.</span>
 					<button
 						type="button"
 						className="ld-btn-soft"
@@ -2518,7 +2518,7 @@ function StepAssessment({
 											}
 										/>
 										<input
-											id={`rps-assess-${i}-weight`}
+											id={`rps-assess-${i}-weight`} disabled={(item.componentType === 'bonus' || /keaktivan|keaktifan/i.test(item.code))}
 											type="number"
 											min={0}
 											max={100}
@@ -2540,7 +2540,8 @@ function StepAssessment({
 											}
 										/>
 									</div>
-									<textarea
+									{(item.componentType === 'bonus' || /keaktivan|keaktifan/i.test(item.code)) && <label>Bonus maksimal (poin)<input type="number" min={1} max={100} value={item.bonusMax || 5} onChange={e => setDraft(p => ({ ...p, assessmentItems: p.assessmentItems.map((it,idx) => idx === i ? { ...it, weight: 0, bonusMax: Number(e.target.value) } : it) }))} /></label>}
+                                   <textarea
 										id={`rps-assess-${i}-desc`}
 										rows={2}
 										placeholder="Deskripsi & metode"
@@ -3049,7 +3050,7 @@ async function syncStructured(
 			course: courseId,
 			code: item.code.trim(),
 			description: item.description.trim(),
-			weight: item.weight,
+			weight: (item.componentType === 'bonus' || /keaktivan|keaktifan/i.test(item.code)) ? 0 : item.weight, bonusMax: (item.componentType === 'bonus' || /keaktivan|keaktifan/i.test(item.code)) ? item.bonusMax || 5 : 0, componentType: item.componentType || ({ kehadiran: 'attendance', tugas: 'tasks', uts: 'uts', uas: 'uas', keaktivan: 'bonus', keaktifan: 'bonus' } as Record<string,string>)[item.code.trim().toLowerCase()] || '',
 			order: aOrder,
 		};
 		if (item.id) {

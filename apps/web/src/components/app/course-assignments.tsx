@@ -7,6 +7,7 @@ import {
 	ClipboardCheck,
 	ClipboardList,
 	Download,
+	Eye,
 	ExternalLink,
 	FileText,
 	Link2,
@@ -41,6 +42,7 @@ import {
 	SHAPE_LABEL,
 	studentGradeLabel,
 	studentWorkPath,
+	isPreviewableSubmissionFile,
 	SUBMISSION_STATUS_LABEL,
 	submissionFileUrl,
 	uploadSubmission,
@@ -554,6 +556,7 @@ export function StudentAssignmentCard({
 	linkedPractice?: Assignment | null;
 	onSaved: () => void;
 }) {
+	const t = useT();
 	const formative = activityTypeOf(assignment) === 'formative';
 	const past = isPastDeadline(assignment.deadline);
 	const closed = assignment.status === 'closed' || assignment.status === 'archived';
@@ -662,18 +665,21 @@ export function StudentAssignmentCard({
 					</div>
 					{mySubmission.files && mySubmission.files.length > 0 && (
 						<div className="asg-sub-files">
-							{mySubmission.files.map((f) => (
-								<a
-									key={f}
-									className="asg-sub-file"
-									href={submissionFileUrl(mySubmission, f)}
-									target="_blank"
-									rel="noreferrer"
-									download
-								>
-									<Download size={12} /> {f}
-								</a>
-							))}
+							{mySubmission.files.map((f) => {
+								const previewable = isPreviewableSubmissionFile(f);
+								return (
+									<a
+										key={f}
+										className="asg-sub-file"
+										href={submissionFileUrl(mySubmission, f)}
+										target="_blank"
+										rel="noreferrer"
+										{...(previewable ? { title: `${t('student.result.openInNewTab')} ${f}` } : { download: true })}
+									>
+										{previewable ? <Eye size={12} /> : <Download size={12} />} {f}
+									</a>
+								);
+							})}
 						</div>
 					)}
 					{mySubmission.link && (

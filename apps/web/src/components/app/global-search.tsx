@@ -418,13 +418,16 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 		<>
 			<button
 				type="button"
-				className="ld-mast-icon"
+				className="ld-mast-icon ld-mast-search-trigger"
 				aria-label="Buka pencarian"
+				aria-keyshortcuts="Control+K Meta+K"
 				aria-expanded={open}
 				aria-haspopup="dialog"
 				onClick={() => setOpen(true)}
 			>
 				<Search size={18} strokeWidth={1.75} aria-hidden />
+				<span className="ld-mast-search-placeholder">Cari mata kuliah, tugas, atau halaman...</span>
+				<kbd className="ld-mast-search-shortcut">Ctrl K</kbd>
 			</button>
 
 			{open && (

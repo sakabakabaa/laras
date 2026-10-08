@@ -48,6 +48,7 @@ import { dateLabel, errorMessage } from '@/lib/learning';
 import { invalidate, invalidateCollections, invalidateCourseData } from '@/lib/local-cache';
 import { LIMITS, limitMessage, runeCount } from '@/lib/rps-limits';
 import { useT } from '@/lib/i18n';
+import { PersonalPractice } from '@/components/app/personal-practice';
 import {
 	courseSectionPath,
 	sectionFromLegacyTab,
@@ -483,13 +484,11 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 						<div className="ld-document-view ld-syllabus-page">
 							<div className="ld-document-side">
 								<span className="ld-eyebrow">
-									{tab === 'rps' ? '01 / Rencana Pembelajaran' : '02 / Garis Besar'}
+									{'02 / Garis Besar'}
 								</span>
-								<h2>{tab === 'rps' ? 'RPS Anda.' : 'Silabus Anda.'}</h2>
+								<h2>{'Silabus Anda.'}</h2>
 								<p>
-									{tab === 'rps'
-										? 'Jaga rencana pembelajaran semester tetap jelas, mutakhir, dan mudah diakses.'
-										: 'Rumah untuk topik, tujuan, dan struktur mata kuliah Anda.'}
+									{'Rumah untuk topik, tujuan, dan struktur mata kuliah Anda.'}
 								</p>
 								{isFacultyOwner && (
 									<button
@@ -504,27 +503,14 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 							<div className="ld-document-paper">
 								<div className="ld-document-paper-header">
 									<span>
-										{course.code || 'Mata Kuliah'} / {tab === 'rps' ? 'RPS' : 'Silabus'}
+										{course.code || 'Mata Kuliah'} / {'Silabus'}
 									</span>
-									{tab === 'rps' && course.rpsFile ? (
-										<a
-											className="ld-pdf-download"
-											href={pb.files.getURL(course, course.rpsFile)}
-											target="_blank"
-											rel="noreferrer"
-											download
-											title="Unduh PDF RPS asli"
-										>
-											<Download size={15} /> PDF asli
-										</a>
-									) : (
-										<MoreHorizontal size={20} />
-									)}
+									<MoreHorizontal size={20} />
 								</div>
 								{isFacultyOwner && editingDoc === tab ? (
 									<div className="ld-document-edit">
 										<label htmlFor="document-content">
-											{tab === 'rps' ? 'Isi RPS' : 'Isi Silabus'}
+											{'Isi Silabus'}
 										</label>
 										<textarea
 											id="document-content"
@@ -533,24 +519,22 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 											value={docValue}
 											className={
 												runeCount(docValue) >
-												(tab === 'rps' ? LIMITS.rps : LIMITS.syllabus)
+												LIMITS.syllabus
 													? 'rps-over'
 													: undefined
 											}
 											aria-invalid={
 												runeCount(docValue) >
-													(tab === 'rps' ? LIMITS.rps : LIMITS.syllabus) || undefined
+													LIMITS.syllabus || undefined
 											}
 											onChange={(e) => setDocValue(e.target.value)}
 											placeholder={
-												tab === 'rps'
-													? 'Tulis capaian pembelajaran, rencana mingguan, metode penilaian, dan referensi di sini...'
-													: 'Tulis ringkasan mata kuliah, topik, bacaan, dan aktivitas belajar di sini...'
+												'Tulis ringkasan mata kuliah, topik, bacaan, dan aktivitas belajar di sini...'
 											}
 										/>
 										<CharMeter
 											value={docValue}
-											max={tab === 'rps' ? LIMITS.rps : LIMITS.syllabus}
+											max={LIMITS.syllabus}
 										/>
 										<div className="ld-document-edit-actions">
 											<button
@@ -588,8 +572,8 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 										</h3>
 										<p>
 											{isFacultyOwner
-												? `${tab === 'rps' ? 'RPS' : 'Silabus'} Anda belum ditambahkan. Mulai menulis saat siap.`
-												: `${tab === 'rps' ? 'RPS' : 'Silabus'} untuk mata kuliah ini belum diterbitkan dosen.`}
+												? `${'Silabus'} Anda belum ditambahkan. Mulai menulis saat siap.`
+												: `${'Silabus'} untuk mata kuliah ini belum diterbitkan dosen.`}
 										</p>
 										{isFacultyOwner && (
 											<button
@@ -597,7 +581,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 												className="ld-btn-primary"
 												onClick={() => beginDoc(tab)}
 											>
-												<Plus size={17} /> Tambah {tab === 'rps' ? 'RPS' : 'silabus'}
+												<Plus size={17} /> Tambah {'silabus'}
 											</button>
 										)}
 									</div>
@@ -745,14 +729,15 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 						sectionId={sectionFilter}
 					/>
 				)}
-				{(section === 'tugas' || section === 'latihan') && (
+				{section === 'latihan' && <PersonalPractice courseId={id} />}
+				{section === 'tugas' && (
 					<CourseAssignments
 						courseId={id}
 						routeId={routeId}
 						canEdit={Boolean(isFacultyOwner)}
 						isStudent={isStudent}
 						courseLabel={course ? `${course.code ? `${course.code} · ` : ''}${course.title}` : ''}
-						activityLock={section === 'latihan' ? 'formative' : 'formal'}
+						activityLock="formal"
 					/>
 				)}
 				{section === 'mahasiswa' && !isStudent && (

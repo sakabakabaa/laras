@@ -21,6 +21,7 @@ import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { loadEvaluationTarget, validateReviewFindings } from '@/lib/evaluation-review.server';
 
 type Body = {
+    criterionScores?: Record<string, number>;
 	submissionId?: string;
 	publicSubmissionId?: string;
 	findings?: unknown;
@@ -41,7 +42,11 @@ export const action = withApi(async ({ request }) => {
 			'Daftar temuan tidak valid — catatan wajib diisi dan kutipan harus persis dari teks kiriman peserta.',
 		);
 	}
-	const { findings, omitted } = validated;
+    const { findings, omitted } = validated;
+    const reviewCriterionScores = body.criterionScores || {};
+    if (typeof reviewCriterionScores !== 'object' || Array.isArray(reviewCriterionScores) ||
+        Object.values(reviewCriterionScores).some(v => typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 100))
+        return apiError(422, 'Skor kriteria harus antara 0 dan 100.');
 
 	const relationField = target.channel === 'enrolled' ? 'submission' : 'publicSubmission';
 	const now = new Date().toISOString();
@@ -58,7 +63,8 @@ export const action = withApi(async ({ request }) => {
 		// Only the lecturer's review columns change — the AI draft's own
 		// findings, score, and citations stay exactly as they were.
 		await pocketbaseAdmin.updateRecord('ai_evaluations', existing.id, {
-			reviewFindings: findings,
+            reviewFindings: findings,
+            reviewCriterionScores,
 			reviewedAt: now,
 		});
 		return json({ ok: true, saved: findings.length, omitted });
@@ -76,7 +82,8 @@ export const action = withApi(async ({ request }) => {
 		reason: '',
 		findings: [],
 		summary: '',
-		reviewFindings: findings,
+        reviewFindings: findings,
+        reviewCriterionScores,
 		reviewedAt: now,
 		generatedAt: now,
 		...(target.channel === 'enrolled'

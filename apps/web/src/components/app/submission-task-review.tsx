@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
 	CheckCircle2,
 	Clock,
+	Download,
+	Eye,
 	FileText,
 	LoaderCircle,
 	Sparkles,
@@ -10,7 +12,7 @@ import {
 import pb from '@/lib/pocketbase-client';
 import { invalidate } from '@/lib/local-cache';
 import { errorMessage } from '@/lib/learning';
-import { submissionFileUrl, type Assignment, type AssignmentSubmission } from '@/lib/assignments';
+import { isPreviewableSubmissionFile, submissionFileUrl, type Assignment, type AssignmentSubmission } from '@/lib/assignments';
 import { enrolledIdentityKey } from '@/lib/check-types';
 import { CheckHistory } from '@/components/app/check-history';
 import {
@@ -399,11 +401,14 @@ function WritingReview({
 		)}
 			{docs.length > 0 && (
 				<div className="asg-sub-files">
-					{docs.map((f) => (
-						<a key={f} className="asg-sub-file" href={submissionFileUrl(submission, f)} target="_blank" rel="noreferrer" download>
-							<FileText size={12} /> {f}
-						</a>
-					))}
+					{docs.map((f) => {
+						const previewable = isPreviewableSubmissionFile(f);
+						return (
+							<a key={f} className="asg-sub-file" href={submissionFileUrl(submission, f)} target="_blank" rel="noreferrer" {...(previewable ? {} : { download: true })}>
+								{previewable ? <Eye size={12} /> : <Download size={12} />} {f}
+							</a>
+						);
+					})}
 				</div>
 			)}
 			{images.length > 0 && (

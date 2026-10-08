@@ -54,7 +54,6 @@ import {
 	parseStages,
 	practiceSyncState,
 	practiceTitleFor,
-	setPracticeIntent,
 	SHAPE_LABEL,
 	SHAPE_OPTIONS,
 	defaultStagesForShape,
@@ -377,7 +376,6 @@ export function AssignmentForm({
 			if (d.courseSel) setCourseSel(d.courseSel);
 			if (d.title) setTitle(d.title);
 			if (d.mode) setMode(d.mode);
-			if (d.activityType) setActivityType(d.activityType);
 			setAllowRevision(Boolean(d.allowRevision));
 			setCheckOn(d.checkOn !== false);
 			if (d.checkMaxInput) setCheckMaxInput(d.checkMaxInput);
@@ -1247,8 +1245,7 @@ export function AssignmentForm({
 	// ── Post-create success panel (fresh formal task only) ──
 	if (createdId) {
 		const goPractice = () => {
-			setPracticeIntent(createdId);
-			window.location.assign(`/app/tugas/buat?practice=${createdId}`);
+			window.location.assign(`/app/courses/${courseSel}/latihan`);
 		};
 		const successWrap = (children: React.ReactNode) =>
 			isPage ? (
@@ -1285,13 +1282,11 @@ export function AssignmentForm({
 								className="ld-outline-action"
 								onClick={goPractice}
 							>
-								<Repeat size={15} /> {t('asg.success.makePractice')}
+								<Repeat size={15} /> Buka Latihan Personal
 							</button>
 						</div>
 						<p className="asg-success-note">
-							<Info size={13} /> Latihan persiapan bersifat opsional — latihan formatif
-							berulang yang ditautkan ke tugas ini, tanpa pengumpulan final dan tanpa
-							dampak nilai. Anda juga dapat membuatnya nanti dari halaman tugas.
+							<Info size={13} /> Latihan Personal menggunakan materi pertemuan terbaru dan umpan balik mahasiswa, tanpa dampak pada nilai resmi.
 						</p>
 					</div>
 		);
@@ -1569,9 +1564,7 @@ export function AssignmentForm({
 							<section className="asg-section" aria-label="Jenis aktivitas">
 								<h3>{t('asg.s1.activityHeading')}</h3>
 								<p className="rps-help">
-									Tugas formal dinilai dan dihitung dalam penilaian resmi. Latihan formatif
-									untuk latihan berulang dengan Cek jawaban — tanpa pengumpulan final dan
-									tanpa dampak nilai.
+									Tugas formal dinilai dan dihitung dalam penilaian resmi. Latihan Personal tersedia di tab Latihan pada mata kuliah.
 								</p>
 								<div className="asg-type-grid" role="radiogroup" aria-label="Jenis aktivitas">
 									<label className={`asg-shape-card${formal ? ' checked' : ''}`}>
@@ -1589,7 +1582,7 @@ export function AssignmentForm({
 										</span>
 										<em>Pengumpulan final · dinilai</em>
 									</label>
-									<label className={`asg-shape-card${formal ? '' : ' checked'}`}>
+									{editing ? <label className={`asg-shape-card${formal ? '' : ' checked'}`}>
 										<input
 											type="radio"
 											name="assignment-activity-type"
@@ -1604,7 +1597,7 @@ export function AssignmentForm({
 											final, tanpa dampak nilai.
 										</span>
 										<em>{t('asg.s1.formativeTag')}</em>
-									</label>
+									</label> : <a className="asg-shape-card" href={courseSel ? `/app/courses/${courseSel}/latihan` : '/app/courses'}><strong><Repeat size={15} /> Latihan Personal</strong><span>Soal singkat dari materi terbaru, disesuaikan dengan kebutuhan mahasiswa.</span><em>Buka tab Latihan mata kuliah →</em></a>}
 								</div>
 							</section>
 

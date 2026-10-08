@@ -284,6 +284,10 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 				</div>
 			</section>
 
+			<section className="ld-panel sco-panel" aria-label="Latihan Personal">
+				<div className="ld-card-head"><h2><Repeat size={16} className="ld-spark" /> Latihan Personal</h2><Link to={courseSectionPath(routeId, 'latihan')} className="ld-text-btn">Buka latihan <ArrowRight size={13} /></Link></div>
+				<p className="ld-empty-sm">Lima pertanyaan singkat dari materi pertemuan terbaru, dengan umpan balik dan rujukan materi. Tanpa nilai resmi.</p>
+			</section>
 			<div className="sco-grid">
 				<div className="sco-main">
 					{/* ── Next session ─────────────────────────────── */}

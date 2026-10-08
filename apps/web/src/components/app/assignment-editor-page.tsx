@@ -96,6 +96,7 @@ export function AssignmentEditorPage() {
 								// The practice intent has served its purpose — drop it so a
 								// later visit to the regular creator does not reopen the form.
 								clearPracticeIntent();
+								navigate(`/app/courses/${rec.course}/latihan`, { replace: true });
 							}),
 					);
 				}
@@ -109,7 +110,7 @@ export function AssignmentEditorPage() {
 		return () => {
 			alive = false;
 		};
-	}, [editId, practiceId]);
+	}, [editId, practiceId, navigate]);
 
 	const location = useLocation();
 	const { setContext: setAssistantPageContext } = useAssistantPageContext();

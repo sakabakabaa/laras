@@ -369,14 +369,14 @@ export function CourseAnalytics({
 							) : (
 								<div className="an-chart">
 									<ResponsiveContainer width="100%" height={220}>
-										<BarChart data={model.weeks} barGap={2} barCategoryGap="28%">
+										<BarChart data={model.weeks} barGap={0} barCategoryGap="10%">
 											<CartesianGrid vertical={false} stroke="#EEF1F4" />
 											<XAxis dataKey="label" tick={{ fontSize: 11, fill: '#98A2B3' }} axisLine={false} tickLine={false} />
 											<YAxis tick={{ fontSize: 11, fill: '#98A2B3' }} axisLine={false} tickLine={false} domain={[0, 100]} unit="%" width={36} />
 											<Tooltip formatter={(value, name) => [`${value}%`, String(name)]} />
-											<Bar dataKey="materi" name="Materi" fill="#12B76A" radius={[4, 4, 0, 0]} maxBarSize={14} />
-											<Bar dataKey="tugas" name="Tugas" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={14} />
-											<Bar dataKey="penilaian" name="Penilaian" fill="#F04438" radius={[4, 4, 0, 0]} maxBarSize={14} />
+											<Bar dataKey="materi" name="Materi" fill="#12B76A" radius={[3, 3, 0, 0]} barSize={6} />
+											<Bar dataKey="tugas" name="Tugas" fill="#3B82F6" radius={[3, 3, 0, 0]} barSize={6} />
+											<Bar dataKey="penilaian" name="Penilaian" fill="#F04438" radius={[3, 3, 0, 0]} barSize={6} />
 										</BarChart>
 									</ResponsiveContainer>
 								</div>

@@ -221,7 +221,9 @@ type ReviewContextValue = {
 	selection: string;
 	pendingMark: { quote: string; severity: EvalSeverity } | null;
 	criteria: { id: string; label: string; weight: number }[];
-	calc: RubricScores;
+    calc: RubricScores;
+    criterionScores: Record<string, number>;
+    setCriterionScore: (id: string, value: string) => void;
 	override: string;
 	overrideValid: boolean;
 	finalScore: number;
@@ -353,7 +355,8 @@ export function AiEvaluationReviewProvider({
 	const [manualNote, setManualNote] = useState('');
 	const [manualError, setManualError] = useState('');
 	// Phase 3 — rubric recalculation, lecturer override, and publish state.
-	const [override, setOverride] = useState('');
+    const [override, setOverride] = useState('');
+    const [criterionScores, setCriterionScores] = useState<Record<string, number>>({});
 	const [publishNote, setPublishNote] = useState('');
 	const [confirmPublish, setConfirmPublish] = useState(false);
 	const [publishing, setPublishing] = useState(false);
@@ -411,6 +414,10 @@ export function AiEvaluationReviewProvider({
 		try {
 			const found = await pb.collection('ai_evaluations').getFirstListItem<AiEvaluationRow>(filter);
 			setRow(found);
+            if (found?.reviewCriterionScores && Object.keys(found.reviewCriterionScores).length) { setCriterionScores(found.reviewCriterionScores); } else if (found && found.scoringVersion === 4 && found.rubricScores && typeof found.rubricScores === 'object') {
+                const savedRows = (found.rubricScores as RubricScores).rows || [];
+                setCriterionScores(Object.fromEntries(savedRows.map(r => [r.id, r.score])));
+            }
 		} catch {
 			setRow(null);
 		} finally {
@@ -421,7 +428,8 @@ export function AiEvaluationReviewProvider({
 	useEffect(() => {
 		setLoading(true);
 		setRow(null);
-		setWorking(null);
+        setWorking(null);
+        setCriterionScores({});
 		setResearchItems({ annotations: {}, missedErrors: [] });
 		setResearchLoadError('');
 		setResearchLoading(true);
@@ -586,7 +594,7 @@ export function AiEvaluationReviewProvider({
 			(!row && participant && (participant.status === 'submitted' || participant.status === 'late')),
 	);
 	const saved = row ? normalizeReviewFindings(parseReviewFindings(row.reviewFindings), criteria) : [];
-	const dirty = working != null && JSON.stringify(items) !== JSON.stringify(saved);
+	const dirty = working != null && (JSON.stringify(items) !== JSON.stringify(saved) || JSON.stringify(criterionScores) !== JSON.stringify(row?.reviewCriterionScores || {}));
 
 	// Warn before navigating away (tab close / reload) with unsaved review edits,
 	// so a draft grade or feedback is not silently lost.
@@ -607,7 +615,8 @@ export function AiEvaluationReviewProvider({
 	// live while the lecturer reviews. The server republishes with the same
 	// rule once no findings remain pending. Lecturer override and publish
 	// state of this submission follow.
-	const calc = calculateRubricScores(items, criteria, {
+    const calc = calculateRubricScores(items, criteria, {
+        criterionScores,
 		includePending: true,
 		wordCount: countWords(content),
 	});
@@ -808,8 +817,8 @@ export function AiEvaluationReviewProvider({
 				},
 				body: JSON.stringify(
 					participant.channel === 'enrolled'
-						? { submissionId: recordKey, findings: items }
-						: { publicSubmissionId: recordKey, findings: items },
+						? { submissionId: recordKey, findings: items, criterionScores }
+						: { publicSubmissionId: recordKey, findings: items, criterionScores },
 				),
 			});
 			const data = (await res.json().catch(() => ({}))) as {
@@ -855,7 +864,8 @@ export function AiEvaluationReviewProvider({
 					...(participant.channel === 'enrolled'
 						? { submissionId: recordKey }
 						: { publicSubmissionId: recordKey }),
-					findings: items,
+                    findings: items,
+                    criterionScores,
 					finalScore: overrideValid ? finalScore : null,
 					scoreAdjusted: overrideTouched.current,
 					note: publishNote,
@@ -966,7 +976,11 @@ export function AiEvaluationReviewProvider({
 		selection,
 		pendingMark,
 		criteria,
-		calc,
+        calc,
+        criterionScores,
+        setCriterionScore: (id, value) => {
+            setCriterionScores(prev => { const next = { ...prev }; if (value === '') delete next[id]; else next[id] = Number(value); return next; });
+        },
 		override,
 		overrideValid,
 		finalScore,
@@ -2621,17 +2635,11 @@ export function AiEvaluationPanel() {
 						<span className="evx-rubric-info" tabIndex={0} aria-label={t('aevr.rubricHowTo')}>
 							<Info size={13} />
 							<span className="evx-rubric-tip" role="tooltip">
-								Skor total memakai model proporsional bertutup berbobot: setiap temuan merah −12,
-								kuning −3 (maks −18), plus toleransi panjang jawaban — sehingga beberapa
-								kesalahan pada jawaban panjang tidak menjatuhkan skor ke 0. Baris per
-								kriteria bersifat informatif (merah −{RUBRIC_MAJOR_PENALTY}, kuning −{RUBRIC_MINOR_PENALTY})
-								agar dosen melihat kriteria yang lemah. Temuan umum (tidak terpetakan ke
-								kriteria) tetap mengurangi skor total dengan faktor 1.{ctx.cefrLevel ? ` Kalibrasi CEFR ${ctx.cefrLevel} pada kode mata kuliah (tugas bahasa).` : ''}
-								Saran nilai bersifat sementara sampai dosen menyimpan &amp; lanjut.
+								Skor total adalah rata-rata tertimbang pencapaian setiap kriteria. Pilih tingkat pencapaian atau isi skor 0–100. Temuan merah/kuning menjadi bukti penilaian, tanpa pengurangan otomatis. Tidak ada bonus panjang atau batas minimum kata universal. Saran nilai bersifat sementara sampai dosen menyimpan &amp; lanjut.
 							</span>
 						</span>
 					</h4>
-					<span>Total <strong>{ctx.calc.total}</strong> / 100</span>
+					<span>{ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) ? 'Rubrik belum lengkap' : <>Total <strong>{ctx.calc.total}</strong> / 100</>}</span>
 				</header>
 				{ctx.calc.factors.length > 0 && (
 					<details className="fer-score-details">
@@ -2678,11 +2686,26 @@ export function AiEvaluationPanel() {
 									<button type="button" onClick={() => setOpenRubric(open ? null : row.id)}>
 										<span>{shortCriterionLabel(row.label)}</span>
 										<span className="evx-bar"><i style={{ width: `${row.score}%` }} /></span>
-										<strong>{row.score}</strong>
+										<strong>{ctx.criterionScores[row.id] == null ? '—' : row.score}</strong>
 									</button>
-									{open && (
+									<div className="evx-criterion-achievement" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '10px 0' }}>
+    <label style={{ flex: 1 }}>Pencapaian · bobot {row.weight}
+        <select aria-label={'Pencapaian ' + row.label} value={ctx.criterionScores[row.id] ?? ''} onChange={e => ctx.setCriterionScore(row.id, e.target.value)}>
+            <option value="">Pilih tingkat pencapaian</option>
+            <option value="100">Sangat baik · 100</option>
+            <option value="85">Baik · 85</option>
+            <option value="70">Cukup · 70</option>
+            <option value="50">Perlu pengembangan · 50</option>
+            <option value="25">Bukti terbatas · 25</option>
+            <option value="0">Belum menunjukkan pencapaian · 0</option>
+            {ctx.criterionScores[row.id] != null && ![0,25,50,70,85,100].includes(ctx.criterionScores[row.id]) && <option value={ctx.criterionScores[row.id]}>Skor khusus · {ctx.criterionScores[row.id]}</option>}
+        </select>
+    </label>
+    <label>Skor 0–100<input aria-label={'Skor ' + row.label} type="number" min={0} max={100} step={1} value={ctx.criterionScores[row.id] ?? ''} onChange={e => ctx.setCriterionScore(row.id, e.target.value)} /></label>
+</div>
+{open && (
 										<p>
-											{row.major} merah · {row.minor} kuning. Skor mulai 100, merah −{RUBRIC_MAJOR_PENALTY}, kuning −{RUBRIC_MINOR_PENALTY}.
+											{row.major} merah · {row.minor} kuning sebagai bukti. Skor pencapaian ditentukan dosen.
 											{reason?.note ? ` Alasan AI: ${reason.note}` : ''}
 										</p>
 									)}
@@ -2693,7 +2716,7 @@ export function AiEvaluationPanel() {
 							<li className="evx-rubric-general-row">
 								<strong>Catatan umum (tidak terpetakan ke kriteria)</strong>
 								<span>{ctx.calc.general.major} merah · {ctx.calc.general.minor} kuning</span>
-								<span>−{ctx.calc.general.penalty} poin</span>
+								<span>Bukti tambahan untuk ditinjau; tanpa penalti otomatis</span>
 							</li>
 						)}
 					</ul>
@@ -2865,7 +2888,7 @@ export function AiEvaluationPanel() {
 					<button
 						type="button"
 						className="evx-next-btn"
-						disabled={ctx.ungradable || ctx.publishing || ctx.pendingCount > 0 || (ctx.override.trim() !== '' && !ctx.overrideValid)}
+						disabled={ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.ungradable || ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.publishing || ctx.pendingCount > 0 || (ctx.override.trim() !== '' && !ctx.overrideValid)}
 						onClick={ctx.requestConfirmPublish}
 					>
 						<Send size={14} /> {t('aevr.saveNext')}
@@ -3083,7 +3106,7 @@ export function AiEvaluationPanel() {
 				<p className="aev-phase3-note">
 					Skor dihitung ulang dari temuan yang Anda setujui atau buat sendiri dan tugaskan ke
 					kriteria rubrik — temuan AI yang ditolak tidak dihitung. Setiap kriteria mulai dari
-					100; temuan merah −{RUBRIC_MAJOR_PENALTY}, kuning −{RUBRIC_MINOR_PENALTY}.
+					pencapaian tiap kriteria; total adalah rata-rata tertimbang.
 					{criteria.length === 0 &&
 						' Tugas ini belum menyimpan kriteria rubrik — skor dihitung dari seluruh temuan yang disetujui.'}
 				</p>
@@ -3191,7 +3214,7 @@ export function AiEvaluationPanel() {
 						type="button"
 						className="ld-btn-primary"
 						disabled={
-							ctx.publishing || ctx.pendingCount > 0 || (ctx.override.trim() !== '' && !ctx.overrideValid)
+							ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.publishing || ctx.pendingCount > 0 || (ctx.override.trim() !== '' && !ctx.overrideValid)
 						}
 						onClick={ctx.requestConfirmPublish}
 					>

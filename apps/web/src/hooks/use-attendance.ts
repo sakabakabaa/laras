@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import pb from '@/lib/pocketbase-client';
 import type { ClassSession } from '@/lib/learning';
 
-export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused';
+export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused' | 'sick';
 
 export type AttendanceRecord = {
 	id: string;

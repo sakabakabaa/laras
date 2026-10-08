@@ -22,23 +22,13 @@ export function LarasLockup({
 
 export function LarasMark({ size = 36 }: { size?: number }) {
 	return (
-		<svg
+		<img
 			className="laras-mark"
 			width={size}
 			height={size}
-			viewBox="0 0 64 64"
+			src="/laras-mark.png"
+			alt=""
 			aria-hidden="true"
-		>
-			<defs>
-				<linearGradient id="laras-mark-g" x1="0" y1="0" x2="1" y2="1">
-					<stop offset="0" stopColor="#ff4d3a" />
-					<stop offset="1" stopColor="#b10c12" />
-				</linearGradient>
-			</defs>
-			<path
-				fill="url(#laras-mark-g)"
-				d="M10 14c10-8 22-6 28 2 2-8 12-12 20-8-8 8-10 18-6 26 8 2 14 10 12 20-10-2-18-10-20-18-2 10-10 18-20 18 2-10 10-16 18-16-8-2-16-8-18-16 6 2 10 0 14-4-8 0-16-2-20-8 4 2 6 3 8 4z"
-			/>
-		</svg>
+		/>
 	);
 }

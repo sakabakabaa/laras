@@ -7,7 +7,7 @@ import { dashboardForRole } from '@/lib/learning';
 import { onQuickAssistantSend, type AssistantSeed } from '@/lib/assistant-quick-send';
 import { GlobalSearch } from '@/components/app/global-search';
 import { AgentDock, AgentPane } from '@/components/app/agent-dock';
-import { LarasLockup } from '@/components/brand/laras-lockup';
+import { LarasMark } from '@/components/brand/laras-lockup';
 import { AssistantPageContextProvider } from '@/components/app/assistant-page-context-provider';
 import { useTheme } from '@/hooks/use-theme';
 import '@/styles/login-light.css';
@@ -133,9 +133,11 @@ export function AppShell({
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => typeof window === 'undefined' ? false : localStorage.getItem('ld-sidebar-collapsed') === '1');
+	const [collapsed, setCollapsed] = useState(() => typeof window === 'undefined' ? true : localStorage.getItem('ld-sidebar-collapsed') !== '0');
   const [animating, setAnimating] = useState(false);
   const animTimer = useRef<number | undefined>(undefined);
+  const [pageAnimating, setPageAnimating] = useState(true);
+  const pageAnimTimer = useRef<number | undefined>(undefined);
   const [profileOpen, setProfileOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useState(false);
   const [agentSeed, setAgentSeed] = useState<AssistantSeed | null>(null);
@@ -154,6 +156,12 @@ export function AppShell({
     animTimer.current = window.setTimeout(() => setAnimating(false), 240);
   };
   useEffect(() => () => window.clearTimeout(animTimer.current), []);
+  useEffect(() => {
+    setPageAnimating(true);
+    window.clearTimeout(pageAnimTimer.current);
+    pageAnimTimer.current = window.setTimeout(() => setPageAnimating(false), 300);
+    return () => window.clearTimeout(pageAnimTimer.current);
+  }, [location.pathname]);
   useEffect(() => {
     localStorage.setItem('ld-sidebar-collapsed', collapsed ? '1' : '0');
   }, [collapsed]);
@@ -217,11 +225,13 @@ export function AppShell({
 						{!hideSidebar && <button type="button" ref={mobileMenuBtnRef} className="ld-mobile-menu" aria-label="Buka navigasi" onClick={() => setMobileOpen(true)}>
 							<Menu size={22} />
 						</button>}
-						<Link to={home} className="ld-mast-logo-link" aria-label="LARAS"><LarasLockup height={28} markOnly /></Link>
+						<Link to={home} className="ld-mast-logo-link" aria-label="LARAS"><LarasMark size={28} /></Link>
+					</div>
+					<div className="ld-mast-search-zone">
+						<GlobalSearch userId={user?.id || ''} isStudent={isStudent} />
 					</div>
 					<div className="ld-topbar-right ld-mast-actions">
 						{!isStudent && <AgentDock open={agentOpen} onOpenChange={setAgentOpen} />}
-						<GlobalSearch userId={user?.id || ''} isStudent={isStudent} />
 						<div className={`ld-profile-wrap${profileOpen ? ' open' : ''}`}>
 							<button type="button" className="ld-profile-trigger" aria-label="Menu profil" aria-expanded={profileOpen} aria-haspopup="menu" onClick={() => setProfileOpen(o => !o)}>
 								<span className="ld-avatar icon" aria-hidden>
@@ -269,18 +279,19 @@ export function AppShell({
 						<nav className="ld-nav" aria-label="Navigasi utama">
 							{navItems.map(item => {
               const Icon = item.icon;
+              const label = t(NAV_T[item.label] ?? item.label);
               if (!item.ready) {
-                return <Link key={item.label} to={item.to} className="ld-nav-link" onClick={() => setMobileOpen(false)}>
+									return <Link key={item.label} to={item.to} className="ld-nav-link" aria-label={label} title={label} data-nav-label={label} onClick={() => setMobileOpen(false)}>
 											<Icon size={18} strokeWidth={1.75} />
-											<span>{t(NAV_T[item.label] ?? item.label)}</span>
+											<span>{label}</span>
 										</Link>;
               }
               const hash = 'hash' in item ? item.hash : undefined;
-              return <NavLink key={item.label} to={hash ? `${item.to}#${hash}` : item.to} end={'end' in item ? item.end : false} className={({
+              return <NavLink key={item.label} to={hash ? `${item.to}#${hash}` : item.to} end={'end' in item ? item.end : false} aria-label={label} title={label} data-nav-label={label} className={({
                 isActive
               }) => `ld-nav-link${isActive && !hash ? ' active' : ''}${hash && location.hash === `#${hash}` ? ' active' : ''}`} onClick={() => setMobileOpen(false)}>
 										<Icon size={18} strokeWidth={1.75} />
-										<span>{t(NAV_T[item.label] ?? item.label)}</span>
+										<span>{label}</span>
 									</NavLink>;
             })}
 						</nav>
@@ -297,7 +308,7 @@ export function AppShell({
 					{rail}
 
 					<div className="ld-main">
-						<main className="ld-content">
+						<main className={`ld-content${pageAnimating ? ' page-enter' : ''}`}>
 							{back && <Link to={home} className="ld-back">
 									← {t('shell.back')}
 								</Link>}

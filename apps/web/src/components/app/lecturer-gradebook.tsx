@@ -22,6 +22,7 @@ import {
 	X,
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
+import { groupedComponents, type AttendanceRecord, type AttendanceSession, type ParticipationAward } from '@/lib/grouped-gradebook';
 import { useT } from '@/lib/i18n';
 import { useCourseRoster } from '@/hooks/use-course-roster';
 import { useCourseSections } from '@/hooks/use-course-sections';
@@ -129,7 +130,7 @@ export function LecturerGradebook({ course }: { course: Course }) {
 					name: entry.name,
 					email: matched?.email || '',
 					nim,
-					section: sectionName(entry.section),
+					section: sectionName(entry.section), sectionId: entry.section || '',
 				};
 			})
 			.sort((a, b) => a.nim.localeCompare(b.nim, 'id') || a.name.localeCompare(b.name, 'id'));
@@ -152,7 +153,7 @@ export function LecturerGradebook({ course }: { course: Course }) {
 				sort: 'order,created',
 			}),
 	);
-	const components = (componentsQuery.data ?? []).filter((c) => c.status === 'active');
+	const rawComponents = (componentsQuery.data ?? []).filter((c) => c.status === 'active');
 	const allComponents = componentsQuery.data ?? [];
 
 	const componentIds = allComponents.map((c) => c.id);
@@ -169,10 +170,10 @@ export function LecturerGradebook({ course }: { course: Course }) {
 	);
 
 	const submissionsQuery = useCachedQuery<AssignmentSubmission[]>(
-		linkedAssignmentIds.length ? `assignment_submissions:gradebook=${courseId}` : null,
+		courseId ? `assignment_submissions:gradebook=${courseId}` : null,
 		() =>
 			pb.collection('assignment_submissions').getFullList<AssignmentSubmission>({
-				filter: orFilter('assignment', linkedAssignmentIds),
+				filter: pb.filter('assignment.course = {:id}', { id: courseId }),
 			}),
 	);
 
@@ -204,12 +205,61 @@ export function LecturerGradebook({ course }: { course: Course }) {
 				sort: 'title',
 			}),
 	);
-	const linkedSet = new Set(linkedAssignmentIds);
+	useEffect(() => {
+        const refresh = () => { componentsQuery.reload(); submissionsQuery.reload(); assignmentsQuery.reload(); attendanceSessions.reload(); attendanceRows.reload(); participation.reload(); };
+        window.addEventListener('focus',refresh);
+        return () => window.removeEventListener('focus',refresh);
+    },[courseId]);
+    const linkedSet = new Set(linkedAssignmentIds);
 	const availableAssignments = (assignmentsQuery.data ?? []).filter(
-		(a) => activityTypeOf(a) === 'formal' && !linkedSet.has(a.id),
+		(a) => !rawComponents.some(c => c.sourceType === 'tasks') && activityTypeOf(a) === 'formal' && !linkedSet.has(a.id),
 	);
 
-	// ── Derived maps ──────────────────────────────────────────────────────
+	const attendanceSessions = useCachedQuery<AttendanceSession[]>(courseId ? 'gradebook:sessions:' + courseId : null, () => pb.collection('class_sessions').getFullList({ filter: pb.filter('course={:c}', { c: courseId }) }));
+    const attendanceRows = useCachedQuery<AttendanceRecord[]>(courseId ? 'gradebook:attendance:' + courseId : null, () => pb.collection('attendance').getFullList({ filter: pb.filter('session.course={:c}', { c: courseId }) }));
+    const participation = useCachedQuery<ParticipationAward[]>(courseId ? 'gradebook:participation:' + courseId : null, () => pb.collection('participation_awards').getFullList({filter:pb.filter('session.course={:c}',{c:courseId})}));
+    const components = useMemo(() => groupedComponents(rawComponents, assignmentsQuery.data || [], submissionsQuery.data || [], students, attendanceSessions.data || [], attendanceRows.data || [], participation.data || []),
+        [componentsQuery.data, assignmentsQuery.data, submissionsQuery.data, students, attendanceSessions.data, attendanceRows.data, participation.data]);
+
+    const updateMapping = async (assignment: Assignment, patch: Record<string, unknown>) => {
+        try {
+            await pb.collection('assignments').update(assignment.id, patch);
+            invalidate('assignments:formal-gradebook=' + courseId); assignmentsQuery.reload(); submissionsQuery.reload();
+        } catch { window.alert('Pemetaan belum tersimpan. Coba lagi.'); }
+    };
+    const syncRps = async () => {
+        if (!(await confirmDialog({ title: 'Sinkronkan komponen ke RPS?', message: 'Bobot Kehadiran, Tugas, UTS, UAS dan bonus Keaktivan mengikuti Penilaian. Komponen RPS lainnya tetap disimpan dengan bobot 0 agar tidak dihitung ganda.', confirmLabel: 'Sinkronkan' }))) return;
+        try {
+            const existing = await pb.collection('assessments').getFullList({filter:pb.filter('course={:c}',{c:courseId})});
+            const codes: Record<string,string> = {attendance:'Kehadiran',tasks:'Tugas',uts:'UTS',uas:'UAS',bonus:'Keaktivan'};
+            const used = new Set<string>();
+            for (const component of rawComponents.filter(c => c.sourceType)) {
+                const code = codes[component.sourceType!];
+                const found = existing.find(a => a.componentType === component.sourceType || String(a.code).toLowerCase() === code.toLowerCase());
+                const payload = {owner:me,course:courseId,componentType:component.sourceType,code,description:component.sourceType==='bonus' ? 'Bonus partisipasi maksimal +'+component.maxScore+' poin di luar bobot 100%.' : component.name, weight:component.sourceType==='bonus' ? 0 : component.weight,bonusMax:component.sourceType==='bonus' ? component.maxScore : 0,order:component.order};
+                if(found) {used.add(found.id); await pb.collection('assessments').update(found.id,payload);} else await pb.collection('assessments').create(payload);
+            }
+            for(const old of existing) if(!used.has(old.id)) await pb.collection('assessments').update(old.id,{weight:0,componentType:''});
+            invalidate('assessments:course='+courseId);
+        } catch {window.alert('Sinkronisasi belum selesai. Coba lagi.');}
+    };
+    const adoptDefaults = async () => {
+        if (!(await confirmDialog({ title: 'Gunakan komponen standar?', message: 'Komponen lama akan diarsipkan dan tidak dihitung ganda. Nilai tugas tetap tersimpan. Bobot awal 10/30/25/35 dan bonus maksimal +5. Periksa pemetaan UTS/UAS setelahnya.', confirmLabel: 'Terapkan' }))) return;
+        try {
+            for (const old of rawComponents) if (!old.sourceType) {
+                if (old.assignment) await pb.collection('assignments').update(old.assignment, { assessmentGroup: /uas/i.test(old.name) ? 'uas' : /uts/i.test(old.name) ? 'uts' : 'tasks' });
+                await pb.collection('grade_components').update(old.id, { status: 'archived' });
+            }
+            const defaults = [['attendance','Kehadiran',10],['tasks','Tugas',30],['uts','UTS',25],['uas','UAS',35],['bonus','Keaktivan',0]] as const;
+            for (const [order, [sourceType,name,weight]] of defaults.entries()) {
+                if (!(componentsQuery.data || []).some(c => c.sourceType === sourceType))
+                    await pb.collection('grade_components').create({ owner: me, course: courseId, sourceType, name, weight, kind: 'manual', maxScore: sourceType === 'bonus' ? 5 : 100, bonusMax: sourceType === 'bonus' ? 5 : 0, attendanceLateCredit: 1, attendanceExcusedCredit: 0, status: 'active', order });
+            }
+            componentsQuery.reload(); assignmentsQuery.reload();
+        } catch { window.alert('Pengaturan belum selesai tersimpan. Muat ulang dan coba lagi.'); }
+    };
+
+    // ── Derived maps ──────────────────────────────────────────────────────
 	const entriesByComponent = useMemo(() => {
 		const map = new Map<string, Map<string, GradeEntry>>();
 		for (const e of entriesQuery.data ?? []) {
@@ -280,14 +330,14 @@ export function LecturerGradebook({ course }: { course: Course }) {
 
 	// ── Grade mutation (manual components) ────────────────────────────────
 	const saveManualGrade = useCallback(
-		async (component: GradeComponent, studentId: string, value: number | null) => {
+		async (component: GradeComponent, studentId: string, value: number | null, note?: string) => {
 			const existing = entriesByComponent.get(component.id)?.get(studentId);
 			const payload = {
 				owner: me,
 				component: component.id,
 				student: studentId,
 				value: value,
-				source: 'manual' as const,
+				source: 'manual' as const, note: note ?? existing?.note ?? '',
 			};
 			try {
 				if (existing) {
@@ -397,7 +447,12 @@ export function LecturerGradebook({ course }: { course: Course }) {
 		[students, finals],
 	);
 
-	const publish = useCallback(async () => {
+    const publish = useCallback(async () => {
+        if (totalWeight(components) !== 100) { window.alert('Total bobot komponen utama harus 100%.'); return; }
+        if ([...finals.values()].some(f => f.countingCount === 0 || f.gradedCount < f.countingCount)) {
+            window.alert('Lengkapi semua komponen nilai berbobot untuk setiap mahasiswa sebelum menerbitkan nilai akhir.');
+            return;
+        }
 		try {
 			const existing = publicationQuery.data;
 			const payload = {
@@ -417,7 +472,7 @@ export function LecturerGradebook({ course }: { course: Course }) {
 		} catch (err) {
 			console.error(err);
 		}
-	}, [publicationQuery.data, me, courseId]);
+	}, [publicationQuery.data, me, courseId, finals, components]);
 
 	const unpublish = useCallback(async () => {
 		if (!publicationQuery.data) return;
@@ -525,7 +580,20 @@ export function LecturerGradebook({ course }: { course: Course }) {
 				</div>
 			</header>
 
-			<div className="gb-kpis">
+			<details className="pp-panel" style={{ margin: '16px 0' }}>
+                <summary style={{ cursor: 'pointer' }}><strong>Pemetaan komponen penilaian</strong></summary>
+                <button className="ld-outline-action" disabled={!rawComponents.some(c => c.sourceType)} onClick={() => void syncRps()}>Sinkronkan komponen ke RPS</button><p>Tugas formal otomatis masuk Tugas. Pindahkan ujian ke UTS/UAS; bobot internal 1 berarti semua tugas setara. Latihan personal tidak dihitung.</p>
+                {!rawComponents.some(c => c.sourceType) && <button className="ld-btn-primary" onClick={() => void adoptDefaults()}>Gunakan Kehadiran, Tugas, UTS, UAS + Keaktivan</button>}
+                {(assignmentsQuery.data || []).filter(a => activityTypeOf(a) === 'formal').map(a => <div key={a.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--p-line)' }}>
+                    <span style={{ flex: '1 1 220px' }}>{a.title}{a.status === 'draft' ? ' · draf, belum dihitung' : ''}</span>
+                    <label>Komponen<select aria-label={'Komponen ' + a.title} value={a.assessmentGroup || 'tasks'} onChange={e => void updateMapping(a, { assessmentGroup: e.target.value })}>
+                        <option value="tasks">Tugas</option><option value="uts">UTS</option><option value="uas">UAS</option><option value="excluded">Tidak dihitung</option>
+                    </select></label>
+                    <label>Bobot internal<input aria-label={'Bobot internal ' + a.title} type="number" min={1} max={1000} defaultValue={a.assessmentWeight || 1} key={a.id + ':' + a.assessmentWeight} style={{ width: 80 }} onBlur={e => { const value = Number(e.target.value); if (Number.isFinite(value) && value >= 1 && value <= 1000) void updateMapping(a, { assessmentWeight: value }); else e.target.value = String(a.assessmentWeight || 1); }} /></label>
+                </div>)}
+                <a className="ld-outline-action" href={`/app/courses/${courseId}/absensi`}>Buka Absensi & Keaktivan →</a><p className="pp-muted">Kehadiran mengikuti pengaturan kredit terlambat dan izin/sakit pada komponen Kehadiran. Catatan absensi yang kosong membuat komponen belum lengkap. Keaktivan adalah bonus, bukan persentase bobot.</p>
+            </details>
+            <div className="gb-kpis">
 				<Kpi icon={Users} tone="blue" value={String(students.length)} label={t('gb.kpi.students')} />
 				<Kpi icon={TrendingUp} tone="teal" value={avg == null ? '—' : String(avg)} label={t('gb.kpi.avg')} />
 				<Kpi icon={CheckCircle2} tone="green" value={highest == null ? '—' : String(highest)} label={t('gb.kpi.highest')} />
@@ -769,7 +837,7 @@ function NilaiTab({
 	statusFilter: StudentStatus | 'all';
 	setStatusFilter: (v: StudentStatus | 'all') => void;
 	onSelectStudent: (id: string) => void;
-	onSaveGrade: (c: GradeComponent, studentId: string, value: number | null) => Promise<void>;
+	onSaveGrade: (c: GradeComponent, studentId: string, value: number | null, note?: string) => Promise<void>;
 }) {
 	const t = useT();
 	if (students.length === 0) {
@@ -830,7 +898,7 @@ function NilaiTab({
 								<th key={c.id} scope="col" className="gb-th-comp">
 									<span className="gb-th-comp-name">{c.name}</span>
 									<span className="gb-th-comp-meta">
-										{c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {c.weight ?? 0}%
+										{c.sourceType === 'bonus' ? 'Bonus keaktivan' : c.computed || ['tasks','attendance'].includes(c.sourceType || '') ? 'Otomatis' : c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {c.sourceType === 'bonus' ? '+' + c.maxScore + ' poin maks.' : (c.weight ?? 0) + '%'}
 									</span>
 								</th>
 							))}
@@ -918,7 +986,7 @@ function GradeCell({
 	studentId: string;
 	entriesByComponent: Map<string, Map<string, GradeEntry>>;
 	submissionsByAssignment: Map<string, Map<string, AssignmentSubmission>>;
-	onSave: (c: GradeComponent, studentId: string, value: number | null) => Promise<void>;
+	onSave: (c: GradeComponent, studentId: string, value: number | null, note?: string) => Promise<void>;
 }) {
 	const t = useT();
 	const { score, source, aiEvaluated } = componentScore(
@@ -931,6 +999,7 @@ function GradeCell({
 	const rawValue = component.kind === 'manual' ? entry?.value ?? '' : '';
 	const [editing, setEditing] = useState(false);
 	const [draft, setDraft] = useState(String(rawValue));
+    const [bonusNote,setBonusNote] = useState(entry?.note || '');
 	const [error, setError] = useState('');
 	const inputRef = useRef<HTMLInputElement>(null);
 
@@ -942,15 +1011,16 @@ function GradeCell({
 		if (editing) inputRef.current?.focus();
 	}, [editing]);
 
-	if (component.kind === 'assignment') {
+	if (component.kind === 'assignment' || component.computed) {
 		return (
-			<div className="gb-cell-assignment" title={aiEvaluated ? t('gb.cell.aiTitle') : t('gb.cell.submissionTitle')}>
+			<div className="gb-cell-assignment" title={component.computed?.[studentId]?.detail || (aiEvaluated ? t('gb.cell.aiTitle') : t('gb.cell.submissionTitle'))}>
 				{score == null ? (
 					<span className="gb-cell-empty">—</span>
 				) : (
-					<span className="gb-cell-value">{score}</span>
+					<span className="gb-cell-value">{component.sourceType === "bonus" ? "+" + score : score}</span>
 				)}
-				{aiEvaluated && <Sparkles size={11} className="gb-ai-ico" aria-label={t('gb.cell.aiLabel')} />}
+				{component.computed && <details style={{ fontSize: 10 }}><summary>{component.computed[studentId]?.detail.split(";")[0]}</summary><p style={{ whiteSpace: "pre-wrap", minWidth: 220 }}>{component.computed[studentId]?.detail}</p></details>}
+{aiEvaluated && <Sparkles size={11} className="gb-ai-ico" aria-label={t('gb.cell.aiLabel')} />}
 			</div>
 		);
 	}
@@ -962,14 +1032,15 @@ function GradeCell({
 			return;
 		}
 		const current = entry?.value ?? null;
-		if (parsed.value === current) {
+		if (component.sourceType === 'bonus' && (parsed.value || 0) > 0 && !bonusNote.trim()) { setError('Tuliskan alasan bonus keaktivan.'); return; }
+        if (parsed.value === current && bonusNote === (entry?.note || '')) {
 			setEditing(false);
 			setError('');
 			if (moveDown) focusNextCell(studentId, component.id);
 			return;
 		}
 		try {
-			await onSave(component, studentId, parsed.value);
+			await onSave(component, studentId, parsed.value, component.sourceType === 'bonus' ? bonusNote.trim().slice(0,1000) : undefined);
 			setEditing(false);
 			setError('');
 			if (moveDown) focusNextCell(studentId, component.id);
@@ -989,7 +1060,7 @@ function GradeCell({
 				{entry?.value == null ? (
 					<span className="gb-cell-empty">—</span>
 				) : (
-					<span className="gb-cell-value">{entry.value}</span>
+					<span className="gb-cell-value">{component.sourceType === "bonus" ? "+" + entry.value : entry.value}</span>
 				)}
 			</button>
 		);
@@ -1016,11 +1087,12 @@ function GradeCell({
 						setEditing(false);
 					}
 				}}
-				onBlur={() => void commit(false)}
+				onBlur={() => { if(component.sourceType !== 'bonus') void commit(false); }}
 				aria-label={t('gb.cell.inputAria', { name: component.name, max: String(component.maxScore || 100) })}
 				aria-invalid={Boolean(error) || undefined}
 			/>
-			{error && <span className="gb-cell-error">{error}</span>}
+			{component.sourceType === 'bonus' && <><input aria-label="Alasan bonus keaktivan" placeholder="Alasan bonus" value={bonusNote} maxLength={1000} onChange={e=>setBonusNote(e.target.value)} /><button className="ld-outline-action" onClick={()=>void commit(false)}>Simpan</button></>}
+{error && <span className="gb-cell-error">{error}</span>}
 		</div>
 	);
 }
@@ -1093,7 +1165,7 @@ function KomponenTab({
 								<div className="gb-comp-main">
 									<strong>{c.name}</strong>
 									<small>
-										{c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {t('gb.komponen.max')} {c.maxScore || 100} · {t('gb.komponen.weight')} {c.weight ?? 0}%
+										{c.sourceType === 'bonus' ? 'Bonus keaktivan' : c.computed || ['tasks','attendance'].includes(c.sourceType || '') ? 'Otomatis' : c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {t('gb.komponen.max')} {c.maxScore || 100} · {t('gb.komponen.weight')} {c.sourceType === 'bonus' ? '+' + c.maxScore + ' poin maks.' : (c.weight ?? 0) + '%'}
 										{c.expand?.assignment ? ` · ${c.expand.assignment.title}` : ''}
 										{graded > 0 ? ` · ${graded} ${t('gb.komponen.graded')}` : ''}
 									</small>
@@ -1229,7 +1301,7 @@ function StudentDrawer({
 	override: GradeOverride | undefined;
 	published: boolean;
 	onClose: () => void;
-	onSetOverride: (studentId: string, value: number | null) => Promise<void>;
+	onSetOverride: (studentId: string, value: number | null, note?: string) => Promise<void>;
 }) {
 	const t = useT();
 	const student = students.find((s) => s.id === studentId);
@@ -1281,7 +1353,7 @@ function StudentDrawer({
 									<div className="gb-drawer-grade-main">
 										<strong>{c.name}</strong>
 										<small>
-											{c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {t('gb.komponen.weight')} {c.weight ?? 0}%
+											{c.sourceType === 'bonus' ? 'Bonus keaktivan' : c.computed || ['tasks','attendance'].includes(c.sourceType || '') ? 'Otomatis' : c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {t('gb.komponen.weight')} {c.sourceType === 'bonus' ? '+' + c.maxScore + ' poin maks.' : (c.weight ?? 0) + '%'}
 											{aiEvaluated && (
 												<span className="gb-ai-tag" title={t('gb.cell.aiLabel')}>
 													<Sparkles size={10} /> AI
@@ -1444,6 +1516,8 @@ function ComponentDialog({
 	const [description, setDescription] = useState(component?.description ?? '');
 	const [maxScore, setMaxScore] = useState(String(component?.maxScore ?? 100));
 	const [weight, setWeight] = useState(String(component?.weight ?? 0));
+    const [lateCredit,setLateCredit] = useState(component?.attendanceLateCredit ?? 1);
+    const [excusedCredit,setExcusedCredit] = useState(component?.attendanceExcusedCredit ?? 0);
 	const [kind, setKind] = useState<'manual' | 'assignment'>(
 		isAssignment ? 'assignment' : (component?.kind ?? 'manual'),
 	);
@@ -1478,10 +1552,12 @@ function ComponentDialog({
 		const payload = {
 			owner: me,
 			course: courseId,
-			name: name.trim(),
+        name: name.trim(),
+        attendanceLateCredit: lateCredit,
+        attendanceExcusedCredit: excusedCredit,
 			description: description.trim(),
-			maxScore: max,
-			weight: w,
+			maxScore: component?.sourceType && component.sourceType !== 'bonus' ? 100 : max, bonusMax: component?.sourceType === 'bonus' ? max : 0,
+			weight: component?.sourceType === 'bonus' ? 0 : w,
 			kind,
 			assignment: kind === 'assignment' ? assignmentId : '',
 			order,
@@ -1552,7 +1628,11 @@ function ComponentDialog({
 						</label>
 					</div>
 					<label>
-						<span>{t('gb.compDialog.source')}</span>
+						{component?.sourceType === 'attendance' && <div style={{display:'flex',gap:12}}>
+    <label>Kredit terlambat<select value={lateCredit} onChange={e=>setLateCredit(Number(e.target.value))}><option value={1}>100%</option><option value={0.5}>50%</option><option value={0}>0%</option></select></label>
+    <label>Kredit izin/sakit<select value={excusedCredit} onChange={e=>setExcusedCredit(Number(e.target.value))}><option value={0}>0%</option><option value={0.5}>50%</option><option value={1}>100%</option></select></label>
+</div>}
+<span>{t('gb.compDialog.source')}</span>
 						<select
 							value={kind}
 							onChange={(e) => setKind(e.target.value as 'manual' | 'assignment')}

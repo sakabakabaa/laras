@@ -11,6 +11,8 @@ import {
 import type { Route } from './+types/root';
 import stylesheet from '@/index.css?url';
 import darkOverrides from '@/styles/dark-overrides.css?url';
+import premiumWorkspace from '@/styles/premium-workspace.css?url';
+import personalPractice from '@/styles/personal-practice.css?url';
 import { siteOrigin } from '@/lib/site-origin.server';
 import { HorizonsPreviewScripts } from './horizons-preview-scripts';
 import { SiteHeader } from '@/components/site-header';
@@ -32,6 +34,8 @@ pb.autoCancellation(false);
 export const links: Route.LinksFunction = () => [
 	{ rel: 'stylesheet', href: stylesheet },
 	{ rel: 'stylesheet', href: darkOverrides },
+	{ rel: 'stylesheet', href: premiumWorkspace },
+	{ rel: 'stylesheet', href: personalPractice },
 	{ rel: 'icon', href: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
 	{ rel: 'icon', href: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
 	{ rel: 'icon', href: '/favicon.png', type: 'image/png', sizes: '48x48' },

@@ -511,7 +511,8 @@ export type AiEvaluationRow = {
 	reviewedAt: string;
 	/** Phase 3 — publish snapshot: recalculated rubric scores, final score,
 	 * adjustment flag, and when the lecturer explicitly published. */
-	rubricScores: unknown;
+    rubricScores: unknown;
+    reviewCriterionScores?: Record<string, number>;
 	finalScore: number | null;
 	scoreAdjusted: boolean;
 	publishedAt: string;

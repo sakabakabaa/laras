@@ -169,6 +169,8 @@ export type SubmissionStatus = 'draft' | 'submitted' | 'late' | 'revision' | 'gr
 export type AssignmentStage = { label: string; note?: string };
 
 export type Assignment = {
+    assessmentGroup?: 'tasks' | 'uts' | 'uas' | 'excluded' | '';
+    assessmentWeight?: number;
 	id: string;
 	owner: string;
 	course: string;
@@ -515,6 +517,11 @@ export function localInputToDeadline(value: string) {
 /** Absolute (same-origin) URL for one uploaded submission file. */
 export function submissionFileUrl(submission: AssignmentSubmission, filename: string) {
 	return pb.files.getURL(submission, filename);
+}
+
+/** Files browsers can display directly instead of forcing a download. */
+export function isPreviewableSubmissionFile(filename: string) {
+	return /\.(pdf|jpe?g|png|webp|gif|bmp)$/i.test(filename);
 }
 
 export type UploadProgress = {

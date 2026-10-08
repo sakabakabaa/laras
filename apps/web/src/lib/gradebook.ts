@@ -15,6 +15,11 @@ import type { Assignment, AssignmentSubmission } from '@/lib/assignments';
 export type GradeComponentKind = 'manual' | 'assignment';
 
 export type GradeComponent = {
+    sourceType?: 'attendance' | 'tasks' | 'uts' | 'uas' | 'bonus' | '';
+    bonusMax?: number;
+    attendanceLateCredit?: number;
+    attendanceExcusedCredit?: number;
+    computed?: Record<string, { score: number | null; complete: boolean; detail: string }>;
 	id: string;
 	owner: string;
 	course: string;
@@ -65,6 +70,7 @@ export type GradePublication = {
 };
 
 export type GradebookStudent = {
+    sectionId?: string;
 	id: string;
 	name: string;
 	email: string;
@@ -91,7 +97,7 @@ export const LETTER_GRADES = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'D', 'E'];
 
 /** True when the component is active and carries weight in the final grade. */
 export function componentCounts(component: GradeComponent): boolean {
-	return component.status === 'active' && (component.weight ?? 0) > 0;
+    return component.status === 'active' && component.sourceType !== 'bonus' && (component.weight ?? 0) > 0;
 }
 
 /**
@@ -105,6 +111,9 @@ export function componentScore(
 	entriesByComponent: Map<string, Map<string, GradeEntry>>,
 	submissionsByAssignment: Map<string, Map<string, AssignmentSubmission>>,
 ): { score: number | null; source: 'manual' | 'assignment'; aiEvaluated: boolean } {
+    if (component.sourceType === 'bonus' && component.computed) return {score: Math.min(component.maxScore || component.bonusMax || 5, (component.computed[studentId]?.score || 0) + (entriesByComponent.get(component.id)?.get(studentId)?.value || 0)),source:'assignment',aiEvaluated:false};
+    if (component.computed) return { score: component.computed[studentId]?.score ?? null, source: 'assignment', aiEvaluated: false };
+    if (component.sourceType === 'bonus') return { score: entriesByComponent.get(component.id)?.get(studentId)?.value ?? 0, source: 'manual', aiEvaluated: false };
 	if (component.kind === 'assignment' && component.assignment) {
 		const sub = submissionsByAssignment.get(component.assignment)?.get(studentId);
 		const grade = sub?.grade;
@@ -156,16 +165,21 @@ export function calculateFinalGrade(
 	let weightedSum = 0;
 	let weightSum = 0;
 	let gradedCount = 0;
-	for (const comp of counting) {
+    for (const comp of counting) {
+        if (comp.computed && !comp.computed[studentId]?.complete) continue;
 		const { score } = componentScore(comp, studentId, entriesByComponent, submissionsByAssignment);
 		if (score == null) continue;
 		weightedSum += score * (comp.weight ?? 0);
 		weightSum += comp.weight ?? 0;
 		gradedCount += 1;
 	}
-	const calculated = weightSum > 0 ? Math.round((weightedSum / weightSum) * 10) / 10 : null;
+    const calculated = weightSum > 0 && gradedCount === counting.length ? Math.round((weightedSum / weightSum) * 10) / 10 : null;
 	const overridden = Boolean(override);
-	const value = overridden ? override!.value : calculated;
+    const bonus = components.filter(c => c.status === 'active' && c.sourceType === 'bonus').reduce((sum,c) => {
+        const entry = entriesByComponent.get(c.id)?.get(studentId);
+        return sum + Math.max(0, Math.min(c.maxScore || c.bonusMax || 5, (entry?.value || 0) + (c.computed?.[studentId]?.score || 0)));
+    },0);
+    const value = overridden ? override!.value : calculated == null ? null : Math.min(100, Math.round((calculated + bonus) * 10) / 10);
 	return {
 		value,
 		overridden,
@@ -178,7 +192,7 @@ export function calculateFinalGrade(
 /** Sum of all active component weights — used to warn when ≠ 100. */
 export function totalWeight(components: GradeComponent[]): number {
 	return components
-		.filter((c) => c.status === 'active')
+        .filter((c) => c.status === 'active' && c.sourceType !== 'bonus')
 		.reduce((sum, c) => sum + (c.weight ?? 0), 0);
 }
 

@@ -540,14 +540,23 @@ export function CourseDashboard() {
 						<div className="ld-greet">
 							<div className="ld-greet-copy">
 								<span className="ld-eyebrow">{formatLongDate()}</span>
-								<h1>Halo, {firstName}! Ada yang bisa dibantu hari ini?</h1>
+								<h1>Halo, {firstName}!</h1>
 							</div>
-							<form className="ld-greet-chat" onSubmit={submitQuick}>
+							<div className="ld-greet-ask">
+								<div className="ld-greet-ask-heading">
+									<span className="ld-greet-ask-symbol" aria-hidden="true"><Sparkles size={15} strokeWidth={1.8} /></span>
+									<div className="ld-greet-ask-copy">
+										<h2 className="ld-greet-ask-title">Tanyakan apa saja</h2>
+										<p>Materi, tugas, dan jadwal kampus</p>
+									</div>
+									<span className="ld-greet-ask-badge">LARAS AI</span>
+								</div>
+								<form className="ld-greet-chat" onSubmit={submitQuick}>
 								<div className="asst-composer-box">
 									<textarea
 										ref={quickRef}
 										className="asst-input"
-										placeholder="Tanyakan apa saja..."
+										placeholder="Ketik pesan untuk LARAS..."
 										value={quickText}
 										onChange={(event) => {
 											setQuickText(event.target.value);
@@ -625,8 +634,9 @@ export function CourseDashboard() {
 										</div>
 									</div>
 								</div>
-							</form>
-							{quickError && <p className="ld-greet-note" role="alert">{quickError}</p>}
+								</form>
+								{quickError && <p className="ld-greet-note" role="alert">{quickError}</p>}
+							</div>
 						</div>
 
 						<nav className="ld-action-row" aria-label="Tindakan cepat">
@@ -848,6 +858,42 @@ export function CourseDashboard() {
 							</>
 						)}
 					</section>
+					{/* Insight */}
+					<section className="ld-panel ld-insight">
+						<div className="ld-card-head">
+							<h2>
+								<span className="ld-spark">
+									<Sparkles size={16} />
+								</span>{' '}
+								Insight
+							</h2>
+						</div>
+						<div className="ld-insight-grid">
+							<div className="ld-insight-main">
+								<strong>{insight.headline}</strong>
+								<p>{insight.body}</p>
+								<button type="button" className="ld-btn-soft" onClick={insight.onClick}>
+									{insight.cta}
+								</button>
+							</div>
+							<div className="ld-insight-side">
+								<div>
+									<span className="ld-up">Sesi selesai</span>
+									<strong>{stats.done}</strong>
+									<small>dari {stats.totalSessions || 0} total</small>
+								</div>
+								<div>
+									<span>Tingkat penyelesaian</span>
+									<strong>
+										{stats.totalSessions
+											? `${Math.round((stats.done / stats.totalSessions) * 100)}%`
+											: '—'}
+									</strong>
+									<small>Rata-rata ruang kerja</small>
+								</div>
+							</div>
+						</div>
+					</section>
 
 					{/* Courses with section badges */}
 					<section className="ld-panel ld-courses-panel" id="courses">
@@ -949,42 +995,6 @@ export function CourseDashboard() {
 						)}
 					</section>
 
-					{/* Insight */}
-					<section className="ld-panel ld-insight">
-						<div className="ld-card-head">
-							<h2>
-								<span className="ld-spark">
-									<Sparkles size={16} />
-								</span>{' '}
-								Insight
-							</h2>
-						</div>
-						<div className="ld-insight-grid">
-							<div className="ld-insight-main">
-								<strong>{insight.headline}</strong>
-								<p>{insight.body}</p>
-								<button type="button" className="ld-btn-soft" onClick={insight.onClick}>
-									{insight.cta}
-								</button>
-							</div>
-							<div className="ld-insight-side">
-								<div>
-									<span className="ld-up">Sesi selesai</span>
-									<strong>{stats.done}</strong>
-									<small>dari {stats.totalSessions || 0} total</small>
-								</div>
-								<div>
-									<span>Tingkat penyelesaian</span>
-									<strong>
-										{stats.totalSessions
-											? `${Math.round((stats.done / stats.totalSessions) * 100)}%`
-											: '—'}
-									</strong>
-									<small>Rata-rata ruang kerja</small>
-								</div>
-							</div>
-						</div>
-					</section>
 					</div>
 					<div className="ld-dash-side">
 					{/* Academic calendar events */}

@@ -38,9 +38,9 @@ import {
 	isPracticeOutdated,
 	MODE_LABEL,
 	practiceSyncState,
-	setPracticeIntent,
 	SHAPE_LABEL,
 	lecturerGradeLabel,
+	isPreviewableSubmissionFile,
 	submissionFileUrl,
 	SUBMISSION_STATUS_LABEL,
 	type Assignment,
@@ -68,6 +68,7 @@ import {
 import { CheckFeedbackBody, CheckEvidence } from '@/components/app/task-workspaces/check-feedback-body';
 import { AssignmentForm } from '@/components/app/assignment-form';
 import { BulkPaperInput } from '@/components/app/bulk-paper-input';
+import { useT } from '@/lib/i18n';
 
 type PublicRow = {
 	id: string;
@@ -196,6 +197,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	// including the explicit review-and-re-copy flow for outdated practices.
 	const [editOpen, setEditOpen] = useState(false);
 	const [bulkOpen, setBulkOpen] = useState(false);
+	const evaluationGridRef = useRef<HTMLDivElement>(null);
 	const linkedPractices = useCachedQuery<Assignment[]>(
 		assignmentId ? `assignments:practice-of=${assignmentId}` : null,
 		() =>
@@ -431,6 +433,34 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	const active = filtered.find((p) => p.key === selected) || filtered[0] || null;
 	const activeAttempts = attempts.filter((a) => active && a.identityKey === active.identityKey);
 	const maxChecks = assignment ? checkMaxOf(assignment) : 5;
+	useEffect(() => {
+		if (!assignment || activityTypeOf(assignment) === 'formative') return;
+		const grid = evaluationGridRef.current;
+		const participantsColumn = grid?.querySelector<HTMLElement>(':scope > .eval-col:first-child');
+		const answerColumn = grid?.querySelector<HTMLElement>(':scope > .eval-col:nth-child(2)');
+		if (!grid || !participantsColumn || !answerColumn) return;
+
+		const syncHeight = () => {
+			const columns = getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/);
+			if (columns.length < 2) {
+				participantsColumn.style.removeProperty('height');
+				return;
+			}
+			participantsColumn.style.height = `${Math.ceil(answerColumn.getBoundingClientRect().height)}px`;
+		};
+		const observer = new ResizeObserver(syncHeight);
+		observer.observe(grid);
+		observer.observe(answerColumn);
+		syncHeight();
+		window.addEventListener('resize', syncHeight);
+		const delayedSync = window.setTimeout(syncHeight, 120);
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('resize', syncHeight);
+			window.clearTimeout(delayedSync);
+			participantsColumn.style.removeProperty('height');
+		};
+	}, [assignmentId, assignment?.id, activityTypeOf(assignment), active?.key, participants.length, loading]);
 
 	if (loading) {
 		return (
@@ -552,11 +582,10 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 									<FileInput size={16} /> Input kertas
 								</button>
 								<Link
-									to={`/app/tugas/buat?practice=${assignment.id}`}
+									to={`/app/courses/${assignment.course}/latihan`}
 									role="menuitem"
-									onClick={() => setPracticeIntent(assignment.id)}
 								>
-									<Repeat size={16} /> Buat latihan persiapan
+									<Repeat size={16} /> Buka Latihan Personal
 								</Link>
 							</>
 						)}
@@ -698,7 +727,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				</ul>
 			)}
 
-			<div className={`eval-grid${formative ? ' formative' : ' evx-grid'}`}>
+			<div ref={evaluationGridRef} className={`eval-grid${formative ? ' formative' : ' evx-grid'}`}>
 				<AiEvaluationReviewProvider
 					assignment={assignment}
 					cefrLevel={cefr}
@@ -1212,8 +1241,9 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: 'ok
 	);
 }
 
-/** Renders a submission's uploaded files — audio clips get a player, others a download link. */
+/** Renders a submission's uploaded files — audio clips get a player, images/PDFs open in a new tab. */
 function SubmissionFiles({ files }: { files: { name: string; url: string }[] }) {
+	const t = useT();
 	if (files.length === 0) return null;
 	return (
 		<div className="asg-sub-files">
@@ -1232,9 +1262,17 @@ function SubmissionFiles({ files }: { files: { name: string; url: string }[] }) 
 						</div>
 					);
 				}
+				const previewable = isPreviewableSubmissionFile(f.name);
 				return (
-					<a key={f.name} className="asg-sub-file" href={f.url} target="_blank" rel="noreferrer" download>
-						<Download size={12} /> {f.name}
+					<a
+						key={f.name}
+						className="asg-sub-file"
+						href={f.url}
+						target="_blank"
+						rel="noreferrer"
+						{...(previewable ? { title: `${t('student.result.openInNewTab')} ${f.name}`, 'aria-label': `${t('student.result.openInNewTab')} ${f.name}` } : { download: true })}
+					>
+						{previewable ? <Eye size={12} /> : <Download size={12} />} {f.name}
 					</a>
 				);
 			})}

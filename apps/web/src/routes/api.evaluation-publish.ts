@@ -31,6 +31,7 @@ import {
 import type { ReviewFinding } from '@/lib/ai-evaluation';
 
 type Body = {
+    criterionScores?: unknown;
 	submissionId?: string;
 	publicSubmissionId?: string;
 	findings?: unknown;
@@ -121,7 +122,12 @@ export const action = withApi(async ({ request }) => {
 	// exact same rule the lecturer sees in the review panel.
 	const criteria = rubricCriteriaOf(target.assignment);
 	const wordCount = countWords(target.content);
-	const scores = calculateRubricScores(findings, criteria, { wordCount });
+    const criterionScores = body.criterionScores && typeof body.criterionScores === 'object' && !Array.isArray(body.criterionScores) ? body.criterionScores as Record<string, number> : {};
+    if (criteria.some(c => c.weight > 0 && (typeof criterionScores[c.id] !== 'number' || !Number.isFinite(criterionScores[c.id]) || criterionScores[c.id] < 0 || criterionScores[c.id] > 100)))
+        return apiError(422, 'Nilai setiap kriteria berbobot sebelum menerbitkan.');
+    if (!criteria.some(c => c.weight > 0) && (typeof body.finalScore !== 'number' || body.scoreAdjusted !== true))
+        return apiError(422, 'Tanpa rubrik berbobot, isi nilai keseluruhan secara eksplisit.');
+    const scores = calculateRubricScores(findings, criteria, { wordCount, criterionScores });
 	let finalScore = scores.total;
 	let adjusted = false;
 	if (typeof body.finalScore === 'number' && Number.isFinite(body.finalScore)) {
@@ -163,7 +169,8 @@ export const action = withApi(async ({ request }) => {
 			? { recommendedScore, detailScore }
 			: null;
 
-	const publishPayload = {
+    const publishPayload = {
+        reviewCriterionScores: criterionScores,
 		reviewFindings: findings,
 		reviewedAt: now,
 		rubricScores: scores,

@@ -18,7 +18,7 @@ const COPY: Record<CourseSection, string> = {
 	'mata-kuliah': 'Pertemuan mingguan mata kuliah, mengikuti rencana di RPS.',
 	absensi: 'Kehadiran mahasiswa per pertemuan dan kelas, terpisah dari nilai dan pengumpulan.',
 	tugas: 'Tugas formal, pengumpulan, dan penilaian.',
-	latihan: 'Latihan formatif berulang, terpisah dari nilai resmi.',
+	latihan: 'Latihan bahasa personal dari pertemuan terbaru dan umpan balik Anda.',
 	berkas: 'Materi dan berkas yang ditautkan ke mata kuliah.',
 	mahasiswa: 'Daftar mahasiswa, akun, dan status pendaftaran.',
 	nilai: 'Nilai tugas formal, umpan balik dosen, dan tugas yang perlu perhatian.',

@@ -894,6 +894,20 @@ export function AssistantPanel({
 	const filteredSessions = searchQuery
 		? sessions.filter((s) => (s.title || 'Percakapan baru').toLowerCase().includes(searchQuery))
 		: sessions;
+	const clarification = clarify && !pending ? (
+		<AssistantClarify
+			key={clarify.messageId}
+			questions={clarify.questions}
+			disabled={busy}
+			onSubmit={(answers) => {
+				const lines = clarify.questions.map((question, i) => {
+					const answer = answers[i];
+					return answer ? `${i + 1}. ${question.prompt}\n${answer}` : '';
+				}).filter(Boolean);
+				void send(`Jawaban klarifikasi:\n${lines.join('\n\n')}`, [], clarify.messageId);
+			}}
+		/>
+	) : null;
 
 	return (
 		<div className={`asst-wrap${variant === 'drawer' ? ' asst-drawer' : ''}`}>
@@ -1140,6 +1154,7 @@ export function AssistantPanel({
 							</div>
 						</div>
 					)}
+					{variant === 'drawer' && clarification}
 				</div>
 
 				{pending && (
@@ -1164,20 +1179,7 @@ export function AssistantPanel({
 					</div>
 				)}
 
-				{clarify && !pending && (
-					<AssistantClarify
-						key={clarify.messageId}
-						questions={clarify.questions}
-						disabled={busy}
-						onSubmit={(answers) => {
-							const lines = clarify.questions.map((question, i) => {
-								const answer = answers[i];
-								return answer ? `${i + 1}. ${question.prompt}\n${answer}` : '';
-							}).filter(Boolean);
-							void send(`Jawaban klarifikasi:\n${lines.join('\n\n')}`, [], clarify.messageId);
-						}}
-					/>
-				)}
+				{variant !== 'drawer' && clarification}
 
 				{error && <div className="ld-alert" role="alert">{error}</div>}
 

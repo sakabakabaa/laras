@@ -4,6 +4,7 @@ import {
 	ArrowLeft,
 	BookOpen,
 	CalendarOff,
+	CalendarDays,
 	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
@@ -94,10 +95,6 @@ function formatRange(start: string, end: string | undefined, language: 'id' | 'e
 	return `${formatDay(start, language)} – ${formatDay(end, language)}`;
 }
 
-function weekdayLong(iso: string, language: 'id' | 'en' | 'de'): string {
-	return new Intl.DateTimeFormat(localeOf(language), { weekday: 'long', timeZone: 'UTC' }).format(parseISO(iso));
-}
-
 function monthInRange(year: number, month: number): boolean {
 	const n = year * 12 + month;
 	return n >= CALENDAR_RANGE.startYear * 12 + CALENDAR_RANGE.startMonth
@@ -116,7 +113,7 @@ function findEvent(id: string): CalendarEvent | undefined {
 }
 
 function sourceFor(category: CalendarCategory) {
-	if (category === 'upi') return CALENDAR_SOURCES.find((s) => s.id === 'upi-en') ?? CALENDAR_SOURCES[1];
+	if (category === 'upi') return CALENDAR_SOURCES.find((source) => source.id === 'upi-en') ?? CALENDAR_SOURCES[1];
 	return CALENDAR_SOURCES[0];
 }
 
@@ -156,6 +153,56 @@ function monthCells(year: number, month: number): string[] {
 	return Array.from({ length: total }, (_, i) => addDays(start, i));
 }
 
+type MonthEventSpan = {
+	event: CalendarEvent;
+	column: number;
+	length: number;
+	lane: number;
+	continuesBefore: boolean;
+	continuesAfter: boolean;
+	showTitle: boolean;
+};
+
+function monthEventSpans(cells: string[], events: CalendarEvent[]) {
+	const weeks = Array.from({ length: cells.length / 7 }, (_, week) => {
+		const firstIndex = week * 7;
+		const first = cells[firstIndex];
+		const last = cells[firstIndex + 6];
+		const items = events
+			.filter((event) => event.start <= last && (event.end ?? event.start) >= first)
+			.map((event) => {
+				const start = event.start < first ? first : event.start;
+				const end = (event.end ?? event.start) > last ? last : (event.end ?? event.start);
+				return {
+					event,
+					column: Math.max(0, Math.round((parseISO(start).getTime() - parseISO(first).getTime()) / 86_400_000)),
+					length: Math.round((parseISO(end).getTime() - parseISO(start).getTime()) / 86_400_000) + 1,
+					continuesBefore: event.start < first,
+					continuesAfter: (event.end ?? event.start) > last,
+				};
+			})
+			.sort((a, b) => a.column - b.column || b.length - a.length || a.event.title.localeCompare(b.event.title));
+		const laneEnds: number[] = [];
+		const spans: MonthEventSpan[] = items.map((item) => {
+			let lane = laneEnds.findIndex((end) => end <= item.column);
+			if (lane === -1) lane = laneEnds.length;
+			laneEnds[lane] = item.column + item.length;
+			return { ...item, lane, showTitle: false };
+		});
+		return { spans, laneCount: laneEnds.length };
+	});
+	const titled = new Set<string>();
+	for (const week of weeks) {
+		for (const span of week.spans) {
+			if (!titled.has(span.event.id)) {
+				span.showTitle = true;
+				titled.add(span.event.id);
+			}
+		}
+	}
+	return weeks;
+}
+
 export function AcademicCalendar() {
 	const language = useLanguage();
 	const t = useT();
@@ -173,6 +220,8 @@ export function AcademicCalendar() {
 	const [today, setToday] = useState<string | null>(null);
 	const [view, setView] = useState<ViewMode>('month');
 	const [exportOpen, setExportOpen] = useState(false);
+	const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+	const [hasChosenActivity, setHasChosenActivity] = useState(false);
 
 	const { user } = useAuth();
 	const [courseEvents, setCourseEvents] = useState<CalendarEvent[]>([]);
@@ -282,7 +331,6 @@ export function AcademicCalendar() {
 	const allOn = ALL_CATEGORIES.every((c) => enabled[c]);
 	const anyOn = ALL_CATEGORIES.some((c) => enabled[c]);
 
-	const selectedEvents = useMemo(() => eventsOnDay(filtered, selected), [filtered, selected]);
 	const cells = useMemo(() => monthCells(cursor.year, cursor.month), [cursor]);
 	const weekDays = useMemo(() => {
 		const start = startOfWeek(selected);
@@ -298,6 +346,18 @@ export function AcademicCalendar() {
 			})
 			.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.title.localeCompare(b.title)));
 	}, [filtered, cursor]);
+	const selectedEvents = useMemo(() => eventsOnDay(filtered, selected), [filtered, selected]);
+	const spansByWeek = useMemo(() => monthEventSpans(cells, monthEvents), [cells, monthEvents]);
+	const upcomingEvents = useMemo(() => monthEvents
+		.filter((ev) => (ev.end ?? ev.start) >= (today ?? selected))
+		.slice(0, 5), [monthEvents, today, selected]);
+	const activityDetails = useMemo(() => {
+		const active = selectedEventId ? filtered.find((event) => event.id === selectedEventId) : undefined;
+		if (active) return [active];
+		if (selectedEvents.length) return selectedEvents;
+		return hasChosenActivity ? [] : upcomingEvents.slice(0, 1);
+	}, [filtered, hasChosenActivity, selectedEventId, selectedEvents, upcomingEvents]);
+	const detailsDate = selectedEventId || selectedEvents.length ? selected : activityDetails[0]?.start ?? selected;
 
 	const canPrev = monthInRange(cursor.year, cursor.month - 1) || (cursor.month === 0 && monthInRange(cursor.year - 1, 11));
 	const canNext = (() => {
@@ -310,6 +370,8 @@ export function AcademicCalendar() {
 		setCursor(next);
 		const day = Math.min(parseISO(selected).getUTCDate(), new Date(Date.UTC(next.year, next.month + 1, 0)).getUTCDate());
 		setSelected(toISO(new Date(Date.UTC(next.year, next.month, day))));
+		setSelectedEventId(null);
+		setHasChosenActivity(true);
 	}
 
 	function shiftWeek(delta: number) {
@@ -318,6 +380,8 @@ export function AcademicCalendar() {
 		if (!monthInRange(d.getUTCFullYear(), d.getUTCMonth())) return;
 		setSelected(next);
 		setCursor({ year: d.getUTCFullYear(), month: d.getUTCMonth() });
+		setSelectedEventId(null);
+		setHasChosenActivity(true);
 	}
 
 	function goToday() {
@@ -326,6 +390,8 @@ export function AcademicCalendar() {
 		if (!monthInRange(d.getUTCFullYear(), d.getUTCMonth())) return;
 		setSelected(today);
 		setCursor({ year: d.getUTCFullYear(), month: d.getUTCMonth() });
+		setSelectedEventId(null);
+		setHasChosenActivity(true);
 	}
 
 	function pickDay(iso: string) {
@@ -333,6 +399,13 @@ export function AcademicCalendar() {
 		if (!monthInRange(d.getUTCFullYear(), d.getUTCMonth())) return;
 		setSelected(iso);
 		setCursor({ year: d.getUTCFullYear(), month: d.getUTCMonth() });
+		setSelectedEventId(null);
+		setHasChosenActivity(true);
+	}
+
+	function pickEvent(event: CalendarEvent, day = event.start) {
+		pickDay(day);
+		setSelectedEventId(event.id);
 	}
 
 	function toggleAll() {
@@ -373,17 +446,6 @@ export function AcademicCalendar() {
 					</Link>
 					<h1>{t('student.calendar.title')}</h1>
 					<p className="ac2-kicker">{t('student.calendar.year')}</p>
-					<p className="ac2-sub">
-						{t('student.calendar.description')}
-					</p>
-					<div className="ac2-sources" aria-label={t('student.calendar.sources')}>
-						{CALENDAR_SOURCES.map((src) => (
-							<a key={src.id} href={src.url} target="_blank" rel="noreferrer" title={src.description}>
-								<ExternalLink size={12} />
-								{src.name}
-							</a>
-						))}
-					</div>
 				</div>
 				<div className="ac2-head-actions">
 					<div className="ac2-export">
@@ -428,20 +490,6 @@ export function AcademicCalendar() {
 						);
 					})}
 				</div>
-				<div className="ac2-views" role="tablist" aria-label={t('student.calendar.views')}>
-					{([['month', t('student.calendar.month')], ['week', t('student.calendar.week')], ['list', t('student.calendar.list')]] as const).map(([id, label]) => (
-						<button
-							key={id}
-							type="button"
-							role="tab"
-							aria-selected={view === id}
-							className={view === id ? 'on' : ''}
-							onClick={() => setView(id)}
-						>
-							{label}
-						</button>
-					))}
-				</div>
 			</div>
 
 			<div className="ac2-layout">
@@ -473,9 +521,12 @@ export function AcademicCalendar() {
 									<ChevronRight size={16} />
 								</button>
 							</div>
-							<button type="button" className="ac2-today" onClick={goToday} disabled={!today || !monthInRange(parseISO(today).getUTCFullYear(), parseISO(today).getUTCMonth())}>
-								{t('student.calendar.today')}
-							</button>
+							<div className="ac2-nav-actions">
+								<div className="ac2-views" role="tablist" aria-label={t('student.calendar.views')}>
+									{([['month', t('student.calendar.month')], ['week', t('student.calendar.week')], ['list', t('student.calendar.list')]] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={view === id} className={view === id ? 'on' : ''} onClick={() => setView(id)}>{label}</button>)}
+								</div>
+								<button type="button" className="ac2-today" onClick={goToday} disabled={!today || !monthInRange(parseISO(today).getUTCFullYear(), parseISO(today).getUTCMonth())}>{t('student.calendar.today')}</button>
+							</div>
 						</div>
 
 						{!anyOn && (
@@ -491,38 +542,27 @@ export function AcademicCalendar() {
 									{dowShort.map((d) => <span key={d} role="columnheader">{d}</span>)}
 								</div>
 								<div className="ac2-grid">
-									{cells.map((iso) => {
-										const d = parseISO(iso);
-										const outside = d.getUTCMonth() !== cursor.month;
-										const dayEvents = eventsOnDay(filtered, iso);
-										const isSelected = iso === selected;
-										const isToday = iso === today;
-										return (
-											<button
-												key={iso}
-												type="button"
-												role="gridcell"
-												className={`ac2-cell${outside ? ' out' : ''}${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}`}
-											aria-label={dayEvents.length ? `${formatDay(iso, language)}: ${dayEvents.map((e) => e.title).join(', ')}` : formatDay(iso, language)}
-												aria-pressed={isSelected}
-												onClick={() => pickDay(iso)}
-											>
-												<span className="ac2-num">{d.getUTCDate()}</span>
-												<span className="ac2-chips">
-													{dayEvents.slice(0, 2).map((ev) => {
-														const Icon = iconFor(ev.category);
-														return (
-															<span key={ev.id} className={`ac2-chip cat-${ev.category}`} title={ev.title}>
-																<Icon size={11} />
-																<em>{ev.title}</em>
-															</span>
-														);
-													})}
-											{dayEvents.length > 2 && <span className="ac2-more">{t('student.calendar.more', { n: String(dayEvents.length - 2) })}</span>}
-												</span>
-											</button>
-										);
-									})}
+									{spansByWeek.map((week, weekIndex) => (
+										<div key={`week-${weekIndex}`} className="ac2-week-row" role="row" style={{ gridTemplateRows: `26px ${week.laneCount ? `repeat(${week.laneCount}, 20px) ` : ''}minmax(38px, 1fr)` }}>
+											{cells.slice(weekIndex * 7, weekIndex * 7 + 7).map((iso, dayIndex) => {
+												const d = parseISO(iso);
+												const outside = d.getUTCMonth() !== cursor.month;
+												const isSelected = iso === selected;
+												const isToday = iso === today;
+												const dayEvents = eventsOnDay(filtered, iso);
+												return <button key={iso} type="button" role="gridcell" className={`ac2-cell${outside ? ' out' : ''}${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}`} style={{ gridColumn: dayIndex + 1, gridRow: '1 / -1' }} aria-label={dayEvents.length ? `${formatDay(iso, language)}: ${dayEvents.map((event) => event.title).join(', ')}` : formatDay(iso, language)} aria-pressed={isSelected} onClick={() => pickDay(iso)}>
+													<span className="ac2-num">{d.getUTCDate()}</span>
+												</button>;
+											})}
+											{week.spans.map((span) => {
+												const Icon = iconFor(span.event.category);
+												const date = cells[weekIndex * 7 + span.column];
+												return <button key={`${span.event.id}-${weekIndex}`} type="button" className={`ac2-span cat-${span.event.category}${span.continuesBefore ? ' continues-before' : ''}${span.continuesAfter ? ' continues-after' : ''}`} style={{ gridColumn: `${span.column + 1} / span ${span.length}`, gridRow: span.lane + 2 }} title={`${span.event.title} · ${formatRange(span.event.start, span.event.end, language)}`} aria-label={`${span.event.title}, ${formatRange(span.event.start, span.event.end, language)}`} onClick={() => pickEvent(span.event, date)}>
+													{span.showTitle && <><Icon size={11} /><em>{span.event.title}</em></>}
+												</button>;
+											})}
+										</div>
+									))}
 								</div>
 				{anyOn && monthEvents.length === 0 && (
 					<p className="ac2-inline-empty">{t('student.calendar.noEventsForFilter')}</p>
@@ -547,7 +587,7 @@ export function AcademicCalendar() {
 												) : dayEvents.map((ev) => {
 													const Icon = iconFor(ev.category);
 													return (
-														<button key={ev.id} type="button" className={`ac2-chip block cat-${ev.category}`} onClick={() => pickDay(iso)}>
+														<button key={ev.id} type="button" className={`ac2-chip block cat-${ev.category}`} onClick={() => pickEvent(ev, iso)}>
 															<Icon size={12} />
 															<em>{ev.title}</em>
 														</button>
@@ -571,7 +611,7 @@ export function AcademicCalendar() {
 									<ul>
 										{monthEvents.map((ev) => (
 											<li key={ev.id}>
-												<button type="button" className={`ac2-agenda-card cat-${ev.category}`} onClick={() => pickDay(ev.start)}>
+												<button type="button" className={`ac2-agenda-card cat-${ev.category}`} onClick={() => pickEvent(ev)}>
 											<AgendaBody ev={ev} language={language} t={t} />
 												</button>
 											</li>
@@ -584,100 +624,52 @@ export function AcademicCalendar() {
 				</div>
 
 				<aside className="ac2-side">
-					<div className="ac2-card ac2-agenda">
-						<div className="ac2-agenda-head">
-						<strong>{weekdayLong(selected, language)}, {formatDay(selected, language)}</strong>
-						<span>{t('student.calendar.eventCount', { n: String(selectedEvents.length) })}</span>
-						</div>
-						{selectedEvents.length === 0 ? (
-							<div className="ac2-empty compact">
-								<CalendarOff size={18} />
-							<p>{t('student.calendar.noEventsForDay')}</p>
-							</div>
-						) : (
-							<ul>
-								{selectedEvents.map((ev) => (
-									<li key={ev.id} className={`ac2-agenda-card cat-${ev.category}`}>
-									<AgendaBody ev={ev} language={language} t={t} />
-										{ev.href ? (
-											<Link className="ac2-source-btn" to={ev.href}>
-								{t('student.calendar.openCourse')} <ChevronRight size={13} />
-											</Link>
-										) : (
-											<a className="ac2-source-btn" href={sourceFor(ev.category).url} target="_blank" rel="noreferrer">
-								{t('student.calendar.viewSource')} <ChevronRight size={13} />
-											</a>
-										)}
-									</li>
-								))}
-							</ul>
-						)}
-					</div>
-
-					<div className="ac2-card ac2-mini">
-						<div className="ac2-mini-nav">
-						<strong>{monthNames[cursor.month]} {cursor.year}</strong>
-							<div>
-							<button type="button" aria-label={t('student.calendar.previousMonth')} disabled={!canPrev} onClick={() => shiftMonth(-1)}>
-									<ChevronLeft size={14} />
-								</button>
-							<button type="button" aria-label={t('student.calendar.nextMonth')} disabled={!canNext} onClick={() => shiftMonth(1)}>
-									<ChevronRight size={14} />
-								</button>
-							</div>
-						</div>
-						<div className="ac2-mini-dow">
-						{dowShort.map((d) => <span key={d}>{d}</span>)}
-						</div>
-						<div className="ac2-mini-grid">
-							{cells.map((iso) => {
-								const d = parseISO(iso);
-								const outside = d.getUTCMonth() !== cursor.month;
-								const marked = eventsOnDay(filtered, iso).length > 0;
-								return (
-									<button
-										key={iso}
-										type="button"
-										className={`${outside ? 'out' : ''}${iso === selected ? ' selected' : ''}${iso === today ? ' today' : ''}${marked ? ' marked' : ''}`}
-										onClick={() => pickDay(iso)}
-									aria-label={formatDay(iso, language)}
-										aria-pressed={iso === selected}
-									>
-										{d.getUTCDate()}
-									</button>
-								);
-							})}
-						</div>
-					</div>
-
 					<div className="ac2-card ac2-semester">
-						{semester && today ? (
-							<SemesterBar semester={semester} today={today} language={language} t={t} />
-						) : (
-							<div className="ac2-empty compact">
-								<CalendarOff size={18} />
-							<p>{t('student.calendar.semesterUnavailable')}</p>
-							</div>
-						)}
+						<div className="ac2-card-head"><strong>{t('student.calendar.semesterStatus')}</strong></div>
+						{semester && today ? <SemesterBar semester={semester} today={today} language={language} t={t} /> : <div className="ac2-empty compact"><CalendarOff size={18} /><p>{t('student.calendar.semesterUnavailable')}</p></div>}
+					</div>
+
+					<div className="ac2-card ac2-upcoming">
+						<div className="ac2-card-head"><strong>{t('student.calendar.agenda')}</strong><span>{monthNames[cursor.month]} {cursor.year}</span></div>
+						{upcomingEvents.length ? <ul>
+							{upcomingEvents.map((ev) => {
+								const day = parseISO(ev.start).getUTCDate();
+								const month = new Intl.DateTimeFormat(language, { month: 'short', timeZone: 'UTC' }).format(parseISO(ev.start));
+								return <li key={ev.id}><button type="button" className={`ac2-upcoming-row cat-${ev.category}`} onClick={() => pickEvent(ev)}>
+									<span className="ac2-date-tile"><strong>{day}</strong><small>{month}</small></span>
+									<span className="ac2-upcoming-copy"><strong><i className={`ac2-dot cat-${ev.category}`} /><span>{ev.title}</span></strong><small>{formatRange(ev.start, ev.end, language)}{ev.note ? ` · ${ev.note}` : ''}</small></span>
+									<ChevronRight size={15} />
+								</button></li>;
+							})}
+						</ul> : <div className="ac2-empty compact"><CalendarOff size={18} /><p>{t('student.calendar.noUpcoming')}</p></div>}
+					</div>
+
+					<div className="ac2-card ac2-official">
+						<div className="ac2-card-head"><strong>{t('student.calendar.officialLinks')}</strong></div>
+						<ul>{CALENDAR_SOURCES.map((src) => <li key={src.id}><a href={src.url} target="_blank" rel="noreferrer"><span className="ac2-link-ico"><ExternalLink size={14} /></span><span>{src.name}</span><ExternalLink size={13} /></a></li>)}</ul>
 					</div>
 				</aside>
 			</div>
 
-			<footer className="ac2-foot">
-				<h2>{t('student.calendar.sourcesNotes')}</h2>
-				<ul>
-					{CALENDAR_SOURCES.map((src) => (
-						<li key={src.id}>
-							<strong>{src.name}</strong>
-							<span>{src.description}</span>
-							<a href={src.url} target="_blank" rel="noreferrer">{src.url}</a>
-						</li>
-					))}
-				</ul>
-				<p>
-					{t('student.calendar.disclaimer')}
-				</p>
-			</footer>
+			<section className="ac2-card ac2-details" aria-labelledby="ac2-details-title">
+				<header className="ac2-details-head">
+					<span className="ac2-details-calendar"><CalendarDays size={19} /></span>
+					<div><h2 id="ac2-details-title">{t('student.calendar.activityDetails')}</h2><p>{formatDay(detailsDate, language)}</p></div>
+					{activityDetails.length > 0 && <span className="ac2-details-count">{t('student.calendar.eventCount', { n: String(activityDetails.length) })}</span>}
+				</header>
+				{activityDetails.length ? <div className="ac2-details-grid">
+					{activityDetails.map((ev) => {
+						const Icon = iconFor(ev.category);
+						return <article key={ev.id} className={`ac2-detail-item cat-${ev.category}`}>
+							<div className="ac2-detail-type"><span className={`ac2-detail-icon cat-${ev.category}`}><Icon size={16} /></span><span>{t(`student.calendar.category.${ev.category}`)}</span></div>
+							<h3>{ev.title}</h3>
+							<p className="ac2-detail-date"><CalendarDays size={14} />{formatRange(ev.start, ev.end, language)}</p>
+							{ev.note && <p className="ac2-detail-note">{ev.note}</p>}
+							{ev.href ? <Link className="ac2-detail-link" to={ev.href}><BookOpen size={14} />{t('student.calendar.openCourse')}<ChevronRight size={14} /></Link> : <a className="ac2-detail-link" href={sourceFor(ev.category).url} target="_blank" rel="noreferrer"><ExternalLink size={14} />{t('student.calendar.viewSource')}<ChevronRight size={14} /></a>}
+						</article>;
+					})}
+				</div> : <div className="ac2-details-empty"><CalendarOff size={18} /><span>{t('student.calendar.selectActivity')}</span></div>}
+			</section>
 		</section>
 	);
 }

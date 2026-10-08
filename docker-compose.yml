@@ -1,0 +1,68 @@
+services:
+  pocketbase:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: pocketbase
+    image: laras-horizon-pocketbase:deploy
+    restart: unless-stopped
+    environment:
+      PB_ENCRYPTION_KEY: ${PB_ENCRYPTION_KEY:?Set PB_ENCRYPTION_KEY in the deployment .env}
+      PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:?Set PB_SUPERUSER_EMAIL in the deployment .env}
+      PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?Set PB_SUPERUSER_PASSWORD in the deployment .env}
+    volumes:
+      - pocketbase-data:/data
+    networks:
+      - laras-app-net
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=laras-app-net
+      - traefik.http.routers.laras-horizon-pb.rule=Host(`laras.srv1957161.hstgr.cloud`) && PathPrefix(`/hcgi/platform/api`)
+      - traefik.http.routers.laras-horizon-pb.entrypoints=websecure
+      - traefik.http.routers.laras-horizon-pb.tls=true
+      - traefik.http.routers.laras-horizon-pb.tls.certresolver=letsencrypt
+      - traefik.http.routers.laras-horizon-pb.priority=100
+      - traefik.http.routers.laras-horizon-pb.middlewares=laras-horizon-pb-strip
+      - traefik.http.middlewares.laras-horizon-pb-strip.stripprefix.prefixes=/hcgi/platform
+      - traefik.http.routers.laras-horizon-pb.service=laras-horizon-pb
+      - traefik.http.services.laras-horizon-pb.loadbalancer.server.port=8090
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    image: laras-horizon-web:deploy
+    restart: unless-stopped
+    depends_on:
+      - pocketbase
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      POCKETBASE_URL: http://pocketbase:8090
+      WEBSITE_DOMAIN: laras.srv1957161.hstgr.cloud
+      BYNARA_API_KEY: ${BYNARA_API_KEY:-}
+      BYNARA_MODEL: gpt-6-luna
+      PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:?Set PB_SUPERUSER_EMAIL in the deployment .env}
+      PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?Set PB_SUPERUSER_PASSWORD in the deployment .env}
+    networks:
+      - laras-app-net
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=laras-app-net
+      - traefik.http.routers.laras-horizon-web.rule=Host(`laras.srv1957161.hstgr.cloud`)
+      - traefik.http.routers.laras-horizon-web.entrypoints=websecure
+      - traefik.http.routers.laras-horizon-web.tls=true
+      - traefik.http.routers.laras-horizon-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.laras-horizon-web.priority=1
+      - traefik.http.routers.laras-horizon-web.service=laras-horizon-web
+      - traefik.http.services.laras-horizon-web.loadbalancer.server.port=3000
+
+networks:
+  laras-app-net:
+    name: laras-app-net
+    driver: bridge
+
+volumes:
+  pocketbase-data:
+    name: laras-horizon-pocketbase-data

@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+**/.env
+**/.env.*
+apps/pocketbase/pb_data
+apps/pocketbase/pb_snapshots
+**/dist
+**/build
+**/.cache
+vault
+app.tar.gz
+tmp-nw-test.pdf

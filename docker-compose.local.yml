@@ -1,0 +1,48 @@
+# Local staging for laras-horizon (desktop).
+# No Traefik, no TLS, no production hostnames. Serves on localhost.
+# Usage: docker compose -f docker-compose.local.yml up --build -d
+services:
+  pocketbase:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: pocketbase
+    image: laras-local-pocketbase:stage
+    restart: unless-stopped
+    environment:
+      PB_ENCRYPTION_KEY: ${PB_ENCRYPTION_KEY:?Set PB_ENCRYPTION_KEY in .env}
+      PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:?Set PB_SUPERUSER_EMAIL in .env}
+      PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?Set PB_SUPERUSER_PASSWORD in .env}
+    volumes:
+      - pocketbase-local-data:/data
+    ports:
+      - "8090:8090"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    image: laras-local-web:stage
+    restart: unless-stopped
+    depends_on:
+      - pocketbase
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      POCKETBASE_URL: http://pocketbase:8090
+      # NOTE: app builds file URLs as https://${WEBSITE_DOMAIN}/hcgi/platform.
+      # Locally that renders as https://localhost:3000/... which won't resolve
+      # over plain HTTP — fine for content/visual work, just don't trust
+      # generated file links in local staging.
+      WEBSITE_DOMAIN: localhost:3000
+      BYNARA_API_KEY: ${BYNARA_API_KEY:-}
+      ASSEMBLY_API_KEY: ${ASSEMBLY_API_KEY:-}
+      HROUTER_API_KEY: ${HROUTER_API_KEY:-}
+      PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:?Set PB_SUPERUSER_EMAIL in .env}
+      PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?Set PB_SUPERUSER_PASSWORD in .env}
+    ports:
+      - "3000:3000"
+
+volumes:
+  pocketbase-local-data:

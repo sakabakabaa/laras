@@ -1,0 +1,31 @@
+# Local credentials and environment configuration
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated output
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+**/build/
+.cache/
+**/.cache/
+
+# Local PocketBase data and snapshots
+apps/pocketbase/pb_data/
+apps/pocketbase/pb_snapshots/
+
+# Local review artifacts and temporary files
+work/
+.shots/
+vault/
+app.tar.gz
+tmp-nw-test.pdf
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

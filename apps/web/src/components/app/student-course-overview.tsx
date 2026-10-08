@@ -1,0 +1,531 @@
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router';
+import {
+	ArrowRight,
+	BookOpen,
+	CalendarDays,
+	ChevronDown,
+	ClipboardCheck,
+	ClipboardList,
+	Download,
+	ExternalLink,
+	FileText,
+	GraduationCap,
+	Layers,
+	Library,
+	LoaderCircle,
+	Repeat,
+	Scale,
+	Sparkles,
+} from 'lucide-react';
+import pb from '@/lib/pocketbase-client';
+import type { Course, ClassSession, FileLibraryRecord } from '@/lib/learning';
+import { dateLabel, isSessionDone } from '@/lib/learning';
+import { useCachedQuery } from '@/hooks/use-cached-query';
+import {
+	activityTypeOf,
+	deadlineHint,
+	deadlineLabel,
+	isPastDeadline,
+	studentGradeLabel,
+	studentWorkPath,
+	type Assignment,
+	type AssignmentSubmission,
+} from '@/lib/assignments';
+import { useCourseAssignments, useMySubmissions } from '@/hooks/use-course-assignments';
+import { useCourseResources } from '@/hooks/use-course-resources';
+import { courseSectionPath } from '@/lib/course-sections';
+import { useMySection } from '@/components/app/course-sections';
+import { useCourseSections } from '@/hooks/use-course-sections';
+
+/**
+ * A unified materi row: native `course_resources` (file or link) plus
+ * auto-linked `file_library` records. Library rows carry their original
+ * record so `pb.files.getURL` builds the correct preview URL.
+ */
+type MateriItem = {
+	id: string;
+	title: string;
+	description: string;
+	/** "file" = uploaded binary, "link" = external URL. */
+	kind: 'file' | 'link';
+	file: string;
+	url: string;
+	session: string;
+	created: string;
+	source: 'native' | 'library';
+	/** Original record, for `pb.files.getURL` on library rows. */
+	record: Record<string, unknown>;
+};
+
+/** Resolve a materi item to an openable href (preview for files, URL for links). */
+function materiHref(item: MateriItem): string {
+	if (item.kind === 'link') return item.url;
+	return pb.files.getURL(item.record as { id: string; collectionId?: string; collectionName?: string }, item.file);
+}
+
+type Props = {
+	course: Course;
+	routeId: string;
+	sessions: ClassSession[];
+};
+
+/**
+ * Student-focused course Ringkasan. Replaces the lecturer RPS planning
+ * dashboard for students — surfaces what a learner needs: course identity,
+ * current progress, the next pertemuan, outstanding tugas/latihan with
+ * one-click resume, and a grades snapshot. All data comes from the same
+ * PocketBase collections and cached hooks; nothing is mutated here.
+ */
+export function StudentCourseOverview({ course, routeId, sessions }: Props) {
+	const [descOpen, setDescOpen] = useState(false);
+	const { sections } = useCourseSections(course.id);
+	const mySection = useMySection(course.id);
+	const hasSections = sections.length > 0;
+	// When the course carries multiple kelas, scope progress and the next
+	// pertemuan to the student's own section so the Ringkasan reflects their
+	// class, not every parallel section at once. Sessions without a section
+	// (legacy / shared) stay visible to everyone. Single-section courses keep
+	// their existing behavior unchanged.
+	const mySessions = useMemo(
+		() =>
+			hasSections && mySection.id
+				? sessions.filter((s) => !s.section || s.section === mySection.id)
+				: sessions,
+		[sessions, hasSections, mySection.id],
+	);
+	const { assignments, loading: assignmentsLoading } = useCourseAssignments(course.id);
+	const studentVisible = useMemo(
+		() => assignments.filter((a) => a.status !== 'draft'),
+		[assignments],
+	);
+	const mySubmissions = useMySubmissions(studentVisible);
+	const { resources } = useCourseResources(course.id);
+
+	// Auto-link: library files associated with this course also appear as
+	// materi. PocketBase access rules enforce visibility — students only see
+	// `student`/`public` files, faculty sees their own.
+	const libraryQuery = useCachedQuery<FileLibraryRecord[]>(
+		course.id ? `file_library:course=${course.id}:sco:-created` : null,
+		() =>
+			pb.collection('file_library').getFullList<FileLibraryRecord>({
+				filter: pb.filter('course = {:id}', { id: course.id }),
+				sort: '-created',
+			}),
+	);
+
+	// Merge native course_resources with auto-linked library files, newest
+	// first — the same union the Berkas section shows.
+	const materi = useMemo<MateriItem[]>(() => {
+		const native: MateriItem[] = resources.map((r) => ({
+			id: r.id,
+			title: r.title,
+			description: r.description,
+			kind: r.kind,
+			file: r.file,
+			url: r.url,
+			session: r.session,
+			created: r.created,
+			source: 'native',
+			record: r,
+		}));
+		const library: MateriItem[] = (libraryQuery.data ?? []).map((r) => ({
+			id: r.id,
+			title: r.title,
+			description: r.description || '',
+			kind: 'file',
+			file: r.file,
+			url: '',
+			session: r.session || '',
+			created: r.created,
+			source: 'library',
+			record: r,
+		}));
+		return [...native, ...library].sort((a, b) => b.created.localeCompare(a.created));
+	}, [resources, libraryQuery.data]);
+
+	const submissions = mySubmissions.data ?? [];
+	const subByAssignment = useMemo(() => {
+		const map = new Map<string, AssignmentSubmission>();
+		for (const s of submissions) map.set(s.assignment, s);
+		return map;
+	}, [submissions]);
+
+	const formal = studentVisible.filter((a) => activityTypeOf(a) === 'formal');
+	const formative = studentVisible.filter((a) => activityTypeOf(a) === 'formative');
+
+	// Outstanding formal work: no submission, draft, or revision requested.
+	const outstanding = formal
+		.filter((a) => {
+			const sub = subByAssignment.get(a.id);
+			if (!sub) return true;
+			return sub.status === 'draft' || sub.status === 'revision';
+		})
+		.sort((a, b) => {
+			const ta = a.deadline ? new Date(a.deadline).getTime() : Infinity;
+			const tb = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+			return ta - tb;
+		});
+
+	// Graded formal work for the snapshot.
+	const graded = formal
+		.map((a) => subByAssignment.get(a.id))
+		.filter((s): s is AssignmentSubmission => s != null && s.status === 'graded');
+	const gradeValues = graded
+		.map((s) => s.grade)
+		.filter((g): g is number => g != null && !Number.isNaN(g));
+	const avg =
+		gradeValues.length > 0
+			? Math.round(gradeValues.reduce((n, g) => n + g, 0) / gradeValues.length)
+			: null;
+
+	// Next pertemuan: first incomplete session by week, else the last one.
+	const sortedSessions = useMemo(
+		() => [...mySessions].sort((a, b) => a.week - b.week),
+		[mySessions],
+	);
+	const nextSession =
+		sortedSessions.find((s) => !isSessionDone(s)) ?? sortedSessions[sortedSessions.length - 1] ?? null;
+	const sessionsDone = mySessions.filter((s) => isSessionDone(s)).length;
+	const progressPct = mySessions.length === 0 ? 0 : Math.round((sessionsDone / mySessions.length) * 100);
+
+	// Materials for the next session, if any.
+	const nextSessionMaterials = useMemo(() => {
+		if (!nextSession) return [];
+		return materi.filter((r) => r.session === nextSession.id);
+	}, [materi, nextSession]);
+
+	const loading = assignmentsLoading || mySubmissions.loading || libraryQuery.loading;
+
+	if (loading) {
+		return (
+			<div className="ld-loading">
+				<LoaderCircle size={24} className="spin" /> Memuat ringkasan...
+			</div>
+		);
+	}
+
+	return (
+		<div className="sco-wrap">
+			{/* ── Course identity & progress ─────────────────────── */}
+			<section className="sco-hero">
+				<div className="sco-hero-copy">
+					<span className="ld-eyebrow">Ringkasan mata kuliah</span>
+					<h1>{course.title}</h1>
+					{course.description ? (
+						<div className="sco-desc-wrap">
+							<button
+								type="button"
+								className="sco-desc-toggle"
+								aria-expanded={descOpen}
+								onClick={() => setDescOpen((o) => !o)}
+							>
+								<span>Deskripsi mata kuliah</span>
+								<ChevronDown size={16} className={`sco-desc-chev${descOpen ? ' open' : ''}`} />
+							</button>
+							{descOpen && <p className="sco-hero-desc">{course.description}</p>}
+						</div>
+					) : (
+						<p className="sco-hero-desc">Deskripsi mata kuliah belum diterbitkan dosen.</p>
+					)}
+					<div className="sco-hero-meta">
+						{hasSections && (
+							<span className="sco-section-badge" title="Kelas Anda pada mata kuliah ini">
+								<Layers size={14} /> {mySection.name || 'Belum ada kelas'}
+							</span>
+						)}
+						{course.lecturerName && (
+							<span>
+								<GraduationCap size={14} /> {course.lecturerName}
+							</span>
+						)}
+						{course.code && (
+							<span>
+								<BookOpen size={14} /> {course.code}
+							</span>
+						)}
+						{course.credits != null && (
+							<span>
+								<Scale size={14} /> {course.credits} SKS
+							</span>
+						)}
+						{course.semester && <span>{course.semester}</span>}
+						{course.academicYear && <span>{course.academicYear}</span>}
+					</div>
+				</div>
+				<div className="sco-progress-card">
+					<div className="sco-progress-ring" role="img" aria-label={`Progres sesi ${progressPct}%`}>
+						<svg viewBox="0 0 48 48" aria-hidden>
+							<circle cx="24" cy="24" r="20" className="cw-ring-bg" />
+							<circle
+								cx="24"
+								cy="24"
+								r="20"
+								className="cw-ring-fg"
+								strokeDasharray={`${(progressPct / 100) * 125.6} 125.6`}
+							/>
+						</svg>
+						<span>{progressPct}%</span>
+					</div>
+					<div className="sco-progress-meta">
+						<span className="ld-eyebrow">Progres sesi</span>
+						<strong>{sessionsDone} dari {mySessions.length} sesi selesai</strong>
+						<Link to={courseSectionPath(routeId, 'mata-kuliah')} className="ld-text-btn">
+							Lihat sesi <ArrowRight size={13} />
+						</Link>
+					</div>
+				</div>
+			</section>
+
+			<div className="sco-grid">
+				<div className="sco-main">
+					{/* ── Next session ─────────────────────────────── */}
+					<section className="ld-panel sco-panel">
+						<div className="ld-card-head">
+							<h2>
+								<CalendarDays size={16} className="ld-spark" /> Pertemuan berikutnya
+							</h2>
+							<Link to={courseSectionPath(routeId, 'mata-kuliah')} className="ld-link-muted">
+								Semua sesi
+							</Link>
+						</div>
+						{nextSession ? (
+							<div className="sco-next">
+								<span className="sco-next-week">
+									Minggu
+									<strong>{String(nextSession.week || '—').padStart(2, '0')}</strong>
+								</span>
+								<div className="sco-next-body">
+									<small>{dateLabel(nextSession.date)}{nextSession.completed ? ' · Selesai' : ''}</small>
+									<h3>{nextSession.title}</h3>
+									{nextSession.topic && <p>{nextSession.topic}</p>}
+									{nextSession.notes && <p className="sco-next-notes">{nextSession.notes}</p>}
+									{nextSessionMaterials.length > 0 && (
+										<ul className="sco-next-materials">
+											{nextSessionMaterials.map((r) => (
+												<li key={r.id}>
+													<FileText size={13} />
+													{r.kind === 'link' ? (
+														<a href={materiHref(r)} target="_blank" rel="noreferrer">
+															{r.title} <ExternalLink size={11} />
+														</a>
+													) : (
+														<a href={materiHref(r)} target="_blank" rel="noreferrer">
+															{r.title} <Download size={11} />
+														</a>
+													)}
+												</li>
+											))}
+										</ul>
+									)}
+									{nextSession.references && (
+										<p className="sco-next-prep">
+											<small>Bahan persiapan</small>
+											{nextSession.references}
+										</p>
+									)}
+								</div>
+							</div>
+						) : (
+							<p className="ld-empty-sm">Belum ada pertemuan dijadwalkan untuk mata kuliah ini.</p>
+						)}
+					</section>
+
+					{/* ── Outstanding tasks & practice ─────────────── */}
+					<section className="ld-panel sco-panel">
+						<div className="ld-card-head">
+							<h2>
+								<ClipboardList size={16} className="ld-spark" /> Tugas & latihan aktif
+							</h2>
+							<Link to={courseSectionPath(routeId, 'tugas')} className="ld-link-muted">
+								Semua tugas
+							</Link>
+						</div>
+						{outstanding.length === 0 && formative.length === 0 ? (
+							<p className="ld-empty-sm">
+								Tidak ada tugas atau latihan aktif saat ini. Cek kembali nanti.
+							</p>
+						) : (
+							<ul className="sco-task-list">
+								{outstanding.map((a) => {
+									const sub = subByAssignment.get(a.id);
+									const past = isPastDeadline(a.deadline);
+									const revision = sub?.status === 'revision';
+									const draft = sub?.status === 'draft';
+									return (
+										<li key={a.id}>
+											<Link
+												to={studentWorkPath(a.id)}
+												className="sco-task-row"
+											>
+												<span className="sco-task-info">
+													<small>
+														{revision
+															? 'Perlu revisi'
+															: draft
+																? 'Draf tersimpan'
+																: past
+																	? 'Batas waktu terlewat'
+																	: 'Tugas formal'}
+														{a.deadline && ` · ${deadlineLabel(a.deadline)}`}
+													</small>
+													<strong>{a.title}</strong>
+													{a.deadline && (
+														<em className={past && !revision ? 'overdue' : ''}>
+															{deadlineHint(a.deadline)}
+														</em>
+													)}
+												</span>
+												<span className="sco-task-cta">
+													{revision ? 'Perbaiki' : draft ? 'Lanjutkan' : 'Mulai'}
+													<ArrowRight size={14} />
+												</span>
+											</Link>
+										</li>
+									);
+								})}
+								{formative.slice(0, 3).map((a) => (
+									<li key={a.id}>
+										<Link
+											to={studentWorkPath(a.id)}
+											className="sco-task-row formative"
+										>
+											<span className="sco-task-info">
+												<small>
+													<Repeat size={11} /> Latihan formatif · tanpa nilai
+												</small>
+												<strong>{a.title}</strong>
+											</span>
+											<span className="sco-task-cta">
+												Latihan
+												<ArrowRight size={14} />
+											</span>
+										</Link>
+									</li>
+								))}
+							</ul>
+						)}
+					</section>
+
+					{/* ── Recent materials ─────────────────────────── */}
+					<section className="ld-panel sco-panel">
+						<div className="ld-card-head">
+							<h2>
+								<Library size={16} className="ld-spark" /> Materi terbaru
+							</h2>
+							<Link to={courseSectionPath(routeId, 'berkas')} className="ld-link-muted">
+								Semua materi
+							</Link>
+						</div>
+						{materi.length === 0 ? (
+							<p className="ld-empty-sm">Dosen belum membagikan materi untuk mata kuliah ini.</p>
+						) : (
+							<ul className="sco-simple-list">
+								{materi.slice(0, 5).map((r) => (
+									<li key={`${r.source}:${r.id}`}>
+										<FileText size={14} className="cw-res-ico" />
+										<a
+											href={materiHref(r)}
+											target="_blank"
+											rel="noreferrer"
+											title={r.description || r.title}
+										>
+											{r.title}
+										</a>
+										<span className="cw-weight">
+											{r.kind === 'link' ? 'Tautan' : r.source === 'library' ? 'Berkas' : 'Berkas'}
+										</span>
+									</li>
+								))}
+								{materi.length > 5 && (
+									<li className="cw-more-li">+{materi.length - 5} materi lainnya</li>
+								)}
+							</ul>
+						)}
+					</section>
+				</div>
+
+				{/* ── Side column: grades + references ─────────────── */}
+				<aside className="sco-side">
+					<section className="ld-panel sco-panel">
+						<div className="ld-card-head">
+							<h2>
+								<GraduationCap size={16} className="ld-spark" /> Nilai
+							</h2>
+							<Link to={courseSectionPath(routeId, 'nilai')} className="ld-link-muted">
+								Detail
+							</Link>
+						</div>
+						<div className="sco-grade-hero">
+							<strong>{avg != null ? studentGradeLabel(avg) : '—'}</strong>
+							<span>{gradeValues.length > 0 ? 'rata-rata' : 'belum ada nilai'}</span>
+						</div>
+						<ul className="sco-grade-list">
+							<li>
+								<span>Dinilai</span>
+								<strong>{graded.length}</strong>
+							</li>
+							<li>
+								<span>Tugas formal</span>
+								<strong>{formal.length}</strong>
+							</li>
+							<li>
+								<span>Belum dikumpulkan</span>
+								<strong>{outstanding.length}</strong>
+							</li>
+						</ul>
+					</section>
+
+					<section className="ld-panel sco-panel">
+						<div className="ld-card-head">
+							<h2>
+								<Sparkles size={16} className="ld-spark" /> Referensi
+							</h2>
+						</div>
+						<ul className="sco-ref-list">
+							{(course.rps || course.rpsFile) && (
+								<li>
+									<FileText size={15} />
+									<Link to={courseSectionPath(routeId, 'rps')}>RPS (hanya baca)</Link>
+								</li>
+							)}
+							{course.syllabus && (
+								<li>
+									<BookOpen size={15} />
+									<Link to={courseSectionPath(routeId, 'silabus')}>Silabus (hanya baca)</Link>
+								</li>
+							)}
+							{course.rpsFile && (
+								<li>
+									<Download size={15} />
+									<a
+										href={pb.files.getURL(course, course.rpsFile)}
+										target="_blank"
+										rel="noreferrer"
+										download
+									>
+										Unduh PDF RPS
+									</a>
+								</li>
+							)}
+							{!course.rps && !course.syllabus && !course.rpsFile && (
+								<li className="ld-empty-sm">Referensi belum diterbitkan dosen.</li>
+							)}
+						</ul>
+					</section>
+
+					<section className="ld-panel sco-panel">
+						<div className="ld-card-head">
+							<h2>
+								<ClipboardCheck size={16} className="ld-spark" /> Info mata kuliah
+							</h2>
+						</div>
+						<Link to={courseSectionPath(routeId, 'info')} className="ld-text-btn">
+							Lihat detail mata kuliah <ArrowRight size={13} />
+						</Link>
+					</section>
+				</aside>
+			</div>
+		</div>
+	);
+}

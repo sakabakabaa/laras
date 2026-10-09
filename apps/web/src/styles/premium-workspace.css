@@ -895,6 +895,8 @@
 .ld-content table :is(th,td) { border-color: var(--p-line); }
 .ld-content table th { color: #687382; font-weight: 600; }
 .ld-content :is([class*="-row"],li)+:is([class*="-row"],li) { border-color: #eeecea; }
+:root.dark .ld-content :is([class*="-row"],li)+:is([class*="-row"],li) { border-color: #2a3038; }
+:root.dark .ld-content .flb-row:hover { border-color: rgba(201,52,43,.28); }
 :root.dark .ld-content :is([class*="-card"],[class*="-panel"]) {
 	border-color: #2a3038;
 	background-color: #171b21;

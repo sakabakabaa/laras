@@ -1091,7 +1091,6 @@
 :root.dark .flb-badge.status-failed{color:#F87171;background:rgba(248,113,113,.10)}
 :root.dark .flb-badge.access-faculty{color:#E8EDF4;background:#222831}
 :root.dark .flb-badge.access-student{color:#60A5FA;background:rgba(37,99,235,.12)}
-:root.dark .flb-badge.access-public{color:#FBBF24;background:#12161C}
 :root.dark .flb-filename{color:#9AA6B6}
 :root.dark .flb-desc{color:#C5CDD8}
 :root.dark .flb-chip{color:#C5CDD8;background:#12161C;border:1px solid #2A3138}
@@ -2784,3 +2783,17 @@
 :root.dark .ld-course-rail-link{background:#1A1F26}
 :root.dark .sa-panel.sa-rail{box-shadow:0 10px 28px rgba(0,0,0,.12)}
 }
+:root.dark .roster-profile-link{color:#E8EDF4}
+:root.dark .cw-student-name strong{color:#E8EDF4}
+:root.dark .cw-student-name a:hover strong{color:#F07168}
+:root.dark .cw-students-more{border-top-color:#2A3138;color:#F07168}
+:root.dark .roster-profile-link span{color:#F0A39D;background:rgba(201,52,43,.18)}
+:root.dark .sp-avatar,:root.dark .sp-metric-icon{background:rgba(201,52,43,.16);color:#F07168}
+:root.dark .sp-metric>strong,:root.dark .sp-header-main h1,:root.dark .sp-task strong,:root.dark .sp-empty strong{color:#E8EDF4}
+:root.dark .sp-attendance-track,:root.dark .sp-skill-track{background:#2A3138}
+:root.dark .sp-confirmed,:root.dark .sp-task>b{background:#12161C}
+:root.dark .sp-learner-value,:root.dark .sp-consent-row{border-color:#2A3138;background:#1A1F26}
+:root.dark .sp-learner-value p,:root.dark .sp-consent-row strong{color:#E8EDF4}
+:root.dark .sp-consent{color:#6EE7B7;background:rgba(16,185,129,.12)}
+:root.dark .sp-preferences-panel textarea,:root.dark .sp-preferences-panel select{background:#12161C;border-color:#2A3138;color:#E8EDF4}
+:root.dark .sp-error{color:#FCA5A5}

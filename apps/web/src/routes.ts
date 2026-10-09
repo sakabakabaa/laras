@@ -10,6 +10,7 @@ export default [
 	route('kalender', 'routes/kalender.tsx'),
 	route('app/courses', 'routes/app.courses.tsx'),
 	route('app/student', 'routes/app.student.tsx'),
+	route('app/latihan', 'routes/app.latihan.tsx'),
 	route('app/onboarding', 'routes/app.onboarding.tsx'),
 	route('app/pengaturan', 'routes/app.pengaturan.tsx'),
 	route('app/coming/:slug', 'routes/app.coming.$slug.tsx'),
@@ -25,6 +26,7 @@ export default [
 	route('app/kerja/:assignmentId', 'routes/app.kerja.$assignmentId.tsx'),
 	route('app/courses/:courseId', 'routes/course.tsx', [
 		index('routes/course.index.tsx'),
+		route('mahasiswa/:rosterId', 'routes/course.student-profile.tsx'),
 		route(':section', 'routes/course.section.tsx'),
 	]),
 	route('app/rps/:courseId', 'routes/app.rps.$courseId.tsx'),
@@ -68,6 +70,7 @@ export default [
 	route('api/practice-assist', 'routes/api.practice-assist.ts'),
     route('api/personal-practice', 'routes/api.personal-practice.ts'),
     route('api/course-grade-summary', 'routes/api.course-grade-summary.ts'),
+	route('api/student-profile', 'routes/api.student-profile.ts'),
 	route('api/practice-speaking', 'routes/api.practice-speaking.ts'),
 	route('api/berkas-parse', 'routes/api.berkas-parse.ts'),
 	route('api/berkas-process', 'routes/api.berkas-process.ts'),

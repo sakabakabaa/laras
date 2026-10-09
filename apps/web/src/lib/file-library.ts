@@ -77,16 +77,14 @@ export const FILE_KIND_LABELS: Record<FileKind, string> = {
 };
 
 export const ACCESS_LABELS: Record<FileAccess, string> = {
-	faculty: 'Dosen only',
-	student: 'Mahasiswa',
-	public: 'Publik',
+	faculty: 'Dosen saja',
+	student: 'Dosen & mahasiswa',
 };
 
 export const ACCESS_HINTS: Record<FileAccess, string> = {
 	faculty:
-		'Berkas pribadi dosen. Mahasiswa tetap dapat membaca berkas yang ditautkan ke mata kuliah (hanya baca, tanpa unduh).',
-	student: 'Mahasiswa terdaftar dapat membaca berkas yang ditautkan ke mata kuliah (hanya baca, tanpa unduh).',
-	public: 'Siapa pun dengan tautan dapat melihat berkas ini.',
+		'Hanya Anda sebagai dosen pengunggah yang dapat membuka berkas ini.',
+	student: 'Mahasiswa dapat membaca berkas pada mata kuliah ini. Anda sebagai dosen pengunggah tetap dapat mengaksesnya.',
 };
 
 export const STATUS_LABELS: Record<FileProcessingStatus, string> = {

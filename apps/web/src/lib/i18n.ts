@@ -70,6 +70,7 @@ const id: Dict = {
 	// App shell / nav
 	'nav.dashboard': 'Dashboard',
 	'nav.courses': 'Mata Kuliah',
+	'nav.practice': 'Latihan',
 	'nav.tasks': 'Tugas',
 	'nav.grades': 'Penilaian',
 	'nav.files': 'Berkas',
@@ -1226,6 +1227,7 @@ const en: Dict = {
 	'worksheet.rubric.correctionAccuracy': 'Accuracy of corrections',
 	'nav.dashboard': 'Dashboard',
 	'nav.courses': 'Courses',
+	'nav.practice': 'Practice',
 	'nav.tasks': 'Tasks',
 	'nav.grades': 'Grades',
 	'nav.files': 'Files',
@@ -2379,6 +2381,7 @@ const de: Dict = {
 	'worksheet.rubric.correctionAccuracy': 'Korrektheit der Korrekturen',
 	'nav.dashboard': 'Dashboard',
 	'nav.courses': 'Kurse',
+	'nav.practice': 'Üben',
 	'nav.tasks': 'Aufgaben',
 	'nav.grades': 'Bewertung',
 	'nav.files': 'Dateien',

@@ -20,7 +20,12 @@ export function useTheme() {
 	const [theme, setTheme] = useState<Theme>('light');
 
 	useEffect(() => {
-		const isDark = document.documentElement.classList.contains('dark');
+		// The root route deliberately paints public pages in light mode. When the
+		// app shell mounts, use the saved preference so its toggle stays in sync.
+		const savedTheme = localStorage.getItem(STORAGE_KEY);
+		const isDark = savedTheme
+			? savedTheme === 'dark'
+			: window.matchMedia('(prefers-color-scheme: dark)').matches;
 		setTheme(isDark ? 'dark' : 'light');
 	}, []);
 

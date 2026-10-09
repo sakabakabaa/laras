@@ -287,9 +287,8 @@ export function FileLibrary() {
 					Akses
 					<select value={accessFilter} onChange={(e) => setAccessFilter(e.target.value)}>
 						<option value="all">Semua akses</option>
-						<option value="faculty">Dosen only</option>
-						<option value="student">Mahasiswa</option>
-						<option value="public">Publik</option>
+						<option value="faculty">Dosen saja</option>
+						<option value="student">Dosen & mahasiswa</option>
 					</select>
 				</label>
 				<label className="flb-select">

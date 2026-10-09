@@ -16,7 +16,7 @@ services:
     volumes:
       - pocketbase-local-data:/data
     ports:
-      - "8090:8090"
+      - "127.0.0.1:8090:8090"
 
   web:
     build:
@@ -42,7 +42,7 @@ services:
       PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:?Set PB_SUPERUSER_EMAIL in .env}
       PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?Set PB_SUPERUSER_PASSWORD in .env}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
 volumes:
   pocketbase-local-data:

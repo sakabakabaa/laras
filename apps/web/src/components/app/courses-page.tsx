@@ -149,7 +149,7 @@ export function CoursesPage() {
 				upcoming: upcomingSessions.length,
 				pct: courseSessions.length === 0 ? 0 : Math.round((done / courseSessions.length) * 100),
 				materials: materials.length,
-				publishedMaterials: materials.filter((row) => row.access === 'student' || row.access === 'public').length,
+				publishedMaterials: materials.filter((row) => row.access === 'student').length,
 				tasks: formal.length,
 				activeTasks: formal.filter((row) => row.status === 'published').length,
 				draftTasks: formal.filter((row) => row.status === 'draft').length,

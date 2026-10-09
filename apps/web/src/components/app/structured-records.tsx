@@ -300,31 +300,33 @@ function ItemRow({
 }) {
 	return (
 		<li className={`sr-row${nested ? ' nested' : ''}`}>
-			{expandable && (
-				<button
-					type="button"
-					className="sr-toggle"
-					onClick={onToggle}
-					aria-label={expanded ? 'Lipat' : 'Bentangkan'}
-				>
-					{expanded ? '▾' : '▸'}
-				</button>
-			)}
-			{code && <span className="sr-code">{code}</span>}
-			<span className="sr-desc">
-				{description}
+			<div className="sr-row-top">
+				{expandable && (
+					<button
+						type="button"
+						className="sr-toggle"
+						onClick={onToggle}
+						aria-label={expanded ? 'Lipat' : 'Bentangkan'}
+					>
+						{expanded ? '▾' : '▸'}
+					</button>
+				)}
+				{code && <span className="sr-code">{code}</span>}
+				{canEdit && (
+					<span className="sr-actions">
+						<button type="button" aria-label="Edit" title="Edit" onClick={onEdit}>
+							<Pencil size={15} />
+						</button>
+						<button type="button" aria-label="Hapus" title="Hapus" onClick={onDelete}>
+							<Trash2 size={15} />
+						</button>
+					</span>
+				)}
+			</div>
+			<details className="sr-desc">
+				<summary>{description}</summary>
 				{hint && <small>{hint}</small>}
-			</span>
-			{canEdit && (
-				<span className="sr-actions">
-					<button type="button" aria-label="Edit" title="Edit" onClick={onEdit}>
-						<Pencil size={15} />
-					</button>
-					<button type="button" aria-label="Hapus" title="Hapus" onClick={onDelete}>
-						<Trash2 size={15} />
-					</button>
-				</span>
-			)}
+			</details>
 		</li>
 	);
 }

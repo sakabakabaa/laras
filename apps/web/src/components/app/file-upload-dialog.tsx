@@ -74,6 +74,7 @@ const CONTEXT_LANGUAGE_LABELS: Record<string, string> = {
 	...LANGUAGE_LABELS,
 	other: 'Lainnya',
 };
+const ACCESS_OPTIONS: FileAccess[] = ['faculty', 'student'];
 
 /**
  * Lecturer-only step-by-step dialog to upload a new library file or edit an
@@ -113,7 +114,7 @@ export function FileUploadDialog({
 	const [description, setDescription] = useState(record?.description ?? '');
 	const [access, setAccess] = useState<FileAccess>(record?.access ?? 'faculty');
 	const [courseId, setCourseId] = useState(record?.course ?? '');
-	const [cpmkId, setCpmkId] = useState(record?.cpmk ?? '');
+	const [cpmkId, setCpmkId] = useState(record?.cpmk || subCpmks.find((item) => item.id === record?.subCpmk)?.cpmk || '');
 	const [subCpmkId, setSubCpmkId] = useState(record?.subCpmk ?? '');
 	const [sessionId, setSessionId] = useState(record?.session ?? '');
 	const [file, setFile] = useState<File | null>(null);
@@ -142,15 +143,15 @@ export function FileUploadDialog({
 	const [busyId, setBusyId] = useState('');
 
 	const courseCpmks = useMemo(
-		() => (courseId ? cpmks.filter((c) => c.course === courseId) : cpmks),
+		() => (courseId ? cpmks.filter((c) => c.course === courseId) : []),
 		[cpmks, courseId],
 	);
 	const courseSubCpmks = useMemo(
-		() => (courseId ? subCpmks.filter((c) => c.course === courseId) : subCpmks),
-		[subCpmks, courseId],
+		() => (courseId && cpmkId ? subCpmks.filter((c) => c.course === courseId && c.cpmk === cpmkId) : []),
+		[subCpmks, courseId, cpmkId],
 	);
 	const courseSessions = useMemo(
-		() => (courseId ? sessions.filter((s) => s.course === courseId) : sessions),
+		() => (courseId ? sessions.filter((s) => s.course === courseId).sort((a, b) => a.week - b.week || a.created.localeCompare(b.created)) : []),
 		[sessions, courseId],
 	);
 
@@ -166,6 +167,16 @@ export function FileUploadDialog({
 		if (value && sessionId && !sessions.some((s) => s.id === sessionId && s.course === value)) {
 			setSessionId('');
 		}
+	};
+	const pickCpmk = (value: string) => {
+		setCpmkId(value);
+		if (subCpmkId && subCpmks.find((item) => item.id === subCpmkId)?.cpmk !== value) {
+			setSubCpmkId('');
+		}
+	};
+	const pickSubCpmk = (value: string) => {
+		setSubCpmkId(value);
+		if (value) setCpmkId(subCpmks.find((item) => item.id === value)?.cpmk ?? '');
 	};
 
 	/** Best-effort metadata analysis after a file is picked (step 1). */
@@ -589,9 +600,9 @@ export function FileUploadDialog({
 
 					{step === 2 && (
 						<div className="flb-form">
-							<div className="flb-form-pair">
-								<label>
-									Mata kuliah <span className="flb-required">*</span>
+			<div className="flb-form-pair">
+				<label>
+					<span>Mata kuliah <span className="flb-required">*</span></span>
 									<select
 										value={courseId}
 										onChange={(e) => pickCourse(e.target.value)}
@@ -610,21 +621,22 @@ export function FileUploadDialog({
 										Wajib — berkas harus ditautkan ke mata kuliah Anda.
 									</small>
 								</label>
-								<label>
-									Sesi (opsional)
-									<select
-										value={sessionId}
-										onChange={(e) => setSessionId(e.target.value)}
-										disabled={busy}
-									>
-										<option value="">Tidak ditautkan</option>
-										{courseSessions.map((session) => (
+				<label>
+					Sesi (opsional)
+					<select
+						value={sessionId}
+						onChange={(e) => setSessionId(e.target.value)}
+						disabled={busy || !courseId}
+					>
+						<option value="">{courseId ? 'Tidak ditautkan' : 'Pilih mata kuliah terlebih dahulu'}</option>
+						{courseSessions.map((session) => (
 											<option key={session.id} value={session.id}>
 												Minggu {session.week} — {session.title}
-											</option>
-										))}
-									</select>
-								</label>
+						</option>
+						))}
+					</select>
+					<small className="flb-file-info">Daftar mengikuti tab Pertemuan pada mata kuliah yang dipilih.</small>
+				</label>
 							</div>
 							<label>
 								Judul berkas
@@ -651,10 +663,10 @@ export function FileUploadDialog({
 							<div className="flb-form-pair">
 								<label>
 									CPMK (opsional)
-									<select
-										value={cpmkId}
-										onChange={(e) => setCpmkId(e.target.value)}
-										disabled={busy}
+					<select
+						value={cpmkId}
+						onChange={(e) => pickCpmk(e.target.value)}
+						disabled={busy || !courseId}
 									>
 										<option value="">Tidak ditautkan</option>
 										{courseCpmks.map((item) => (
@@ -666,12 +678,12 @@ export function FileUploadDialog({
 								</label>
 								<label>
 									Sub-CPMK (opsional)
-									<select
-										value={subCpmkId}
-										onChange={(e) => setSubCpmkId(e.target.value)}
-										disabled={busy}
-									>
-										<option value="">Tidak ditautkan</option>
+					<select
+						value={subCpmkId}
+						onChange={(e) => pickSubCpmk(e.target.value)}
+						disabled={busy || !cpmkId}
+					>
+						<option value="">{cpmkId ? 'Tidak ditautkan' : 'Pilih CPMK terlebih dahulu'}</option>
 										{courseSubCpmks.map((item) => (
 											<option key={item.id} value={item.id}>
 												{item.code || 'Tanpa kode'} — {item.description.slice(0, 60)}
@@ -687,7 +699,7 @@ export function FileUploadDialog({
 									onChange={(e) => setAccess(e.target.value as FileAccess)}
 									disabled={busy}
 								>
-									{(Object.keys(ACCESS_LABELS) as FileAccess[]).map((value) => (
+									{ACCESS_OPTIONS.map((value) => (
 										<option key={value} value={value}>
 											{ACCESS_LABELS[value]}
 										</option>

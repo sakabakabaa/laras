@@ -187,9 +187,9 @@ const fileAccessFilter = (requester: Requester): string => {
 		return `(owner = "${idOrThrow('requester', requester.id)}" || access != 'faculty')`;
 	}
 	if (requester.role === 'student') {
-		return `(access = 'student' || access = 'public')`;
+		return `access = 'student'`;
 	}
-	return `access = 'public'`;
+	return `access = '__none__'`;
 };
 
 /**

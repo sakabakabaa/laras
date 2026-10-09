@@ -82,9 +82,8 @@ function libraryFileToItem(record: FileLibraryRecord): ResourceItem {
 }
 
 const ACCESS_LABEL: Record<FileAccess, string> = {
-	faculty: 'Dosen',
-	student: 'Mahasiswa',
-	public: 'Publik',
+	faculty: 'Dosen saja',
+	student: 'Dosen & mahasiswa',
 };
 
 type Props = {
@@ -105,8 +104,8 @@ export function CourseResources({ courseId, canEdit, isStudent }: Props) {
 	} = useCourseResources(courseId);
 
 	// Auto-link: library files associated with this course also appear here.
-	// PocketBase access rules enforce visibility — students only see
-	// `student`/`public` files, faculty sees their own.
+	// PocketBase access rules enforce visibility — students see course-linked
+	// files shared with them, while faculty sees their own files.
 	const libraryQuery = useCachedQuery<FileLibraryRecord[]>(
 		courseId ? `file_library:course=${courseId}:-created` : null,
 		() =>

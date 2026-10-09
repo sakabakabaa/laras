@@ -1,4 +1,4 @@
-import { Outlet, useParams } from 'react-router';
+import { Outlet, useLocation, useParams } from 'react-router';
 import type { Route } from './+types/course';
 import { requireAuth } from '@/lib/require-auth';
 import { AppShell } from '@/components/app/app-shell';
@@ -19,6 +19,8 @@ export function HydrateFallback() {
 
 export default function CourseLayout() {
 	const { courseId = '' } = useParams();
+	const location = useLocation();
+	const isStudentProfile = /\/mahasiswa\/[^/]+\/?$/.test(location.pathname);
 	const { user } = useAuth();
 	const role = (user as { role?: string } | null)?.role || 'faculty';
 	const isStudent = role === 'student';
@@ -41,7 +43,7 @@ export default function CourseLayout() {
 				/>
 			}
 		>
-			<CourseDetail routeId={courseId} />
+			{!isStudentProfile && <CourseDetail routeId={courseId} />}
 			<Outlet />
 		</AppShell>
 	);

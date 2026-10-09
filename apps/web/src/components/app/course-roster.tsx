@@ -449,7 +449,9 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 								return (
 								<tr key={entry.id} className="roster-tr">
 									<td className="roster-td-nim" data-label={t('roster.nim')}>{entry.nim}</td>
-									<td className="roster-td-name" data-label={t('roster.name')}>{entry.name}</td>
+									<td className="roster-td-name" data-label={t('roster.name')}>
+										{canEdit ? <Link className="roster-profile-link" to={`/app/courses/${courseId}/mahasiswa/${entry.id}`}>{entry.name}<span>Profil</span></Link> : entry.name}
+									</td>
 									{hasSections && <td className="roster-td-section" data-label={t('roster.class')}>{sectionName(entry.section) || '—'}</td>}
 									<td className="roster-td-status" data-label={t('roster.status')}>
 										<RosterStatusBadges status={status} loading={statusLoading} />

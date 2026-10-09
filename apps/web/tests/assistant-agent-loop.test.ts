@@ -82,9 +82,9 @@ describe('Phase 14 — structured tool-call parsing', () => {
 // ── Registry, permission & confirmation safeguards ──────────────────────────
 
 describe('Phase 14 — tool registry permissions', () => {
-	it('registers all existing tools (including search_history)', () => {
+	it('registers all available tools (including search_history)', () => {
 		expect([...TOOL_REGISTRY.keys()].sort()).toEqual(
-			['add_roster_students', 'course_detail', 'create_assignment', 'create_course', 'import_rps_pdf', 'link_session_outcomes', 'list_assignments', 'list_courses', 'search_history', 'summarize_insights'],
+			['add_roster_students', 'calendar_events', 'course_detail', 'course_materials', 'create_assignment', 'create_course', 'import_rps_pdf', 'link_session_outcomes', 'list_assignments', 'list_courses', 'search_history', 'student_profile', 'summarize_insights'],
 		);
 	});
 

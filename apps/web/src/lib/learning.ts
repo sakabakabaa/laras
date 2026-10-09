@@ -201,7 +201,7 @@ export type CourseResource = {
 };
 
 /** File-library access level: who may view/download the stored file. */
-export type FileAccess = 'faculty' | 'student' | 'public';
+export type FileAccess = 'faculty' | 'student';
 
 /** File-library processing status (Phase 1: uploads become ready immediately). */
 export type FileProcessingStatus = 'processing' | 'ready' | 'failed';

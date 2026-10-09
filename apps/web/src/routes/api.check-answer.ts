@@ -684,6 +684,19 @@ async function enrolledCheck(request: Request, body: Body) {
 				const strategy = selectStrategy({ profile, currentCategory: '', hintLevel: rows.items.length + 1 });
 				personalizationContext = buildPersonalizationContext({ profile, currentCategory: '' });
 				personalization = summarizeDecision({ profile, currentCategory: '', strategy });
+				// Optional student preferences affect explanation style only. They
+				// enter this path only after both lecturer and student enablement.
+				const preferences = await pocketbaseAdmin.listRecords<{
+					aiPersonalization?: boolean; explanationLanguage?: string; supportPreference?: string; confidence?: string;
+				}>('student_learning_profiles', { page: 1, perPage: 1, filter: `student="${user.id}"` });
+				const prefs = preferences.items[0];
+				if (prefs?.aiPersonalization) {
+					const language = ({ id: 'Bahasa Indonesia', en: 'English', de: 'Deutsch' } as Record<string, string>)[prefs.explanationLanguage || ''];
+					const support = ({ examples: 'contoh konkret', steps: 'langkah demi langkah', concise: 'penjelasan ringkas' } as Record<string, string>)[prefs.supportPreference || ''];
+					const confidence = ({ low: 'gunakan penjelasan dasar dengan nada mendukung', medium: 'gunakan penjelasan bertahap', high: 'boleh berikan tantangan lanjutan yang tetap sesuai materi' } as Record<string, string>)[prefs.confidence || ''];
+					const choices = [language && `bahasa: ${language}`, support && `gaya: ${support}`, confidence].filter(Boolean);
+					if (choices.length) personalizationContext += `\nPreferensi belajar yang dipilih mahasiswa dan diizinkan untuk personalisasi AI: ${choices.join('; ')}. Terapkan pada gaya penjelasan saja, bukan pada kebenaran atau kriteria penilaian.`;
+				}
 			}
 		} catch (error) {
 			logger.error('personalization profile build failed', error);

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { BookOpen, LoaderCircle, Search } from 'lucide-react';
+import { ArrowRight, BookOpen, Gamepad2, LoaderCircle, Search } from 'lucide-react';
 import { AppShell } from '@/components/app/app-shell';
-import { CourseThumb } from '@/components/app/course-thumb';
-import { CardCta } from '@/components/card-cta';
+import { WorldScene } from './student-home-adventure';
+import { PracticeMascot } from './practice-mascot';
+import { useStudentHomeText } from '@/lib/student-home-copy';
 import { StudentSectionChip } from '@/components/app/course-sections';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { courseRouteId } from '@/lib/course-route';
@@ -15,6 +16,7 @@ type EnrichedEnrollment = Enrollment & { expand?: { course?: Course } };
 
 export function StudentCourses() {
 	const t = useT();
+	const label = useStudentHomeText();
 	const [query, setQuery] = useState('');
 
 	const coursesQuery = useCachedQuery<Course[]>('courses:all:title', () =>
@@ -74,10 +76,10 @@ export function StudentCourses() {
 				<LoaderCircle size={24} className="spin" /> {t('student.courses.loading')}
 				</div>
 			) : (
-				<div className="ld-student">
-					<div className="ld-page-head">
+				<div className="ld-student student-worlds-page sd-game">
+					<div className="ld-page-head student-page-banner">
 						<span className="ld-eyebrow">{t('student.common.studySpace')}</span>
-						<h1>{t('student.courses.title')}</h1>
+						<h1>{t('student.courses.title')}</h1><p>{label("Materi, tantangan, dan tugas dalam satu dunia kelas.")}</p><span className="student-banner-mascot" aria-hidden="true"><PracticeMascot size={96} /></span>
 					</div>
 					<section className="ld-panel" aria-label={t('student.courses.enrolled')}>
 						<div className="ld-card-head">
@@ -110,26 +112,26 @@ export function StudentCourses() {
 								{filtered.length === 0 ? (
 									<div className="ld-empty-sm">{t('student.courses.noMatch')}</div>
 								) : (
-									<ul className="sd-course-list">
-										{filtered.map((course) => {
+									<ul className="student-worlds-grid">
+										{filtered.map((course, index) => {
 											const courseSessions = sessions.filter((session) => session.course === course.id);
 											const done = courseSessions.filter((session) => session.completed).length;
 											const total = courseSessions.length;
 											const pct = total === 0 ? 0 : Math.round((done / total) * 100);
 											return (
 												<li key={course.id}>
-													<article className="sd-course-card">
-														<CourseThumb course={course} />
+													<article className="student-world-card">
+														<Link to={`/app/courses/${courseRouteId(course)}`} className="student-world-picture" aria-label={course.title}><WorldScene variant={index} /></Link>
 														<div className="sd-course-body">
 															<div className="sd-course-head">
-																<strong>{course.title}</strong>
+																<Link to={`/app/courses/${courseRouteId(course)}`}><strong>{course.title}</strong></Link>
 																<StudentSectionChip courseId={course.id} />
 															</div>
 															<small>
 											{course.code || t('student.common.noCode')}
 																{course.semester ? ` · ${course.semester}` : ''}
 															</small>
-															<div className="sd-course-foot">
+															<div className="sd-course-foot"><small>{label("Progres pertemuan kelas")}</small>
 																<div className="ld-progress-wrap">
 																	<div className="ld-progress">
 																		<span style={{ width: `${pct}%` }} />
@@ -141,7 +143,7 @@ export function StudentCourses() {
 																</span>
 															</div>
 														</div>
-									<CardCta to={`/app/courses/${courseRouteId(course)}`} label={t('sd.open')} />
+									<div className="student-world-actions"><Link to={`/app/latihan?course=${course.id}`}><Gamepad2 size={16} /> {label("Mulai latihan")}</Link><Link to={`/app/courses/${courseRouteId(course)}`}>{t('sd.open')} <ArrowRight size={14} /></Link></div>
 													</article>
 												</li>
 											);

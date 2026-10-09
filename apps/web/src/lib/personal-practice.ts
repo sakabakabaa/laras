@@ -26,7 +26,7 @@ export type PracticeReadiness = {
     activeRoundId: string;
     sessions: { id: string; title: string; week: number; date: string }[];
     sources: PracticeSource[]; reason: string; scopeNote: string;
-    personalization: string; history: { id: string; created: string; correct: number; total: number }[];
+    personalization: string; history: { id: string; created: string; completedAt?: string; correct: number; total: number }[];
     totalXp: number;
     reports: { prompt: string; reason: string; created: string }[];
     sections: { id: string; title: string; locator: string; excerpt: string; extraction: string; session: string }[];

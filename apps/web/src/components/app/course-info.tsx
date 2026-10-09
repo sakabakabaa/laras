@@ -1,3 +1,4 @@
+import { PracticeMascot } from './practice-mascot';
 import { Link } from 'react-router';
 import {
 	BookOpen,
@@ -45,7 +46,7 @@ export function CourseInfo({ course, routeId, isStudent }: Props) {
 
 	return (
 		<div className="sci-wrap">
-			<div className="res-head">
+			<div className={`res-head${isStudent ? ' student-page-banner' : ''}`}><span className="student-banner-mascot" aria-hidden="true">{isStudent && <PracticeMascot size={85} />}</span>
 				<div>
 					<span className="ld-eyebrow">Informasi mata kuliah</span>
 					<h2 className="res-title">{course.title}</h2>

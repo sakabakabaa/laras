@@ -1,3 +1,4 @@
+import { PracticeMascot } from './practice-mascot';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
@@ -144,7 +145,7 @@ export function CourseAssignments({ courseId, canEdit, isStudent, activityLock }
 
 	return (
 		<div className="asg-area">
-			<div className="res-head">
+			<div className={`res-head${isStudent ? ' student-page-banner' : ''}`}>
 				<div>
 					<span className="ld-eyebrow">{isStudent ? t('student.assignments.eyebrow') : 'Tugas & Pengumpulan'}</span>
 					<h2 className="res-title">{isStudent ? t('student.assignments.title') : 'Kelola tugas'}</h2>
@@ -154,6 +155,7 @@ export function CourseAssignments({ courseId, canEdit, isStudent, activityLock }
 							: 'Pantau pengumpulan mahasiswa, beri revisi dan nilai. Pembuatan tugas baru terpusat di Tugas.'}
 					</p>
 				</div>
+                {isStudent && <span className="student-banner-mascot" aria-hidden="true"><PracticeMascot size={85} /></span>}
 				{canEdit && (
 					<Link
 						to={`/app/tugas/buat?course=${courseId}`}
@@ -523,7 +525,7 @@ function StudentAssignmentLaunch({
 				? t('worksheet.status.draft')
 				: '';
 	return (
-		<article className={`sas-launch${finallySubmitted ? ' done' : ''}`}>
+		<article className={`sas-launch${finallySubmitted ? ' done' : ''}`}><span className="student-task-marker" aria-hidden="true">{finallySubmitted ? <CheckCircle2 size={23} /> : <ClipboardList size={23} />}</span>
 			<span>
 				<small>
 					{formative ? t('worksheet.formativeExercise') : t('worksheet.formalTask')}

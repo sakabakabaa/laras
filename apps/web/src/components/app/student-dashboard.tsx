@@ -1,18 +1,17 @@
+import { useStudentHomeText } from '@/lib/student-home-copy';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
 	ArrowRight,
 	BookOpen,
 	CalendarDays,
-	ClipboardList,
 	LoaderCircle,
-	PlayCircle,
 	Search,
-	Sparkles,
 } from 'lucide-react';
 import { AppShell } from '@/components/app/app-shell';
 import { CourseThumb } from '@/components/app/course-thumb';
 import { CardCta } from '@/components/card-cta';
+import { StudentHomeAdventure } from '@/components/app/student-home-adventure';
 import { StudentSectionChip } from '@/components/app/course-sections';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import pb from '@/lib/pocketbase-client';
@@ -73,8 +72,9 @@ function typeLine(kind: ResumeKind, assignment: Assignment, t: (key: string) => 
 	return skill ? `${base} · ${skill}` : base;
 }
 
-export function StudentDashboard() {
+export function StudentDashboard({ preview = false }: { preview?: boolean }) {
 	const t = useT();
+ const label = useStudentHomeText();
 	const language = useLanguage();
 	const [query, setQuery] = useState('');
 	const [now, setNow] = useState<number | null>(null);
@@ -146,7 +146,7 @@ export function StudentDashboard() {
 		submissionsQuery.reload();
 	};
 
-	const enrolledCourseIds = useMemo(() => new Set(enrollments.map((e) => e.course)), [enrollments]);
+	const enrolledCourseIds = useMemo(() => new Set(preview ? courses.filter(c => c.owner === pb.authStore.record?.id).map(c => c.id) : enrollments.map((e) => e.course)), [enrollments, courses, preview]);
 	const myCourses = useMemo(
 		() => courses.filter((c) => enrolledCourseIds.has(c.id)),
 		[courses, enrolledCourseIds],
@@ -256,7 +256,6 @@ export function StudentDashboard() {
 	}, [myAssignments, courseById, subsByAssignment, t]);
 
 	const primary = resumeItems[0];
-	const rest = resumeItems.slice(1, 4);
 
 	// ── Outstanding task count per course (for course card badges) ──
 	const outstandingByCourse = useMemo(() => {
@@ -353,80 +352,12 @@ export function StudentDashboard() {
 					<LoaderCircle size={24} className="spin" /> {t('sd.loading')}
 				</div>
 			) : (
-				<div className="ld-student">
-					<section className="ld-student-welcome">
-						<div>
-							<h1>{t('sd.welcome')}</h1>
-							<p>{t('sd.welcomeSub')}</p>
-						</div>
-					</section>
-
-					{/* P0, Resume / next action */}
-					{primary ? (
-						<section className="sd-resume" aria-label={t('sd.resume')}>
-							<div className="sd-resume-primary">
-								<div className="sd-resume-copy">
-									<span className="sd-resume-eyebrow">
-										<PlayCircle size={14} /> {t(`sd.kind.${primary.kind}`)}
-									</span>
-									<h2>{primary.assignment.title}</h2>
-									<p className="sd-resume-meta">
-										{primary.label} · {primary.course.title}
-									</p>
-								</div>
-								<Link to={primary.href} className="sd-resume-cta">
-									{t(`sd.cta.${primary.kind}`)} <ArrowRight size={16} />
-								</Link>
-							</div>
-							{rest.length > 0 && (
-								<ul className="sd-resume-others">
-									{rest.map((item) => (
-										<li key={item.assignment.id}>
-											<Link to={item.href} className="sd-resume-other">
-												<span className="sd-resume-other-text">
-													<small>{item.label}</small>
-													<strong>{item.assignment.title}</strong>
-													<em>{item.course.title}</em>
-												</span>
-												<ArrowRight size={15} className="sd-row-arrow" />
-											</Link>
-										</li>
-									))}
-								</ul>
-							)}
-						</section>
-					) : (
-						<section className="sd-resume sd-resume-empty" aria-label={t('sd.startEyebrow')}>
-							<div className="sd-resume-empty-copy">
-								<span className="sd-resume-eyebrow">
-									<Sparkles size={14} /> {t('sd.startEyebrow')}
-								</span>
-								<h2>
-									{myCourses.length > 0
-										? t('sd.startNoActive')
-										: t('sd.startFirst')}
-								</h2>
-								<p>
-									{myCourses.length > 0
-										? t('sd.startNoActiveSub')
-										: t('sd.startFirstSub')}
-								</p>
-								{myCourses.length > 0 ? (
-									<Link
-										to={`/app/courses/${courseRouteId(myCourses[0])}`}
-										className="sd-resume-cta"
-									>
-										{t('sd.openCourse')} <ArrowRight size={16} />
-									</Link>
-								) : catalog.length > 0 ? (
-									<a href="#jelajahi" className="sd-resume-cta">
-										{t('sd.viewCatalog')} <ArrowRight size={16} />
-									</a>
-								) : null}
-							</div>
-						</section>
-					)}
-
+				<div className="ld-student sd-adventure-page">
+                    <StudentHomeAdventure courses={myCourses} preview={preview} />
+                    {primary && <Link to={primary.href} className="sd-game-task-reminder"><span className="sd-game-task-icon"><BookOpen size={18} /></span><span><small>{label('Tugas kelas')} · {primary.course.title}</small><strong>{primary.assignment.title}</strong></span><span className="sd-game-task-action">{t(`sd.cta.${primary.kind}`)} <ArrowRight size={16} /></span></Link>}
+                    <details className="sd-game-coursework">
+                        <summary>{label('Kelas & tugas')} <span>{primary ? `${primary.course.title} · ${primary.assignment.title}` : label('Materi, tugas, dan jadwal kelasmu')}</span></summary>
+                        {primary && <section className="sd-resume"><div className="sd-resume-primary"><div className="sd-resume-copy"><span className="sd-resume-eyebrow">{primary.label}</span><h2>{primary.assignment.title}</h2><p className="sd-resume-meta">{primary.course.title}</p></div><Link to={primary.href} className="sd-resume-cta">{t(`sd.cta.${primary.kind}`)} <ArrowRight size={16} /></Link></div></section>}
 					<div className="ld-student-grid">
 						<section className="ld-panel">
 							<div className="ld-card-head">
@@ -600,6 +531,7 @@ export function StudentDashboard() {
 							</ul>
 						</section>
 					)}
+                    </details>
 				</div>
 			)}
 		</AppShell>

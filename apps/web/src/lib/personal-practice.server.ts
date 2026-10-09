@@ -150,7 +150,7 @@ export async function practiceContext(pb: PocketBase, user: { id: string; role?:
         const attempts = await list<Attempt>('personal_practice_attempts', `round=${quote(round.id)} && status='done'`, 'ordinal');
         const reports = await list<{ ordinal: number }>('personal_practice_reports', `round=${quote(round.id)}`);
         previous.push(...attempts.filter(a => a.result.verdict !== 'uncertain' && !reports.some(r => r.ordinal === a.ordinal)).map(a => ({ skill: a.result.skill, verdict: a.result.verdict })));
-        completedHistory.push({ id: round.id, created: round.created, correct: attempts.filter(a => a.result.verdict === 'correct').length, total: attempts.length });
+        completedHistory.push({ id: round.id, created: round.created, completedAt: attempts.at(-1)?.updated || round.updated, correct: attempts.filter(a => a.result.verdict === 'correct').length, total: attempts.length });
     }
     // Published feedback is context, not an automatically validated diagnosis.
     const feedback: string[] = [];

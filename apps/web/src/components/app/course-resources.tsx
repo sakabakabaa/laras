@@ -1,3 +1,4 @@
+import { PracticeMascot } from './practice-mascot';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
@@ -224,7 +225,7 @@ export function CourseResources({ courseId, canEdit, isStudent }: Props) {
 
 	return (
 		<div className="res-area">
-			<div className="res-head">
+			<div className={`res-head${isStudent ? ' student-page-banner' : ''}`}>
 				<div>
 					<span className="ld-eyebrow">{isStudent ? t('student.resources.eyebrow') : 'Sumber Daya Mata Kuliah'}</span>
 					<h2 className="res-title">
@@ -236,6 +237,7 @@ export function CourseResources({ courseId, canEdit, isStudent }: Props) {
 							: 'Unggah slide, dokumen, media, atau tautan. Berkas dari menu Berkas yang ditautkan ke mata kuliah ini juga tampil otomatis.'}
 					</p>
 				</div>
+                {isStudent && <span className="student-banner-mascot" aria-hidden="true"><PracticeMascot size={85} /></span>}
 				{canEdit && (
 					<button type="button" className="ld-btn-primary" onClick={() => setEditing('new')}>
 						<Plus size={17} /> Tambah sumber daya

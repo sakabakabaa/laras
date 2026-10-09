@@ -1,3 +1,5 @@
+import { useStudentHomeText } from '@/lib/student-home-copy';
+import { PracticeMascot } from './practice-mascot';
 import { useEffect, useState, useMemo } from 'react';
 import pb from '@/lib/pocketbase-client';
 import { Link } from 'react-router';
@@ -26,6 +28,7 @@ type Props = {
  */
 export function StudentGrades({ course }: Props) {
 	const t = useT();
+	const label = useStudentHomeText();
 const language = useLanguage();
 	const dateLabel = (date?: string) => date ? new Intl.DateTimeFormat(language === 'de' ? 'de-DE' : language === 'en' ? 'en-GB' : 'id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(date)) : t('student.grades.noDeadline');
 	const { assignments, loading } = useCourseAssignments(course.id);
@@ -80,7 +83,7 @@ const language = useLanguage();
 
 	return (
 		<div className="sgr-wrap">
-			<div className="res-head">
+			<div className="res-head student-page-banner">
 				<div>
 					<span className="ld-eyebrow">{t('student.grades.eyebrow')}</span>
 					<h2 className="res-title">{t('student.grades.title')}</h2>
@@ -88,12 +91,13 @@ const language = useLanguage();
 						{t('student.grades.description')}
 					</p>
 				</div>
+                <span className="student-banner-mascot" aria-hidden="true"><PracticeMascot size={85} /></span>
 			</div>
 
 			{summary && <section className="ld-panel" style={{padding:20,marginBottom:20}}>
-    <h3>Komponen nilai mata kuliah</h3>
-    <div className="pp-profile-skills">{summary.components.map(c => <article className="pp-profile-skill" key={c.name}><strong>{c.name}</strong><p>{c.score == null ? '—' : (c.bonus ? '+' : '') + c.score}{!c.bonus && ' / 100'}</p><small>{c.bonus ? 'Bonus di luar bobot' : 'Bobot '+c.weight+'%'}</small><p style={{fontSize:12}}>{c.detail}</p></article>)}</div>
-    <p><strong>Nilai akhir: {summary.published && summary.final?.value != null ? summary.final.value + ' · ' + summary.final.letter : 'Belum diterbitkan / belum lengkap'}</strong></p>
+    <h3>{label("Komponen nilai mata kuliah")}</h3>
+    <div className="pp-profile-skills">{summary.components.map(c => <article className="pp-profile-skill" key={c.name}><strong>{c.name}</strong><p>{c.score == null ? '—' : (c.bonus ? '+' : '') + c.score}{!c.bonus && ' / 100'}</p><small>{c.bonus ? label("Bonus di luar bobot") : label("Bobot {weight}%", {weight:String(c.weight)})}</small><details className="student-grade-detail"><summary>{label("Rincian")}</summary><p>{c.detail}</p></details></article>)}</div>
+    <p><strong>{label("Nilai akhir")}: {summary.published && summary.final?.value != null ? summary.final.value + ' · ' + summary.final.letter : label("Belum diterbitkan / belum lengkap")}</strong></p>
 </section>}
 <div className="sgr-summary">
 				<div className="sgr-summary-card">

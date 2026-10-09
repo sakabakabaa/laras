@@ -2,7 +2,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import { BarChart3, BookOpen, CalendarDays, ClipboardList, FlaskConical, FolderOpen, Gamepad2, GraduationCap, Home, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Menu, Settings, Sparkles, Sun, User, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useT } from '@/lib/i18n';
+import { useT, useLanguage } from '@/lib/i18n';
 import { dashboardForRole } from '@/lib/learning';
 import { onQuickAssistantSend, type AssistantSeed } from '@/lib/assistant-quick-send';
 import { GlobalSearch } from '@/components/app/global-search';
@@ -97,13 +97,8 @@ const STUDENT_NAV = [{
   icon: BookOpen,
   ready: true
 }, {
-  to: '/kalender',
-  end: true,
-  label: 'Kalender',
-  icon: CalendarDays,
-  ready: true
-}, {
-  to: '/analytics',
+  to: '/app/student',
+  hash: 'progres-belajar',
   end: false,
   label: 'Analitik',
   icon: BarChart3,
@@ -137,6 +132,7 @@ export function AppShell({
   } = useAuth();
   const { theme, toggleWithTransition } = useTheme();
   const t = useT();
+  const language = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -226,7 +222,7 @@ export function AppShell({
   }, [displayName]);
   const sidebarCollapsed = Boolean(rail) || collapsed;
   if (variant === 'saas') {
-    return <AssistantPageContextProvider><div className="ld-layout">
+    return <AssistantPageContextProvider><div className={`ld-layout${isStudent ? ' student-adventure-shell' : ''}`}>
 				<header className="ld-mast">
 					<div className="ld-mast-brand">
 						{!hideSidebar && <button type="button" ref={mobileMenuBtnRef} className="ld-mobile-menu" aria-label="Buka navigasi" onClick={() => setMobileOpen(true)}>
@@ -283,7 +279,8 @@ export function AppShell({
 						<nav className="ld-nav" aria-label="Navigasi utama">
 							{navItems.map(item => {
               const Icon = item.icon;
-              const label = t(NAV_T[item.label] ?? item.label);
+              const studentLabels: Record<string, Record<string, string>> = { id: { Dashboard: 'Beranda', 'Mata Kuliah': 'Kelas', Analitik: 'Progres' }, en: { Dashboard: 'Home', 'Mata Kuliah': 'Classes', Analitik: 'Progress' }, de: { Dashboard: 'Start', 'Mata Kuliah': 'Kurse', Analitik: 'Fortschritt' } };
+              const label = (isStudent && studentLabels[language]?.[item.label]) || t(NAV_T[item.label] ?? item.label);
               if (!item.ready) {
 									return <Link key={item.label} to={item.to} className="ld-nav-link" aria-label={label} title={label} data-nav-label={label} onClick={() => setMobileOpen(false)}>
 											<Icon size={18} strokeWidth={1.75} />
@@ -293,7 +290,7 @@ export function AppShell({
               const hash = 'hash' in item ? item.hash : undefined;
               return <NavLink key={item.label} to={hash ? `${item.to}#${hash}` : item.to} end={'end' in item ? item.end : false} aria-label={label} title={label} data-nav-label={label} className={({
                 isActive
-              }) => `ld-nav-link${isActive && !hash ? ' active' : ''}${hash && location.hash === `#${hash}` ? ' active' : ''}`} onClick={() => setMobileOpen(false)}>
+              }) => `ld-nav-link${isActive && !hash && !(isStudent && item.to === '/app/student' && location.hash) ? ' active' : ''}${hash && location.hash === `#${hash}` ? ' active' : ''}`} onClick={() => setMobileOpen(false)}>
 										<Icon size={18} strokeWidth={1.75} />
 										<span>{label}</span>
 									</NavLink>;

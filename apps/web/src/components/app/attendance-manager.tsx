@@ -1,3 +1,4 @@
+import { PracticeMascot } from './practice-mascot';
 import {SessionRoster} from './session-roster';
 import {useMemo} from 'react';
 import {ClipboardList,LoaderCircle} from 'lucide-react';
@@ -44,7 +45,7 @@ function StudentAttendance({ courseId }: { courseId: string }) {
 
 	return (
 		<div className="ld-attendance">
-			<div className="ld-attendance-head">
+			<div className="ld-attendance-head student-page-banner"><span className="student-banner-mascot" aria-hidden="true"><PracticeMascot size={85} /></span>
 				<div>
 					<span className="ld-eyebrow">{t('student.attendance.eyebrow')}</span>
 					<h2 className="ld-attendance-title">{t('student.attendance.title')}</h2>

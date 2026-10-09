@@ -1,3 +1,4 @@
+import { PracticeMascot } from './practice-mascot';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
@@ -207,7 +208,7 @@ export function CourseAnalytics({
 
 	return (
 		<section className="an-page" aria-label={`Analitik ${course.title}`}>
-			<div className="an-head">
+			<div className={`an-head${isStudent ? ' student-page-banner' : ''}`}>
 				<div>
 					<Link to="/analytics" className="an-back">
 						← Analitik
@@ -217,6 +218,7 @@ export function CourseAnalytics({
 						{[course.semester, course.academicYear].filter(Boolean).join(' · ') || 'Semester belum diisi'}
 					</p>
 				</div>
+				{isStudent && <span className="student-banner-mascot" aria-hidden="true"><PracticeMascot size={85} /></span>}
 				<label className="an-period">
 					<CalendarRange size={16} />
 					<select value={String(week)} onChange={(e) => setWeek(Number(e.target.value))} aria-label="Periode">

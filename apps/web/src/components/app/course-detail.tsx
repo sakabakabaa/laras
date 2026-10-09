@@ -1,3 +1,5 @@
+import { useStudentHomeText } from '@/lib/student-home-copy';
+import { PracticeMascot } from './practice-mascot';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import {
@@ -58,6 +60,7 @@ import {
 
 export function CourseDetail({ routeId }: { routeId: string }) {
 	const t = useT();
+	const label = useStudentHomeText();
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const role = (user as { role?: string } | null)?.role || 'faculty';
@@ -594,10 +597,10 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 					)}
 					{tab === 'sessions' && (
 						<div className="ld-sessions-view">
-							<div className="ld-sessions-head">
+							<div className={`ld-sessions-head${isStudent ? ' student-page-banner' : ''}`}>{isStudent && <span className="student-banner-mascot" aria-hidden="true"><PracticeMascot size={85} /></span>}
 								<div>
-									<span className="ld-eyebrow">03 / Pertemuan Kelas</span>
-									<h2>Semester, sesi demi sesi.</h2>
+									<span className="ld-eyebrow">{isStudent ? t("student.courseRail.mata-kuliah") : "03 / Pertemuan Kelas"}</span>
+									<h2>{isStudent ? label("Perjalanan kelasmu") : "Semester, sesi demi sesi."}</h2>
 								</div>
 								{isFacultyOwner && (
 									<div className="ld-sessions-actions">
@@ -680,8 +683,8 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 													{session.completed && ' · Selesai'}
 												</small>
 												<h3>{session.title}</h3>
-												{session.topic && <p>{session.topic}</p>}
-												{session.notes && <p className="ld-session-notes">{session.notes}</p>}
+												{session.topic && (!isStudent || session.topic !== session.title) && <p>{session.topic}</p>}
+                                                {session.notes && (isStudent ? <details className="student-session-details"><summary>{label("Rincian pertemuan")}</summary><p className="ld-session-notes">{session.notes}</p></details> : <p className="ld-session-notes">{session.notes}</p>)}
 												<SessionLinks session={session} records={records} />
 											</div>
 											{isFacultyOwner && (
@@ -729,7 +732,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 						sectionId={sectionFilter}
 					/>
 				)}
-				{section === 'latihan' && <PersonalPractice courseId={id} />}
+				{section === 'latihan' && <PersonalPractice courseId={id} gameMode={isStudent} />}
 				{section === 'tugas' && (
 					<CourseAssignments
 						courseId={id}

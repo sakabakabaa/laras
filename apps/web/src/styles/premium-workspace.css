@@ -18,7 +18,7 @@
 	background: var(--p-surface);
 	color: var(--p-ink);
 	border: 1px solid var(--p-line);
-	border-bottom: 0;
+	border-bottom: 1px solid var(--p-line);
 	border-radius: 14px 14px 0 0;
 }
 
@@ -127,6 +127,10 @@
 .ld-content {
 	max-width: 1600px;
 	padding: 26px 28px 72px;
+}
+.ld-content:has(.ld-dash-wrap) {
+	border-left: 1px solid var(--p-line);
+	border-right: 1px solid var(--p-line);
 }
 .ld-page-head { margin-bottom: 22px; }
 .ld-eyebrow { color: #858d98; letter-spacing: .1em; font-size: 10px; }

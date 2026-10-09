@@ -1,3 +1,6 @@
+import { WorldScene } from './student-home-adventure';
+import { PracticeMascot } from './practice-mascot';
+import { useStudentHomeText } from '@/lib/student-home-copy';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
@@ -78,6 +81,7 @@ type Props = {
  */
 export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 	const t = useT();
+	const label = useStudentHomeText();
 	const language = useLanguage();
 	const [descOpen, setDescOpen] = useState(false);
 	const { sections } = useCourseSections(course.id);
@@ -215,7 +219,7 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 	return (
 		<div className="sco-wrap">
 			{/* ── Course identity & progress ─────────────────────── */}
-			<section className="sco-hero">
+			<section className="sco-hero student-course-hero"><div className="student-course-scene"><WorldScene /></div>
 				<div className="sco-hero-copy">
 					<span className="ld-eyebrow">{t('student.overview.eyebrow')}</span>
 					<h1>{course.title}</h1>
@@ -284,10 +288,11 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 				</div>
 			</section>
 
-			<section className="ld-panel sco-panel" aria-label="Latihan Personal">
-				<div className="ld-card-head"><h2><Repeat size={16} className="ld-spark" /> Latihan Personal</h2><Link to={courseSectionPath(routeId, 'latihan')} className="ld-text-btn">Buka latihan <ArrowRight size={13} /></Link></div>
-				<p className="ld-empty-sm">Lima pertanyaan singkat dari materi pertemuan terbaru, dengan umpan balik dan rujukan materi. Tanpa nilai resmi.</p>
-			</section>
+			<section className="student-course-practice">
+                <PracticeMascot size={72} />
+                <div><span className="sd-game-eyebrow">{label("SATU PUTARAN, SEKITAR 5 MENIT")}</span><h2>{label("Satu langkah lagi?")}</h2><p>{label("Coba tantangan dari materi kelas. Jawabanmu mendapat penjelasan.")}</p></div>
+                <Link to={`/app/latihan?course=${course.id}`} className="sd-game-primary">{label("Mulai latihan")} <ArrowRight size={16} /></Link>
+            </section>
 			<div className="sco-grid">
 				<div className="sco-main">
 					{/* ── Next session ─────────────────────────────── */}

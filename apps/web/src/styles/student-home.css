@@ -1,0 +1,136 @@
+.ld-student.sd-adventure-page { border:0; background:transparent; overflow:visible; border-radius:0; }
+.sd-game { --game-green:#427255; --game-cream:#fff5e5; color:var(--p-ink); }
+.sd-game a { text-decoration:none; }
+.sd-game-greeting { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:24px; }
+.sd-game-eyebrow { display:flex; align-items:center; gap:7px; color:var(--p-muted); font-size:10px; font-weight:750; letter-spacing:.11em; }
+.sd-game-greeting h1 { margin:6px 0; font-size:clamp(25px,3vw,36px); letter-spacing:-.045em; }
+.sd-game-greeting p { margin:0; color:var(--p-muted); font-size:14px; }
+.sd-game-profile-link { display:flex; gap:8px; align-items:center; color:var(--p-wine); background:var(--p-wine-soft); border-radius:30px; padding:11px 16px; font-size:12px; font-weight:700; }
+.sd-game-hero { position:relative; display:grid; grid-template-columns:1.2fr 1fr; align-items:center; min-height:325px; background:var(--game-cream); border:1px solid #eddfca; border-radius:24px; overflow:hidden; }
+.sd-game-hero-copy { position:relative; z-index:2; padding:36px 42px; }
+.sd-game-hero-copy .sd-game-eyebrow { color:#946f3e; }
+.sd-game-hero h2 { max-width:430px; font-size:clamp(27px,3.2vw,43px); line-height:1.15; letter-spacing:-.04em; margin:17px 0; }
+.sd-game-hero p { max-width:420px; color:#79694f; font-size:14px; line-height:1.75; margin:0 0 24px; }
+.sd-game-play { display:inline-flex; align-items:center; justify-content:center; gap:12px; background:#8f2019; color:#fff; border:1px solid #761911; border-bottom:4px solid #64180f; border-radius:14px; padding:14px 22px; font-size:14px; font-weight:750; transition:transform .18s,box-shadow .18s; }
+.sd-game-play:hover { transform:translateY(-2px); box-shadow:0 8px 15px #8f20191c; }
+.sd-game-play:active { transform:translateY(2px); }
+.sd-game-hero-foot { display:flex; gap:6px; align-items:center; font-size:11px; color:#897452; margin-top:15px; }
+.sd-game-hero-art { position:relative; align-self:stretch; min-height:300px; isolation:isolate; }
+.sd-game-hero-art:before { content:''; position:absolute; width:275px; height:275px; background:#f3dfb8; border-radius:50%; top:32px; left:50%; transform:translateX(-50%); z-index:-1; }
+.sd-game-mascot { position:absolute; top:76px; left:50%; transform:translateX(-50%) rotate(-7deg); animation:sd-companion-bob 5s ease-in-out infinite; z-index:2; }
+.sd-game-mascot-bubble { position:absolute; top:38px; left:50%; transform:translateX(-50%) rotate(4deg); background:#fffdf6; border:1px solid #e4d4b8; padding:12px 18px; border-radius:15px 15px 15px 3px; color:#8f2019; white-space:nowrap; font-size:12px; font-weight:700; z-index:3; }
+.sd-game-art-ground { position:absolute; left:13%; right:13%; bottom:-30px; height:100px; border-radius:50%; background:#d9b995; }
+.sd-game-art-book,.sd-game-art-flag { position:absolute; display:grid; place-items:center; width:62px; height:62px; background:#fffaf0; border:1px solid #ebd7b8; border-radius:17px; color:#946f3e; }
+.sd-game-art-book { bottom:38px; left:9%; transform:rotate(-14deg); }
+.sd-game-art-flag { top:119px; right:11%; transform:rotate(13deg); }
+.sd-game-spark { position:absolute; color:#d49632; font-size:30px; }
+.sd-game-spark-a { top:62px; left:12%; }.sd-game-spark-b { bottom:75px; right:13%; }
+.sd-game-small-row { display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin:20px 0 35px; }
+.sd-game-goal,.sd-game-level { display:flex; align-items:center; gap:15px; background:var(--p-surface); border:1px solid var(--p-line); border-radius:17px; padding:20px; }
+.sd-game-goal-ring { flex:none; display:grid; place-items:center; width:50px; height:50px; border:3px solid var(--p-wine-soft); color:var(--p-wine); border-radius:50%; }
+.sd-game-goal-ring.done { border-color:var(--game-green); color:var(--game-green); }
+.sd-game-goal h2,.sd-game-level strong { font-size:13px; margin:0 0 5px; display:block; }
+.sd-game-goal p,.sd-game-level span { font-size:11px; color:var(--p-muted); margin:0; line-height:1.6; }
+.sd-game-goal-count { margin-left:auto; color:var(--p-muted); font-size:12px; font-weight:700; }
+.sd-game-level { color:var(--p-ink); }.sd-game-level>svg { color:#c08c31; flex:none; }.sd-game-level>div { flex:1; }
+.sd-game-level-track { overflow:hidden; background:var(--p-line); border-radius:9px; height:5px; margin-top:10px; }.sd-game-level-track>span { display:block; height:100%; background:#d29e3e; border-radius:9px; }
+.sd-game-section-heading { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-bottom:18px; }
+.sd-game-section-heading h2 { font-size:22px; letter-spacing:-.035em; margin:6px 0 0; }
+.sd-game-section-heading>a,.sd-game-progress-note { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--p-muted); }
+.sd-game-world-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
+.sd-game-world { border:1px solid var(--p-line); border-radius:20px; overflow:hidden; background:var(--p-surface); transition:transform .2s,box-shadow .2s; }
+.sd-game-world:hover { transform:translateY(-4px); box-shadow:0 9px 24px #1722380c; }
+.sd-game-world>a:first-child { display:block; color:var(--p-ink); }
+.sd-world-scene { display:block; width:100%; height:175px; --world-sky:#fae6d3; --world-sun:#efb65c; --world-hill:#e5bda4; --world-front:#d59678; --world-path:#fff2d5; --world-flag:#9b473a; }
+.sd-world-1 { --world-sky:#e2efe6; --world-sun:#e9cd7e; --world-hill:#b2c8ad; --world-front:#87ad94; --world-path:#f7edce; --world-flag:#4d755c; }
+.sd-world-2 { --world-sky:#e6e6f4; --world-sun:#e6c18e; --world-hill:#c1bddc; --world-front:#9c99bf; --world-path:#f7eddc; --world-flag:#656188; }
+.sd-world-3 { --world-sky:#dfeef3; --world-sun:#e5ca82; --world-hill:#adc9d3; --world-front:#83aebf; --world-path:#f7eddc; --world-flag:#427a8d; }
+.sd-game-world-copy { padding:21px 24px; }.sd-game-world-number { font-size:10px; font-weight:700; color:var(--p-muted); letter-spacing:.08em; }.sd-game-world h3 { font-size:18px; line-height:1.3; margin:9px 0; }.sd-game-world p { font-size:12px; line-height:1.6; color:var(--p-muted); margin:0 0 18px; }.sd-game-world-cta { display:flex; justify-content:space-between; align-items:center; color:var(--p-wine); font-size:13px; font-weight:700; }
+.sd-game-class-link { display:flex; align-items:center; gap:8px; padding:12px 24px; border-top:1px solid var(--p-line); color:var(--p-muted); font-size:11px; }.sd-game-class-link>svg:last-child { margin-left:auto; }
+.sd-game-progress { margin-top:36px; scroll-margin-top:90px; }.sd-game-progress-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }.sd-game-skill-panel,.sd-game-recent-panel { padding:22px; background:var(--p-surface); border:1px solid var(--p-line); border-radius:18px; }.sd-game-progress h3 { display:flex; align-items:center; gap:9px; font-size:13px; margin:0 0 17px; }.sd-game-progress h3>svg { color:var(--p-wine); }.sd-game-skill,.sd-game-recent { display:flex; align-items:center; gap:12px; padding:13px 0; color:var(--p-ink); border-top:1px solid var(--p-line); }.sd-game-skill strong,.sd-game-recent strong { display:block; font-size:12px; }.sd-game-skill small,.sd-game-recent small { display:block; color:var(--p-muted); font-size:10px; margin-top:4px; }.sd-game-skill em { margin-left:auto; font-style:normal; font-size:10px; white-space:nowrap; color:var(--game-green); background:color-mix(in srgb,var(--game-green) 10%,var(--p-surface)); padding:5px 8px; border-radius:20px; }.sd-game-skill em.sd-game-skill-focus { color:var(--p-wine); background:var(--p-wine-soft); }.sd-game-recent-icon { flex:none; background:var(--p-wine-soft); color:var(--p-wine); width:32px; height:32px; display:grid; place-items:center; border-radius:10px; }.sd-game-recent time { margin-left:auto; color:var(--p-muted); font-size:10px; white-space:nowrap; }.sd-game-progress-empty { display:flex; align-items:center; gap:15px; color:var(--p-muted); padding:10px 0; }.sd-game-progress-empty svg { flex:none; color:var(--p-wine); opacity:.7; }.sd-game-progress-empty p { font-size:12px; line-height:1.7; margin:0; }
+.sd-game-empty { text-align:center; padding:28px; border:1px dashed var(--p-line); border-radius:20px; }.sd-game-empty p { color:var(--p-muted); font-size:13px; }.sd-game-empty a { color:var(--p-wine); display:inline-flex; gap:8px; font-size:13px; }
+.sd-game-data-note,.sd-preview-note { font-size:12px; color:var(--p-muted); display:flex; align-items:center; gap:8px; padding:12px 0; }.sd-game-data-note button { background:none; border:0; color:var(--p-wine); text-decoration:underline; cursor:pointer; }.sd-preview-note { flex-wrap:wrap; padding:12px 16px; background:var(--p-wine-soft); border-radius:12px; margin-bottom:20px; }.sd-preview-note a { margin-left:auto; color:var(--p-wine); }
+.sd-game-coursework { margin-top:28px; border:1px solid var(--p-line); border-radius:18px; background:var(--p-surface); }.sd-game-coursework>summary { padding:20px 24px; font-weight:700; font-size:14px; cursor:pointer; }.sd-game-coursework>summary span { color:var(--p-muted); font-size:12px; font-weight:400; margin-left:12px; }.sd-game-coursework .sd-resume { border:0; border-top:1px solid var(--p-line); padding:20px 24px; }.sd-game-coursework .ld-student-grid { gap:16px; padding:0 20px 20px; }.sd-game-coursework>.ld-panel { margin:0 20px 20px; }.sd-game-coursework .ld-panel { border:1px solid var(--p-line); border-radius:12px; }
+.sd-game a:focus-visible,.sd-game button:focus-visible,.sd-game-coursework summary:focus-visible { outline:3px solid var(--p-wine); outline-offset:4px; }
+:root.dark .sd-game { --game-cream:#29241e; --game-green:#8fc5a0; }:root.dark .sd-game-hero { border-color:#443b30; }:root.dark .sd-game-hero p,:root.dark .sd-game-hero-foot { color:#c0b198; }:root.dark .sd-game-hero-copy .sd-game-eyebrow { color:#d4b786; }:root.dark .sd-game-hero-art:before { background:#3a3023; }:root.dark .sd-game-art-ground { background:#504030; }:root.dark .sd-game-mascot-bubble,:root.dark .sd-game-art-book,:root.dark .sd-game-art-flag { background:#393023; color:#edc98c; border-color:#5a4830; }:root.dark .sd-world-scene { filter:brightness(.8) saturate(.85); }
+@keyframes sd-companion-bob { 0%,100% { transform:translateX(-50%) translateY(0) rotate(-7deg); } 50% { transform:translateX(-50%) translateY(-7px) rotate(-3deg); } }
+@media(min-width:1300px) { .sd-adventure-page { max-width:1160px; margin:auto; } }
+@media(max-width:750px) { .sd-game-greeting { gap:10px; }.sd-game-profile-link { padding:9px; font-size:10px; }.sd-game-hero { grid-template-columns:1fr; }.sd-game-hero-copy { padding:27px; }.sd-game-hero-art { min-height:220px; order:-1; }.sd-game-hero-art:before { width:205px; height:205px; top:15px; }.sd-game-mascot { top:51px; }.sd-game-mascot svg { width:155px; height:155px; }.sd-game-mascot-bubble { top:17px; }.sd-game-art-ground { height:65px; bottom:-30px; }.sd-game-art-book { bottom:24px; left:18%; }.sd-game-art-flag { top:100px; right:16%; }.sd-game-small-row,.sd-game-progress-grid { grid-template-columns:1fr; }.sd-game-small-row { gap:12px; }.sd-game-section-heading { align-items:flex-end; }.sd-game-section-heading h2 { font-size:20px; }.sd-game-progress-note { display:none; }.sd-game-hero-foot { align-items:flex-start; line-height:1.6; }.sd-game-coursework>summary span { display:block; margin:7px 0 0; }.sd-game-coursework .ld-student-grid { padding:0 12px 12px; }.sd-game-coursework .sd-resume { padding:16px; }.sd-game-skill { flex-wrap:wrap; }.sd-game-world-grid { grid-template-columns:1fr; } }
+@media(prefers-reduced-motion:reduce) { .sd-game-mascot { animation:none; }.sd-game *, .sd-game *:before { transition:none!important; } }
+
+.sd-game-task-reminder { display:flex; align-items:center; gap:14px; padding:18px 22px; border:1px solid var(--p-line); border-radius:16px; background:var(--p-surface); color:var(--p-ink); text-decoration:none; margin-top:28px; }.sd-game-task-icon { display:grid; place-items:center; width:38px; height:38px; background:var(--p-wine-soft); color:var(--p-wine); border-radius:11px; flex:none; }.sd-game-task-reminder small { display:block; color:var(--p-muted); font-size:10px; margin-bottom:5px; }.sd-game-task-reminder strong { display:block; font-size:12px; }.sd-game-task-action { display:flex; align-items:center; gap:8px; margin-left:auto; color:var(--p-wine); font-size:11px; white-space:nowrap; }.sd-game-badges { display:flex; flex-wrap:wrap; gap:12px; margin-top:25px; }.sd-game-badges>span { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:12px 16px; border:1px solid var(--p-line); border-radius:14px; color:var(--p-ink); font-size:12px; background:var(--p-surface); }.sd-game-badges svg { color:#c08c31; }.sd-game-badges small { color:var(--p-muted); font-size:10px; }
+@media(max-width:600px) { .sd-game-task-reminder { flex-wrap:wrap; }.sd-game-task-action { width:100%; padding-left:52px; white-space:normal; } }
+
+@media(min-width:751px) and (max-width:1100px) { .sd-game-world-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+/* Shared student world: scoped so lecturer workspaces retain their layout. */
+.student-adventure-shell { --student-cream:#fff5e5; --student-gold:#b68533; --student-leaf:#477559; }
+.student-adventure-shell .ld-content { background:radial-gradient(ellipse at 90% 0%, #f8ecd733, transparent 45%); }
+.student-adventure-shell :is(.ld-panel,.res-group,.asg-card,.sgr-summary-card,.ld-document-paper,.ld-info-card,.ld-session-row,.sas-card) { border:1px solid var(--p-line); border-radius:18px; background:var(--p-surface); box-shadow:0 4px 0 color-mix(in srgb,var(--p-line) 35%,transparent); }
+.student-adventure-shell :is(.ld-btn-primary,.ld-outline-action,.ld-text-btn,.sco-task-cta) { border-radius:12px; }
+.student-adventure-shell :is(.ld-btn-primary,.sd-game-primary) { box-shadow:0 4px 0 color-mix(in srgb,var(--p-wine) 65%,#000); transition:transform .15s,box-shadow .15s; }
+.student-adventure-shell :is(.ld-btn-primary,.sd-game-primary):active { transform:translateY(3px); box-shadow:0 1px 0 var(--p-wine); }
+.student-adventure-shell :is(.res-ico,.ld-empty-icon,.sco-next-week,.sco-task-cta,.ws-head-mark) { background:var(--student-cream); color:var(--p-wine); border-radius:14px; }
+.student-adventure-shell .ld-course-rail { background:var(--p-surface); }
+.student-adventure-shell .ld-course-rail-head { border:1px solid var(--p-line); border-radius:16px; padding:18px; margin:12px 10px 18px; background:var(--student-cream); }
+.student-adventure-shell .ld-course-rail-link { border-radius:12px; margin:3px 10px; }
+.student-adventure-shell .ld-course-rail-link.active { background:var(--p-wine-soft); color:var(--p-wine); box-shadow:inset 3px 0 var(--p-wine); }
+.student-page-banner { position:relative; background:var(--student-cream); border:1px solid var(--p-line); border-radius:22px; padding:28px 130px 28px 28px; margin-bottom:24px; min-height:130px; }
+.student-page-banner h1,.student-page-banner h2 { font-size:clamp(25px,3vw,34px); letter-spacing:-.04em; margin:10px 0; }
+.student-page-banner p { max-width:570px; font-size:13px; line-height:1.7; color:var(--p-muted); margin:0; }
+.student-banner-mascot { position:absolute; right:25px; top:20px; transform:rotate(-7deg); animation:student-banner-float 4s ease-in-out infinite; }
+.ld-student.student-worlds-page { border:0; border-radius:0; background:transparent; overflow:visible; max-width:1160px; margin:auto; }
+.student-worlds-page>.ld-panel { border:0; background:transparent; padding:0; box-shadow:none; }
+.student-worlds-page .ld-search-bar { border:1px solid var(--p-line); border-radius:14px; background:var(--p-surface); margin:18px 0 24px; }
+.student-worlds-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px; list-style:none; margin:0; padding:0; }
+.student-worlds-grid>li { min-width:0; }
+.student-world-card { border:1px solid var(--p-line); border-radius:22px; overflow:hidden; background:var(--p-surface); box-shadow:0 5px 0 color-mix(in srgb,var(--p-line) 35%,transparent); transition:transform .2s; }
+.student-world-card:hover { transform:translateY(-4px); }
+.student-world-picture { display:block; }.student-world-picture svg { display:block; width:100%; height:auto; }
+.student-world-card .sd-course-body { padding:20px; min-width:0; }.student-world-card .sd-course-head { flex-wrap:wrap; gap:8px; }.student-world-card .sd-course-head a { color:var(--p-ink); text-decoration:none; font-size:17px; }
+.student-world-card .sd-course-foot { flex-direction:column; align-items:stretch; margin-top:18px; gap:8px; }.student-world-card .sd-course-foot>small { color:var(--p-muted); font-size:10px; }.student-world-card .ld-progress-wrap { width:100%; }.student-world-card .ld-progress { flex:1; height:7px; }.student-world-card .ld-progress span { background:var(--student-leaf); }
+.student-world-actions { display:flex; flex-wrap:wrap; gap:12px; padding:0 20px 20px; align-items:center; }.student-world-actions a { display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--p-wine); text-decoration:none; }.student-world-actions a:first-child { padding:10px 12px; background:var(--p-wine-soft); border-radius:12px; font-weight:700; }
+.student-course-hero { position:relative; overflow:hidden; border:1px solid var(--p-line); border-radius:24px; padding:32px; background:var(--student-cream); gap:26px; }
+.student-course-hero .sco-hero-copy { position:relative; z-index:1; }.student-course-hero .sco-hero-meta { flex-wrap:wrap; }.student-course-hero .sco-progress-card { position:relative; z-index:1; background:var(--p-surface); border:1px solid var(--p-line); border-radius:18px; padding:20px; }
+.student-course-scene { position:absolute; inset:auto 0 0 auto; width:50%; opacity:.16; pointer-events:none; }.student-course-scene svg { width:100%; display:block; }
+.student-course-practice { display:flex; align-items:center; gap:22px; margin:24px 0; border:1px solid var(--p-line); border-radius:20px; padding:24px; background:var(--p-surface); }.student-course-practice>svg { flex:none; }.student-course-practice>div { flex:1; min-width:0; }.student-course-practice h2 { font-size:22px; margin:8px 0; letter-spacing:-.03em; }.student-course-practice p { font-size:12px; color:var(--p-muted); margin:0; line-height:1.7; }.student-course-practice a { white-space:nowrap; }
+.student-adventure-shell .sco-task-row { border:1px solid var(--p-line); border-radius:14px; padding:16px; margin:8px 0; }.student-adventure-shell .sco-task-info strong { line-height:1.5; }.student-adventure-shell .sco-task-row:hover { background:var(--p-wine-soft); }
+.student-adventure-shell .res-group-head { padding:16px 20px; background:var(--student-cream); border-radius:18px 18px 0 0; }.student-adventure-shell .res-row { padding:18px 20px; }.student-adventure-shell .res-ico { width:44px; height:44px; }
+.student-adventure-shell .ld-session-list { gap:14px; }.student-adventure-shell .ld-session-row { padding:18px; margin-bottom:12px; }.student-adventure-shell .ld-session-week { background:var(--student-cream); padding:10px; border-radius:12px; color:var(--p-wine); }
+.student-adventure-shell .sgr-summary-card { padding:22px; }.student-adventure-shell .sgr-summary-card strong { color:var(--student-leaf); }.student-adventure-shell .sgr-row { border-radius:12px; padding:16px; margin:8px 0; background:var(--p-surface); border:1px solid var(--p-line); }
+.student-adventure-shell .pp-game-hero { background:var(--student-cream); border:1px solid var(--p-line); border-radius:24px; }.student-adventure-shell .pp-game-courses { grid-template-columns:repeat(3,minmax(0,1fr)); }.student-adventure-shell .pp-game-course { border-radius:22px; border-color:var(--p-line); box-shadow:0 5px 0 color-mix(in srgb,var(--p-line) 35%,transparent); }
+.student-practice-world-art { position:relative; display:block; }.student-practice-world-art svg.sd-world-scene { width:100%; height:auto; display:block; }.student-world-marker { position:absolute; right:18px; bottom:18px; background:var(--p-surface); color:var(--p-wine); width:44px; height:44px; border-radius:14px; display:grid; place-items:center; transform:rotate(-8deg); }
+.student-adventure-shell .pp-game-flow,.student-adventure-shell .pp-round { border-radius:24px; }.student-adventure-shell .pp-progress>span { border-radius:8px; }
+.student-adventure-shell .sas-workspace .ws-head { background:var(--student-cream); border:1px solid var(--p-line); border-radius:20px; }.student-adventure-shell .ws-task { border-radius:20px; border-color:var(--p-line); }.student-adventure-shell .sas-card { padding:22px; }.student-adventure-shell :is(.sas input,.sas textarea) { border-radius:12px; }
+:root.dark .student-adventure-shell { --student-cream:#29241e; --student-gold:#d1ad62; --student-leaf:#91bc9d; }
+:root.dark .student-adventure-shell .ld-content { background:radial-gradient(ellipse at 90% 0%, #33281833,transparent 45%); }
+:root.dark .student-adventure-shell :is(.res-ico,.ld-empty-icon,.sco-next-week,.ws-head-mark) { background:var(--student-cream); color:var(--p-wine); }
+@keyframes student-banner-float { 0%,100% { transform:translateY(0) rotate(-7deg); }50% { transform:translateY(-5px) rotate(-3deg); } }
+@media(max-width:1100px) { .student-worlds-grid,.student-adventure-shell .pp-game-courses { grid-template-columns:repeat(2,minmax(0,1fr)); }.student-course-practice { flex-wrap:wrap; }.student-course-practice>a { margin-left:94px; } }
+@media(max-width:750px) { .student-worlds-grid,.student-adventure-shell .pp-game-courses { grid-template-columns:1fr; }.student-page-banner { padding:24px 100px 24px 20px; }.student-banner-mascot { right:12px; top:27px; }.student-banner-mascot svg { width:72px; height:72px; }.student-course-hero { padding:22px; flex-direction:column; align-items:stretch; }.student-course-hero .sco-progress-card { width:100%; }.student-course-practice { gap:14px; padding:20px; }.student-course-practice .sd-game-eyebrow { font-size:9px; }.student-course-practice>a { margin-left:0; width:100%; justify-content:center; }.student-course-practice>svg { width:55px; height:55px; }.student-adventure-shell .res-row { flex-wrap:wrap; }.student-adventure-shell .res-meta { min-width:0; flex:1; }.student-adventure-shell .res-actions { width:100%; flex-wrap:wrap; }.student-adventure-shell .sco-task-row { flex-wrap:wrap; gap:14px; }.student-adventure-shell .sgr-row { flex-wrap:wrap; gap:14px; } }
+@media(prefers-reduced-motion:reduce) { .student-banner-mascot { animation:none; }.student-adventure-shell * { scroll-behavior:auto!important; }.student-world-card,.student-adventure-shell .ld-btn-primary,.student-adventure-shell .sd-game-primary { transition:none; } }
+.student-adventure-shell .student-worlds-page>.ld-panel { border:0; border-radius:0; box-shadow:none; background:transparent; }
+.student-adventure-shell .student-world-card { border-radius:22px; }
+.student-adventure-shell .student-course-hero { background:var(--student-cream); border-color:var(--p-line); }
+.student-adventure-shell .student-course-hero .sco-progress-card { border-radius:18px; border-color:var(--p-line); }
+.student-adventure-shell .student-course-practice .sd-game-primary { display:inline-flex; align-items:center; justify-content:center; gap:10px; background:var(--p-wine); color:#fff; padding:14px 20px; border:0; border-radius:13px; font-size:13px; font-weight:700; text-decoration:none; }
+.student-adventure-shell .cw-ring-bg { stroke:var(--p-line); }
+.student-adventure-shell .student-world-card .ld-progress span { background:var(--student-leaf); }
+.student-adventure-shell .ld-course-rail-link.active { background:var(--p-wine-soft); color:var(--p-wine); }
+.student-adventure-shell .ld-attendance-table-wrap { border:1px solid var(--p-line); border-radius:18px; overflow:auto; }
+.student-adventure-shell .ld-attendance-table thead { background:var(--student-cream); }
+.student-adventure-shell .sas-launch { display:flex; align-items:center; gap:18px; border:1px solid var(--p-line); border-radius:18px; padding:20px; background:var(--p-surface); box-shadow:0 4px 0 color-mix(in srgb,var(--p-line) 35%,transparent); }
+.student-adventure-shell .sas-launch>.student-task-marker { flex:none; width:48px; height:48px; border-radius:15px; display:grid; place-items:center; color:var(--p-wine); background:var(--student-cream); }
+.student-adventure-shell .sas-launch.done>.student-task-marker { color:var(--student-leaf); background:color-mix(in srgb,var(--student-leaf) 12%,var(--p-surface)); }.student-adventure-shell .sas-launch>span:not(.student-task-marker) { flex:1; min-width:0; }
+.student-adventure-shell .sas-launch strong { line-height:1.6; }.student-adventure-shell .sas-launch .card-cta { flex:none; }
+.student-adventure-shell :is(.an-card,.an-stat,.sci-panel) { border:1px solid var(--p-line); border-radius:18px; background:var(--p-surface); }.student-adventure-shell .an-period { margin-right:0; align-self:flex-end; }.student-adventure-shell .ld-session-list { position:relative; }.student-adventure-shell .ld-session-row.done .ld-session-week { color:var(--student-leaf); }
+@media(max-width:750px) { .student-adventure-shell .sas-launch { flex-wrap:wrap; gap:14px; }.student-adventure-shell .sas-launch .card-cta { margin-left:62px; }.student-adventure-shell .an-head.student-page-banner { flex-wrap:wrap; } }
+.student-grade-detail { font-size:12px; color:var(--p-muted); line-height:1.7; margin-top:12px; }.student-grade-detail summary { cursor:pointer; color:var(--p-wine); }.student-grade-detail p { overflow-wrap:anywhere; }
+@media(max-width:750px) { .student-adventure-shell .sgr-wrap .pp-profile-skills { grid-template-columns:1fr; }.student-adventure-shell .ld-session-row { gap:12px; flex-wrap:wrap; } }
+.student-adventure-shell .ld-student.pp-game-hub { background:transparent; border:0; box-shadow:none; border-radius:0; overflow:visible; }
+.student-adventure-shell .pp-game-course { grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto; align-items:stretch; padding:0; overflow:hidden; }
+.student-adventure-shell .student-practice-world-art { width:100%; flex:none; }
+.student-adventure-shell .pp-game-course-copy { width:100%; min-width:0; padding:20px; display:flex; flex-direction:column; gap:12px; text-align:left; }
+.student-adventure-shell .pp-game-course-copy strong { white-space:normal; overflow:visible; text-overflow:clip; }
+.student-adventure-shell .pp-course-cta { align-items:center; display:flex; gap:8px; }
+.student-session-details { font-size:12px; margin:12px 0; }.student-session-details summary { color:var(--p-wine); cursor:pointer; }.student-session-details .ld-session-notes { margin-top:10px; }

@@ -8,6 +8,7 @@ type Profile = {
 	id: string;
 	student: string;
 	goals?: string;
+	currentGoal?: string;
 	priorExperience?: string;
 	confidence?: string;
 	explanationLanguage?: string;
@@ -22,6 +23,7 @@ type Body = {
 	courseId?: string;
 	rosterId?: string;
 	goals?: string;
+	currentGoal?: string;
 	priorExperience?: string;
 	confidence?: string;
 	explanationLanguage?: string;
@@ -79,7 +81,7 @@ export const action = withApi(async ({ request }) => {
 		const submissions = submissionRows.items.filter((item) => formalIds.has(item.assignment));
 		const graded = submissions.filter((item) => item.status === 'graded' && typeof item.grade === 'number');
 		const sharedProfile = profile?.shareWithLecturer ? {
-			goals: profile.goals || '', priorExperience: profile.priorExperience || '',
+			goals: profile.goals || '', currentGoal: profile.currentGoal || '', priorExperience: profile.priorExperience || '',
 			confidence: profile.confidence || '', explanationLanguage: profile.explanationLanguage || '',
 			supportPreference: profile.supportPreference || '', updated: profile.updated || '',
 		} : null;
@@ -103,15 +105,17 @@ export const action = withApi(async ({ request }) => {
 	if (body.mode === 'load') {
 		return json({ profile: current ? {
 			goals: current.goals || '', priorExperience: current.priorExperience || '', confidence: current.confidence || '',
+			currentGoal: current.currentGoal || '',
 			explanationLanguage: current.explanationLanguage || '', supportPreference: current.supportPreference || '',
 			shareWithLecturer: Boolean(current.shareWithLecturer), aiPersonalization: Boolean(current.aiPersonalization), updated: current.updated || '',
-		} : { goals: '', priorExperience: '', confidence: '', explanationLanguage: '', supportPreference: '', shareWithLecturer: false, aiPersonalization: false } });
+		} : { goals: '', currentGoal: '', priorExperience: '', confidence: '', explanationLanguage: '', supportPreference: '', shareWithLecturer: false, aiPersonalization: false } });
 	}
 	if (body.mode !== 'save') return apiError(422, 'Aksi profil tidak dikenal.');
 	const allowed = <T extends string>(value: unknown, values: readonly T[]) => values.includes(value as T) ? value as T : '';
 	const data = {
 		student: user.id,
 		goals: cleanText(body.goals, 2000),
+		currentGoal: cleanText(body.currentGoal, 500),
 		priorExperience: cleanText(body.priorExperience, 2000),
 		confidence: allowed(body.confidence, ['low', 'medium', 'high'] as const),
 		explanationLanguage: allowed(body.explanationLanguage, ['id', 'en', 'de'] as const),

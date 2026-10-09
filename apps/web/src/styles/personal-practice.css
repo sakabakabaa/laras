@@ -158,6 +158,20 @@
 .pp-profile-entry small { display: block; margin-top: 5px; }
 .pp-profile-entry p { line-height: 1.7; white-space: pre-wrap; }
 
+.pp-outcome-progress { margin: 20px 0; }
+.pp-outcome-progress h4 { margin: 0 0 6px; }
+.pp-outcome-progress > p { margin: 0 0 12px; }
+.pp-outcome-progress .pp-profile-skill > strong { display: -webkit-box; overflow: hidden; line-height: 1.45; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.pp-guided-lesson { margin: 14px 0; }
+.pp-lesson-card { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--p-line); border-radius: 12px; background: var(--p-surface); }
+.pp-lesson-card h4 { margin: 0; }
+.pp-lesson-card ol { display: grid; gap: 7px; margin: 0; padding-left: 22px; line-height: 1.6; }
+.pp-lesson-card form { display: grid; justify-items: start; gap: 10px; }
+.pp-lesson-card .pp-writing { display: grid; gap: 7px; width: 100%; }
+.pp-lesson-check { margin: 0; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--p-wine) 8%, var(--p-surface)); }
+.pp-lesson-check.correct { color: #126345; background: #eaf8f1; }
+.pp-lesson-check.needs_work,.pp-lesson-check.partially_correct { color: #8f2019; background: #fff3e7; }
+
 /* Illustrated game layer */
 .pp-game-hero { position: relative; gap: 24px; overflow: hidden; background: radial-gradient(circle at 14% 90%, #fff0d8 0, transparent 33%), radial-gradient(circle at 90% 0%, color-mix(in srgb, var(--p-wine-soft) 65%, transparent), transparent 42%), var(--p-surface); }
 .pp-game-hero-art { position: relative; display: grid; place-items: center; width: 132px; height: 122px; flex: 0 0 132px; }

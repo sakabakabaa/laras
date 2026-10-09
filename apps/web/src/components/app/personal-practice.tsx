@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, ExternalLink, FileText, LoaderCircle, RefreshCw, Sparkles } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
 import { PracticeMascot } from '@/components/app/practice-mascot';
-import type { PracticeReadiness, PracticeRound, PracticeSource } from '@/lib/personal-practice';
+import type { PracticeLesson, PracticeReadiness, PracticeRound, PracticeSource } from '@/lib/personal-practice';
 import type { StudentProgress } from '@/lib/student-progress';
 import type { FileLibraryRecord } from '@/lib/learning';
 
@@ -18,6 +18,9 @@ export function PersonalPractice({ courseId, gameMode = false }: { courseId: str
     const [feedback, setFeedback] = useState(false);
     const [report, setReport] = useState('');
     const [reported, setReported] = useState(false);
+    const [lesson, setLesson] = useState<PracticeLesson | null>(null);
+    const [lessonAnswer, setLessonAnswer] = useState('');
+    const [lessonCheck, setLessonCheck] = useState<{ verdict: keyof typeof verdictLabel; feedback: string } | null>(null);
     const [gameStep, setGameStep] = useState<GameStep>('ready');
     const xp = round?.results.reduce((sum, result) => sum + verdictXp[result.verdict], 0) ?? 0;
     const totalXp = ready?.totalXp ?? 0;
@@ -78,7 +81,7 @@ export function PersonalPractice({ courseId, gameMode = false }: { courseId: str
     const submit = () => void run('Memeriksa jawaban…', async () => {
         if (!round?.question) return;
         const result = await request<PracticeRound>('answer', { roundId: round.id, ordinal: round.question.ordinal, answer });
-        setRound(result); setFeedback(true); setAnswer(''); setReported(false); setReport('');
+        setRound(result); setFeedback(true); setAnswer(''); setReported(false); setReport(''); setLesson(null); setLessonAnswer(''); setLessonCheck(null);
         await loadReady();
     });
     if (!ready) return <section className="pp-page">{error ? <div role="alert" className="pp-error">{error}<button onClick={() => void run('Memuat…', async () => { await loadReady(); })}>Coba lagi</button></div> : <div className="pp-loading"><LoaderCircle className="spin" /> Membuka latihan personal…</div>}</section>;
@@ -105,6 +108,17 @@ export function PersonalPractice({ courseId, gameMode = false }: { courseId: str
                 <div className="pp-example"><span>{round.last.prompt}</span><p>Jawaban Anda: {round.last.answer}</p></div>
                 {round.last.result.correction && round.last.result.verdict !== 'correct' && <div className="pp-example"><span>Contoh jawaban</span><p>{round.last.result.correction}</p></div>}
                 <SourceList key={round.last.ordinal} sources={round.last.sources} />
+                {round.last.result.verdict !== 'correct' && round.last.result.verdict !== 'uncertain' && <div className="pp-guided-lesson">
+                    {!lesson ? <button type="button" className="ld-outline-action" disabled={Boolean(busy)} onClick={() => void run('Menyiapkan pelajaran singkat…', async () => setLesson(await request<PracticeLesson>('lesson', { roundId: round.id, ordinal: round.last!.ordinal })))}><BookOpen size={16} /> Pelajari konsep ini</button> : <section className="pp-lesson-card" aria-live="polite">
+                        <span className="pp-eyebrow">PELAJARAN SINGKAT</span><h4>{lesson.title}</h4><ol>{lesson.points.map((point, index) => <li key={index}>{point}</li>)}</ol>
+                        <div className="pp-example"><span>Contoh</span><p>{lesson.example}</p></div>
+                        <form onSubmit={e => { e.preventDefault(); void run('Memeriksa pemahaman…', async () => { const result = await request<{ verdict: keyof typeof verdictLabel; feedback: string }>('lesson-check', { roundId: round.id, ordinal: round.last!.ordinal, answer: lessonAnswer }); setLessonCheck(result); await loadReady(); }); }}>
+                            <label className="pp-writing"><strong>Coba pikirkan</strong><span>{lesson.check}</span><textarea rows={2} maxLength={1200} required value={lessonAnswer} disabled={Boolean(busy) || Boolean(lessonCheck)} onChange={e => setLessonAnswer(e.target.value)} placeholder="Tulis jawaban singkat…" /></label>
+                            {!lessonCheck && <button className="ld-btn-primary" disabled={Boolean(busy) || !lessonAnswer.trim()}>Periksa pemahaman <ArrowRight size={15} /></button>}
+                        </form>
+                        {lessonCheck && <p className={`pp-lesson-check ${lessonCheck.verdict}`} role="status"><strong>{verdictLabel[lessonCheck.verdict]}</strong> · {lessonCheck.feedback}</p>}
+                    </section>}
+                </div>}
                 <details className="pp-report"><summary>Ada masalah dengan soal atau penilaian ini?</summary>{reported ? <p role="status">Laporan tersimpan untuk dosen. Jawaban ini tidak dipakai untuk menyesuaikan latihan berikutnya.</p> : <form onSubmit={e => { e.preventDefault(); void run('Mengirim laporan…', async () => { await request('report', { roundId: round.id, ordinal: round.last!.ordinal, reason: report }); setReported(true); await loadReady(); }); }}><label>Jelaskan masalahnya<textarea value={report} minLength={10} maxLength={1500} required onChange={e => setReport(e.target.value)} /></label><button className="ld-outline-action" disabled={Boolean(busy)}>Laporkan soal</button></form>}</details>
                 {round.last.result.verdict === 'uncertain' && <p className="pp-muted">Jawaban ini tidak dipakai sebagai bukti kelemahan.</p>}
                 <button className="ld-btn-primary" disabled={Boolean(busy)} onClick={() => setFeedback(false)}>{round.question ? 'Pertanyaan berikutnya' : 'Lihat ringkasan'}<ArrowRight size={16} /></button>
@@ -131,6 +145,11 @@ function LearningProfile({ progress }: { progress: StudentProgress }) {
             <strong>{skill.label}</strong><span>{status[skill.status]}</span>
             <p>{skill.recentCorrect}/{skill.recentTotal} jawaban terbaru tepat</p><small>{skill.correct}/{skill.total} tepat dari seluruh latihan</small>
         </article>)}</div>
+        {progress.outcomes.length > 0 && <section className="pp-outcome-progress"><h4>Progres capaian mata kuliah</h4><p className="pp-muted">Berdasarkan soal yang sumbernya tertaut ke Sub-CPMK pertemuan. Ini petunjuk latihan, bukan nilai penguasaan.</p><div className="pp-profile-skills">{progress.outcomes.map(outcome => <article key={outcome.id} className={'pp-profile-skill ' + outcome.status}>
+            <strong>{outcome.code || 'Sub-CPMK'} · {outcome.description}</strong><span>{status[outcome.status]}</span>
+            <p>{outcome.recentCorrect}/{outcome.recentTotal} jawaban terbaru tepat</p><small>{outcome.total} jawaban latihan{progress.miniLessons.byOutcome.find(item => item.id === outcome.id)?.checks ? ` · cek pelajaran: ${progress.miniLessons.byOutcome.find(item => item.id === outcome.id)?.correct}/${progress.miniLessons.byOutcome.find(item => item.id === outcome.id)?.checks} tepat` : ''}</small>
+        </article>)}</div></section>}
+        {(progress.miniLessons.opened > 0 || progress.miniLessons.checks > 0) && <p className="pp-muted">Pelajaran singkat dibuka {progress.miniLessons.opened} kali · cek pemahaman {progress.miniLessons.correct}/{progress.miniLessons.checks} tepat.</p>}
         {progress.confirmed.length > 0 && <section><h4>Pola kesalahan dari tugas yang ditinjau</h4><ul>{progress.confirmed.map(item => <li key={item.label}>{item.label} <small>· {item.count} temuan ditinjau{item.count < 3 ? ' · bukti awal' : ' · berulang'}</small></li>)}</ul></section>}
         {progress.scoredTasks > 0 && !progress.confirmed.length && <p className="pp-muted">Tugas sudah dinilai. Belum ada temuan kesalahan terstruktur yang ditinjau; nilai keseluruhan tidak digunakan untuk menebak kelemahan tertentu.</p>}
         {progress.recent.length > 0 && <section><h4>Catatan kesalahan & umpan balik terbaru</h4>{progress.recent.map(item => <details key={item.kind + item.id} className="pp-profile-entry">

@@ -201,7 +201,7 @@ const runStudentProfile = async (pb: PocketBase, userId: string, args: Record<st
 	if (!enrollment.items.length) return `${str(rosterEntry.name, 100)} tercatat di roster, tetapi akun mahasiswa belum terdaftar pada mata kuliah ini.`;
 
 	const [profileRows, attendanceRows, assignments, submissions, components, entries, overrides, publicationRows, learning] = await Promise.all([
-		pocketbaseAdmin.listRecords<{ shareWithLecturer?: boolean; goals?: string; priorExperience?: string; confidence?: string; explanationLanguage?: string; supportPreference?: string; updated?: string }>('student_learning_profiles', { perPage: 1, filter: `student="${esc(student.id)}"` }),
+		pocketbaseAdmin.listRecords<{ shareWithLecturer?: boolean; goals?: string; currentGoal?: string; priorExperience?: string; confidence?: string; explanationLanguage?: string; supportPreference?: string; updated?: string }>('student_learning_profiles', { perPage: 1, filter: `student="${esc(student.id)}"` }),
 		pb.collection('attendance').getFullList<{ status: string }>({ filter: pb.filter('roster = {:rosterId}', { rosterId: rosterEntry.id }), fields: 'status', perPage: 500 }),
 		pb.collection('assignments').getFullList<Assignment>({ filter: pb.filter('course = {:courseId}', { courseId: resolved.course.id }), fields: 'id,title,activityType', perPage: 500 }),
 		pb.collection('assignment_submissions').getFullList<AssignmentSubmission>({ filter: pb.filter('owner = {:studentId} && assignment.course = {:courseId}', { studentId: student.id, courseId: resolved.course.id }), fields: 'assignment,status,grade,feedback,updated', sort: '-updated', perPage: 500 }),
@@ -226,6 +226,7 @@ const runStudentProfile = async (pb: PocketBase, userId: string, args: Record<st
 	if (profile?.shareWithLecturer) {
 		lines.push('Preferensi belajar yang dibagikan mahasiswa:');
 		if (profile.goals) lines.push(`- Tujuan: ${str(profile.goals, 500)}`);
+		if (profile.currentGoal) lines.push(`- Fokus belajar saat ini: ${str(profile.currentGoal, 500)}`);
 		if (profile.priorExperience) lines.push(`- Pengalaman sebelumnya: ${str(profile.priorExperience, 500)}`);
 		if (profile.confidence) lines.push(`- Kepercayaan diri yang dilaporkan: ${profile.confidence}`);
 		if (profile.explanationLanguage) lines.push(`- Bahasa penjelasan pilihan: ${profile.explanationLanguage}`);
@@ -252,6 +253,8 @@ const runStudentProfile = async (pb: PocketBase, userId: string, args: Record<st
 	}
 	if (overrides.length) lines.push(`Nilai akhir override dosen: ${overrides[0].value}/100.`);
 	if (learning.skills.length) lines.push(`Pola latihan berbasis bukti: ${learning.skills.map((skill) => `${skill.label} (${skill.status}, ${skill.total} jawaban)`).join('; ')}.`);
+	if (learning.outcomes.length) lines.push(`Progres Sub-CPMK dari soal latihan yang tertaut ke pertemuan: ${learning.outcomes.map((outcome) => `${outcome.code || outcome.description} (${outcome.status}, ${outcome.total} jawaban)`).join('; ')}.`);
+	if (learning.miniLessons.opened || learning.miniLessons.checks) lines.push(`Tindak lanjut pelajaran singkat: ${learning.miniLessons.opened} dibuka, ${learning.miniLessons.checks} cek pemahaman dijawab, ${learning.miniLessons.correct} tepat.`);
 	lines.push('Catatan: ini ringkasan rekaman yang tersedia; jangan menyimpulkan kemampuan atau kondisi pribadi di luar data tersebut.');
 	return lines.join('\n');
 };

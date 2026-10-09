@@ -17,6 +17,12 @@ export function normalizePracticeSkill(id: unknown, label: string): PracticeSkil
 export type StudentProgress = {
     scoredTasks: number; practiceAnswers: number;
     skills: { id: string; label: string; correct: number; total: number; recentCorrect: number; recentTotal: number; status: 'building' | 'focus' | 'steady' | 'improving' }[];
+    outcomes: { id: string; code: string; description: string; total: number; correct: number; recentCorrect: number; recentTotal: number; status: 'building' | 'focus' | 'steady' | 'improving' }[];
+    miniLessons: {
+        opened: number; checks: number; correct: number; needsWork: number;
+        bySkill: { id: string; label: string; opened: number; checks: number; correct: number; needsWork: number }[];
+        byOutcome: { id: string; code: string; opened: number; checks: number; correct: number; needsWork: number }[];
+    };
     confirmed: { label: string; count: number }[];
     recent: { id: string; kind: 'practice' | 'task'; title: string; feedback: string; correction: string; date: string }[];
 };

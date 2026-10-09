@@ -1,7 +1,7 @@
 import { withApi, apiError, json, readJsonBody } from '@/lib/api.server';
 import { authenticateUser } from '@/lib/context-retrieval.server';
 import { createRateLimiter } from '@/lib/rate-limit.server';
-import { practiceContext, startPractice, readRound, publicRound, answerPractice, reportPractice, practiceLesson } from '@/lib/personal-practice.server';
+import { practiceContext, startPractice, readRound, publicRound, answerPractice, reportPractice, practiceLesson, checkPracticeLesson } from '@/lib/personal-practice.server';
 
 const budget = createRateLimiter({ maxRequests: 12, windowSeconds: 60 });
 export const action = withApi(async ({ request }) => {
@@ -21,6 +21,8 @@ export const action = withApi(async ({ request }) => {
     if (!(await budget('personal-practice:' + auth.user.id))) return apiError(429, 'Terlalu banyak permintaan. Tunggu sebentar.');
     if (body.action === 'lesson' && typeof body.roundId === 'string' && Number.isInteger(body.ordinal))
         return json(await practiceLesson(await readRound(body.roundId, auth.user.id, ctx.course.id), Number(body.ordinal)));
+    if (body.action === 'lesson-check' && typeof body.roundId === 'string' && Number.isInteger(body.ordinal) && typeof body.answer === 'string')
+        return json(await checkPracticeLesson(await readRound(body.roundId, auth.user.id, ctx.course.id), Number(body.ordinal), body.answer));
     if (body.action === 'report' && typeof body.roundId === 'string' && Number.isInteger(body.ordinal) && typeof body.reason === 'string') {
         await reportPractice(await readRound(body.roundId, auth.user.id, ctx.course.id), Number(body.ordinal), body.reason); return json({ ok: true });
     }

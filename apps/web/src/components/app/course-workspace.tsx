@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
 	AlertTriangle,
 	ArrowRight,
@@ -22,7 +22,7 @@ import {
 	Users,
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
-import type { Course, ClassSession, Enrollment, CollaborativeTask } from '@/lib/learning';
+import type { Course, ClassSession, CollaborativeTask } from '@/lib/learning';
 import type { CourseRecords } from '@/hooks/use-course-records';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { useCourseResources } from '@/hooks/use-course-resources';
@@ -34,9 +34,8 @@ import {
 import { RpsAiHelper } from '@/components/app/rps-ai-helper';
 import type { FixContext } from '@/lib/rps-fix';
 import { useCourseAssignments } from '@/hooks/use-course-assignments';
+import { useCourseRoster } from '@/hooks/use-course-roster';
 import { activityTypeOf, deadlineLabel, isPastDeadline } from '@/lib/assignments';
-
-type EnrichedEnrollment = Enrollment & { expand?: { owner?: { name?: string; email?: string } } };
 
 type SectionStatus = {
 	/** 0–100 completion for this section. */
@@ -79,17 +78,9 @@ export function CourseWorkspace({
 	const navigate = useNavigate();
 	const { cpl, cpmk, subCpmk, topics, assessments } = records;
 
-	// Cached reads — the students panel and tugas kolaboratif reuse rows from
-	// the local cache instead of re-querying PocketBase on every visit.
-	const enrollmentsQuery = useCachedQuery<EnrichedEnrollment[]>(
-		isStudent ? null : `enrollments:course=${course.id}`,
-		() =>
-			pb.collection('enrollments').getFullList<EnrichedEnrollment>({
-				filter: pb.filter('course = {:id}', { id: course.id }),
-				expand: 'owner',
-				sort: '-created',
-			}),
-	);
+	// Show the lecturer-managed roster here: unlike enrollments, it contains
+	// the confirmed names and NIMs even before a student account is activated.
+	const rosterQuery = useCourseRoster(isFacultyOwner ? course.id : undefined);
 	const collabQuery = useCachedQuery<CollaborativeTask[]>(
 		`collaborative_tasks:course=${course.id}`,
 		() =>
@@ -98,8 +89,8 @@ export function CourseWorkspace({
 				sort: 'order,created',
 			}),
 	);
-	const enrollments = enrollmentsQuery.data ?? [];
-	const enrollLoading = !isStudent && enrollmentsQuery.loading;
+	const rosterEntries = rosterQuery.entries;
+	const rosterLoading = isFacultyOwner && rosterQuery.loading;
 	const collabTasks = collabQuery.data ?? [];
 
 	const validation = useMemo(
@@ -723,35 +714,35 @@ export function CourseWorkspace({
 								<h2>
 									<GraduationCap size={16} className="ld-spark" /> Mahasiswa
 								</h2>
-								<span className="ld-chip">{enrollments.length} terdaftar</span>
+								<span className="ld-chip">{rosterEntries.length} mahasiswa</span>
 							</div>
-							{enrollLoading ? (
+							{rosterLoading ? (
 								<div className="cw-students-loading">
 									<LoaderCircle size={16} className="spin" /> Memuat…
 								</div>
-							) : enrollments.length === 0 ? (
+							) : rosterEntries.length === 0 ? (
 								<p className="ld-empty-sm">
-									Belum ada mahasiswa terdaftar. Bagikan mata kuliah ini agar mahasiswa dapat mendaftar.
+									Belum ada mahasiswa di roster. Tambahkan mahasiswa dari tab Mahasiswa.
 								</p>
 							) : (
 								<ul className="cw-student-list">
-									{enrollments.map((e) => {
-										const name = e.expand?.owner?.name || e.expand?.owner?.email || 'Mahasiswa';
-										const initials = name.charAt(0).toUpperCase();
+									{rosterEntries.slice(0, 2).map((student) => {
+										const initials = student.name.trim().charAt(0).toUpperCase() || 'M';
 										return (
-											<li key={e.id}>
+											<li key={student.id}>
 												<span className="cw-student-avatar">{initials}</span>
 												<span className="cw-student-name">
-													<strong>{name}</strong>
-													{e.expand?.owner?.email && e.expand.owner.email !== name && (
-														<small>{e.expand.owner.email}</small>
-													)}
+													<Link to={`/app/courses/${course.id}/mahasiswa/${student.id}`}><strong>{student.name}</strong></Link>
+													<small>NIM {student.nim}</small>
 												</span>
 											</li>
 										);
 									})}
 								</ul>
 							)}
+							{rosterEntries.length > 0 && <Link className="cw-students-more" to={`/app/courses/${course.id}/mahasiswa`}>
+								{rosterEntries.length > 2 ? `Lihat semua ${rosterEntries.length} mahasiswa` : 'Buka roster mahasiswa'} <ArrowRight size={13} />
+							</Link>}
 						</section>
 					)}
 

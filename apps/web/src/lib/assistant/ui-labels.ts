@@ -31,6 +31,12 @@ export function toolActivityLabel(toolName: string): string {
 			return 'Memeriksa detail mata kuliah';
 		case 'summarize_insights':
 			return 'Menganalisis wawasan akademik';
+		case 'student_profile':
+			return 'Memeriksa ringkasan mahasiswa';
+		case 'calendar_events':
+			return 'Memeriksa kalender akademik';
+		case 'course_materials':
+			return 'Mencari materi mata kuliah';
 		case 'import_rps_pdf':
 			return 'Menganalisis RPS';
 		case 'search_history':

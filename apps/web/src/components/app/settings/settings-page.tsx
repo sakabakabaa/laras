@@ -5,6 +5,7 @@ import { PreferencesSection } from './preferences-section';
 import { LanguageSection } from './language-section';
 import { AccountInfoSection } from './account-info-section';
 import { UsageSection } from './usage-section';
+import { LearnerProfileSection } from './learner-profile-section';
 import { useAuth } from '@/hooks/use-auth';
 
 /**
@@ -21,6 +22,7 @@ export function SettingsPage() {
 	return (
 		<div className="ld-settings">
 			<ProfileSection />
+			{isStudent && <LearnerProfileSection />}
 			<SecuritySection />
 			{isStudent && <RecoverySection />}
 			{!isStudent && <LanguageSection />}

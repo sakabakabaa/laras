@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
-import { BarChart3, BookOpen, CalendarDays, ClipboardList, FlaskConical, FolderOpen, GraduationCap, Home, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Menu, Settings, Sparkles, Sun, User, X } from 'lucide-react';
+import { BarChart3, BookOpen, CalendarDays, ClipboardList, FlaskConical, FolderOpen, Gamepad2, GraduationCap, Home, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Menu, Settings, Sparkles, Sun, User, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useT } from '@/lib/i18n';
@@ -69,6 +69,7 @@ const FACULTY_NAV = [{
 const NAV_T: Record<string, string> = {
   Dashboard: 'nav.dashboard',
   'Mata Kuliah': 'nav.courses',
+  Latihan: 'nav.practice',
   Tugas: 'nav.tasks',
   Penilaian: 'nav.grades',
   Berkas: 'nav.files',
@@ -82,6 +83,12 @@ const STUDENT_NAV = [{
   end: true,
   label: 'Dashboard',
   icon: Home,
+  ready: true
+}, {
+  to: '/app/latihan',
+  end: true,
+  label: 'Latihan',
+  icon: Gamepad2,
   ready: true
 }, {
   to: '/app/courses',
@@ -238,11 +245,8 @@ export function AppShell({
 									<User size={18} strokeWidth={1.75} />
 								</span>
 							</button>
-							{profileOpen && <div className="ld-profile-menu" role="menu">
-									<div className="ld-profile-menu-head">
-										<span className="ld-avatar sm icon" aria-hidden>
-											<User size={18} strokeWidth={1.75} />
-										</span>
+			{profileOpen && <div className="ld-profile-menu" role="menu">
+								<div className="ld-profile-menu-head">
 										<div>
 											<strong>{displayName}</strong>
 											<span>{user?.email || roleLabel}</span>

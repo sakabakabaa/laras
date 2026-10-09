@@ -560,9 +560,9 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 											</button>
 										</div>
 									</div>
-								) : course[tab] ? (
-									<div className="ld-document-content">{course[tab]}</div>
-								) : (
+				) : course[tab] ? (
+					<SyllabusContent text={course[tab]} />
+				) : (
 									<div className="ld-document-empty">
 										<FileText size={32} strokeWidth={1.3} />
 										<h3>
@@ -837,4 +837,27 @@ function SessionLinks({
 			))}
 		</div>
 	);
+}
+
+function SyllabusContent({ text }: { text: string }) {
+	const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+	const topics = lines.map((line) => line.match(/^(\d{1,3})[.)]?\s+(.+)$/));
+
+	if (topics.length >= 2 && topics.every(Boolean)) {
+		return (
+			<div className="ld-syllabus-topics" aria-label="Daftar topik silabus">
+				{topics.map((match) => (
+					<article className="ld-syllabus-topic" key={match![1]}>
+						<span className="ld-syllabus-topic-number" aria-hidden="true">{match![1].padStart(2, '0')}</span>
+						<div className="ld-syllabus-topic-copy">
+							<strong>{match![2].split(/\s(?=\()/)[0]}</strong>
+							{match![2].includes(' (') && <p>{match![2].slice(match![2].indexOf(' (') + 1)}</p>}
+						</div>
+					</article>
+				))}
+			</div>
+		);
+	}
+
+	return <div className="ld-document-content">{text}</div>;
 }

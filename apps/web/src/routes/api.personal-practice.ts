@@ -12,7 +12,7 @@ export const action = withApi(async ({ request }) => {
     if (typeof body.courseId !== 'string' || !/^[a-zA-Z0-9]{5,40}$/.test(body.courseId)) return apiError(422, 'Mata kuliah tidak valid.');
     const ctx = await practiceContext(auth.pb, auth.user, body.courseId);
     if (body.action === 'readiness') {
-        return json({ enabled: ctx.settings.enabled, language: ctx.settings.language, level: ctx.settings.level, canEdit: ctx.canEdit, activeRoundId: ctx.activeRoundId,
+        return json({ enabled: ctx.settings.enabled, language: ctx.settings.language, level: ctx.settings.level, canEdit: ctx.canEdit, activeRoundId: ctx.activeRoundId, totalXp: ctx.totalXp,
             sessions: ctx.sessions.map(s => ({ id: s.id, title: s.title, week: s.week, date: s.date })),
             sources: ctx.sources.map(s => ({ ...s, text: ctx.canEdit ? s.text : '' })), reason: ctx.reason, scopeNote: ctx.scopeNote,
             personalization: ctx.personalization, progress: ctx.progress, history: ctx.history, reports: ctx.reports, sections: ctx.canEdit ? ctx.sections : [] });

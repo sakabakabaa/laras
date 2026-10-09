@@ -119,6 +119,9 @@ const TOOL_LABEL: Record<string, string> = {
 	list_assignments: 'Daftar tugas',
 	course_detail: 'Ringkasan mata kuliah',
 	summarize_insights: 'Wawasan akademik',
+	student_profile: 'Ringkasan mahasiswa',
+	calendar_events: 'Kalender akademik',
+	course_materials: 'Materi mata kuliah',
 };
 
 /** Confirmation-card action verb shown before the draft description. */

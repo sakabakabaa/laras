@@ -105,7 +105,7 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 
 	// Auto-link: library files associated with this course also appear as
 	// materi. PocketBase access rules enforce visibility — students only see
-	// `student`/`public` files, faculty sees their own.
+	// files shared with students, faculty sees their own.
 	const libraryQuery = useCachedQuery<FileLibraryRecord[]>(
 		course.id ? `file_library:course=${course.id}:sco:-created` : null,
 		() =>

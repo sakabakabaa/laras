@@ -8,6 +8,7 @@ import {
 	ScrollRestoration,
 	useLocation,
 } from 'react-router';
+import { useEffect, useLayoutEffect } from 'react';
 import type { Route } from './+types/root';
 import stylesheet from '@/index.css?url';
 import darkOverrides from '@/styles/dark-overrides.css?url';
@@ -31,11 +32,13 @@ import pb from '@/lib/pocketbase-client';
 // disabling autoCancellation is safe and matches the server client.
 pb.autoCancellation(false);
 
+const useClientLayoutEffect = typeof document === 'undefined' ? useEffect : useLayoutEffect;
+
 export const links: Route.LinksFunction = () => [
 	{ rel: 'stylesheet', href: stylesheet },
-	{ rel: 'stylesheet', href: darkOverrides },
 	{ rel: 'stylesheet', href: premiumWorkspace },
 	{ rel: 'stylesheet', href: personalPractice },
+	{ rel: 'stylesheet', href: darkOverrides },
 	{ rel: 'icon', href: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
 	{ rel: 'icon', href: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
 	{ rel: 'icon', href: '/favicon.png', type: 'image/png', sizes: '48x48' },
@@ -97,7 +100,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<script
 					dangerouslySetInnerHTML={{
-						__html: `(function(){try{var t=localStorage.getItem('laras-theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.classList.add('dark');var m=document.querySelector('meta[name="color-scheme"]');if(!m){m=document.createElement('meta');m.name='color-scheme';document.head.appendChild(m)}m.content='dark light'}}catch(e){}})()`,
+						__html: `(function(){try{var p=location.pathname;var lightOnly=p==='/'||p==='/login';var t=localStorage.getItem('laras-theme');var d=!lightOnly&&(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches));var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';var m=document.querySelector('meta[name="color-scheme"]');if(!m){m=document.createElement('meta');m.name='color-scheme';document.head.appendChild(m)}m.content=d?'dark light':'light'}catch(e){}})()`,
 					}}
 				/>
 				<Meta />
@@ -118,6 +121,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
 	const { pathname } = useLocation();
+	useClientLayoutEffect(() => {
+		const lightOnly = pathname === '/' || pathname === '/login';
+		const savedTheme = localStorage.getItem('laras-theme');
+		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		const isDark = !lightOnly && (savedTheme === 'dark' || (!savedTheme && prefersDark));
+		const root = document.documentElement;
+		root.classList.toggle('dark', isDark);
+		root.style.colorScheme = isDark ? 'dark' : 'light';
+		const colorScheme = document.querySelector('meta[name="color-scheme"]');
+		colorScheme?.setAttribute('content', isDark ? 'dark light' : 'light');
+	}, [pathname]);
 	const isAppChrome =
 		pathname.startsWith('/app') || pathname.startsWith('/login') || pathname.startsWith('/tugas') || pathname.startsWith('/analytics') || pathname.startsWith('/kalender');
 	return (

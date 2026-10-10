@@ -19,18 +19,16 @@
 import type PocketBase from 'pocketbase';
 import { collectModel } from './model.server';
 import { logAssistantError } from './logging.server';
-import { getSession, loadSessionMessages, updateSessionContext } from './persistence.server';
+import { updateSessionContext } from './persistence.server';
 import {
 	COMPACTION_SYSTEM_PROMPT,
 	buildCompactionPrompt,
 	computeMessageTokens,
 	estimateTokens,
-	matchOlderMessages,
 	parseStructuredContext,
 	shouldCompact,
 	splitForCompaction,
 } from './compaction';
-import { ASSISTANT_RECENT_MESSAGE_WINDOW, ASSISTANT_HISTORY_RETRIEVAL_LIMIT } from '@/constants/assistant.config';
 import type { AssistantMessageRecord, AssistantSession, AssistantSessionRecord, SessionStructuredContext } from './types';
 
 /** Injectable model caller — defaults to the real {@link collectModel}. */
@@ -142,36 +140,3 @@ export const mergeStructuredContexts = (
 	}
 	return result;
 };
-
-/**
- * Retrieves older (compacted-out) messages matching a query for the
- * `search_history` tool. Searches only messages outside the recent window, so
- * a retrieval never dumps the whole transcript. Returns formatted snippets.
- */
-export const retrieveOlderHistory = async (
-	pb: PocketBase,
-	userId: string,
-	sessionId: string,
-	query: string,
-): Promise<string> => {
-	const q = query.trim();
-	if (!q) return 'Tidak ada kata kunci pencarian.';
-	await getSession(pb, userId, sessionId);
-	const messages = await loadSessionMessages(pb, userId, sessionId);
-	const recentIds = new Set(messages.slice(-ASSISTANT_RECENT_MESSAGE_WINDOW).map((m) => m.id));
-	const matches = matchOlderMessages(
-		messages.map((m) => ({ id: m.id, role: m.role, content: m.content })),
-		q,
-		recentIds,
-	);
-	if (matches.length === 0) {
-		return `Tidak ditemukan pesan lama yang cocok dengan "${q}".`;
-	}
-	const lines = matches.map((m, i) => {
-		const who = m.role === 'user' ? 'Dosen' : m.role === 'assistant' ? 'Asisten' : 'Tool';
-		return `${i + 1}. [${who}] ${m.snippet}`;
-	});
-	return `Ditemukan ${matches.length} pesan lama yang cocok dengan "${q}":\n${lines.join('\n')}`;
-};
-
-export { ASSISTANT_HISTORY_RETRIEVAL_LIMIT };

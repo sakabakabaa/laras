@@ -28,7 +28,7 @@ import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { esc } from '@/lib/student-onboarding.server';
 import { studentProgress } from '@/lib/student-progress.server';
 import { courseLabel, courseMissMessage, resolveCourseRef } from './context.server';
-import { retrieveOlderHistory } from './compaction.server';
+import { retrieveOlderHistory } from './history-retrieval.server';
 import { authorizeCourseId, verifyOwnedCourse } from './authorization.server';
 import logger from '@/lib/logger.server';
 import { normalizeSkill, rowId, SHAPE_LABEL, str, weekFromText } from './parsing';

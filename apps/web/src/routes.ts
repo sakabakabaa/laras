@@ -26,6 +26,7 @@ export default [
 	route('app/kerja/:assignmentId', 'routes/app.kerja.$assignmentId.tsx'),
 	route('app/courses/:courseId', 'routes/course.tsx', [
 		index('routes/course.index.tsx'),
+		route('pertemuan/:sessionId/rencana', 'routes/course.lesson-plan.tsx'),
 		route('mahasiswa/:rosterId', 'routes/course.student-profile.tsx'),
 		route(':section', 'routes/course.section.tsx'),
 	]),
@@ -88,6 +89,8 @@ export default [
 	route('tugas/:token', 'routes/tugas.$token.tsx'),
 	route('api/integrated-ai/stream', 'routes/api.integrated-ai.stream.ts'),
 	route('api/ai-usage', 'routes/api.ai-usage.ts'),
+	route('api/lesson-plans','routes/api.lesson-plans.ts'),
+	route('api/agent-tasks', 'routes/api.agent-tasks.ts'),
 	route('api/assistant', 'routes/api.assistant.ts'),
 	route('api/student-assistant', 'routes/api.student-assistant.ts'),
 	route('api/*', 'routes/api.$.ts'),

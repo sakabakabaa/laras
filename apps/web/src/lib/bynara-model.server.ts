@@ -33,6 +33,7 @@ const normalizeToolParameters = (value: unknown): unknown => {
 /** Call Bynara's OpenAI-compatible Chat Completions API, collecting SSE or JSON output. */
 export async function collectBynaraText({
 	prompt,
+	model: requestedModel,
 	systemPrompt,
 	images = [],
 	messages,
@@ -40,6 +41,7 @@ export async function collectBynaraText({
 	timeoutMs = 60_000,
 }: {
 	prompt?: string;
+	model?: string;
 	systemPrompt?: string;
 	images?: string[];
 	messages?: BynaraMessage[];
@@ -48,7 +50,7 @@ export async function collectBynaraText({
 }): Promise<BynaraResult> {
 	const apiKey = process.env.BYNARA_API_KEY;
 	if (!apiKey) throw new Error('BYNARA_API_KEY is not set');
-	const model = process.env.BYNARA_MODEL || MODEL;
+	const model = requestedModel || process.env.BYNARA_MODEL || MODEL;
 	const requestMessages = messages || [
 		...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
 		{

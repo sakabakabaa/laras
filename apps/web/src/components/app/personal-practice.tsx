@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, ExternalLink, FileText, LoaderCircle, RefreshCw, Sparkles } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
+import { useSearchParams } from 'react-router';
+import { AgentTaskPanel } from './agent-task-panel';
 import { PracticeMascot } from '@/components/app/practice-mascot';
 import type { PracticeLesson, PracticeReadiness, PracticeRound, PracticeSource } from '@/lib/personal-practice';
 import type { StudentProgress } from '@/lib/student-progress';
@@ -10,6 +12,8 @@ const verdictLabel = { correct: 'Benar', partially_correct: 'Sebagian benar', ne
 const verdictXp = { correct: 20, partially_correct: 10, needs_work: 5, uncertain: 0 };
 type GameStep = 'ready' | 'loading' | 'prepared' | 'playing';
 export function PersonalPractice({ courseId, gameMode = false }: { courseId: string; gameMode?: boolean }) {
+    const [params] = useSearchParams();
+    const coachId = params.get('coach') || '';
     const [ready, setReady] = useState<PracticeReadiness | null>(null);
     const [round, setRound] = useState<PracticeRound | null>(null);
     const [busy, setBusy] = useState('');
@@ -88,6 +92,10 @@ export function PersonalPractice({ courseId, gameMode = false }: { courseId: str
     if (gameMode && gameStep === 'loading') return <section className="pp-page pp-game-mode"><div className="pp-game-stage pp-game-enter" role="status" aria-live="polite" aria-busy="true"><PracticeMascot mood="thinking" size={104} /><span className="pp-eyebrow">MENYIAPKAN PUTARAN</span><h2>Menyiapkan lima soal</h2><p>Mengambil materi dan memeriksa soal.</p><div className="pp-real-progress" role="progressbar" aria-label="Latihan sedang disiapkan"><span /></div><small>Siap otomatis saat soal selesai disusun.</small></div></section>;
     if (gameMode && gameStep === 'prepared') return <section className="pp-page pp-game-mode"><div className="pp-game-stage pp-game-prepared pp-game-enter"><PracticeMascot mood="happy" size={108} /><span className="pp-eyebrow">PUTARAN SIAP</span><h2>Siap mulai?</h2><p>Lima soal sudah disiapkan dari materi kelasmu.</p><div className="pp-game-stage-facts"><span>5 soal</span><span>± 5 menit</span><span>LEVEL {level}</span></div><div className="pp-level-progress"><span style={{ width: `${levelProgress}%` }} /></div><small>{levelProgress}/100 XP menuju level {level + 1}</small><button className="ld-btn-primary" onClick={beginGame}>Mulai sekarang <ArrowRight size={16} /></button></div></section>;
     return <section className={`pp-page${gameMode ? ' pp-game-mode' : ''}`}>
+        {coachId && <AgentTaskPanel student coachId={coachId} compact activeRoundId={round?.id || ''} onRoundReady={id => void run('Membuka putaran…', async () => {
+            const next = await request<PracticeRound>('round', { roundId: id });
+            setRound(next); setAnswer(''); setFeedback(Boolean(next.last)); setLesson(null); setGameStep('prepared'); localStorage.setItem(storageKey, id);
+        })} />}
         {!gameMode && <header className="pp-heading"><div><span className="pp-eyebrow">LATIHAN PERSONAL</span><h2>Sedikit latihan, makin percaya diri.</h2><p>Bahasa berkembang lewat kebiasaan. Lima pertanyaan dari pertemuan terbaru, sesuai kebutuhan Anda.</p></div><span className="pp-badge">Tanpa nilai resmi</span></header>}
         {error && <div className="pp-error" role="alert">{error}</div>}
         {ready.canEdit && !round && <div className="pp-panel"><h3>Latihan mandiri mahasiswa</h3><p className="pp-muted">Latihan tersedia otomatis. Setiap mahasiswa mendapat soal dari tiga pertemuan terakhir di kelasnya, materi yang dapat ia baca, serta umpan balik dan riwayat latihannya sendiri. Pratinjau ini memakai lingkup mata kuliah, tanpa data pribadi mahasiswa.</p>{ready.reports.length > 0 && <details><summary>Soal yang dilaporkan ({ready.reports.length})</summary>{ready.reports.map((r,i) => <div className="pp-example" key={i}><strong>{r.prompt}</strong><p>{r.reason}</p></div>)}</details>}</div>}
@@ -129,7 +137,7 @@ export function PersonalPractice({ courseId, gameMode = false }: { courseId: str
             </form> : <div className={`pp-summary${gameMode ? ' pp-game-summary pp-game-enter' : ''}`}>{gameMode ? <PracticeMascot mood="happy" size={112} /> : <div className="pp-start-icon"><CheckCircle2 size={30} /></div>}<span className="pp-eyebrow">PUTARAN SELESAI</span><h3>Latihan selesai</h3>{gameMode && <div className="pp-xp-total"><Sparkles size={21} /><strong>+{xp} XP</strong><span>{totalXp} XP · LEVEL {level}</span></div>}<p>Jawaban benar: {round.results.filter(r => r.verdict === 'correct').length} dari {round.total}.</p>
                 <div className="pp-skill-summary">{[...new Set(round.results.map(r => r.skill))].map(skill => { const results = round.results.filter(r => r.skill === skill); return <div key={skill}><strong>{skill}</strong><span>{results.filter(r => r.verdict === 'correct').length}/{results.length} benar</span></div>; })}</div>
                 <div className="pp-sources"><h4>Tinjau jawaban</h4>{round.review.map(item => <details key={item.ordinal}><summary>{item.ordinal}. {item.prompt}<small>{verdictLabel[item.result.verdict]}</small></summary><p>Jawaban Anda: {item.answer}</p><p>{item.result.explanation}</p>{item.result.correction && <p>Contoh: {item.result.correction}</p>}<SourceList sources={item.sources} /></details>)}</div>
-                <button className="ld-btn-primary" onClick={start} disabled={Boolean(busy)}><RefreshCw size={16} /> Latihan dengan contoh baru</button>
+                {coachId ? <a className="ld-outline-action" href="/app/student">Kembali ke dashboard</a> : <button className="ld-btn-primary" onClick={start} disabled={Boolean(busy)}><RefreshCw size={16} /> Latihan dengan contoh baru</button>}
             </div>}
         </div>}
         {!gameMode && round && ready.progress && <LearningProfile progress={ready.progress} />}

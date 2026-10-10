@@ -14,6 +14,11 @@ type Pages = {
   "/": {
     params: {};
   };
+  "/hcgi/platform/api/*": {
+    params: {
+      "*": string;
+    };
+  };
   "/login": {
     params: {};
   };
@@ -33,6 +38,9 @@ type Pages = {
     params: {};
   };
   "/app/student": {
+    params: {};
+  };
+  "/app/latihan": {
     params: {};
   };
   "/app/onboarding": {
@@ -87,6 +95,18 @@ type Pages = {
   "/app/courses/:courseId": {
     params: {
       "courseId": string;
+    };
+  };
+  "/app/courses/:courseId/pertemuan/:sessionId/rencana": {
+    params: {
+      "courseId": string;
+      "sessionId": string;
+    };
+  };
+  "/app/courses/:courseId/mahasiswa/:rosterId": {
+    params: {
+      "courseId": string;
+      "rosterId": string;
     };
   };
   "/app/courses/:courseId/:section": {
@@ -214,6 +234,15 @@ type Pages = {
   "/api/practice-assist": {
     params: {};
   };
+  "/api/personal-practice": {
+    params: {};
+  };
+  "/api/course-grade-summary": {
+    params: {};
+  };
+  "/api/student-profile": {
+    params: {};
+  };
   "/api/practice-speaking": {
     params: {};
   };
@@ -267,6 +296,12 @@ type Pages = {
   "/api/ai-usage": {
     params: {};
   };
+  "/api/lesson-plans": {
+    params: {};
+  };
+  "/api/agent-tasks": {
+    params: {};
+  };
   "/api/assistant": {
     params: {};
   };
@@ -283,11 +318,15 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/app" | "/analytics" | "/app/penilaian" | "/kalender" | "/app/courses" | "/app/student" | "/app/onboarding" | "/app/pengaturan" | "/app/coming/:slug" | "/app/tugas" | "/app/tugas/buat" | "/app/tugas/insights" | "/app/riset" | "/app/asisten" | "/app/berkas" | "/app/berkas/:fileId" | "/app/tugas/:assignmentId" | "/app/tugas/:assignmentId/pratinjau" | "/app/kerja/:assignmentId" | "/app/courses/:courseId" | "/app/courses/:courseId/:section" | "/app/rps/:courseId" | "/sitemap.xml" | "/robots.txt" | "/api/health" | "/api/rps-import" | "/api/rps-assist" | "/api/assignment-draft" | "/api/task-config-draft" | "/api/rubric-suggestions" | "/api/course-thumbnail" | "/api/task-submit" | "/api/task-assist" | "/api/feedback" | "/api/evaluation-draft" | "/api/evaluation-participants" | "/api/evaluation-review" | "/api/evaluation-annotation" | "/api/evaluation-missed-error" | "/api/evaluation-publish" | "/api/research-export" | "/api/research-analytics" | "/api/personalization-analytics" | "/api/feedback-uptake" | "/api/evaluation-result" | "/api/bulk-paper-prepare" | "/api/bulk-paper-extract" | "/api/bulk-paper-submit" | "/api/transcribe" | "/api/check-answer" | "/api/roster-enroll" | "/api/roster-status" | "/api/roster-reset-password" | "/api/roster-language" | "/api/student-password" | "/api/recovery-email/request" | "/api/recovery-email/verify" | "/api/recovery-email/request-reset" | "/api/recovery-email/reset-password" | "/api/practice-assist" | "/api/practice-speaking" | "/api/berkas-parse" | "/api/berkas-process" | "/api/berkas-suggest" | "/api/berkas-snapshot" | "/api/berkas-restore" | "/api/context/check" | "/api/context/insights" | "/api/context/material" | "/api/recommendations/generate" | "/api/recommendations/review" | "/verifikasi-email" | "/lupa-sandi" | "/reset-password" | "/tugas/:token" | "/api/integrated-ai/stream" | "/api/ai-usage" | "/api/assistant" | "/api/student-assistant" | "/api/*";
+    page: "/" | "/hcgi/platform/api/*" | "/login" | "/app" | "/analytics" | "/app/penilaian" | "/kalender" | "/app/courses" | "/app/student" | "/app/latihan" | "/app/onboarding" | "/app/pengaturan" | "/app/coming/:slug" | "/app/tugas" | "/app/tugas/buat" | "/app/tugas/insights" | "/app/riset" | "/app/asisten" | "/app/berkas" | "/app/berkas/:fileId" | "/app/tugas/:assignmentId" | "/app/tugas/:assignmentId/pratinjau" | "/app/kerja/:assignmentId" | "/app/courses/:courseId" | "/app/courses/:courseId/pertemuan/:sessionId/rencana" | "/app/courses/:courseId/mahasiswa/:rosterId" | "/app/courses/:courseId/:section" | "/app/rps/:courseId" | "/sitemap.xml" | "/robots.txt" | "/api/health" | "/api/rps-import" | "/api/rps-assist" | "/api/assignment-draft" | "/api/task-config-draft" | "/api/rubric-suggestions" | "/api/course-thumbnail" | "/api/task-submit" | "/api/task-assist" | "/api/feedback" | "/api/evaluation-draft" | "/api/evaluation-participants" | "/api/evaluation-review" | "/api/evaluation-annotation" | "/api/evaluation-missed-error" | "/api/evaluation-publish" | "/api/research-export" | "/api/research-analytics" | "/api/personalization-analytics" | "/api/feedback-uptake" | "/api/evaluation-result" | "/api/bulk-paper-prepare" | "/api/bulk-paper-extract" | "/api/bulk-paper-submit" | "/api/transcribe" | "/api/check-answer" | "/api/roster-enroll" | "/api/roster-status" | "/api/roster-reset-password" | "/api/roster-language" | "/api/student-password" | "/api/recovery-email/request" | "/api/recovery-email/verify" | "/api/recovery-email/request-reset" | "/api/recovery-email/reset-password" | "/api/practice-assist" | "/api/personal-practice" | "/api/course-grade-summary" | "/api/student-profile" | "/api/practice-speaking" | "/api/berkas-parse" | "/api/berkas-process" | "/api/berkas-suggest" | "/api/berkas-snapshot" | "/api/berkas-restore" | "/api/context/check" | "/api/context/insights" | "/api/context/material" | "/api/recommendations/generate" | "/api/recommendations/review" | "/verifikasi-email" | "/lupa-sandi" | "/reset-password" | "/tugas/:token" | "/api/integrated-ai/stream" | "/api/ai-usage" | "/api/lesson-plans" | "/api/agent-tasks" | "/api/assistant" | "/api/student-assistant" | "/api/*";
   };
   "routes/home.tsx": {
     id: "routes/home";
     page: "/";
+  };
+  "routes/hcgi.platform.$.ts": {
+    id: "routes/hcgi.platform.$";
+    page: "/hcgi/platform/api/*";
   };
   "routes/login.tsx": {
     id: "routes/login";
@@ -316,6 +355,10 @@ type RouteFiles = {
   "routes/app.student.tsx": {
     id: "routes/app.student";
     page: "/app/student";
+  };
+  "routes/app.latihan.tsx": {
+    id: "routes/app.latihan";
+    page: "/app/latihan";
   };
   "routes/app.onboarding.tsx": {
     id: "routes/app.onboarding";
@@ -371,11 +414,19 @@ type RouteFiles = {
   };
   "routes/course.tsx": {
     id: "routes/course";
-    page: "/app/courses/:courseId" | "/app/courses/:courseId/:section";
+    page: "/app/courses/:courseId" | "/app/courses/:courseId/pertemuan/:sessionId/rencana" | "/app/courses/:courseId/mahasiswa/:rosterId" | "/app/courses/:courseId/:section";
   };
   "routes/course.index.tsx": {
     id: "routes/course.index";
     page: "/app/courses/:courseId";
+  };
+  "routes/course.lesson-plan.tsx": {
+    id: "routes/course.lesson-plan";
+    page: "/app/courses/:courseId/pertemuan/:sessionId/rencana";
+  };
+  "routes/course.student-profile.tsx": {
+    id: "routes/course.student-profile";
+    page: "/app/courses/:courseId/mahasiswa/:rosterId";
   };
   "routes/course.section.tsx": {
     id: "routes/course.section";
@@ -537,6 +588,18 @@ type RouteFiles = {
     id: "routes/api.practice-assist";
     page: "/api/practice-assist";
   };
+  "routes/api.personal-practice.ts": {
+    id: "routes/api.personal-practice";
+    page: "/api/personal-practice";
+  };
+  "routes/api.course-grade-summary.ts": {
+    id: "routes/api.course-grade-summary";
+    page: "/api/course-grade-summary";
+  };
+  "routes/api.student-profile.ts": {
+    id: "routes/api.student-profile";
+    page: "/api/student-profile";
+  };
   "routes/api.practice-speaking.ts": {
     id: "routes/api.practice-speaking";
     page: "/api/practice-speaking";
@@ -605,6 +668,14 @@ type RouteFiles = {
     id: "routes/api.ai-usage";
     page: "/api/ai-usage";
   };
+  "routes/api.lesson-plans.ts": {
+    id: "routes/api.lesson-plans";
+    page: "/api/lesson-plans";
+  };
+  "routes/api.agent-tasks.ts": {
+    id: "routes/api.agent-tasks";
+    page: "/api/agent-tasks";
+  };
   "routes/api.assistant.ts": {
     id: "routes/api.assistant";
     page: "/api/assistant";
@@ -622,6 +693,7 @@ type RouteFiles = {
 type RouteModules = {
   "root": typeof import("./src/root.tsx");
   "routes/home": typeof import("./src/routes/home.tsx");
+  "routes/hcgi.platform.$": typeof import("./src/routes/hcgi.platform.$.ts");
   "routes/login": typeof import("./src/routes/login.tsx");
   "routes/app": typeof import("./src/routes/app.tsx");
   "routes/analytics": typeof import("./src/routes/analytics.tsx");
@@ -629,6 +701,7 @@ type RouteModules = {
   "routes/kalender": typeof import("./src/routes/kalender.tsx");
   "routes/app.courses": typeof import("./src/routes/app.courses.tsx");
   "routes/app.student": typeof import("./src/routes/app.student.tsx");
+  "routes/app.latihan": typeof import("./src/routes/app.latihan.tsx");
   "routes/app.onboarding": typeof import("./src/routes/app.onboarding.tsx");
   "routes/app.pengaturan": typeof import("./src/routes/app.pengaturan.tsx");
   "routes/app.coming.$slug": typeof import("./src/routes/app.coming.$slug.tsx");
@@ -644,6 +717,8 @@ type RouteModules = {
   "routes/app.kerja.$assignmentId": typeof import("./src/routes/app.kerja.$assignmentId.tsx");
   "routes/course": typeof import("./src/routes/course.tsx");
   "routes/course.index": typeof import("./src/routes/course.index.tsx");
+  "routes/course.lesson-plan": typeof import("./src/routes/course.lesson-plan.tsx");
+  "routes/course.student-profile": typeof import("./src/routes/course.student-profile.tsx");
   "routes/course.section": typeof import("./src/routes/course.section.tsx");
   "routes/app.rps.$courseId": typeof import("./src/routes/app.rps.$courseId.tsx");
   "routes/sitemap.xml": typeof import("./src/routes/sitemap.xml.ts");
@@ -684,6 +759,9 @@ type RouteModules = {
   "routes/api.recovery-email-request-reset": typeof import("./src/routes/api.recovery-email-request-reset.ts");
   "routes/api.recovery-email-reset-password": typeof import("./src/routes/api.recovery-email-reset-password.ts");
   "routes/api.practice-assist": typeof import("./src/routes/api.practice-assist.ts");
+  "routes/api.personal-practice": typeof import("./src/routes/api.personal-practice.ts");
+  "routes/api.course-grade-summary": typeof import("./src/routes/api.course-grade-summary.ts");
+  "routes/api.student-profile": typeof import("./src/routes/api.student-profile.ts");
   "routes/api.practice-speaking": typeof import("./src/routes/api.practice-speaking.ts");
   "routes/api.berkas-parse": typeof import("./src/routes/api.berkas-parse.ts");
   "routes/api.berkas-process": typeof import("./src/routes/api.berkas-process.ts");
@@ -701,6 +779,8 @@ type RouteModules = {
   "routes/tugas.$token": typeof import("./src/routes/tugas.$token.tsx");
   "routes/api.integrated-ai.stream": typeof import("./src/routes/api.integrated-ai.stream.ts");
   "routes/api.ai-usage": typeof import("./src/routes/api.ai-usage.ts");
+  "routes/api.lesson-plans": typeof import("./src/routes/api.lesson-plans.ts");
+  "routes/api.agent-tasks": typeof import("./src/routes/api.agent-tasks.ts");
   "routes/api.assistant": typeof import("./src/routes/api.assistant.ts");
   "routes/api.student-assistant": typeof import("./src/routes/api.student-assistant.ts");
   "routes/api.$": typeof import("./src/routes/api.$.ts");

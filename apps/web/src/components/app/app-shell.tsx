@@ -205,6 +205,7 @@ export function AppShell({
   } | null)?.role || 'faculty';
   const home = dashboardForRole(role);
   const isStudent = role === 'student';
+  const isAssistantPage = location.pathname.replace(/\/$/, '') === '/app/asisten';
   const displayName = user?.name || (isStudent ? t('role.student') : t('role.faculty'));
   const roleLabel = isStudent ? t('role.student') : t('role.faculty');
   const signOut = () => {
@@ -234,7 +235,7 @@ export function AppShell({
 						<GlobalSearch userId={user?.id || ''} isStudent={isStudent} />
 					</div>
 					<div className="ld-topbar-right ld-mast-actions">
-						{!isStudent && <AgentDock open={agentOpen} onOpenChange={setAgentOpen} />}
+						{!isStudent && !isAssistantPage && <AgentDock open={agentOpen} onOpenChange={setAgentOpen} />}
 						<div className={`ld-profile-wrap${profileOpen ? ' open' : ''}`}>
 							<button type="button" className="ld-profile-trigger" aria-label="Menu profil" aria-expanded={profileOpen} aria-haspopup="menu" onClick={() => setProfileOpen(o => !o)}>
 								<span className="ld-avatar icon" aria-hidden>
@@ -267,7 +268,7 @@ export function AppShell({
 					</div>
 				</header>
 
-				<div className={`ld-stage${agentOpen && !isStudent ? ' agent-open' : ''}`}>
+				<div className={`ld-stage${agentOpen && !isStudent && !isAssistantPage ? ' agent-open' : ''}`}>
 				<div className={`ld-body${rail ? ' has-rail' : ''}${hideSidebar ? ' no-sidebar' : ''}`}>
 					{!hideSidebar && <aside className={`ld-sidebar ${mobileOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}${animating ? ' ld-animating' : ''}`}>
 						<div className="ld-sidebar-brand">
@@ -321,7 +322,7 @@ export function AppShell({
 						</main>
 					</div>
 				</div>
-				{!isStudent && <AgentPane open={agentOpen} name={displayName} onClose={() => setAgentOpen(false)} seed={agentSeed} onSeedConsumed={() => setAgentSeed(null)} />}
+				{!isStudent && !isAssistantPage && <AgentPane open={agentOpen} name={displayName} onClose={() => setAgentOpen(false)} seed={agentSeed} onSeedConsumed={() => setAgentSeed(null)} />}
 			</div>
 			</div></AssistantPageContextProvider>;
   }

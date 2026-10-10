@@ -78,7 +78,7 @@ export function AgentPane({
 				</div>
 			</header>
 			<div className="ld-agent-body">
-				<AssistantPanel variant="drawer" name={name} seed={seed} onSeedConsumed={onSeedConsumed} />
+				{open && <AssistantPanel variant="drawer" name={name} seed={seed} onSeedConsumed={onSeedConsumed} />}
 				{transitioning && (
 					<div className="ld-agent-skeleton" aria-hidden="true">
 						<div className="ld-agent-skeleton-toolbar"><span /><span /></div>

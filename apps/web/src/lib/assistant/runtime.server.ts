@@ -73,7 +73,7 @@ import {
 	WRITE_TOOL_NAMES,
 } from './tools.server';
 import { recordToolAudit } from './audit.server';
-import { maxToolCallsPerTurn } from '@/lib/ai-usage.server';
+import { maxToolCallsPerTurn, enforceAiAccess, commitUsage, deriveIdempotencyKey } from '@/lib/ai-usage.server';
 import { WRITE_TOOLS } from './types';
 import type {
 	AssistantPageContext,
@@ -108,6 +108,7 @@ export const handleSend = async (
 	files: File[] = [],
 	sessionId = '',
 	pageContextInput: AssistantPageContextInput = {},
+	resumeAfterAction = false,
 ): Promise<SendResult> => {
 	const { pb, id: userId } = user;
 	logAssistantRequest('send', user);
@@ -115,13 +116,13 @@ export const handleSend = async (
 	const sid = session.id;
 	const trimmed = message.trim();
 	const block = attachmentBlock.trim();
-	if (!trimmed && !block && !images.length) throw Object.assign(new Error('Pesan tidak boleh kosong.'), { status: 422 });
+	if (!resumeAfterAction && !trimmed && !block && !images.length) throw Object.assign(new Error('Pesan tidak boleh kosong.'), { status: 422 });
 	const imageMarker = buildImageMarker(images);
 	const baseText = block ? `${trimmed || 'Tolong tinjau lampiran berikut.'}\n\n${block}` : trimmed;
 	const stored = imageMarker ? `${baseText}\n${imageMarker}` : baseText;
 
 	await dismissPendingClarify(pb, userId, sid, clarifyMessageId.trim());
-	await saveSessionMessage(pb, userId, sid, { role: 'user', content: stored });
+	if (!resumeAfterAction) await saveSessionMessage(pb, userId, sid, { role: 'user', content: stored });
 
 	const rows = await loadSessionMessages(pb, userId, sid);
 	// Automatic compaction: when the session crosses the configurable message/
@@ -144,19 +145,21 @@ export const handleSend = async (
 				.map((q, i) => `${i + 1}. ${q.prompt || ''}`)
 				.filter((line) => line.length > 3)
 			: [];
+		const execution = r.actionStatus === 'executed' && WRITE_TOOLS.has(r.toolName) ? `\nAKSI SELESAI (jangan diulang): ${JSON.stringify({ tool: r.toolName, args: r.toolArgs, result: r.toolResult })}` : '';
 		const rawContent = questions.length ? `${r.content}\n\nPertanyaan klarifikasi:\n${questions.join('\n')}` : r.content;
-		const content = stripImageMarker(rawContent);
+		const content = stripImageMarker(rawContent) + execution;
 		const imgs = parseImageMarker(r.content);
 		const signed = imgs.length && fileToken ? imgs.map((img) => signImageRef(img.ref, fileToken)).filter(Boolean) : [];
 		return { role: r.role, content, ...(signed.length ? { images: signed } : {}) };
 	});
 
 	const pageContext = await validateAndAuthorizePageContext(pb, userId, pageContextInput, courseRoute);
-	const systemPrompt = buildSystemPrompt(pageContext, {
+	const baseSystemPrompt = buildSystemPrompt(pageContext, {
 		summary: activeSession.summary || '',
 		structured: activeSession.structuredContext ?? null,
 	});
 
+	const systemPrompt = baseSystemPrompt + (resumeAfterAction ? '\nAKSI TERAKHIR SUDAH DIEKSEKUSI DAN DIVERIFIKASI. Lanjutkan tujuan asli dari riwayat bila masih ada langkah yang diperlukan. Jangan mengulang aksi yang sudah selesai. Setiap perubahan baru tetap memerlukan persetujuan sendiri. Bila tujuan sudah tercapai, ringkas hasil dan tautan; jangan mengusulkan aksi tambahan di luar permintaan.' : '');
 	const toolCtx: ToolExecutionContext = { pb, userId, files, courseRoute, sessionId: sid };
 
 	// ── Agent loop ──────────────────────────────────────────────────────────
@@ -196,7 +199,7 @@ export const handleSend = async (
 			? null
 			: parseClarifyBlock(raw) || extractProseQuestions(stripClarifyBlock(stripToolBlock(raw)));
 		const stripped = stripToolCalls(stripClarifyBlock(stripToolBlock(raw))).trim();
-		const visible = collapseRepeatedAssistantText(stripped || (hasClarifyProtocol(raw) ? '' : raw.trim()));
+		const visible = collapseRepeatedAssistantText(stripped || (hasClarifyProtocol(raw) || toolCall ? '' : raw.trim()));
 
 		// ── Clarification: surface questions, stop the loop. ────────────────
 		if (clarifyQuestions) {
@@ -236,7 +239,7 @@ export const handleSend = async (
 			const shown = decideAssistantVisible(visible, recentAssistant);
 			const saved = await saveSessionMessage(pb, userId, sid, {
 				role: 'assistant',
-				content: shown.action === 'show' ? shown.text : '',
+				content: shown.action === 'show' && shown.text ? shown.text : result.ok ? 'Data dibaca.' : 'Data belum dapat dibaca.',
 				toolName: toolCall.name,
 				toolArgs: toolCall.args,
 				toolResult: resultText,
@@ -266,6 +269,16 @@ export const handleSend = async (
 				{ role: 'user' as const, content: resultText },
 			];
 			continue;
+		}
+
+		// A continuation cannot propose the same completed write again, even if
+		// the model ignores the completion record. Feed the verified result back.
+		if (resumeAfterAction) {
+			const completed = [...rows].reverse().find(r => r.actionStatus === 'executed' && r.toolName === toolCall.name && sameCompletedWrite(toolCall.name, r.toolArgs || {}, toolCall.args));
+			if (completed) {
+				workingHistory.push({ role: 'assistant' as const, content: visible }, { role: 'user' as const, content: `Aksi ini sudah selesai. Dilarang membuatnya lagi. Baca hasil atau ringkas hasil yang sudah tersimpan: ${JSON.stringify({ tool: completed.toolName, args: completed.toolArgs, result: completed.toolResult })}` });
+				continue;
+			}
 		}
 
 		// ── Write tool: prepare a draft and surface a confirmation card. ─────
@@ -322,7 +335,7 @@ export const handleSend = async (
 	}
 
 	// Loop exhausted without a final answer — persist the last model output.
-	const fallback = 'Saya telah mengumpulkan informasi yang Anda minta. Apakah ada yang ingin saya lanjutkan?';
+	const fallback = 'Batas langkah untuk giliran ini tercapai. Tujuan belum dinyatakan selesai. Hasil yang sudah diperoleh tersimpan di percakapan; lanjutkan untuk mengerjakan langkah yang masih tersisa.';
 	const saved = await saveSessionMessage(pb, userId, sid, { role: 'assistant', content: fallback });
 	return { text: saved.content, toolActivity };
 };
@@ -516,7 +529,7 @@ export const handleConfirm = async (
 	user: AssistantSession,
 	messageId: string,
 	courseRoute = '',
-): Promise<{ text: string }> => {
+): Promise<SendResult> => {
 	const { pb, id: userId } = user;
 	logAssistantRequest('confirm', user);
 	const row = await pb.collection('assistant_messages').getOne<{ id: string; owner: string; session: string; toolName: string; actionStatus: string; toolArgs: Record<string, unknown> | null; toolResult: unknown }>(messageId).catch(() => null);
@@ -534,6 +547,8 @@ export const handleConfirm = async (
 		? (row.toolResult as { draft?: unknown }).draft
 		: undefined;
 	if (storedDraft && typeof storedDraft === 'object') args.draft = storedDraft;
+	// Atomically claim a pending action before executing; concurrent confirmations cannot duplicate writes.
+	await pocketbaseAdmin.send(`/api/assistant-actions/${messageId}/claim`, { method: 'POST', body: { owner: userId } });
 	try {
 		const startedAt = Date.now();
 		const result =
@@ -544,11 +559,13 @@ export const handleConfirm = async (
 					: row.toolName === 'add_roster_students'
 						? await executeAddRosterStudents(pb, userId, args)
 						: await executeCreateAssignment(pb, userId, args, courseRoute);
+		await verifyWrittenAction(pb, userId, row.toolName, args, result.link || '');
 		const durationMs = Date.now() - startedAt;
 		logToolExecution(user, row.toolName, 'write', true);
 		await pb.collection('assistant_messages').update(messageId, {
 			actionStatus: 'executed',
 			toolResult: { link: result.link },
+			toolArgs: { ...(row.toolArgs || {}), link: result.link },
 		});
 		logConfirmation(user, row.toolName, 'executed');
 		// Audit the confirmed write: status confirmed, with the resulting link as
@@ -561,8 +578,17 @@ export const handleConfirm = async (
 			durationMs,
 			confirmationState: 'confirmed',
 		});
-		await saveSessionMessage(pb, userId, sid, { role: 'assistant', content: result.text });
-		return { text: result.text };
+		await saveSessionMessage(pb, userId, sid, { role: 'assistant', content: result.link ? `${result.text}\n\n[Buka catatan](${result.link})` : result.text });
+		// Failure to continue must never label a successful write as failed.
+  const continuationAccess = await enforceAiAccess({ userId, role: 'lecturer', idempotencyKey: deriveIdempotencyKey(userId, `resume:${messageId}`) });
+  if (!continuationAccess.ok) return { text: `${result.text}\n\nHasil tersimpan dan diperiksa. ${continuationAccess.message}` };
+  try {
+   const next = await handleSend(user, '', '', [], '', courseRoute, [], sid, {}, true);
+   await commitUsage({ userId, role: 'lecturer' });
+   return { ...next, text: [result.text, next.text].filter(Boolean).join('\n\n') };
+  } catch {
+   return { text: `${result.text}\n\nHasil tersimpan dan diperiksa. Kelanjutan belum dapat diproses; lanjutkan percakapan untuk langkah berikutnya.` };
+  } finally { continuationAccess.release(); }
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Gagal membuat catatan.';
 		logToolExecution(user, row.toolName, 'write', false);
@@ -602,3 +628,35 @@ export const handleReject = async (user: AssistantSession, messageId: string): P
 };
 
 export type { PendingAction, Clarification, SendResult };
+
+/** Read back the action's persisted records before reporting success. */
+async function verifyWrittenAction(pb: PocketBase, owner: string, tool: string, args: Record<string, unknown>, link: string) {
+ const must = (ok: boolean) => { if (!ok) throw new Error('Perubahan sudah dijalankan tetapi hasil belum dapat diverifikasi. Periksa catatan sebelum mencoba lagi.'); };
+ if (tool === 'create_course') {
+  const id = link.split('/').at(-1) || '';
+  const record = await pb.collection('courses').getOne(id);
+  must(record.owner === owner && record.title === str(args.title, 200));
+ } else if (tool === 'create_assignment') {
+  const id = new URL(link, 'https://laras.invalid').searchParams.get('edit') || '';
+  const record = await pb.collection('assignments').getOne(id);
+  must(record.owner === owner && record.course === args.courseId && record.title === str(args.title, 200) && record.status === 'draft');
+ } else if (tool === 'link_session_outcomes') {
+  const plan = args.draft as PreparedLinkPlan;
+  for (const item of plan.links) {
+   const record = await pb.collection('class_sessions').getOne(item.sessionId);
+   must(record.owner === owner && record.course === args.courseId && item.subCpmks.every(id => (record.subCpmks || []).includes(id)) && item.cpmks.every(id => (record.cpmks || []).includes(id)) && item.cpls.every(id => (record.cpls || []).includes(id)));
+  }
+ } else if (tool === 'add_roster_students') {
+  const plan = args.draft as PreparedRosterTransfer;
+  const rows = await pb.collection('course_roster').getFullList({ filter: pb.filter('course={:c} && owner={:u}', { c: args.destinationCourseId, u: owner }) });
+  must(plan.additions.every(a => rows.some(r => r.nim === a.nim.trim())));
+ }
+}
+
+function sameCompletedWrite(tool: string, saved: Record<string, unknown>, proposed: Record<string, unknown>): boolean {
+ const normalized = (v: unknown) => String(v || '').trim().toLocaleLowerCase();
+ if (tool === 'create_course') return !!saved.title && normalized(saved.title) === normalized(proposed.title);
+ if (tool === 'create_assignment') return !!saved.title && normalized(saved.title) === normalized(proposed.title) && normalized(saved.courseId) === normalized(proposed.courseId);
+ const canonical = (v: unknown): unknown => Array.isArray(v) ? v.map(canonical) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([k]) => !['link', 'draft'].includes(k)).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => [k, canonical(x)])) : v;
+ return JSON.stringify(canonical(saved)) === JSON.stringify(canonical(proposed));
+}

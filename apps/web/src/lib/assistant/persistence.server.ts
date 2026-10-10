@@ -105,10 +105,18 @@ export const getSession = async (
  * stale one. The old session is left in place as history — only a new default
  * is returned, so the lecturer resumes on a clean conversation.
  */
-export const resolveDefaultSession = async (
+const resolveDefaultSessionRecord = async (
 	pb: PocketBase,
 	userId: string,
 ): Promise<AssistantSessionRecord> => {
+	// Reuse an unused draft before comparing dated conversations. Empty
+	// lastMessageAt sorts behind old populated sessions and previously caused
+	// every page visit to create another blank conversation.
+	const empty = await pb.collection(SESSIONS).getList<AssistantSessionRecord>(1, 1, {
+		filter: pb.filter('owner = {:id} && status = "active" && messageCount = 0 && lastMessageAt = ""', { id: userId }),
+		sort: '-created',
+	});
+	if (empty.items.length) return empty.items[0];
 	const list = await pb.collection(SESSIONS).getList<AssistantSessionRecord>(1, 1, {
 		filter: pb.filter('owner = {:id} && status = "active"', { id: userId }),
 		sort: '-lastMessageAt,-updated',
@@ -121,6 +129,27 @@ export const resolveDefaultSession = async (
 		return createSession(pb, userId, { title: 'Percakapan baru' });
 	}
 	return createSession(pb, userId, { title: 'Percakapan baru' });
+};
+
+// Coalesce simultaneous initial loads from the page and drawer.
+const resolvingDefaults = new Map<string, Promise<AssistantSessionRecord>>();
+export const resolveDefaultSession = (pb: PocketBase, userId: string): Promise<AssistantSessionRecord> => {
+ const pending = resolvingDefaults.get(userId);
+ if (pending) return pending;
+ const result = resolveDefaultSessionRecord(pb, userId).finally(() => resolvingDefaults.delete(userId));
+ resolvingDefaults.set(userId, result);
+ return result;
+};
+
+/** A compact title from the first message, without an extra model request. */
+const conversationTitle = (content: string): string => {
+ const firstParagraph = content.split(/\n\s*\n|<<gambar|<<lampiran/)[0];
+ const clean = firstParagraph.replace(/https?:\/\/\S+/g, '').replace(/[#*_`>]+/g, '').replace(/\s+/g, ' ').trim();
+ if (!clean) return 'Tinjau lampiran';
+ if (clean.length <= 64) return clean;
+ const cut = clean.slice(0, 64);
+ const space = cut.lastIndexOf(' ');
+ return (space > 40 ? cut.slice(0, space) : cut).trimEnd() + '…';
 };
 
 /** Renames a session (owner-scoped). */
@@ -213,7 +242,7 @@ export const saveSessionMessage = async (
 		actionStatus: data.actionStatus ?? 'none',
 		tokenEstimate: estimateTokens(data.content),
 	});
-	await touchSession(pb, userId, sessionId, data.content);
+	await touchSession(pb, userId, sessionId, data.content, data.role);
 	return rec;
 };
 
@@ -225,7 +254,8 @@ export const touchSession = async (
 	pb: PocketBase,
 	userId: string,
 	sessionId: string,
-	_latestContent: string,
+	latestContent: string,
+	role?: 'user' | 'assistant' | 'tool',
 ): Promise<void> => {
 	const row = await pb
 		.collection(SESSIONS)
@@ -235,6 +265,7 @@ export const touchSession = async (
 	await pb
 		.collection(SESSIONS)
 		.update(row.id, {
+			...(role === 'user' && !row.messageCount && (!row.title || row.title === 'Percakapan baru') ? { title: conversationTitle(latestContent) } : {}),
 			messageCount: (row.messageCount ?? 0) + 1,
 			lastMessageAt: new Date().toISOString(),
 		})

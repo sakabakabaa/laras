@@ -184,8 +184,8 @@ export const action = withApi(async ({ request }) => {
 		}
 		if (action === 'confirm') {
 			if (!messageId) return apiError(422, 'messageId wajib diisi.');
-			// Confirm executes a write tool (no model call), so it is rate-limited
-			// and concurrency-guarded but consumes no usage weight.
+			// Confirm claims and executes the approved write. Automatic continuation
+			// obtains its own model budget inside the runtime after the write succeeds.
 			const access = await enforceAiAccess({
 				userId: user.id,
 				role: 'lecturer',
@@ -195,7 +195,7 @@ export const action = withApi(async ({ request }) => {
 			if (!access.ok) return apiError(access.status, access.message);
 			try {
 				const result = await handleConfirm(user, messageId, courseRoute);
-				return json({ ok: true, text: result.text });
+				return json({ ok: true, ...result });
 			} finally {
 				access.release();
 			}

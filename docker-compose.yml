@@ -43,6 +43,7 @@ services:
       WEBSITE_DOMAIN: laras.srv1957161.hstgr.cloud
       BYNARA_API_KEY: ${BYNARA_API_KEY:-}
       BYNARA_MODEL: gpt-6-luna
+      AGENT_CREDENTIAL_KEY: ${AGENT_CREDENTIAL_KEY:-}
       PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:?Set PB_SUPERUSER_EMAIL in the deployment .env}
       PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?Set PB_SUPERUSER_PASSWORD in the deployment .env}
     networks:

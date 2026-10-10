@@ -25,6 +25,7 @@ import {
 	type LucideIcon,
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
+import { AgentTaskPanel } from './agent-task-panel';
 import { AssistantClarify, type ClarifyQuestion } from '@/components/app/assistant-clarify';
 import { useAssistantPageContext } from '@/components/app/assistant-page-context-provider';
 import type { AssistantSeed } from '@/lib/assistant-quick-send';
@@ -111,6 +112,8 @@ const lecturerVisible = (text: string) => {
 type Suggestion = { icon: LucideIcon; label: string; tone: 'chat' | 'spark' | 'file' };
 
 const TOOL_LABEL: Record<string, string> = {
+	prepare_lesson: 'Menyiapkan rencana pelajaran',
+	agent_task_status: 'Progres tugas asisten',
 	create_course: 'Membuat mata kuliah',
 	create_assignment: 'Membuat tugas',
 	link_session_outcomes: 'Menautkan capaian ke pertemuan',
@@ -654,7 +657,9 @@ export function AssistantPanel({
 					created: new Date().toISOString(),
 				},
 			]);
-			setPending(null);
+			setPending(data.pendingAction || null);
+			setClarify(data.clarification || null);
+			if (currentSession?.id) await loadSession(currentSession.id);
 		} catch (err) {
 			setError(sanitizeError(err));
 		} finally {
@@ -913,7 +918,7 @@ export function AssistantPanel({
 	) : null;
 
 	return (
-		<div className={`asst-wrap${variant === 'drawer' ? ' asst-drawer' : ''}`}>
+		<div className={`asst-wrap${variant === 'drawer' ? ' asst-drawer' : ' asst-page'}`}>
 			{variant === 'page' && (
 				<header className="asst-head">
 					<div className="asst-head-title">
@@ -928,13 +933,26 @@ export function AssistantPanel({
 				</header>
 			)}
 
+			<div className={variant === 'page' ? 'asst-workspace' : 'asst-drawer-workspace'}>
+			{variant === 'page' && <aside className="asst-workspace-sidebar" aria-label="Rencana dan percakapan">
+				<AgentTaskPanel compact />
+				<section className="asst-past-conversations" aria-label="Percakapan sebelumnya">
+					<header><h2>Percakapan sebelumnya</h2><button type="button" onClick={() => void startNewSession()} aria-label="Mulai percakapan baru"><Plus size={16} /></button></header>
+					<div className="asst-session-search"><Search size={14} /><input type="search" value={sessionSearch} onChange={e => setSessionSearch(e.target.value)} placeholder="Cari percakapan..." aria-label="Cari percakapan sebelumnya" /></div>
+					<div className="asst-past-list">
+						{filteredSessions.length === 0 && <p className="asst-session-empty">{sessions.length ? 'Tidak ada yang cocok.' : 'Belum ada percakapan.'}</p>}
+						{filteredSessions.map(s => <button key={s.id} type="button" className={`asst-session-item${s.id === currentSession?.id ? ' active' : ''}`} aria-current={s.id === currentSession?.id ? 'true' : undefined} disabled={busy} onClick={() => void selectSession(s)}><span className="asst-session-item-meta"><span className="asst-session-item-title">{s.title || 'Percakapan baru'}</span><span className="asst-session-item-when">{formatLastActivity(s.lastMessageAt)}</span></span>{s.status === 'archived' && <Archive size={13} />}</button>)}
+					</div>
+				</section>
+			</aside>}
+
 			<div className="asst-card">
 				<div className="asst-session-bar" ref={sessionsRef}>
 					<div className="asst-session-switch">
 						<button
 							type="button"
 							className="asst-session-title"
-							onClick={() => setSessionsOpen((open) => !open)}
+							onClick={() => { if (variant === 'drawer') setSessionsOpen((open) => !open); }}
 							aria-haspopup="menu"
 							aria-expanded={sessionsOpen}
 							aria-label="Buka riwayat percakapan"
@@ -944,7 +962,7 @@ export function AssistantPanel({
 							{currentSession?.status === 'archived' && <span className="asst-session-archived">Arsip</span>}
 							<ChevronDown size={14} className={`asst-session-chevron${sessionsOpen ? ' open' : ''}`} />
 						</button>
-						{sessionsOpen && (
+						{variant === 'drawer' && sessionsOpen && (
 							<div className="asst-session-list" role="menu">
 								<button type="button" className="asst-session-new" onClick={() => void startNewSession()} role="menuitem">
 									<Plus size={15} strokeWidth={2} /> Percakapan baru
@@ -985,7 +1003,7 @@ export function AssistantPanel({
 						<button
 							type="button"
 							className={`asst-history-btn${sessionsOpen ? ' open' : ''}`}
-							onClick={() => setSessionsOpen((open) => !open)}
+							onClick={() => { if (variant === 'drawer') setSessionsOpen((open) => !open); }}
 							aria-expanded={sessionsOpen}
 							aria-label="Riwayat percakapan"
 							title="Riwayat percakapan"
@@ -1137,7 +1155,7 @@ export function AssistantPanel({
 												))}
 											</ul>
 										)}
-										{m.actionStatus === 'executed' && m.toolArgs && (
+										{m.actionStatus === 'executed' && typeof m.toolArgs?.link === 'string' && m.toolArgs.link.startsWith('/app/') && (
 											<Link to={(m.toolArgs as { link?: string }).link ?? '#'} className="asst-result-link">
 												<CheckCircle2 size={14} /> Buka catatan
 											</Link>
@@ -1319,6 +1337,7 @@ export function AssistantPanel({
 						</div>
 					</div>
 				</form>
+			</div>
 			</div>
 		</div>
 	);

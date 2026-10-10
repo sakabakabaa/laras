@@ -36,6 +36,8 @@ import type { ActiveShape, AssistantTool, AssistantToolDefinition, AssistantTool
 
 /** The registry of tools the assistant can call, with their execution kind. */
 export const ASSISTANT_TOOLS: AssistantTool[] = [
+	{ name: 'prepare_lesson', kind: 'read', description: 'Menjalankan tugas latar belakang untuk menyusun draf pelajaran dari bukti kelas dan materi; penyimpanan rencana memerlukan persetujuan.' },
+	{ name: 'agent_task_status', kind: 'read', description: 'Membaca progres tugas asisten milik dosen.' },
 	{ name: 'list_courses', kind: 'read', description: 'Daftar mata kuliah milik dosen.' },
 	{ name: 'list_assignments', kind: 'read', description: 'Daftar tugas dosen (semua atau per mata kuliah).' },
 	{ name: 'course_detail', kind: 'read', description: 'Ringkasan satu mata kuliah.' },
@@ -221,7 +223,7 @@ const runStudentProfile = async (pb: PocketBase, userId: string, args: Record<st
 		`Mata kuliah: ${courseLabel(resolved.course)}`,
 		`Kehadiran tercatat: ${attendance.present} hadir, ${attendance.late} terlambat, ${attendance.absent} absen, ${attendance.excused} izin (${attendanceRows.length} pertemuan tercatat).`,
 		`Tugas formal dinilai: ${graded.length} dari ${assignments.filter((a) => a.activityType !== 'formative').length}.`,
-		`Status nilai buku nilai: ${publicationRows.items.length ? 'sudah dipublikasikan' : 'belum dipublikasikan'}.`,
+		`Status nilai buku nilai: ${publicationRows.length ? 'sudah dipublikasikan' : 'belum dipublikasikan'}.`,
 	];
 	if (profile?.shareWithLecturer) {
 		lines.push('Preferensi belajar yang dibagikan mahasiswa:');
@@ -401,6 +403,28 @@ export const runReadTool = async (
  * implementations, returning the standardized {@link TypedToolResult} contract.
  */
 export const TOOL_REGISTRY: ReadonlyMap<string, AssistantToolDefinition> = new Map<string, AssistantToolDefinition>([
+ [ 'prepare_lesson', {
+  name: 'prepare_lesson', description: 'Siapkan rencana pelajaran berdasarkan bukti kelas dan materi yang disetujui. Menjalankan tugas latar belakang; tidak mengubah catatan akademik. Draf ditinjau dan disetujui di panel tugas sebelum disimpan.',
+  permission: 'draft', requiresConfirmation: false,
+  inputSchema: { type: 'object', properties: { courseId: { type: 'string', description: 'ID/kode mata kuliah', required: true }, sessionId: {type:'string',description:'ID pertemuan yang dituju',required:true}, goal: { type: 'string', description: 'Tujuan atau fokus pelajaran' } }, required: ['courseId','sessionId'] },
+  execute: async (ctx, args) => {
+   if(!args.sessionId)return {ok:false,error:{code:'missing_session',message:'Pilih pertemuan dahulu di halaman Rencana pembelajaran. Jangan membuat rencana tanpa pertemuan.'}};
+   const resolved = await resolveCourseRef(ctx.pb, ctx.userId, String(args.courseId || ''), ctx.courseRoute);
+   if (!resolved.course) return { ok: false, error: { code: 'not_found', message: courseMissMessage(String(args.courseId || ''), resolved.courses) } };
+   const { createAgentTask } = await import('@/lib/agent-tasks.server');
+   const task = await createAgentTask(ctx.pb, { id: ctx.userId, role: 'faculty' }, resolved.course.id, 'lesson', String(args.goal || ''),String(args.sessionId));
+   return { ok: true, data: { taskId: task.id, status: task.status, goal: task.goal, link: `/app/courses/${task.course}/pertemuan/${task.payload.sessionId}/rencana`, note: 'Tugas sudah dijadwalkan. Jangan klaim draf selesai sebelum status menyatakan selesai. Dosen meninjau dan menyetujui draf di panel tugas.' }, source: { type: 'agent_task', id: task.id } };
+  },
+ } ],
+ [ 'agent_task_status', {
+  name: 'agent_task_status', description: 'Baca progres tugas asisten milik dosen, termasuk draf dan hasil yang tersimpan.', permission: 'read', requiresConfirmation: false,
+  inputSchema: { type: 'object', properties: { taskId: { type: 'string', description: 'ID tugas opsional' } } },
+  execute: async (ctx, args) => {
+   const { listAgentTasks } = await import('@/lib/agent-tasks.server');
+   const rows = await listAgentTasks(ctx.pb, { id: ctx.userId, role: 'faculty' });
+   return { ok: true, data: args.taskId ? rows.filter(t => t.id === args.taskId) : rows, source: { type: 'agent_tasks' } };
+  },
+ } ],
 	[
 		'list_courses',
 		{
@@ -654,7 +678,7 @@ export const getToolDefinition = (name: string): AssistantToolDefinition | undef
 
 /** The set of read-only tool names (derived from the registry). */
 export const READ_TOOL_NAMES = new Set(
-	[...TOOL_REGISTRY.values()].filter((t) => t.permission === 'read').map((t) => t.name),
+	[...TOOL_REGISTRY.values()].filter((t) => t.permission === 'read' || t.permission === 'draft').map((t) => t.name),
 );
 
 /** The set of write tool names requiring confirmation (derived from the registry). */
@@ -719,7 +743,7 @@ export const executeReadTool = async (
 	if (!def) {
 		return { ok: false, error: { code: 'unknown_tool', message: `Tool tidak dikenali: ${name}` } };
 	}
-	if (def.permission !== 'read' || !def.execute) {
+	if (!['read', 'draft'].includes(def.permission) || !def.execute) {
 		return { ok: false, error: { code: 'permission_denied', message: `Tool "${name}" bukan tool baca dan tidak dapat dieksekusi langsung.` } };
 	}
 	const validation = validateToolArgs(def, rawArgs);

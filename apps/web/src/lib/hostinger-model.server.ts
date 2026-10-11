@@ -1,19 +1,19 @@
-export type BynaraTool = { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } };
-export type BynaraToolCall = { id?: string; name: string; arguments: Record<string, unknown> };
-export type BynaraResult = { content: string; model: string; provider: 'bynara'; toolCalls?: BynaraToolCall[] };
+export type HostingerTool = { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } };
+export type HostingerToolCall = { id?: string; name: string; arguments: Record<string, unknown> };
+export type HostingerResult = { content: string; model: string; provider: 'hostinger'; toolCalls?: HostingerToolCall[] };
 
-export type BynaraMessage = {
+export type HostingerMessage = {
 	role: 'system' | 'user' | 'assistant' | 'tool';
 	content: string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>;
 	tool_call_id?: string;
 	tool_calls?: { id: string; type: 'function'; function: { name: string; arguments: string } }[];
 };
 
-const API_URL = 'https://router.bynara.id/v1/chat/completions';
 const MODEL = 'gpt-6-luna';
+const apiUrl = () => `${(process.env.HROUTER_BASE_URL || 'https://router.hostinger.com/v1').replace(/\/+$/, '')}/chat/completions`;
 
 /**
- * Keep tool parameters within the JSON Schema shape accepted by Bynara.
+ * Keep tool parameters within standard JSON Schema for the OpenAI-compatible router.
  * Some locally-authored schemas mark individual properties with
  * `required: true`; JSON Schema expresses required fields as a string array
  * on the containing object instead. The registry already has those arrays,
@@ -30,27 +30,29 @@ const normalizeToolParameters = (value: unknown): unknown => {
 	return normalized;
 };
 
-/** Call Bynara's OpenAI-compatible Chat Completions API, collecting SSE or JSON output. */
-export async function collectBynaraText({
+/** Call Hostinger AI Router's OpenAI-compatible Chat Completions API, collecting SSE or JSON output. */
+export async function collectHostingerText({
 	prompt,
 	model: requestedModel,
 	systemPrompt,
 	images = [],
 	messages,
 	tools,
+	responseFormat,
 	timeoutMs = 60_000,
 }: {
 	prompt?: string;
 	model?: string;
 	systemPrompt?: string;
 	images?: string[];
-	messages?: BynaraMessage[];
-	tools?: BynaraTool[];
+	messages?: HostingerMessage[];
+	tools?: HostingerTool[];
+	responseFormat?: {type:'json_object'};
 	timeoutMs?: number;
-}): Promise<BynaraResult> {
-	const apiKey = process.env.BYNARA_API_KEY;
-	if (!apiKey) throw new Error('BYNARA_API_KEY is not set');
-	const model = requestedModel || process.env.BYNARA_MODEL || MODEL;
+}): Promise<HostingerResult> {
+	const apiKey = process.env.HROUTER_API_KEY;
+	if (!apiKey) throw new Error('HROUTER_API_KEY is not set');
+	const model = requestedModel || process.env.HROUTER_MODEL || MODEL;
 	const requestMessages = messages || [
 		...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
 		{
@@ -66,7 +68,7 @@ export async function collectBynaraText({
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), timeoutMs);
 	try {
-		const response = await fetch(API_URL, {
+		const response = await fetch(apiUrl(), {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${apiKey}`,
@@ -77,6 +79,7 @@ export async function collectBynaraText({
 				model,
 				messages: requestMessages,
 				stream: !tools,
+				...(responseFormat ? {response_format:responseFormat} : {}),
 				...(tools?.length
 					? {
 							tools: tools.map((tool) => ({
@@ -94,7 +97,7 @@ export async function collectBynaraText({
 		});
 		if (!response.ok || !response.body) {
 			await response.text().catch(() => '');
-			throw new Error(`Bynara request failed (HTTP ${response.status})`);
+			throw new Error(`Hostinger AI Router request failed (HTTP ${response.status})`);
 		}
 
 		const contentType = response.headers.get('content-type') || '';
@@ -112,8 +115,8 @@ export async function collectBynaraText({
 						return name && args && typeof args === 'object' && !Array.isArray(args) ? [{ id: call.id, name, arguments: args as Record<string, unknown> }] : [];
 				} catch { return []; }
 			}) || [];
-			if (!content && !toolCalls.length) throw new Error('Bynara returned an empty completion');
-			return { content, model: result.model || model, provider: 'bynara', ...(toolCalls.length ? { toolCalls } : {}) };
+			if (!content && !toolCalls.length) throw new Error('Hostinger AI Router returned an empty completion');
+			return { content, model: result.model || model, provider: 'hostinger', ...(toolCalls.length ? { toolCalls } : {}) };
 		}
 
 		const reader = response.body.getReader();
@@ -130,7 +133,7 @@ export async function collectBynaraText({
 				choices?: Array<{ delta?: { content?: string }; finish_reason?: string }>;
 				error?: { message?: string };
 			};
-			if (event.error) throw new Error(`Bynara stream error: ${event.error.message || 'unknown error'}`);
+			if (event.error) throw new Error(`Hostinger AI Router stream error: ${event.error.message || 'unknown error'}`);
 			if (event.model) actualModel = event.model;
 			content += event.choices?.[0]?.delta?.content || '';
 		};
@@ -144,8 +147,8 @@ export async function collectBynaraText({
 		}
 		buffer += decoder.decode();
 		if (buffer.trim()) consume(buffer.trim());
-		if (!content) throw new Error('Bynara returned an empty completion');
-		return { content, model: actualModel, provider: 'bynara' };
+		if (!content) throw new Error('Hostinger AI Router returned an empty completion');
+		return { content, model: actualModel, provider: 'hostinger' };
 	} finally {
 		clearTimeout(timeout);
 	}

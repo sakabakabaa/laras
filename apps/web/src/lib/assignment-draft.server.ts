@@ -5,7 +5,7 @@
  * from the model.
  */
 import logger from '@/lib/logger.server';
-import { collectBynaraText } from '@/lib/bynara-model.server';
+import { collectHostingerText } from '@/lib/hostinger-model.server';
 import {
 	SHAPE_OPTIONS,
 	STAGE_PRESETS,
@@ -60,7 +60,7 @@ function clip(value: string | undefined | null, max: number) {
 }
 
 export async function collectModel(prompt: string): Promise<string> {
-	return (await collectBynaraText({
+	return (await collectHostingerText({
 		prompt,
 		systemPrompt:
 			'Anda menyusun draf tugas kuliah dalam Bahasa Indonesia. Balas HANYA JSON valid tanpa markdown. Jangan mengarang CPL, CPMK, Sub-CPMK, bobot, tanggal, sumber, atau fakta yang tidak ada di konteks. Anda hanya boleh merangkai ulang teks yang sudah diberikan. Jika data tidak ada, kosongkan field dan tulis catatan di reviewNotes.',

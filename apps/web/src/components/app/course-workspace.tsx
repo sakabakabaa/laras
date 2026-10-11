@@ -307,6 +307,7 @@ export function CourseWorkspace({
 					</div>
 				)}
 			</header>
+			<div className="cw-status-row">
 			{/* ── Completeness hero ─────────────────────────────── */}
 			<section className={`cw-hero${overallComplete ? ' ok' : ''}`}>
 				<div className="cw-hero-ring" role="img" aria-label={`Kelengkapan RPS ${overallPct}%`}>
@@ -396,6 +397,38 @@ export function CourseWorkspace({
 					</div>
 				</section>
 			)}
+
+			</div>
+
+					{isFacultyOwner && (
+						<section className="ld-panel cw-quick-panel">
+							<div className="ld-card-head">
+								<h2>
+									<Sparkles size={16} className="ld-spark" /> Aksi Cepat
+								</h2>
+							</div>
+							<div className="cw-quick-grid">
+								<button type="button" className="cw-quick" onClick={() => goRps()}>
+									<FileText size={16} /> Editor RPS
+								</button>
+								<button type="button" className="cw-quick" onClick={() => goRps(3)}>
+									<CalendarDays size={16} /> Rencana mingguan
+								</button>
+								<button type="button" className="cw-quick" onClick={() => goRps(5)}>
+									<ClipboardList size={16} /> Penilaian
+								</button>
+								<button type="button" className="cw-quick" onClick={onAddSession}>
+									<Plus size={16} /> Tambah sesi
+								</button>
+								<button type="button" className="cw-quick" onClick={onEditCourse}>
+									<Pencil size={16} /> Edit detail
+								</button>
+								<button type="button" className="cw-quick" onClick={() => onTab('sessions')}>
+									<CalendarDays size={16} /> Lihat sesi
+								</button>
+							</div>
+						</section>
+					)}
 
 			<div className="cw-grid">
 				<div className="cw-main">
@@ -746,35 +779,6 @@ export function CourseWorkspace({
 						</section>
 					)}
 
-					{isFacultyOwner && (
-						<section className="ld-panel cw-quick-panel">
-							<div className="ld-card-head">
-								<h2>
-									<Sparkles size={16} className="ld-spark" /> Aksi Cepat
-								</h2>
-							</div>
-							<div className="cw-quick-grid">
-								<button type="button" className="cw-quick" onClick={() => goRps()}>
-									<FileText size={16} /> Editor RPS
-								</button>
-								<button type="button" className="cw-quick" onClick={() => goRps(3)}>
-									<CalendarDays size={16} /> Rencana mingguan
-								</button>
-								<button type="button" className="cw-quick" onClick={() => goRps(5)}>
-									<ClipboardList size={16} /> Penilaian
-								</button>
-								<button type="button" className="cw-quick" onClick={onAddSession}>
-									<Plus size={16} /> Tambah sesi
-								</button>
-								<button type="button" className="cw-quick" onClick={onEditCourse}>
-									<Pencil size={16} /> Edit detail
-								</button>
-								<button type="button" className="cw-quick" onClick={() => onTab('sessions')}>
-									<CalendarDays size={16} /> Lihat sesi
-								</button>
-							</div>
-						</section>
-					)}
 
 					{isStudent && (
 						<section className="ld-panel cw-student-info">

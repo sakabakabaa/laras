@@ -36,7 +36,7 @@ export function createResearchSnapshot(input: {
   provider: input.providerConfig.provider,
   model: input.providerConfig.model,
   modelVersion: input.providerConfig.modelVersion || 'unknown',
-  endpoint: 'https://router.bynara.id/v1/chat/completions',
+  endpoint: 'https://router.hostinger.com/v1/chat/completions',
   stream: true,
   timeoutMs: 60000,
   parameters: { temperature: 'provider-default', maxTokens: 'provider-default' },

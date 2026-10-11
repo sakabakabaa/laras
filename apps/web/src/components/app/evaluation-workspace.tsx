@@ -1,3 +1,4 @@
+import { SubmissionPdfPreview } from './submission-pdf-preview';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
@@ -186,7 +187,6 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	const [filterOpen, setFilterOpen] = useState(false);
 	const [sort, setSort] = useState<'time' | 'name' | 'grade'>('time');
 	const [selected, setSelected] = useState<string | null>(null);
-	const [tab, setTab] = useState<'answer' | 'history' | 'notes'>('answer');
 	const [showInstructions, setShowInstructions] = useState(false);
 	// Enrolled submission owners' display identity (name + NIM), resolved
 	// server-side because the `users` viewRule blocks expanding other students'
@@ -313,14 +313,14 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				if (prev) {
 					event.preventDefault();
 					setSelected(prev.key);
-					setTab('answer');
+
 				}
 			} else if (key === 'arrowright' || key === 'j') {
 				const next = list[index + 1];
 				if (next) {
 					event.preventDefault();
 					setSelected(next.key);
-					setTab('answer');
+
 				}
 			} else if (key === 'g') {
 				const field = document.getElementById('evx-score-input');
@@ -707,13 +707,13 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 						<button type="button" aria-label="Peserta sebelumnya" disabled={!active || filtered.findIndex((p) => p.key === active.key) <= 0} onClick={() => {
 							const index = filtered.findIndex((p) => p.key === active?.key);
 							const prev = filtered[index - 1];
-							if (prev) { setSelected(prev.key); setTab('answer'); }
+							if (prev) { setSelected(prev.key);  }
 						}}><ChevronLeft size={16} /></button>
 						<span>{active ? filtered.findIndex((p) => p.key === active.key) + 1 : 0} dari {filtered.length}</span>
 						<button type="button" aria-label="Peserta berikutnya" disabled={!active || filtered.findIndex((p) => p.key === active.key) >= filtered.length - 1} onClick={() => {
 							const index = filtered.findIndex((p) => p.key === active?.key);
 							const next = filtered[index + 1];
-							if (next) { setSelected(next.key); setTab('answer'); }
+							if (next) { setSelected(next.key);  }
 						}}><ChevronRight size={16} /></button>
 					</div>
 				</div>
@@ -763,7 +763,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 						const next = filtered[index + 1];
 						if (next) {
 							setSelected(next.key);
-							setTab('answer');
+
 						}
 					}}
 				>
@@ -858,7 +858,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 										className={`${formative ? '' : 'evx-person '}${active?.key === p.key ? 'active' : ''}${formative ? '' : p.status === 'graded' ? ' graded' : ' pending-grade'}`}
 										onClick={() => {
 											setSelected(p.key);
-											setTab('answer');
+
 										}}
 									>
 										<span className="cw-student-avatar">{p.name.charAt(0).toUpperCase()}</span>
@@ -873,7 +873,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 												? attemptCountByKey.get(p.identityKey)
 													? `${attemptCountByKey.get(p.identityKey)} cek`
 													: '—'
-												: p.grade != null
+												: p.status === 'graded' && p.grade != null
 													? lecturerGradeLabel(p.grade)
 													: p.status === 'draft'
 														? 'Draf'
@@ -925,34 +925,15 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 									</a>
 								)}
 							</div>
-							<div className="eval-tabs" role="tablist">
-								{(
-									[
-										['answer', 'Jawaban'],
-										['history', `Riwayat (${activeAttempts.length})`],
-										['notes', 'Catatan'],
-									] as const
-								).map(([value, label]) => (
-									<button
-										key={value}
-										type="button"
-										role="tab"
-										aria-selected={tab === value}
-										className={tab === value ? 'active' : ''}
-										onClick={() => setTab(value)}
-									>
-										{label}
-									</button>
-								))}
-							</div>
-							{tab === 'answer' && (
+{(
 								<div className="eval-answer">
 									{active.status === 'draft' && (
 										<p className="eval-note">Masih draf, belum dikumpulkan secara resmi.</p>
 									)}
-									{active.autoScore != null && (
+									{active.autoScore != null && ['quiz', 'reading', 'listening'].includes(taskKindForShape(assignment.shape) || '') && (
 										<p className="evx-autoscore">Skor otomatis {active.autoScore}/100 (bukan nilai resmi). Lihat analisis AI di panel kanan.</p>
 									)}
+
 									{formative ? (
 										<>
 											<FormativeReviewAnswer />
@@ -1001,6 +982,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 										</div>
 									) : (
 										<>
+
 											<SubmissionFiles files={active.files} />
 											{active.link && (
 												<a className="asg-sub-file" href={active.link} target="_blank" rel="noreferrer">
@@ -1018,8 +1000,8 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 									)}
 								</div>
 							)}
-							{tab === 'history' && (
-								<div className="eval-history">
+							{activeAttempts.length > 0 && (
+								<details className="eval-history"><summary>Riwayat pemeriksaan ({activeAttempts.length})</summary>
 									{active.enrolled && (
 										<SubmissionTaskReview
 											assignment={assignment}
@@ -1067,12 +1049,12 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 											})}
 										</ol>
 									)}
-								</div>
+								</details>
 							)}
-							{tab === 'notes' && (
-								<p className="tsr-text">
+							{active.feedback && (
+								<details className="eval-official-feedback"><summary>Feedback diterbitkan</summary><p className="tsr-text">
 									{active.feedback || 'Belum ada umpan balik resmi. Tulis di panel penilaian.'}
-								</p>
+								</p></details>
 							)}
 						</>
 					)}
@@ -1262,6 +1244,13 @@ function SubmissionFiles({ files }: { files: { name: string; url: string }[] }) 
 						</div>
 					);
 				}
+                const pdf = /\.pdf$/i.test(f.name);
+                const image = /\.(png|jpe?g|webp|gif|avif)$/i.test(f.name);
+                if (pdf || image) return <section key={f.url} className="eval-file-preview">
+                    <header><strong>File asli</strong><a href={f.url} target="_blank" rel="noreferrer" title={f.name}><ExternalLink size={12} /> Buka penuh</a></header>
+                    {image ? <a href={f.url} target="_blank" rel="noreferrer"><img src={f.url} alt={'File asli: ' + f.name} /></a> : <SubmissionPdfPreview url={f.url} name={f.name} />}
+                    <span className="eval-file-name">{f.name}</span>
+                </section>;
 				const previewable = isPreviewableSubmissionFile(f.name);
 				return (
 					<a

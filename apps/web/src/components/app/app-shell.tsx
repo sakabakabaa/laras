@@ -1,3 +1,4 @@
+import { TOUR_REPLAY_EVENT } from '@/components/app/welcome-tour';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import { BarChart3, BookOpen, CalendarDays, ClipboardList, FlaskConical, FolderOpen, Gamepad2, GraduationCap, Home, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Menu, Settings, Sparkles, Sun, User, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -10,6 +11,7 @@ import { AgentDock, AgentPane } from '@/components/app/agent-dock';
 import { LarasMark } from '@/components/brand/laras-lockup';
 import { AssistantPageContextProvider } from '@/components/app/assistant-page-context-provider';
 import { useTheme } from '@/hooks/use-theme';
+import { WorkspaceGuide } from '@/components/app/workspace-guide';
 import '@/styles/login-light.css';
 const FACULTY_NAV = [{
   to: '/app',
@@ -231,13 +233,14 @@ export function AppShell({
 						</button>}
 						<Link to={home} className="ld-mast-logo-link" aria-label="LARAS"><LarasMark size={28} /></Link>
 					</div>
-					<div className="ld-mast-search-zone">
+					<div className="ld-mast-search-zone" data-guide="global-search">
 						<GlobalSearch userId={user?.id || ''} isStudent={isStudent} />
 					</div>
 					<div className="ld-topbar-right ld-mast-actions">
 						{!isStudent && !isAssistantPage && <AgentDock open={agentOpen} onOpenChange={setAgentOpen} />}
+						<WorkspaceGuide pathname={`${location.pathname}${location.hash}`} title={title} isStudent={isStudent} />
 						<div className={`ld-profile-wrap${profileOpen ? ' open' : ''}`}>
-							<button type="button" className="ld-profile-trigger" aria-label="Menu profil" aria-expanded={profileOpen} aria-haspopup="menu" onClick={() => setProfileOpen(o => !o)}>
+							<button type="button" className="ld-profile-trigger" data-guide="profile" aria-label="Menu profil" aria-expanded={profileOpen} aria-haspopup="menu" onClick={() => setProfileOpen(o => !o)}>
 								<span className="ld-avatar icon" aria-hidden>
 									<User size={18} strokeWidth={1.75} />
 								</span>
@@ -254,7 +257,11 @@ export function AppShell({
 											<Settings size={16} strokeWidth={1.75} />
 											{t('nav.settings')}
 										</Link>
-										<button type="button" role="menuitem" aria-pressed={theme === 'dark'} onClick={(e) => toggleWithTransition(e)}>
+										<button type="button" role="menuitem" onClick={() => { setProfileOpen(false); window.dispatchEvent(new Event(TOUR_REPLAY_EVENT)); }}>
+                                        <BookOpen size={16} strokeWidth={1.75} />
+                                        Video panduan
+                                    </button>
+                                    <button type="button" role="menuitem" aria-pressed={theme === 'dark'} onClick={(e) => toggleWithTransition(e)}>
 											{theme === 'dark' ? <Sun size={16} strokeWidth={1.75} /> : <Moon size={16} strokeWidth={1.75} />}
 											{theme === 'dark' ? 'Mode terang' : 'Mode gelap'}
 										</button>
@@ -277,7 +284,7 @@ export function AppShell({
 							</button>
 						</div>
 
-						<nav className="ld-nav" aria-label="Navigasi utama">
+						<nav className="ld-nav" data-guide="navigation" aria-label="Navigasi utama">
 							{navItems.map(item => {
               const Icon = item.icon;
               const studentLabels: Record<string, Record<string, string>> = { id: { Dashboard: 'Beranda', 'Mata Kuliah': 'Kelas', Analitik: 'Progres' }, en: { Dashboard: 'Home', 'Mata Kuliah': 'Classes', Analitik: 'Progress' }, de: { Dashboard: 'Start', 'Mata Kuliah': 'Kurse', Analitik: 'Fortschritt' } };

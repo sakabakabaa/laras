@@ -23,7 +23,7 @@ import type { Assignment } from '@/lib/assignments';
 
 const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
 
-type Body = { submissionId?: string; publicSubmissionId?: string };
+type Body = { submissionId?: string; publicSubmissionId?: string; force?: boolean };
 
 export const action = withApi(async ({ request }) => {
 	if (request.method !== 'POST') return apiError(405, 'Method not allowed');
@@ -77,7 +77,10 @@ export const action = withApi(async ({ request }) => {
 		return apiError(403, 'Hanya dosen pemilik tugas atau pemilik kiriman yang dapat meminta draf evaluasi.');
 	}
 
+	if (body.force === true && user.id !== assignment.owner) return apiError(403, 'Hanya dosen pemilik tugas dapat meminta evaluasi ulang.');
+
 	const result = await queueEvaluationDraft({
+        force: body.force === true,
 		assignment,
 		...(submissionId ? { submissionId } : { publicSubmissionId }),
 	});

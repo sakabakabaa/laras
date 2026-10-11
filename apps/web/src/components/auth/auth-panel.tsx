@@ -1,8 +1,7 @@
+import { tourSessionKey } from '@/components/app/welcome-tour';
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import {
-	BookOpen,
-	BarChart3,
 	Eye,
 	EyeOff,
 	GraduationCap,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import pb from '@/lib/pocketbase-client';
+import { LoginFeaturePreview } from './login-feature-preview';
 import { LarasLockup } from '@/components/brand/laras-lockup';
 import {
 	dashboardForRole,
@@ -58,6 +58,7 @@ export function AuthPanel() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState('');
+	const [correctingRole, setCorrectingRole] = useState<Role | null>(null);
 
 	const copy = ROLE_COPY[role];
 
@@ -73,17 +74,32 @@ export function AuthPanel() {
 		event.preventDefault();
 		setBusy(true);
 		setError('');
+		setCorrectingRole(null);
 		try {
-			await login(loginIdentifier, password);
-			// Destination follows the account's stored role, so access stays
-			// consistent regardless of which tab was active at login. A safe
-			// same-origin `next` path (e.g. a shared task link that required
-			// login) returns the user to where they were heading.
-			const role = (pb.authStore.record as { role?: string } | null)?.role;
+			try {
+				await login(loginIdentifier, password);
+			} catch (firstError) {
+				// If the student NIM was entered while the lecturer tab was active,
+				// retry with the roster account's canonical email identifier.
+				const studentIdentifier = `${email.trim()}@student.upi.edu`;
+				if (email.includes('@') || studentIdentifier === loginIdentifier) throw firstError;
+				await login(studentIdentifier, password);
+			}
+			// The account record is authoritative. Correct the role picker before
+			// navigating so signing in under the wrong tab still feels intentional.
+			const storedRole = (pb.authStore.record as { role?: string } | null)?.role;
+			const accountRole: Role = storedRole === 'student' ? 'student' : 'faculty';
+			try { sessionStorage.removeItem(tourSessionKey(pb.authStore.record?.id || '', accountRole)); } catch { /* Storage is optional. */ }
+			if (accountRole !== role) {
+				setCorrectingRole(accountRole);
+				setRole(accountRole);
+				await new Promise((resolve) => window.setTimeout(resolve, 420));
+			}
+			// A safe same-origin next path returns users to the page they requested.
 			const dest =
 				next && next.startsWith('/') && !next.startsWith('//')
 					? next
-					: dashboardForRole(role);
+					: dashboardForRole(accountRole);
 			navigate(dest);
 		} catch (err) {
 			setError(errorMessage(err));
@@ -107,40 +123,12 @@ export function AuthPanel() {
 					</Link>
 					<p className="lp-kicker">Asisten akademik terintegrasi</p>
 					<h1>
-						{role === 'student' ? 'Belajar.' : 'Mengajar.'}
+						<span className="login-role-copy" key={`hero-title-${role}`}>{role === 'student' ? 'Belajar.' : 'Mengajar.'}</span>
 						<span>Lebih Mudah.</span>
 					</h1>
-					<p className="lp-lead">{copy.heroBody}</p>
+					<p className="lp-lead login-role-copy" key={`hero-body-${role}`}>{copy.heroBody}</p>
 				</div>
-				<ul className="lp-features">
-					<li>
-						<span className="lp-feat-icon">
-							<BookOpen size={20} strokeWidth={1.75} />
-						</span>
-						<div>
-							<strong>Manajemen Perkuliahan</strong>
-							<p>Kelola kelas, RPS, silabus, materi, dan penugasan dengan lebih mudah.</p>
-						</div>
-					</li>
-					<li>
-						<span className="lp-feat-icon">
-							<Users size={20} strokeWidth={1.75} />
-						</span>
-						<div>
-							<strong>Kolaborasi</strong>
-							<p>Terhubung dengan dosen, mahasiswa, dan asisten dalam satu platform.</p>
-						</div>
-					</li>
-					<li>
-						<span className="lp-feat-icon">
-							<BarChart3 size={20} strokeWidth={1.75} />
-						</span>
-						<div>
-							<strong>Pantau Progres</strong>
-							<p>Lihat aktivitas dan capaian pembelajaran secara real-time.</p>
-						</div>
-					</li>
-				</ul>
+				<LoginFeaturePreview key={role} role={role} />
 			</section>
 
 			<section className="lp-pane">
@@ -148,10 +136,11 @@ export function AuthPanel() {
 					<div className="lp-card-brand">
 						<LarasLockup height={34} />
 					</div>
-					<h2>{copy.formHeadLogin}</h2>
-					<p className="lp-card-sub">{copy.formSubLogin}</p>
+					<h2 className="login-role-copy" key={`form-heading-${role}`}>{copy.formHeadLogin}</h2>
+					<p className="lp-card-sub login-role-copy" key={`form-subtitle-${role}`}>{copy.formSubLogin}</p>
 
-					<div className="login-role-toggle" role="tablist" aria-label="Peran">
+					<div className="login-role-toggle" role="tablist" aria-label="Peran" data-role={role}>
+						<span className="login-role-indicator" aria-hidden="true" />
 						<button
 							type="button"
 							role="tab"
@@ -159,6 +148,7 @@ export function AuthPanel() {
 							className={role === 'student' ? 'active' : ''}
 							onClick={() => {
 								setRole('student');
+								setCorrectingRole(null);
 								setError('');
 							}}
 						>
@@ -172,6 +162,7 @@ export function AuthPanel() {
 							className={role === 'faculty' ? 'active' : ''}
 							onClick={() => {
 								setRole('faculty');
+								setCorrectingRole(null);
 								setError('');
 							}}
 						>
@@ -182,16 +173,16 @@ export function AuthPanel() {
 
 					<form onSubmit={submit} className="login-form">
 						<label className="login-field">
-							<span>{nimLogin ? 'NIM' : 'Alamat Email UPI'}</span>
+							<span>NIM atau Alamat Email UPI</span>
 							<div className="login-input-wrap">
 								<Mail size={16} className="login-input-icon" aria-hidden="true" />
 								<input
-									type={nimLogin ? 'text' : 'email'}
+									type="text"
 									required
-									autoComplete={nimLogin ? 'username' : 'email'}
+									autoComplete="username"
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
-									placeholder={nimLogin ? 'contoh: 2021001' : 'nama@upi.edu'}
+									placeholder="contoh: 2021001 atau nama@upi.edu"
 								/>
 							</div>
 						</label>
@@ -239,13 +230,14 @@ export function AuthPanel() {
 								{error}
 							</p>
 						)}
+						{correctingRole && <p className="login-role-correction login-role-copy" key={`correction-${correctingRole}`} role="status">Akun ini terdaftar sebagai {correctingRole === 'student' ? 'mahasiswa' : 'dosen'}. Mengalihkan pilihan…</p>}
 
 						<button className="login-submit" type="submit" disabled={busy}>
 							{busy ? (
 								<LoaderCircle size={18} className="spin" />
 							) : (
 								<>
-									{copy.submitLogin}
+									<span className="login-role-copy" key={`submit-${role}`}>{copy.submitLogin}</span>
 									<span aria-hidden="true">→</span>
 								</>
 							)}

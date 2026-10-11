@@ -41,8 +41,15 @@ services:
       PORT: 3000
       POCKETBASE_URL: http://pocketbase:8090
       WEBSITE_DOMAIN: laras.srv1957161.hstgr.cloud
+      # Bynara remains configured only for course-thumbnail image generation.
       BYNARA_API_KEY: ${BYNARA_API_KEY:-}
-      BYNARA_MODEL: gpt-6-luna
+      HROUTER_API_KEY: ${HROUTER_API_KEY:-}
+      HROUTER_MODEL: ${HROUTER_MODEL:-gpt-6-luna}
+      HROUTER_CONVERSATION_MODEL: ${HROUTER_CONVERSATION_MODEL:-}
+      TTS_PROVIDER: ${TTS_PROVIDER:-hostinger}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-JBFqnCBsd6RMkjVDRZzb}
+      ELEVENLABS_TTS_MODEL: ${ELEVENLABS_TTS_MODEL:-eleven_flash_v2_5}
       AGENT_CREDENTIAL_KEY: ${AGENT_CREDENTIAL_KEY:-}
       PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:?Set PB_SUPERUSER_EMAIL in the deployment .env}
       PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?Set PB_SUPERUSER_PASSWORD in the deployment .env}

@@ -350,7 +350,7 @@ export type EvalFinding = {
 	anchorAmbiguous?: boolean;
 };
 
-export type EvalRubricRow = { criterion: string; score: number; note: string };
+export type EvalRubricRow = { criterionId?: string; criterion: string; score: number; note: string };
 
 /** Phase 2 — where a reviewed finding came from. */
 export type ReviewSource = 'ai' | 'lecturer';

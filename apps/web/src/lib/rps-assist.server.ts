@@ -4,7 +4,7 @@
  * explanation. Field values always come from `buildFixProposal`.
  */
 import logger from '@/lib/logger.server';
-import { collectBynaraText } from '@/lib/bynara-model.server';
+import { collectHostingerText } from '@/lib/hostinger-model.server';
 import {
 	buildFixProposal,
 	candidateSubCpmks,
@@ -24,7 +24,7 @@ function clip(value: string, max = 280) {
 }
 
 async function collectModel(prompt: string): Promise<string> {
-	return (await collectBynaraText({
+	return (await collectHostingerText({
 		prompt,
 		systemPrompt:
 			'Anda meninjau usulan perbaikan RPS. Balas HANYA JSON valid tanpa markdown. Jangan mengarang CPL, CPMK, Sub-CPMK, sesi, bobot, atau teks. Anda hanya boleh menerima pasangan sessionId dan subCpmkId yang ada di kandidat, atau menolaknya. explanation dalam Bahasa Indonesia, maksimal 3 kalimat, menjelaskan apa yang aman dan apa yang sengaja tidak diubah.',

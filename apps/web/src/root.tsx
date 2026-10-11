@@ -24,6 +24,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { ConfirmDialogHost } from '@/components/confirm-dialog';
 import { EditorOverlayGuard } from '@/components/editor-overlay-guard';
 import pb from '@/lib/pocketbase-client';
+import { WelcomeTour } from '@/components/app/welcome-tour';
 
 // The PocketBase SDK cancels an in-flight request when a new one shares its
 // autoCancellation key — and that key is `method + path` only, ignoring query
@@ -145,6 +146,7 @@ export default function App() {
 			<EditorOverlayGuard />
 			{!isAppChrome && <SiteHeader />}
 			<Outlet />
+			<WelcomeTour />
 			{!isAppChrome && <SiteFooter />}
 			<ConfirmDialogHost />
 		</>

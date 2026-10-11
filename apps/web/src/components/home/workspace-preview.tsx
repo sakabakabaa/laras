@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router';
 import { useEffect, useRef, useState } from 'react';
 import { FileText, FolderOpen, User } from 'lucide-react';
 
@@ -14,6 +15,7 @@ const TABS: { id: Role; label: string }[] = [
  * is positioned from measured tab widths so it stays accurate across labels.
  */
 export function WorkspacePreview() {
+	const { hash } = useLocation();
 	const [role, setRole] = useState<Role>('s');
 	const tabsRef = useRef<HTMLDivElement>(null);
 	const [pill, setPill] = useState({ left: 4, width: 0 });
@@ -37,16 +39,21 @@ export function WorkspacePreview() {
 		const onResize = () => positionPill(role);
 		window.addEventListener('resize', onResize);
 		return () => window.removeEventListener('resize', onResize);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [role]);
+
+	useEffect(() => {
+		if (hash === '#mahasiswa') setRole('s');
+		if (hash === '#dosen') setRole('l');
+	}, [hash]);
 
 	return (
 		<section className="lp-section lp-preview" id="platform" aria-labelledby="preview-title">
 			<div className="lp-wrap">
+				<span id="mahasiswa" className="lp-anchor" /><span id="dosen" className="lp-anchor" /><span id="keterampilan" className="lp-anchor" />
 				<div className="lp-preview-head">
 					<div className="lp-section-head" data-lp-reveal>
 						<p className="lp-kicker">Ruang kerja</p>
-						<h2 id="preview-title">Satu ruang kerja untuk seluruh perjalanan belajar.</h2>
+						<h2 id="preview-title">Satu ruang. Tiga cara bekerja.</h2>
 						<p>
 							Mahasiswa, dosen, dan asisten AI bekerja dari mata kuliah, materi, dan
 							tugas yang sama — tidak ada yang perlu disalin antar alat.
@@ -66,12 +73,20 @@ export function WorkspacePreview() {
 						aria-hidden="true"
 						style={{ transform: `translateX(${pill.left}px)`, width: pill.width }}
 					/>
-					{TABS.map((t) => (
+					{TABS.map((t, index) => (
 						<button
 							key={t.id}
 							data-tab={t.id}
 							className="lp-role-tab"
 							role="tab"
+								onKeyDown={(event) => {
+									if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
+										event.preventDefault();
+										const next = event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (index + (event.key === 'ArrowRight' ? 1 : 2)) % 3;
+										select(TABS[next].id);
+										tabsRef.current?.querySelector<HTMLButtonElement>(`[data-tab="${TABS[next].id}"]`)?.focus();
+									}
+								}}
 							aria-selected={role === t.id}
 							tabIndex={role === t.id ? 0 : -1}
 							onClick={() => select(t.id)}
@@ -81,7 +96,7 @@ export function WorkspacePreview() {
 					))}
 				</div>
 
-				<div className="lp-workspace" data-lp-reveal="scale" style={{ '--d': '.15s' }}>
+				<div className="lp-workspace" key={role}  style={{ '--d': '.15s' }}>
 					{role === 's' && (
 						<div className="lp-ws-view active" role="tabpanel">
 							<div className="lp-ws-panel lp-span-7">

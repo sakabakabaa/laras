@@ -3,15 +3,12 @@ import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, ExternalLink, F
 import pb from '@/lib/pocketbase-client';
 import { useSearchParams } from 'react-router';
 import { AgentTaskPanel } from './agent-task-panel';
-import { PracticeMascot } from '@/components/app/practice-mascot';
 import type { PracticeLesson, PracticeReadiness, PracticeRound, PracticeSource } from '@/lib/personal-practice';
 import type { StudentProgress } from '@/lib/student-progress';
 import type { FileLibraryRecord } from '@/lib/learning';
 
 const verdictLabel = { correct: 'Benar', partially_correct: 'Sebagian benar', needs_work: 'Belum tepat', uncertain: 'Belum bisa dinilai' };
-const verdictXp = { correct: 20, partially_correct: 10, needs_work: 5, uncertain: 0 };
-type GameStep = 'ready' | 'loading' | 'prepared' | 'playing';
-export function PersonalPractice({ courseId, gameMode = false }: { courseId: string; gameMode?: boolean }) {
+export function PersonalPractice({ courseId }: { courseId: string }) {
     const [params] = useSearchParams();
     const coachId = params.get('coach') || '';
     const [ready, setReady] = useState<PracticeReadiness | null>(null);
@@ -25,11 +22,6 @@ export function PersonalPractice({ courseId, gameMode = false }: { courseId: str
     const [lesson, setLesson] = useState<PracticeLesson | null>(null);
     const [lessonAnswer, setLessonAnswer] = useState('');
     const [lessonCheck, setLessonCheck] = useState<{ verdict: keyof typeof verdictLabel; feedback: string } | null>(null);
-    const [gameStep, setGameStep] = useState<GameStep>('ready');
-    const xp = round?.results.reduce((sum, result) => sum + verdictXp[result.verdict], 0) ?? 0;
-    const totalXp = ready?.totalXp ?? 0;
-    const level = Math.floor(totalXp / 100) + 1;
-    const levelProgress = totalXp % 100;
     const storageKey = `laras-practice:${pb.authStore.record?.id}:${courseId}`;
     const request = useCallback(async <T,>(action: string, body: Record<string, unknown> = {}): Promise<T> => {
         const response = await fetch('/api/personal-practice', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pb.authStore.token}` }, body: JSON.stringify({ action, courseId, ...body }) });
@@ -72,16 +64,11 @@ export function PersonalPractice({ courseId, gameMode = false }: { courseId: str
         setBusy(label); setError('');
         try { await job(); return true; } catch (e) { setError((e as Error).message); return false; } finally { setBusy(''); }
     };
-    const start = () => void (async () => {
-        if (gameMode) setGameStep('loading');
-        const started = await run('Menyiapkan latihan dari materi Anda…', async () => {
+    const start = () => void run('Menyiapkan latihan dari materi Anda…', async () => {
             const result = await request<PracticeRound>('start');
             setRound(result); setAnswer(''); setFeedback(Boolean(result.last));
             localStorage.setItem(storageKey, result.id);
         });
-        if (gameMode) setGameStep(started ? 'prepared' : 'ready');
-    })();
-    const beginGame = () => { setGameStep('playing'); setFeedback(Boolean(round?.last)); };
     const submit = () => void run('Memeriksa jawaban…', async () => {
         if (!round?.question) return;
         const result = await request<PracticeRound>('answer', { roundId: round.id, ordinal: round.question.ordinal, answer });
@@ -89,30 +76,28 @@ export function PersonalPractice({ courseId, gameMode = false }: { courseId: str
         await loadReady();
     });
     if (!ready) return <section className="pp-page">{error ? <div role="alert" className="pp-error">{error}<button onClick={() => void run('Memuat…', async () => { await loadReady(); })}>Coba lagi</button></div> : <div className="pp-loading"><LoaderCircle className="spin" /> Membuka latihan personal…</div>}</section>;
-    if (gameMode && gameStep === 'loading') return <section className="pp-page pp-game-mode"><div className="pp-game-stage pp-game-enter" role="status" aria-live="polite" aria-busy="true"><PracticeMascot mood="thinking" size={104} /><span className="pp-eyebrow">MENYIAPKAN PUTARAN</span><h2>Menyiapkan lima soal</h2><p>Mengambil materi dan memeriksa soal.</p><div className="pp-real-progress" role="progressbar" aria-label="Latihan sedang disiapkan"><span /></div><small>Siap otomatis saat soal selesai disusun.</small></div></section>;
-    if (gameMode && gameStep === 'prepared') return <section className="pp-page pp-game-mode"><div className="pp-game-stage pp-game-prepared pp-game-enter"><PracticeMascot mood="happy" size={108} /><span className="pp-eyebrow">PUTARAN SIAP</span><h2>Siap mulai?</h2><p>Lima soal sudah disiapkan dari materi kelasmu.</p><div className="pp-game-stage-facts"><span>5 soal</span><span>± 5 menit</span><span>LEVEL {level}</span></div><div className="pp-level-progress"><span style={{ width: `${levelProgress}%` }} /></div><small>{levelProgress}/100 XP menuju level {level + 1}</small><button className="ld-btn-primary" onClick={beginGame}>Mulai sekarang <ArrowRight size={16} /></button></div></section>;
-    return <section className={`pp-page${gameMode ? ' pp-game-mode' : ''}`}>
+    return <section className="pp-page">
         {coachId && <AgentTaskPanel student coachId={coachId} compact activeRoundId={round?.id || ''} onRoundReady={id => void run('Membuka putaran…', async () => {
             const next = await request<PracticeRound>('round', { roundId: id });
-            setRound(next); setAnswer(''); setFeedback(Boolean(next.last)); setLesson(null); setGameStep('prepared'); localStorage.setItem(storageKey, id);
+            setRound(next); setAnswer(''); setFeedback(Boolean(next.last)); setLesson(null); localStorage.setItem(storageKey, id);
         })} />}
-        {!gameMode && <header className="pp-heading"><div><span className="pp-eyebrow">LATIHAN PERSONAL</span><h2>Sedikit latihan, makin percaya diri.</h2><p>Bahasa berkembang lewat kebiasaan. Lima pertanyaan dari pertemuan terbaru, sesuai kebutuhan Anda.</p></div><span className="pp-badge">Tanpa nilai resmi</span></header>}
+        <header className="pp-heading"><div><span className="pp-eyebrow">LATIHAN PERSONAL</span><h2>Sedikit latihan, makin percaya diri.</h2><p>Bahasa berkembang lewat kebiasaan. Lima pertanyaan dari pertemuan terbaru, sesuai kebutuhan Anda.</p></div><span className="pp-badge">Tanpa nilai resmi</span></header>
         {error && <div className="pp-error" role="alert">{error}</div>}
         {ready.canEdit && !round && <div className="pp-panel"><h3>Latihan mandiri mahasiswa</h3><p className="pp-muted">Latihan tersedia otomatis. Setiap mahasiswa mendapat soal dari tiga pertemuan terakhir di kelasnya, materi yang dapat ia baca, serta umpan balik dan riwayat latihannya sendiri. Pratinjau ini memakai lingkup mata kuliah, tanpa data pribadi mahasiswa.</p>{ready.reports.length > 0 && <details><summary>Soal yang dilaporkan ({ready.reports.length})</summary>{ready.reports.map((r,i) => <div className="pp-example" key={i}><strong>{r.prompt}</strong><p>{r.reason}</p></div>)}</details>}</div>}
         {busy && <div className="pp-loading" role="status"><LoaderCircle className="spin" size={18} /> {busy}</div>}
-        {!round || (gameMode && gameStep !== 'playing') ? <>
-            {!gameMode && ready.progress && <LearningProfile progress={ready.progress} />}
-            {gameMode ? <div className="pp-game-stage pp-game-ready pp-game-enter"><PracticeMascot mood="ready" size={108} /><span className="pp-eyebrow">{ready.canEdit ? 'DEMO LATIHAN' : 'TANTANGAN BARU'}</span><h2>{ready.canEdit ? 'Coba latihan ini?' : round ? 'Lanjutkan putaran?' : 'Siap untuk latihan?'}</h2><p>5 soal pilihan ganda dan menulis singkat, sekitar 5 menit.</p><div className="pp-game-stage-facts"><span>LEVEL {level}</span><span><Sparkles size={13} /> {totalXp} XP terkumpul</span></div><div className="pp-level-progress"><span style={{ width: `${levelProgress}%` }} /></div><small>{levelProgress}/100 XP menuju level {level + 1}</small><button className="ld-btn-primary" onClick={start} disabled={Boolean(busy) || Boolean(ready.reason)}>{ready.canEdit ? 'Siapkan demo' : round ? 'Lanjutkan' : 'Mulai'}<ArrowRight size={16} /></button></div> : <div className="pp-start pp-panel"><div className="pp-start-icon"><Sparkles size={25} /></div><div><h3>{ready.canEdit ? 'Coba pengalaman mahasiswa' : 'Latihan hari ini'}</h3><p>5 pertanyaan · sekitar 5 menit · pilihan ganda & menulis singkat</p><p className="pp-muted">{ready.personalization}</p></div>
+        {!round ? <>
+            {ready.progress && <LearningProfile progress={ready.progress} />}
+            <div className="pp-start pp-panel"><div className="pp-start-icon"><Sparkles size={25} /></div><div><h3>{ready.canEdit ? 'Coba pengalaman mahasiswa' : 'Latihan hari ini'}</h3><p>5 pertanyaan · sekitar 5 menit · pilihan ganda & menulis singkat</p><p className="pp-muted">{ready.personalization}</p></div>
                 <button className="ld-btn-primary" onClick={start} disabled={Boolean(busy) || Boolean(ready.reason)}>{ready.canEdit ? 'Pratinjau latihan' : 'Mulai latihan'}<ArrowRight size={16} /></button>
-            </div>}
+            </div>
             {ready.reason && <p className="pp-notice">{ready.reason}</p>}
-            {!gameMode && <><div className="pp-section-heading"><h3>Dari pertemuan terbaru</h3><span className="pp-muted">{ready.scopeNote}</span></div>
+            <><div className="pp-section-heading"><h3>Dari pertemuan terbaru</h3><span className="pp-muted">{ready.scopeNote}</span></div>
             <div className="pp-session-grid">{ready.sessions.map(s => <article className="pp-panel" key={s.id}><span className="pp-eyebrow">MINGGU {s.week}</span><h4>{s.title}</h4><small>{new Date(s.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' })}</small></article>)}</div>
-            {ready.history.length > 0 && <div className="pp-panel"><h3>Riwayat latihan{ready.canEdit ? ' pratinjau' : ''}</h3>{ready.history.map(h => <button className="pp-history" key={h.id} disabled={Boolean(busy)} onClick={() => void run('Membuka riwayat…', async () => { const r = await request<PracticeRound>('round', { roundId: h.id }); setRound(r); setFeedback(false); })}><span>{new Date(h.created).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })}</span><span>{h.correct}/{h.total} tepat <ArrowRight size={14} /></span></button>)}</div>}</>}
-        </> : <div className={`pp-round pp-panel${gameMode ? ' pp-round-game' : ''}`}>
-            <div className="pp-round-top"><button className="pp-back" disabled={Boolean(busy)} onClick={() => { if (gameMode) { setGameStep('prepared'); return; } setRound(null); setFeedback(false); }}><ChevronLeft size={16} /> Kembali</button><span>{round.preview ? 'Pratinjau dosen · ' : ''}{round.answered}/{round.total} tantangan</span>{gameMode && <span className="pp-xp-pill"><Sparkles size={14} /> LV {level} · {totalXp} XP</span>}</div>
+            {ready.history.length > 0 && <div className="pp-panel"><h3>Riwayat latihan{ready.canEdit ? ' pratinjau' : ''}</h3>{ready.history.map(h => <button className="pp-history" key={h.id} disabled={Boolean(busy)} onClick={() => void run('Membuka riwayat…', async () => { const r = await request<PracticeRound>('round', { roundId: h.id }); setRound(r); setFeedback(false); })}><span>{new Date(h.created).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })}</span><span>{h.correct}/{h.total} tepat <ArrowRight size={14} /></span></button>)}</div>}</>
+        </> : <div className="pp-round pp-panel">
+            <div className="pp-round-top"><button className="pp-back" disabled={Boolean(busy)} onClick={() => { setRound(null); setFeedback(false); }}><ChevronLeft size={16} /> Kembali</button><span>{round.preview ? 'Pratinjau dosen · ' : ''}{round.answered}/{round.total} terjawab</span></div>
             <div className="pp-progress" role="progressbar" aria-label="Progres latihan" aria-valuenow={round.answered} aria-valuemin={0} aria-valuemax={round.total}><span style={{ width: `${round.total ? round.answered / round.total * 100 : 0}%` }} /></div>
-            {feedback && round.last ? <div className={`pp-feedback ${round.last.result.verdict}${gameMode ? ' pp-game-enter' : ''}`} aria-live="polite">{gameMode ? <PracticeMascot mood={round.last.result.verdict === 'correct' ? 'happy' : round.last.result.verdict === 'uncertain' ? 'thinking' : 'oops'} size={72} /> : <div className="pp-feedback-icon">{round.last.result.verdict === 'correct' ? <CheckCircle2 /> : <BookOpen />}</div>}<span className="pp-eyebrow">{round.last.result.skill}</span><h3>{verdictLabel[round.last.result.verdict]}</h3><div className="pp-feedback-explanation"><strong>Penjelasan</strong><p>{round.last.result.explanation}</p></div>
+            {feedback && round.last ? <div className={`pp-feedback ${round.last.result.verdict}`} aria-live="polite"><div className="pp-feedback-icon">{round.last.result.verdict === 'correct' ? <CheckCircle2 /> : <BookOpen />}</div><span className="pp-eyebrow">{round.last.result.skill}</span><h3>{verdictLabel[round.last.result.verdict]}</h3><div className="pp-feedback-explanation"><strong>Penjelasan</strong><p>{round.last.result.explanation}</p></div>
                 <div className="pp-example"><span>{round.last.prompt}</span><p>Jawaban Anda: {round.last.answer}</p></div>
                 {round.last.result.correction && round.last.result.verdict !== 'correct' && <div className="pp-example"><span>Contoh jawaban</span><p>{round.last.result.correction}</p></div>}
                 <SourceList key={round.last.ordinal} sources={round.last.sources} />
@@ -130,17 +115,17 @@ export function PersonalPractice({ courseId, gameMode = false }: { courseId: str
                 <details className="pp-report"><summary>Ada masalah dengan soal atau penilaian ini?</summary>{reported ? <p role="status">Laporan tersimpan untuk dosen. Jawaban ini tidak dipakai untuk menyesuaikan latihan berikutnya.</p> : <form onSubmit={e => { e.preventDefault(); void run('Mengirim laporan…', async () => { await request('report', { roundId: round.id, ordinal: round.last!.ordinal, reason: report }); setReported(true); await loadReady(); }); }}><label>Jelaskan masalahnya<textarea value={report} minLength={10} maxLength={1500} required onChange={e => setReport(e.target.value)} /></label><button className="ld-outline-action" disabled={Boolean(busy)}>Laporkan soal</button></form>}</details>
                 {round.last.result.verdict === 'uncertain' && <p className="pp-muted">Jawaban ini tidak dipakai sebagai bukti kelemahan.</p>}
                 <button className="ld-btn-primary" disabled={Boolean(busy)} onClick={() => setFeedback(false)}>{round.question ? 'Pertanyaan berikutnya' : 'Lihat ringkasan'}<ArrowRight size={16} /></button>
-            </div> : round.question ? <form key={round.question.ordinal} className={`pp-question${gameMode ? ' pp-game-enter' : ''}`} onSubmit={e => { e.preventDefault(); submit(); }}>
-                {gameMode && <div className="pp-question-mascot"><PracticeMascot mood="thinking" size={64} /></div>}<span className="pp-eyebrow">{gameMode ? 'TANTANGAN' : 'PERTANYAAN'} {round.question.ordinal} dari {round.total} · {round.question.type === 'multiple_choice' ? 'PILIH JAWABAN' : 'MENULIS SINGKAT'}</span><h3>{round.question.prompt}</h3><p className="pp-muted">{round.question.skill}</p>
+            </div> : round.question ? <form key={round.question.ordinal} className="pp-question" onSubmit={e => { e.preventDefault(); submit(); }}>
+                <span className="pp-eyebrow">PERTANYAAN {round.question.ordinal} dari {round.total} · {round.question.type === 'multiple_choice' ? 'PILIH JAWABAN' : 'MENULIS SINGKAT'}</span><h3>{round.question.prompt}</h3><p className="pp-muted">{round.question.skill}</p>
                 {round.question.type === 'multiple_choice' ? <fieldset className="pp-choices"><legend className="sr-only">Pilih jawaban Anda</legend>{round.question.options.map((option, i) => <label className={answer === String(i) ? 'selected' : ''} key={i}><input type="radio" name="practice-answer" value={i} required checked={answer === String(i)} disabled={Boolean(busy)} onChange={() => setAnswer(String(i))} /><span className="pp-choice-letter">{String.fromCharCode(65 + i)}</span><span>{option}</span>{answer === String(i) && <Check size={16} />}</label>)}</fieldset> : <label className="pp-writing">Jawaban Anda<textarea autoFocus rows={5} value={answer} maxLength={2000} required disabled={Boolean(busy)} placeholder="Tulis 1–3 kalimat…" onChange={e => setAnswer(e.target.value)} /><small>{answer.length}/2000</small></label>}
                 <div className="pp-question-footer"><span className="pp-muted">Progres disimpan setelah setiap jawaban.</span><button className="ld-btn-primary" disabled={Boolean(busy) || !answer.trim()}>Periksa jawaban<ArrowRight size={16} /></button></div>
-            </form> : <div className={`pp-summary${gameMode ? ' pp-game-summary pp-game-enter' : ''}`}>{gameMode ? <PracticeMascot mood="happy" size={112} /> : <div className="pp-start-icon"><CheckCircle2 size={30} /></div>}<span className="pp-eyebrow">PUTARAN SELESAI</span><h3>Latihan selesai</h3>{gameMode && <div className="pp-xp-total"><Sparkles size={21} /><strong>+{xp} XP</strong><span>{totalXp} XP · LEVEL {level}</span></div>}<p>Jawaban benar: {round.results.filter(r => r.verdict === 'correct').length} dari {round.total}.</p>
+            </form> : <div className="pp-summary"><div className="pp-start-icon"><CheckCircle2 size={30} /></div><span className="pp-eyebrow">PUTARAN SELESAI</span><h3>Latihan selesai</h3><p>Jawaban benar: {round.results.filter(r => r.verdict === 'correct').length} dari {round.total}.</p>
                 <div className="pp-skill-summary">{[...new Set(round.results.map(r => r.skill))].map(skill => { const results = round.results.filter(r => r.skill === skill); return <div key={skill}><strong>{skill}</strong><span>{results.filter(r => r.verdict === 'correct').length}/{results.length} benar</span></div>; })}</div>
                 <div className="pp-sources"><h4>Tinjau jawaban</h4>{round.review.map(item => <details key={item.ordinal}><summary>{item.ordinal}. {item.prompt}<small>{verdictLabel[item.result.verdict]}</small></summary><p>Jawaban Anda: {item.answer}</p><p>{item.result.explanation}</p>{item.result.correction && <p>Contoh: {item.result.correction}</p>}<SourceList sources={item.sources} /></details>)}</div>
                 {coachId ? <a className="ld-outline-action" href="/app/student">Kembali ke dashboard</a> : <button className="ld-btn-primary" onClick={start} disabled={Boolean(busy)}><RefreshCw size={16} /> Latihan dengan contoh baru</button>}
             </div>}
         </div>}
-        {!gameMode && round && ready.progress && <LearningProfile progress={ready.progress} />}
+        {round && ready.progress && <LearningProfile progress={ready.progress} />}
     </section>;
 }
 function LearningProfile({ progress }: { progress: StudentProgress }) {

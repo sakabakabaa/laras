@@ -61,6 +61,7 @@ export function Hero() {
 					role="img"
 					aria-label="Pratinjau ruang kerja mahasiswa LARAS: mata kuliah Bahasa Jerman pada 68%, tugas mendatang, koreksi AI, dan nilai 86."
 				>
+					<span className="lp-demo-cursor" aria-hidden="true" />
 					<div className="lp-stage-tilt">
 						<div className="lp-app" aria-hidden="true">
 							<div className="lp-app-bar">

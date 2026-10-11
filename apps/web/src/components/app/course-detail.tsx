@@ -733,7 +733,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 						sectionId={sectionFilter}
 					/>
 				)}
-				{section === 'latihan' && <PersonalPractice courseId={id} gameMode={isStudent} />}
+				{section === 'latihan' && <PersonalPractice courseId={id} />}
 				{section === 'tugas' && (
 					<CourseAssignments
 						courseId={id}

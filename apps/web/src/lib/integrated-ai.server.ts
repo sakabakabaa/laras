@@ -11,7 +11,7 @@
  * the environment variables below. Never ask the visitor or the site owner for
  * an OpenAI / Gemini / Anthropic key.
  */
-import { collectBynaraText } from '@/lib/bynara-model.server';
+import { collectHostingerText } from '@/lib/hostinger-model.server';
 import { REQUIRE_LOGIN } from '@/constants/ai-assistant.config';
 import { apiError } from '@/lib/api.server';
 import logger from '@/lib/logger.server';
@@ -458,7 +458,7 @@ export const streamAssistant = async ({
 				: latest.content,
 		},
 	];
-	const completion = await collectBynaraText({ messages, timeoutMs: 90_000 });
+	const completion = await collectHostingerText({ messages, timeoutMs: 90_000 });
 	const responseBody = new ReadableStream<Uint8Array>({
 		start(controller) {
 			controller.enqueue(sseFrame({ type: 'content', data: { content: completion.content } }));

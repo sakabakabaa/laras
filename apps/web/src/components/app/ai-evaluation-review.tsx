@@ -1,3 +1,5 @@
+import { createPortal, flushSync } from 'react-dom';
+import { matchCriterion, validatedRubric, rubricTotal } from '@/lib/evaluation-rubric';
 import {
 	createContext,
 	useCallback,
@@ -374,6 +376,7 @@ export function AiEvaluationReviewProvider({
 	// True once the lecturer edits the score field themselves — distinguishes
 	// an explicit lecturer adjustment from the untouched AI-recommendation autofill.
 	const overrideTouched = useRef(false);
+    const criterionScoresTouched = useRef(false);
 
 	// Phase 4 — lecturer-only research items for this evaluation: human missed
 	// errors (AI false negatives) and AI-finding research annotations. Loaded
@@ -414,6 +417,9 @@ export function AiEvaluationReviewProvider({
 		try {
 			const found = await pb.collection('ai_evaluations').getFirstListItem<AiEvaluationRow>(filter);
 			setRow(found);
+            if (found?.publishedAt && typeof found.finalScore === 'number' && Number.isFinite(found.finalScore)) {
+                setOverride(String(found.finalScore)); overrideTouched.current = true;
+            }
             if (found?.reviewCriterionScores && Object.keys(found.reviewCriterionScores).length) { setCriterionScores(found.reviewCriterionScores); } else if (found && found.scoringVersion === 4 && found.rubricScores && typeof found.rubricScores === 'object') {
                 const savedRows = (found.rubricScores as RubricScores).rows || [];
                 setCriterionScores(Object.fromEntries(savedRows.map(r => [r.id, r.score])));
@@ -430,6 +436,7 @@ export function AiEvaluationReviewProvider({
 		setRow(null);
         setWorking(null);
         setCriterionScores({});
+        criterionScoresTouched.current = false;
 		setResearchItems({ annotations: {}, missedErrors: [] });
 		setResearchLoadError('');
 		setResearchLoading(true);
@@ -566,8 +573,15 @@ export function AiEvaluationReviewProvider({
 		});
 	}, [row, loading, criteria]);
 
-	// The model's stored recommendedScore is a separate estimate and must not
-	// prefill the grade — it diverged from the rubric rule (e.g. 62 vs 86).
+	// Seed an unsaved rubric from validated AI criteria; never overwrite lecturer work.
+    useEffect(() => {
+        if (loading || row?.status !== 'ready' || criterionScoresTouched.current) return;
+        if (row.reviewCriterionScores && Object.keys(row.reviewCriterionScores).length) return;
+        if (row.scoringVersion === 4 && row.rubricScores) return;
+        const scores = validatedRubric(parseRubric(row.rubricBreakdown), criteria);
+        if (rubricTotal(scores, criteria) == null) return;
+        setCriterionScores(Object.fromEntries(scores.map(entry => [matchCriterion(entry, criteria)!.id!, entry.score])));
+    }, [loading, row, criteria]);
 
 	const ready = row?.status === 'ready' ? row : null;
 	const items = working ?? [];
@@ -625,15 +639,15 @@ export function AiEvaluationReviewProvider({
 	// until the lecturer edits the grade. Rejected findings are already excluded.
 	useEffect(() => {
 		if (loading || overrideTouched.current || working == null) return;
-		const next = String(calc.total);
+		const next = criteria.some(c => c.weight > 0 && criterionScores[c.id] == null) ? '' : String(calc.total);
 		setOverride((prev) => (prev === next ? prev : next));
-	}, [loading, working, calc.total]);
+	}, [loading, working, calc.total, criteria, criterionScores]);
 	const overrideTrim = override.trim();
 	const overrideNum = overrideTrim === '' ? null : Number(overrideTrim);
 	const overrideValid =
 		overrideNum != null && Number.isFinite(overrideNum) && overrideNum >= 0 && overrideNum <= 100;
 	const finalScore = overrideValid && overrideNum != null ? Math.round(overrideNum) : calc.total;
-	const adjustedByLecturer = overrideValid && overrideTouched.current;
+	const adjustedByLecturer = overrideValid && overrideTouched.current && (!row?.publishedAt || row.finalScore !== overrideNum || Boolean(row.scoreAdjusted));
 	const pendingCount = items.filter((f) => f.status === 'pending').length;
 	const published = row?.publishedAt ? row : null;
 	// Displayed recommendation is the rubric total, not the model's stored estimate.
@@ -643,7 +657,7 @@ export function AiEvaluationReviewProvider({
 	// The lecturer's explicit finalScore always wins; this never auto-averages.
 	const recommendedScore = row?.recommendedScore ?? null;
 	const divergence =
-		recommendedScore != null && Math.abs(recommendedScore - calc.total) > 15
+		!criteria.some(c => c.weight > 0 && criterionScores[c.id] == null) && recommendedScore != null && Math.abs(recommendedScore - calc.total) > 15
 			? { recommendedScore, detailScore: calc.total }
 			: null;
 	// Step 6 — speaking pronunciation confidence (advisory only, never auto-penalizes).
@@ -783,7 +797,7 @@ export function AiEvaluationReviewProvider({
 		if (!recordKey || !participant) return;
 		setRegenerating(true);
 		try {
-			await fetch('/api/evaluation-draft', {
+			const response = await fetch('/api/evaluation-draft', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -791,13 +805,16 @@ export function AiEvaluationReviewProvider({
 				},
 				body: JSON.stringify(
 					participant.channel === 'enrolled'
-						? { submissionId: recordKey }
-						: { publicSubmissionId: recordKey },
+						? { submissionId: recordKey, force: true }
+						: { publicSubmissionId: recordKey, force: true },
 				),
 			});
+            const result = await response.json();
+            if (!response.ok || result.status === 'error' || result.status === 'skipped') throw new Error(result.reason || result.error || 'Permintaan evaluasi gagal.');
+            setNotice('Evaluasi AI baru diminta menggunakan rubrik dan materi terbaru.');
 			await load();
-		} catch {
-			/* background convenience only — the note below stays */
+		} catch (error) {
+            setSaveError(error instanceof Error ? error.message : 'Permintaan evaluasi gagal.');
 		} finally {
 			setRegenerating(false);
 		}
@@ -979,6 +996,7 @@ export function AiEvaluationReviewProvider({
         calc,
         criterionScores,
         setCriterionScore: (id, value) => {
+            criterionScoresTouched.current = true;
             setCriterionScores(prev => { const next = { ...prev }; if (value === '') delete next[id]; else next[id] = Number(value); return next; });
         },
 		override,
@@ -1282,9 +1300,9 @@ function AnswerScript({
 								if (!part.severity || part.findingIndex == null) {
 									if (checked && part.text.trim()) {
 									return (
-										<mark key={partIndex} className="aev-mark ok" title="Frasa sudah dicek dan benar">
+										<mark key={partIndex} className="aev-mark ok" title="Tidak ada temuan pada bagian ini">
 											{part.text}
-											<span className="sr-only">Frasa sudah dicek dan benar</span>
+											<span className="sr-only">Tidak ada temuan pada bagian ini</span>
 										</mark>
 									);
 								}
@@ -2410,6 +2428,10 @@ export function AiEvaluationAnswer() {
 	const t = useT();
 	const noteRef = useRef<HTMLTextAreaElement | null>(null);
 	const textRef = useRef<HTMLDivElement | null>(null);
+    const popupRef = useRef<HTMLDivElement | null>(null);
+    const selectionContextRef = useRef(ctx);
+    selectionContextRef.current = ctx;
+    const [markPopup, setMarkPopup] = useState<{ left: number; top: number } | null>(null);
 	const content = ctx?.content || '';
 
 	// Focus the inline note as soon as a mark is placed.
@@ -2417,29 +2439,73 @@ export function AiEvaluationAnswer() {
 		if (ctx?.pendingMark) window.setTimeout(() => noteRef.current?.focus(), 0);
 	}, [ctx?.pendingMark]);
 
-	// Manual inline marking: capture a text selection made inside the
-	// student's submitted text (mouse or keyboard selection).
-	useEffect(() => {
-		if (!content) return;
-		const capture = () => {
-			const el = textRef.current;
-			if (!el) return;
-			const sel = window.getSelection();
-			if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
-			const node = sel.getRangeAt(0).commonAncestorContainer;
-			if (!el.contains(node)) return;
-			const text = sel.toString().trim();
-			if (!text || text.length > 300 || !content.includes(text)) return;
-			ctx?.captureSelection(text);
-		};
-		const onSettled = () => window.setTimeout(capture, 0);
-		document.addEventListener('mouseup', onSettled);
-		document.addEventListener('keyup', onSettled);
-		return () => {
-			document.removeEventListener('mouseup', onSettled);
-			document.removeEventListener('keyup', onSettled);
-		};
-	}, [content, ctx]);
+    // Show tools only for a valid selection inside this student's answer.
+    useEffect(() => {
+        setMarkPopup(null);
+    }, [content]);
+    useEffect(() => {
+        if (!content) return;
+        let timer = 0;
+        let dragging = false;
+        const capture = () => {
+            timer = 0;
+            if (dragging || selectionContextRef.current?.pendingMark || popupRef.current?.contains(document.activeElement)) return;
+            const el = textRef.current;
+            const sel = window.getSelection();
+            if (!el || !sel || !sel.rangeCount || sel.isCollapsed) { setMarkPopup(null); return; }
+            const range = sel.getRangeAt(0);
+            const text = sel.toString().trim();
+            if (!el.contains(range.startContainer) || !el.contains(range.endContainer) || !text || text.length > 300 || !content.includes(text)) {
+                setMarkPopup(null); return;
+            }
+            const rect = range.getBoundingClientRect();
+            const width = Math.min(420, window.innerWidth - 24);
+            // Native selection events occur outside React's input handlers. Commit
+            // the popup now rather than waiting for a WebView animation frame.
+            flushSync(() => {
+                selectionContextRef.current?.captureSelection(text);
+                setMarkPopup({
+                    left: Math.max(12, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 12)),
+                    top: Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - 130)),
+                });
+            });
+        };
+        const schedule = () => {
+            if (timer) window.clearTimeout(timer);
+            timer = window.setTimeout(capture, 0);
+        };
+        const down = () => { dragging = true; };
+        const up = (event: Event) => {
+            dragging = false;
+            if (!popupRef.current?.contains(event.target as Node)) { capture(); schedule(); }
+        };
+        const dismiss = () => {
+            if (timer) window.clearTimeout(timer);
+            timer = 0;
+            setMarkPopup(null);
+        };
+        const keyup = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') { dismiss(); return; }
+            if (!popupRef.current?.contains(event.target as Node)) schedule();
+        };
+        document.addEventListener('pointerdown', down);
+        document.addEventListener('pointerup', up);
+        document.addEventListener('mouseup', up);
+        document.addEventListener('selectionchange', schedule);
+        document.addEventListener('keyup', keyup);
+        document.addEventListener('scroll', dismiss, true);
+        window.addEventListener('resize', dismiss);
+        return () => {
+            if (timer) window.clearTimeout(timer);
+            document.removeEventListener('pointerdown', down);
+            document.removeEventListener('pointerup', up);
+            document.removeEventListener('mouseup', up);
+            document.removeEventListener('selectionchange', schedule);
+            document.removeEventListener('keyup', keyup);
+            document.removeEventListener('scroll', dismiss, true);
+            window.removeEventListener('resize', dismiss);
+        };
+    }, [content]);
 
 	if (!ctx || !ctx.hasRecord) {
 		return content ? <p className="tsr-text">{content}</p> : null;
@@ -2450,7 +2516,7 @@ export function AiEvaluationAnswer() {
 
 	return (
 		<div className="aev-answer">
-			<div className="aev-markbar" role="toolbar" aria-label={t('aevr.markTextAria')}>
+			{markPopup && createPortal(<div ref={popupRef} className="aev-markbar aev-selection-tools" style={markPopup} role="toolbar" aria-label={t('aevr.markTextAria')}>
 				<span className="aev-markbar-label">
 					<Highlighter size={14} /> {t('aevr.markText')}
 				</span>
@@ -2458,7 +2524,7 @@ export function AiEvaluationAnswer() {
 					type="button"
 					className={`aev-mark-btn minor${ctx.pendingMark?.severity === 'minor' ? ' active' : ''}${ctx.selection ? ' ready' : ''}`}
 					onMouseDown={(e) => e.preventDefault()}
-					onClick={() => ctx.markSelection('minor')}
+					onClick={() => { ctx.markSelection('minor'); setMarkPopup(null); }}
 				>
 					Kuning · perlu perbaikan
 				</button>
@@ -2466,11 +2532,11 @@ export function AiEvaluationAnswer() {
 					type="button"
 					className={`aev-mark-btn major${ctx.pendingMark?.severity === 'major' ? ' active' : ''}${ctx.selection ? ' ready' : ''}`}
 					onMouseDown={(e) => e.preventDefault()}
-					onClick={() => ctx.markSelection('major')}
+					onClick={() => { ctx.markSelection('major'); setMarkPopup(null); }}
 				>
 					Merah · kesalahan berarti
 				</button>
-				<button type="button" className="aev-tool" onClick={ctx.focusNote}>
+				<button type="button" className="aev-tool" onMouseDown={e => e.preventDefault()} onClick={() => { ctx.focusNote(); setMarkPopup(null); }}>
 					<MessageSquare size={13} /> {t('aevr.note')}
 				</button>
 				<button
@@ -2479,12 +2545,13 @@ export function AiEvaluationAnswer() {
 					title={t('aevr.cancelMarkTitle')}
 					onClick={() => {
 						ctx.cancelSelection();
+                        setMarkPopup(null);
 						ctx.focusFinding(null);
 					}}
 				>
 					<Eraser size={13} /> {t('aevr.clearAnnotation')}
 				</button>
-			</div>
+			</div>, document.body)}
 			{ctx.pendingMark && (
 				<div className={`aev-inline-note ${ctx.pendingMark.severity}`}>
 					<strong>
@@ -2586,10 +2653,12 @@ export function AiEvaluationPanel() {
 	const t = useT();
 	const noteRef = useRef<HTMLTextAreaElement | null>(null);
 	const [openRubric, setOpenRubric] = useState<string | null>(null);
+    const [feedbackOpen, setFeedbackOpen] = useState(false);
 
 	useEffect(() => {
 		if (!ctx?.noteTick) return;
-		noteRef.current?.focus();
+		setFeedbackOpen(true);
+        window.setTimeout(() => noteRef.current?.focus(), 0);
 	}, [ctx?.noteTick]);
 
 	if (!ctx || !ctx.hasRecord) return null;
@@ -2600,32 +2669,22 @@ export function AiEvaluationPanel() {
 	const wordsNote = ctx.publishNote.length;
 
 	return (
-		<section className="evx-panel" aria-label="Tinjauan temuan dan penilaian">
+		<section className="evx-panel evx-compact" aria-label="Tinjauan temuan dan penilaian">
 			<header className="evx-panel-head">
 				<h3>
 					<Sparkles size={14} /> {t('aevr.review')}
 				</h3>
 				<span className={`evx-draft${ctx.published ? ' live' : ''}`}>{ctx.published ? t('aevr.published') : t('aevr.draft')}</span>
 			</header>
-			<button
-				type="button"
-				className={`aev-research-toggle${ctx.researchMode ? ' on' : ''}`}
-				aria-pressed={ctx.researchMode}
-				onClick={() => ctx.setResearchMode(!ctx.researchMode)}
-			>
-				<FlaskConical size={13} /> {ctx.researchMode ? t('aevr.researchModeOn') : t('aevr.researchMode')}
-			</button>
-			{ctx.researchMode && <ResearchCounters />}
-			{ctx.researchMode && <ResearchMetadataPanel />}
 
 			<div className="evx-ai-card score-only">
 				<div className="evx-ai-score">
 					<strong>
-						{ctx.calc.total}
-						<small> / 100{letterGrade(ctx.calc.total) ? ` · ${letterGrade(ctx.calc.total)}` : ''}</small>
+						{ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) ? 'Belum dinilai' : <>{ctx.calc.total}<small> / 100{letterGrade(ctx.calc.total) ? ` · ${letterGrade(ctx.calc.total)}` : ''}</small></>}
 					</strong>
-					<span>{t('aevr.recommendScore')}</span>
+					<span>Skor rubrik · belum menjadi nilai resmi</span>
 				</div>
+                <button type="button" className="evx-refresh" aria-label="Minta skor AI baru" title="Minta skor AI baru dengan kriteria dan materi terbaru" onClick={ctx.regenerate} disabled={ctx.regenerating || ctx.preparing}>{ctx.regenerating || ctx.preparing ? <LoaderCircle size={14} className="spin" /> : <RotateCcw size={14} />}</button>
 			</div>
 
 			<section className="evx-block">
@@ -2639,37 +2698,8 @@ export function AiEvaluationPanel() {
 							</span>
 						</span>
 					</h4>
-					<span>{ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) ? 'Rubrik belum lengkap' : <>Total <strong>{ctx.calc.total}</strong> / 100</>}</span>
+					{ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) && <span>Belum lengkap</span>}
 				</header>
-				{ctx.calc.factors.length > 0 && (
-					<details className="fer-score-details">
-						<summary>
-							<span>{t('aevr.detailScoring')}</span>
-							<ChevronDown size={16} aria-hidden="true" />
-						</summary>
-						<div className="fer-score-details-body">
-							<p className="evx-muted fer-rationale">{ctx.calc.rationale}</p>
-							<ul className="fer-factors" aria-label="Rincian perhitungan skor">
-								{ctx.calc.factors.map((factor) => {
-									const isBase = factor.key === 'base';
-									return (
-										<li key={factor.key}>
-											<span className="fer-factor-label">{factor.label}</span>
-											<span className="fer-factor-detail">{factor.detail}</span>
-											{isBase ? (
-												<em className="tolerance">100</em>
-											) : factor.impact !== 0 ? (
-												<em className={factor.impact < 0 ? 'penalty' : 'tolerance'}>
-													{factor.impact > 0 ? `+${factor.impact}` : factor.impact}
-												</em>
-											) : null}
-										</li>
-									);
-								})}
-							</ul>
-						</div>
-					</details>
-				)}
 				{ctx.calc.rows.length === 0 && (
 					<p className="evx-muted">
 						Skor hitung {ctx.calc.total}/100 dari temuan yang disetujui
@@ -2679,17 +2709,17 @@ export function AiEvaluationPanel() {
 				{(ctx.calc.rows.length > 0 || ctx.calc.general) && (
 					<ul className="evx-rubric">
 						{ctx.calc.rows.map((row) => {
-							const reason = breakdown.find((entry) => entry.criterion.toLowerCase().includes(shortCriterionLabel(row.label).toLowerCase()) || shortCriterionLabel(row.label).toLowerCase().includes(entry.criterion.toLowerCase().slice(0, 12)));
+							const reason = breakdown.find(entry => matchCriterion(entry, ctx.criteria)?.id === row.id);
 							const open = openRubric === row.id;
 							return (
 								<li key={row.id}>
-									<button type="button" onClick={() => setOpenRubric(open ? null : row.id)}>
+									<button type="button" aria-expanded={open} onClick={() => setOpenRubric(open ? null : row.id)}>
 										<span>{shortCriterionLabel(row.label)}</span>
 										<span className="evx-bar"><i style={{ width: `${row.score}%` }} /></span>
-										<strong>{ctx.criterionScores[row.id] == null ? '—' : row.score}</strong>
+										<strong>{ctx.criterionScores[row.id] == null ? '—' : row.score}</strong><ChevronDown size={12} aria-hidden="true" />
 									</button>
-									<div className="evx-criterion-achievement" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '10px 0' }}>
-    <label style={{ flex: 1 }}>Pencapaian · bobot {row.weight}
+									{open && <div className="evx-criterion-achievement">
+    <label>Pencapaian · bobot {row.weight}
         <select aria-label={'Pencapaian ' + row.label} value={ctx.criterionScores[row.id] ?? ''} onChange={e => ctx.setCriterionScore(row.id, e.target.value)}>
             <option value="">Pilih tingkat pencapaian</option>
             <option value="100">Sangat baik · 100</option>
@@ -2702,7 +2732,7 @@ export function AiEvaluationPanel() {
         </select>
     </label>
     <label>Skor 0–100<input aria-label={'Skor ' + row.label} type="number" min={0} max={100} step={1} value={ctx.criterionScores[row.id] ?? ''} onChange={e => ctx.setCriterionScore(row.id, e.target.value)} /></label>
-</div>
+</div>}
 {open && (
 										<p>
 											{row.major} merah · {row.minor} kuning sebagai bukti. Skor pencapaian ditentukan dosen.
@@ -2723,15 +2753,16 @@ export function AiEvaluationPanel() {
 				)}
 				{ctx.calc.general && (
 					<p className="evx-rubric-total-note">
-						Penalti catatan umum sudah termasuk dalam total di atas dan tidak dikurangkan lagi.
+						Catatan umum menjadi bukti untuk ditinjau; tidak ada pengurangan skor otomatis.
 					</p>
 				)}
 			</section>
 
-			<section className="evx-block">
-				<header>
+			<details className="evx-block evx-feedback" open={feedbackOpen} onToggle={event => setFeedbackOpen(event.currentTarget.open)}>
+				<summary><div>
 					<h4><PenLine size={14} /> {t('aevr.feedback')}</h4>
-				</header>
+                {!feedbackOpen && <p className="evx-feedback-preview">{ctx.publishNote.trim() ? ctx.publishNote.trim().slice(0, 90) : 'Tambah feedback untuk mahasiswa'}</p>}
+                </div><ChevronDown size={14} /></summary>
 				<textarea
 					ref={noteRef}
 					className="aev-publish-note"
@@ -2752,39 +2783,8 @@ export function AiEvaluationPanel() {
 					</button>
 					<span>{wordsNote} / 2000</span>
 				</div>
-			</section>
+			</details>
 
-			<section className="evx-block evx-final-block">
-				<label>
-					Nilai akhir
-					<span className="evx-score-field">
-						<input
-							id="evx-score-input"
-							inputMode="decimal"
-							value={ctx.override}
-							onChange={(e) => ctx.changeOverride(e.target.value)}
-							placeholder={String(ctx.calc.total)}
-							aria-label={t('aevr.finalGradeAria')}
-						/>
-						<em>/ 100</em>
-					</span>
-				</label>
-				{ctx.overrideValid && (
-					<span className={`aev-adjust-badge${ctx.adjustedByLecturer ? '' : ' ai'}`}>
-						{ctx.adjustedByLecturer ? 'Disesuaikan dosen' : 'Skor rekomendasi'}
-					</span>
-				)}
-				{ctx.override.trim() !== '' && !ctx.overrideValid && <span className="aev-override-warn">Nilai harus angka 0–100.</span>}
-				{ctx.adjustedByLecturer && ctx.finalScore !== ctx.calc.total && (
-					<p className="aev-override-delta">
-						Skor hitung {ctx.calc.total} → nilai akhir {ctx.finalScore}
-						{' '}(<em>{ctx.finalScore - ctx.calc.total > 0 ? '+' : ''}{ctx.finalScore - ctx.calc.total}</em>, disesuaikan dosen)
-					</p>
-				)}
-				{ctx.adjustedByLecturer && (
-					<button type="button" className="ld-outline-action sm" onClick={ctx.clearOverride}>Hapus penyesuaian</button>
-				)}
-			</section>
 
 			{ctx.confidence && (
 				<section className="evx-block evx-confidence-block">
@@ -2844,6 +2844,96 @@ export function AiEvaluationPanel() {
 				</div>
 			)}
 
+            <details className="evx-block evx-more"><summary>Lainnya <ChevronDown size={14} /></summary>
+			<button
+				type="button"
+				className={`aev-research-toggle${ctx.researchMode ? ' on' : ''}`}
+				aria-pressed={ctx.researchMode}
+				onClick={() => ctx.setResearchMode(!ctx.researchMode)}
+			>
+				<FlaskConical size={13} /> {ctx.researchMode ? t('aevr.researchModeOn') : t('aevr.researchMode')}
+			</button>
+			{ctx.researchMode && <ResearchCounters />}
+			{ctx.researchMode && <ResearchMetadataPanel />}
+				{!ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) && ctx.calc.factors.length > 0 && (
+					<details className="fer-score-details">
+						<summary>
+							<span>{t('aevr.detailScoring')}</span>
+							<ChevronDown size={16} aria-hidden="true" />
+						</summary>
+						<div className="fer-score-details-body">
+							<p className="evx-muted fer-rationale">{ctx.calc.rationale}</p>
+							<ul className="fer-factors" aria-label="Rincian perhitungan skor">
+								{ctx.calc.factors.map((factor) => {
+									const isBase = factor.key === 'base';
+									return (
+										<li key={factor.key}>
+											<span className="fer-factor-label">{factor.label}</span>
+											<span className="fer-factor-detail">{factor.detail}</span>
+											{isBase ? (
+												<em className="tolerance">100</em>
+											) : factor.impact !== 0 ? (
+												<em className={factor.impact < 0 ? 'penalty' : 'tolerance'}>
+													{factor.impact > 0 ? `+${factor.impact}` : factor.impact}
+												</em>
+											) : null}
+										</li>
+									);
+								})}
+							</ul>
+						</div>
+					</details>
+				)}
+
+			{(citations.length > 0 || ready?.contextNote) && (
+				<footer className="aev-foot">
+					{citations.length > 0 ? (
+						<div className="aev-citations">
+							<h6>Rujukan materi disetujui</h6>
+							<ul>
+								{citations.map((citation, index) => (
+									<li key={index}>{citation.title} (versi {citation.version}): {citation.section}{citation.pageRef ? ` · hal. ${citation.pageRef}` : ''}</li>
+								))}
+							</ul>
+						</div>
+					) : (
+						ready && <p className="aev-context">Konteks saat draf dibuat{ready.generatedAt ? ` (${stamp(ready.generatedAt)})` : ''}: {ready.contextNote}</p>
+					)}
+				</footer>
+			)}
+            </details>
+            <div className="evx-sticky-actions">
+			<section className="evx-block evx-final-block">
+				<label>
+					Nilai akhir
+					<span className="evx-score-field">
+						<input
+							id="evx-score-input"
+							inputMode="decimal"
+							value={ctx.override}
+							onChange={(e) => ctx.changeOverride(e.target.value)}
+							placeholder={ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) ? 'Belum dinilai' : String(ctx.calc.total)}
+							aria-label={t('aevr.finalGradeAria')}
+						/>
+						<em>/ 100</em>
+					</span>
+				</label>
+				{ctx.overrideValid && (
+					<span className={`aev-adjust-badge${ctx.adjustedByLecturer ? '' : ' ai'}`}>
+						{ctx.published && ctx.override === String(ctx.published.finalScore) ? 'Nilai tersimpan' : ctx.adjustedByLecturer ? 'Disesuaikan dosen' : 'Skor rubrik'}
+					</span>
+				)}
+				{ctx.override.trim() !== '' && !ctx.overrideValid && <span className="aev-override-warn">Nilai harus angka 0–100.</span>}
+				{ctx.adjustedByLecturer && !ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) && ctx.finalScore !== ctx.calc.total && (
+					<p className="aev-override-delta">
+						Skor hitung {ctx.calc.total} → nilai akhir {ctx.finalScore}
+						{' '}(<em>{ctx.finalScore - ctx.calc.total > 0 ? '+' : ''}{ctx.finalScore - ctx.calc.total}</em>, disesuaikan dosen)
+					</p>
+				)}
+				{ctx.adjustedByLecturer && (
+					<button type="button" className="ld-outline-action sm" onClick={ctx.clearOverride}>Hapus penyesuaian</button>
+				)}
+			</section>
 			{ctx.confirmPublish ? (
 				<div className="aev-publish-confirm">
 					<div className="aev-publish-summary" aria-label="Ringkasan sebelum terbit">
@@ -2891,10 +2981,11 @@ export function AiEvaluationPanel() {
 						disabled={ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.ungradable || ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.publishing || ctx.pendingCount > 0 || (ctx.override.trim() !== '' && !ctx.overrideValid)}
 						onClick={ctx.requestConfirmPublish}
 					>
-						<Send size={14} /> {t('aevr.saveNext')}
+						<Send size={14} /> Terbitkan &amp; lanjut
 					</button>
 				</div>
 			)}
+            </div>
 			{ctx.dirty && (
 				<button type="button" className="evx-discard" disabled={ctx.saving} onClick={ctx.resetReview}>{t('aevr.discardReview')}</button>
 			)}
@@ -2902,22 +2993,6 @@ export function AiEvaluationPanel() {
 			{ctx.publishNotice && <p className="eval-saved" role="status"><CheckCircle2 size={13} /> {ctx.publishNotice}</p>}
 			{ctx.saveError && <p className="form-error" role="alert"><AlertTriangle size={13} /> {ctx.saveError}</p>}
 			{ctx.notice && <p className="eval-saved" role="status"><CheckCircle2 size={13} /> {ctx.notice}</p>}
-			{(citations.length > 0 || ready?.contextNote) && (
-				<footer className="aev-foot">
-					{citations.length > 0 ? (
-						<div className="aev-citations">
-							<h6>Rujukan materi disetujui</h6>
-							<ul>
-								{citations.map((citation, index) => (
-									<li key={index}>{citation.title} (versi {citation.version}): {citation.section}{citation.pageRef ? ` · hal. ${citation.pageRef}` : ''}</li>
-								))}
-							</ul>
-						</div>
-					) : (
-						ready && <p className="aev-context">{ready.contextNote}</p>
-					)}
-				</footer>
-			)}
 		</section>
 	);
 }
@@ -3247,7 +3322,7 @@ export function AiEvaluationPanel() {
 						</ul>
 					</div>
 				) : (
-					ready && <p className="aev-context">{ready.contextNote}</p>
+					ready && <p className="aev-context">Konteks saat draf dibuat{ready.generatedAt ? ` (${stamp(ready.generatedAt)})` : ''}: {ready.contextNote}</p>
 				)}
 				{ctx.row?.reviewedAt ? (
 					<small>Tinjauan terakhir disimpan {stamp(ctx.row.reviewedAt)}</small>

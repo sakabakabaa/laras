@@ -60,6 +60,20 @@ describe('generation-time persistence', () => {
   await settle();
   expect(state.row.generationHistory[1].summary).toBe('old summary');
  });
+ it('forces a fresh draft for graded work while preserving published lecturer decisions', async () => {
+  const previousStatus = state.submission.status;
+  state.submission.status = 'graded';
+  const review = { finalScore: 91, publishedAt: '2026-10-02', reviewCriterionScores: { task: 91 }, reviewFindings: [{ id: 'manual', source: 'lecturer' }], rubricScores: { rows: [] }, scoreAdjusted: true };
+  state.row = { id: 'e1', status: 'ready', generatedAt: '2026-10-03', summary: 'previous', ...review };
+  try {
+   expect((await queueEvaluationDraft({ assignment, submissionId: 's1', force: true })).queued).toBe(true);
+   await settle();
+   expect(state.model).toHaveBeenCalledOnce();
+   for (const [key, value] of Object.entries(review)) expect(state.row[key]).toEqual(value);
+   expect(state.row.generationHistory[0].summary).toBe('previous');
+   expect(state.row.status).toBe('ready');
+  } finally { state.submission.status = previousStatus; }
+ });
  it('persists the exact consumed snapshot before calling the model', async () => {
   state.model.mockImplementation(async (prompt: string, images: string[], systemPrompt: string) => {
    expect(state.row.researchSnapshot.studentText).toBe(state.submission.content.slice(0, 12000));

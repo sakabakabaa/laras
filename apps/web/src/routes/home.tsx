@@ -4,12 +4,7 @@ import '@/styles/landing.css';
 import { LandingEffects } from '@/components/home/landing-effects';
 import { Hero } from '@/components/home/hero';
 import { WorkspacePreview } from '@/components/home/workspace-preview';
-import { Capabilities } from '@/components/home/capabilities';
-import { StudentJourney } from '@/components/home/student-journey';
-import { Lecturer } from '@/components/home/lecturer';
-import { AiContext } from '@/components/home/ai-context';
-import { Workflow } from '@/components/home/workflow';
-import { Analytics } from '@/components/home/analytics';
+import { CompactWorkflow, ProgressAndTrust } from '@/components/home/compact-tour';
 import { FinalCta } from '@/components/home/final-cta';
 
 export function meta({ matches, location }: Route.MetaArgs) {
@@ -22,16 +17,12 @@ export function meta({ matches, location }: Route.MetaArgs) {
 
 export default function HomePage() {
 	return (
-		<main className="lp-main">
+		<main className="lp-main lp-compact">
 			<LandingEffects />
 			<Hero />
 			<WorkspacePreview />
-			<Capabilities />
-			<StudentJourney />
-			<Lecturer />
-			<AiContext />
-			<Workflow />
-			<Analytics />
+			<CompactWorkflow />
+			<ProgressAndTrust />
 			<FinalCta />
 		</main>
 	);

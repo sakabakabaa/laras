@@ -86,7 +86,7 @@ const runListAssignments = async (pb: PocketBase, userId: string, args: Record<s
 	});
 	if (!assignments.length) return 'Belum ada tugas yang ditemukan.';
 	const lines = assignments.map((a, i) => {
-		const type = a.activityType === 'formative' ? 'Latihan formatif' : 'Tugas formal';
+		const type = a.activityType === 'formative' ? 'Arsip latihan lama' : 'Tugas resmi';
 		return `${i + 1}. ${str(a.title)} — ${type} (${a.status || 'draft'})`;
 	});
 	return `Daftar tugas Anda (${assignments.length}):\n${lines.join('\n')}`;
@@ -107,13 +107,13 @@ const runCourseDetail = async (pb: PocketBase, userId: string, args: Record<stri
 		pb.collection('course_roster').getFullList({ filter, fields: 'id', perPage: 200 }).catch(() => []),
 	]);
 	const formal = assignments.filter((a) => a.activityType !== 'formative').length;
-	const formative = assignments.filter((a) => a.activityType === 'formative').length;
+
 	return [
 		`Mata kuliah: ${str(course.title)}`,
 		course.code ? `Kode: ${str(course.code, 40)}` : '',
 		`Jumlah sesi: ${sessions.length}`,
 		`Tugas formal: ${formal}`,
-		`Latihan formatif: ${formative}`,
+
 		`Mahasiswa terdaftar: ${roster.length}`,
 	].filter(Boolean).join('\n');
 };
@@ -136,7 +136,7 @@ const runSummarizeInsights = async (pb: PocketBase, userId: string, args: Record
 		return 'Data wawasan belum dapat dimuat saat ini. Jumlah tidak ditampilkan agar kegagalan pemuatan tidak terbaca sebagai nol.';
 	}
 	const formal = assignments.filter((a) => a.activityType !== 'formative').length;
-	const formative = assignments.filter((a) => a.activityType === 'formative').length;
+
 	const assignmentIds = assignments.map((a) => a.id);
 	let checks = 0;
 	let submissions = 0;
@@ -165,7 +165,7 @@ const runSummarizeInsights = async (pb: PocketBase, userId: string, args: Record
 	return [
 		'Ringkasan wawasan akademik Anda:',
 		`- Total tugas formal: ${formal}`,
-		`- Total latihan formatif: ${formative}`,
+
 		`- Total pemeriksaan Cek jawaban: ${checks}`,
 		`- Total pengumpulan mahasiswa: ${submissions}`,
 	].join('\n');
@@ -629,7 +629,7 @@ export const TOOL_REGISTRY: ReadonlyMap<string, AssistantToolDefinition> = new M
 					shape: { type: 'string', description: 'Jenis tugas', enum: ['writing', 'speaking'], required: true },
 					week: { type: 'number', description: 'Nomor pertemuan' },
 					mode: { type: 'string', description: 'Format kerja', enum: ['individual', 'collaborative'] },
-					activityType: { type: 'string', description: 'Jenis aktivitas', enum: ['formal', 'formative'] },
+					activityType: { type: 'string', description: 'Jenis aktivitas', enum: ['formal'] },
 					instruction: { type: 'string', description: 'Arahan singkat dosen' },
 				},
 				required: ['courseId', 'shape'],
@@ -775,7 +775,7 @@ export const cleanAssignmentSummary = (
 	args: Record<string, unknown>,
 	prepared?: PreparedAssignment,
 ): string => {
-	const activity = args.activityType === 'formative' ? 'latihan formatif' : 'tugas formal';
+	const activity = 'tugas resmi';
 	const shape = SHAPE_LABEL[str(args.shape, 40)] || 'Menulis';
 	const mode = args.mode === 'collaborative' ? 'kelompok' : 'individu';
 	return [
@@ -969,7 +969,8 @@ export const executeCreateAssignment = async (
 	const draft = args.draft && typeof args.draft === 'object' ? (args.draft as PreparedAssignment) : null;
 	const shape: ActiveShape = (draft ? normalizeSkill(args.shape, draft.title) : normalizeSkill(args.shape, title)) || 'writing';
 	const mode: AssignmentMode = args.mode === 'collaborative' ? 'collaborative' : 'individual';
-	const activityType: ActivityType = args.activityType === 'formative' ? 'formative' : 'formal';
+	if (args.activityType === 'formative') throw Object.assign(new Error('Tugas formatif sudah dihentikan. Gunakan Latihan personal dari materi kelas.'), { status: 422 });
+	const activityType: ActivityType = 'formal';
 	const assignment = await pb.collection('assignments').create<Assignment>({
 		owner: userId,
 		course: courseId,

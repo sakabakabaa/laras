@@ -10,7 +10,7 @@
  * `buildWarnings`, exactly like the heuristic parser.
  */
 import logger from '@/lib/logger.server';
-import { collectBynaraText } from '@/lib/bynara-model.server';
+import { collectHostingerText } from '@/lib/hostinger-model.server';
 import {
 	buildWarnings,
 	splitItems,
@@ -594,7 +594,7 @@ type StreamOutcome = {
 async function runAiStream(cappedText: string): Promise<StreamOutcome> {
 	let content: string;
 	try {
-		({ content } = await collectBynaraText({ prompt: cappedText, systemPrompt: SYSTEM_PROMPT, timeoutMs: 90_000 }));
+		({ content } = await collectHostingerText({ prompt: cappedText, systemPrompt: SYSTEM_PROMPT, timeoutMs: 90_000 }));
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		const status = message.match(/HTTP (\d{3})/)?.[1];
@@ -604,12 +604,12 @@ async function runAiStream(cappedText: string): Promise<StreamOutcome> {
 			outputChars: 0,
 			repaired: false,
 			fatal,
-			error: message.includes('AbortError') ? 'Model request timed out after 90s.' : `Bynara request failed: ${message}`,
+			error: message.includes('AbortError') ? 'Model request timed out after 90s.' : `Hostinger AI Router request failed: ${message}`,
 		};
 	}
 
 	if (!content.trim()) {
-		return { raw: null, outputChars: 0, repaired: false, error: 'Bynara returned an empty response.' };
+		return { raw: null, outputChars: 0, repaired: false, error: 'Hostinger AI Router returned an empty response.' };
 	}
 
 	const [raw, repaired] = parseRawRps(content);

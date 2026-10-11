@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BadgeCheck, Brain, LoaderCircle, Save, UserRound } from 'lucide-react';
+import { BadgeCheck, Brain, LoaderCircle, Save, UserRound, MessageCircle } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
 import { errorMessage } from '@/lib/learning';
 
@@ -7,6 +7,7 @@ type LearnerPrefs = {
 	goals: string; currentGoal: string; priorExperience: string; confidence: string; explanationLanguage: string;
 	supportPreference: string; shareWithLecturer: boolean; aiPersonalization: boolean;
 };
+type Reflection = {id:string;courseTitle:string;scenario:string;language:string;level:string;transcript:{role:string;text:string;feedback?:string;hint?:string}[];reflection?:{strengths:string[];improvements:string[];nextStep:string};completedAt:string;created:string};
 const empty: LearnerPrefs = { goals: '', currentGoal: '', priorExperience: '', confidence: '', explanationLanguage: '', supportPreference: '', shareWithLecturer: false, aiPersonalization: false };
 
 export function LearnerProfileSection() {
@@ -15,12 +16,21 @@ export function LearnerProfileSection() {
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState('');
 	const [saved, setSaved] = useState(false);
+	const [conversations, setConversations] = useState<Reflection[]>([]);
+	const [historyLoading, setHistoryLoading] = useState(true);
 	useEffect(() => {
 		let active = true;
 		fetch('/api/student-profile', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pb.authStore.token}` }, body: JSON.stringify({ mode: 'load' }) })
 			.then(async (res) => { const data = await res.json().catch(() => null) as { profile?: LearnerPrefs; error?: string } | null; if (!res.ok) throw new Error(data?.error || 'Preferensi gagal dimuat.'); if (active) setValue({ ...empty, ...data?.profile }); })
 			.catch((err) => { if (active) setError(errorMessage(err)); }).finally(() => { if (active) setLoading(false); });
 		return () => { active = false; };
+	}, []);
+	useEffect(() => {
+		let active = true;
+		fetch('/api/student-profile', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${pb.authStore.token}`}, body:JSON.stringify({mode:'conversations'}) })
+			.then(async res => { const data=await res.json().catch(()=>null) as {conversations?:Reflection[];error?:string}|null; if(!res.ok)throw new Error(data?.error||'Riwayat percakapan gagal dimuat.'); if(active)setConversations(data?.conversations||[]); })
+			.catch(err=>{if(active)setError(errorMessage(err));}).finally(()=>{if(active)setHistoryLoading(false);});
+		return()=>{active=false;};
 	}, []);
 	const update = <K extends keyof LearnerPrefs>(key: K, next: LearnerPrefs[K]) => setValue((prev) => ({ ...prev, [key]: next }));
 	const save = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -49,5 +59,10 @@ export function LearnerProfileSection() {
 			{error && <p className="form-error" role="alert">{error}</p>}{saved && <p className="ld-settings-success"><BadgeCheck size={15} /> Preferensi tersimpan.</p>}
 			<div className="ld-settings-actions"><button type="submit" className="ld-btn-primary" disabled={saving}>{saving ? <LoaderCircle size={16} className="spin" /> : <Save size={16} />} Simpan preferensi</button></div>
 		</form>}
+		<section className="cp-profile-reflections" aria-labelledby="cp-profile-reflections-title">
+			<div className="cp-profile-reflections-heading"><MessageCircle size={19}/><div><span className="ld-eyebrow">CATATAN PRIBADI</span><h3 id="cp-profile-reflections-title">Refleksi percakapan</h3></div></div>
+			<p>Percakapan lengkap tersimpan di profil ini dan hanya dapat dilihat oleh Anda.</p>
+			{historyLoading?<p className="sp-loading"><LoaderCircle size={16} className="spin"/> Memuat riwayat percakapan…</p>:!conversations.length?<p>Belum ada percakapan selesai yang tersimpan.</p>:<div className="cp-profile-reflections-list">{conversations.map(session=><details key={session.id}><summary><span><strong>{session.scenario||'Latihan percakapan'}</strong><small>{session.courseTitle} · {session.language} {session.level}</small></span><time>{new Date(session.completedAt||session.created).toLocaleDateString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short',year:'numeric'})}</time></summary><div className="cp-profile-transcript">{session.transcript.map((message,index)=><article key={`${session.id}-${index}`}><strong>{message.role==='assistant'?'Partner AI':'Kamu'}</strong><p>{message.text}</p>{message.feedback&&<small>Catatan bahasa: {message.feedback}</small>}</article>)}</div>{session.reflection&&<div className="cp-profile-summary"><h4>Yang sudah baik</h4><ul>{session.reflection.strengths.map(item=><li key={item}>{item}</li>)}</ul><h4>Untuk dilatih berikutnya</h4><ul>{session.reflection.improvements.map(item=><li key={item}>{item}</li>)}</ul><p>{session.reflection.nextStep}</p></div>}</details>)}</div>}
+		</section>
 	</section>;
 }

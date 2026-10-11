@@ -1,6 +1,6 @@
 import type PocketBase from 'pocketbase';
 import { pocketbaseAdmin as db } from '@/lib/pocketbase-client.server';
-import { collectBynaraText } from '@/lib/bynara-model.server';
+import { collectHostingerText } from '@/lib/hostinger-model.server';
 import { parseModelJson } from '@/lib/feedback.server';
 import { buildLearnerProfileForUser } from '@/lib/learner-profile.server';
 import { extractCefrLevel } from '@/lib/cefr-level';
@@ -57,7 +57,7 @@ async function practiceModel(userId: string, preview: boolean, input: { systemPr
     const access = await enforceAiAccess({ userId, role, capability: 'generate_practice', inputChars: input.prompt.length + input.systemPrompt.length });
     if (!access.ok) return practiceError(access.status, access.message);
     try {
-        const result = await collectBynaraText(input);
+        const result = await collectHostingerText(input);
         await commitUsage({ userId, role, capability: 'generate_practice' });
         return result;
     } finally { access.release(); }

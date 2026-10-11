@@ -392,3 +392,57 @@ html.lp-loaded [data-lp-reveal].lp-in{opacity:1;transform:none}
   .lp-bob,.lp-bob-2{animation:none!important}
   .lp-stage-tilt{transform:none!important}
 }
+
+/* Compact public tour: isolated from login and lesson-plan styles. */
+.lp-compact .lp-section{padding-block:64px}
+.lp-compact .lp-section-head{margin-bottom:30px;max-width:760px}
+.lp-compact .lp-section-head h2,.lp-compact-trust h2{font-size:clamp(30px,3.3vw,44px);line-height:1.12}
+.lp-compact .lp-hero{padding-top:48px;padding-bottom:40px}
+.lp-compact .lp-hero h1{font-size:clamp(40px,4.4vw,60px)}
+.lp-compact .lp-hero-meta{margin-top:28px}
+.lp-compact .lp-final h2{font-size:clamp(34px,4vw,52px)}
+.lp-compact .lp-role-tabs{margin-bottom:28px}
+.lp-anchor{display:block;position:absolute;top:0;scroll-margin-top:90px}
+.lp-compact section{scroll-margin-top:75px}
+.lp-compact .lp-role-tabs .pill{transition:transform .45s cubic-bezier(.22,1,.36,1),width .45s cubic-bezier(.22,1,.36,1)}
+.lp-compact .lp-ws-view{animation:lp-compact-enter .45s ease both}
+.lp-compact-flow-grid,.lp-compact-trust-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.lp-compact-steps{display:grid;gap:12px}
+.lp-compact-steps button{display:flex;gap:18px;text-align:left;padding:18px;border:1px solid transparent;border-radius:16px;background:transparent;cursor:pointer;color:var(--lp-ink);font:inherit;transition:background .3s,border-color .3s,transform .3s}
+.lp-compact-steps button[aria-selected=true]{background:white;border-color:var(--lp-line);box-shadow:var(--lp-shadow-1);transform:translateX(5px)}
+.lp-compact-number{font-size:20px;font-weight:700;color:var(--lp-red-deep);padding-top:5px}
+.lp-compact-steps small{display:block;color:var(--lp-red-deep);font-size:11px;font-weight:700;margin-bottom:5px}
+.lp-compact-steps strong{display:block;font-size:20px;margin-bottom:8px}
+.lp-compact-steps button>span>span{display:block;font-size:14px;line-height:1.6;color:var(--lp-ink-2)}
+.lp-compact-demo,.lp-compact-progress{border:1px solid var(--lp-line);border-radius:22px;background:white;box-shadow:var(--lp-shadow-2);padding:24px}
+.lp-compact-demo{min-height:335px}
+.lp-compact-demo-top{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:11px;color:var(--lp-ink-2);letter-spacing:.05em}
+.lp-compact-demo-top button{display:grid;place-items:center;border:1px solid var(--lp-line);border-radius:50%;width:30px;height:30px;background:white;color:var(--lp-ink);cursor:pointer}
+.lp-compact-demo-top button:disabled{opacity:.4;cursor:default}
+.lp-compact-scene{animation:lp-compact-enter .45s ease both;padding-top:18px}
+.lp-compact-scene>svg{color:var(--lp-red-deep);margin-bottom:14px}
+.lp-compact-scene h3{font-size:24px;line-height:1.2;margin-bottom:9px}
+.lp-compact-scene p{font-size:13px;color:var(--lp-ink-2)}
+.lp-compact-scene ul{list-style:none;padding:0;margin:18px 0 12px;display:grid;gap:12px}
+.lp-compact-scene li{display:flex;align-items:center;gap:9px;font-size:14px;animation:lp-compact-enter .4s both}
+.lp-compact-scene li svg{color:var(--lp-ok);flex-shrink:0}
+.lp-compact-dots{display:flex;gap:5px;justify-content:flex-end}
+.lp-compact-dots i{width:20px;height:4px;border-radius:9px;background:var(--lp-line);transition:background .3s,width .3s}
+.lp-compact-dots i.on{width:36px;background:var(--lp-red-deep)}
+.lp-compact-trust{background:white;border-top:1px solid var(--lp-line)}
+.lp-compact-lead{margin-top:18px!important;color:var(--lp-ink-2);font-size:16px;line-height:1.7;max-width:48ch}
+.lp-compact-assurance{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--lp-red-deep);margin-top:20px!important}
+.lp-compact-progress>p{margin:16px 0 24px;font-size:14px;color:var(--lp-ink-2);line-height:1.6}
+.lp-compact-skill{display:grid;grid-template-columns:100px 1fr 44px;gap:12px;align-items:center;margin:18px 0;font-size:13px}
+.lp-compact-skill>div{height:8px;background:var(--lp-paper);border-radius:10px;overflow:hidden}
+.lp-compact-skill i{display:block;height:100%;background:var(--lp-red-deep);border-radius:10px;transform-origin:left}
+.lp-compact-progress.lp-in .lp-compact-skill i{animation:lp-compact-grow .9s both}
+.lp-compact-progress>small{display:block;margin-top:24px;font-size:11px;color:var(--lp-ink-2)}
+.lp-demo-cursor{position:absolute;z-index:5;pointer-events:none;left:60%;top:55%;width:20px;height:26px;background:var(--lp-red-deep);clip-path:polygon(0 0,0 100%,30% 70%,55% 100%,75% 85%,50% 60%,100% 60%);animation:lp-demo-cursor 9s 1s both}
+.lp-compact .lp-float-ai{animation:lp-compact-enter .7s 3s both}
+.lp-compact .lp-float-grade{animation:lp-compact-enter .7s 6s both}
+@keyframes lp-demo-cursor{0%{transform:translate(80px,80px);opacity:0}10%{opacity:1}35%{transform:translate(-40px,-30px)}65%{transform:translate(40px,120px)}85%{transform:translate(-220px,-110px);opacity:1}100%{opacity:0}}
+@keyframes lp-compact-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes lp-compact-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(max-width:750px){.lp-compact .lp-section{padding-block:40px}.lp-compact-flow-grid,.lp-compact-trust-grid{grid-template-columns:1fr;gap:24px}.lp-compact-demo{min-height:325px}.lp-demo-cursor{display:none}.lp-compact-steps button{padding:14px}.lp-compact .lp-hero{padding-top:32px}}
+@media(prefers-reduced-motion:reduce){.lp-compact *, .lp-compact *::before{animation:none!important;transition:none!important}.lp-demo-cursor{display:none}.lp-compact-steps button[aria-selected=true]{transform:none}}

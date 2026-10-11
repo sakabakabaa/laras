@@ -207,7 +207,8 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 			collected += 1;
 			submittedCount += 1;
 		}
-		if (sub.status === 'graded' || (sub.grade != null && !Number.isNaN(sub.grade))) graded += 1;
+		// A numeric field can contain a default zero before assessment is published.
+		if (sub.status === 'graded') graded += 1;
 	}
 	const expected = classSize * formal.length;
 	const collectionRate = expected ? pct(collected, expected) : null;

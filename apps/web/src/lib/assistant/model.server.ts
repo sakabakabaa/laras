@@ -5,7 +5,7 @@
  * model API key and proxy entrance id are read per request from the
  * environment and never logged. A 60s abort guards against a hung stream.
  */
-import { collectBynaraText, type BynaraTool } from '@/lib/bynara-model.server';
+import { collectHostingerText, type HostingerTool } from '@/lib/hostinger-model.server';
 import { TOOL_REGISTRY } from './tools.server';
 import { logModelRequest, logModelResult } from './logging.server';
 import type { AssistantSession } from './types';
@@ -32,7 +32,7 @@ export const collectModel = async (
 					: message.content,
 			})),
 		];
-		const tools: BynaraTool[] = [...TOOL_REGISTRY.values()].map((tool) => ({
+		const tools: HostingerTool[] = [...TOOL_REGISTRY.values()].map((tool) => ({
 			type: 'function',
 			function: {
 				name: tool.name,
@@ -40,7 +40,7 @@ export const collectModel = async (
 				parameters: tool.inputSchema as unknown as Record<string, unknown>,
 			},
 		}));
-		const { content, toolCalls } = await collectBynaraText({ messages, tools });
+		const { content, toolCalls } = await collectHostingerText({ messages, tools });
 		const toolProtocol = toolCalls?.map((call) => `[[TOOL_CALL]]${JSON.stringify({ name: call.name, args: call.arguments })}[[/TOOL_CALL]]`).join('\n') || '';
 		const output = [content, toolProtocol].filter(Boolean).join('\n');
 		logModelResult(session, true, Date.now() - started);

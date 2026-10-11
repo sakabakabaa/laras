@@ -6,7 +6,7 @@
  * anything is saved.
  */
 import logger from '@/lib/logger.server';
-import { collectBynaraText } from '@/lib/bynara-model.server';
+import { collectHostingerText } from '@/lib/hostinger-model.server';
 
 const requireEnv = (name: string) => {
 	const value = process.env[name];
@@ -22,7 +22,7 @@ export type AssistKind = 'feedback' | 'summary' | 'transcription';
 /**
  * Model metadata captured from the provider's own response. `model` is the
  * identifier the provider reported it actually used (e.g. `gpt-6-luna`);
- * `modelVersion` is the provider's own revision reference — for Bynara the
+ * `modelVersion` is the provider's own revision reference — for Hostinger AI Router the
  * model identifier is that reference, so a real run never records `unknown`
  * here. Only a provider that reports no identifier at all yields `unknown`,
  * and never an invented value. `durationMs` is the wall-clock generation time.
@@ -31,7 +31,7 @@ export type ModelProvenance = {
 	content: string;
 	model: string;
 	modelVersion: string;
-	provider?: 'bynara';
+	provider?: 'hostinger';
 	durationMs: number | null;
 };
 
@@ -74,7 +74,7 @@ export async function collectModelWithProvenance(
 	systemPrompt?: string,
 ): Promise<ModelProvenance> {
 	const startedAt = Date.now();
-	const result = await collectBynaraText({
+	const result = await collectHostingerText({
 		prompt,
 		images: images.slice(0, MAX_IMAGES),
 		systemPrompt:
@@ -84,7 +84,7 @@ export async function collectModelWithProvenance(
 	return {
 		content: result.content.trim(),
 		model: result.model,
-		// Bynara reports the model identifier it actually used (e.g.
+		// Hostinger AI Router reports the model identifier it actually used (e.g.
 		// `gpt-6-luna`); that identifier IS the provider's revision
 		// reference. Recording 'unknown' here would discard real
 		// provenance the provider handed us.

@@ -1,3 +1,4 @@
+import { validatedRubric, rubricTotal } from './evaluation-rubric';
 /**
  * Phase 1 (evaluasi dosen) — server-side AI evaluation drafts for Tugas formal.
  *
@@ -65,8 +66,6 @@ type SubmissionRow = {
 
 type EvalRow = { id: string; status: string; generatedAt?: string | null; generationHistory?: Record<string, unknown>[]; [key: string]: unknown };
 
-const MAX_BREAKDOWN = 6;
-const MAX_MODEL_ASPECTS = 5;
 const MAX_IMAGES = 5;
 const MAX_TEXT_CHARS = 12000;
 
@@ -75,8 +74,8 @@ const MAX_TEXT_CHARS = 12000;
  * or system prompt materially changes so old drafts stay reproducible against
  * the version that generated them.
  */
-export const AI_EVALUATION_PROMPT_VERSION = 'german-gfl-feedback-v1';
-export const AI_EVALUATION_SYSTEM_PROMPT_VERSION = 'german-gfl-feedback-v1';
+export const AI_EVALUATION_PROMPT_VERSION = 'german-gfl-feedback-v2';
+export const AI_EVALUATION_SYSTEM_PROMPT_VERSION = 'german-gfl-feedback-v2';
 export const RESEARCH_SCHEMA_VERSION = 2;
 
 /** SHA-256 hex hash of a text, for reproducibility without storing the full input. */
@@ -100,16 +99,18 @@ const SYSTEM_PROMPT = [
 ].join(' ');
 
 /** Rubric criteria stored on the assignment (writing / speaking shapes). */
-function rubricCriteriaOf(assignment: Assignment): { label: string; weight: number }[] {
+function rubricCriteriaOf(assignment: Assignment): { id: string; label: string; weight: number }[] {
 	const kind = taskKindForShape(assignment.shape);
 	if (kind === 'writing') {
 		return parseWritingConfig(assignment.taskConfig).criteria.map((c) => ({
+			id: c.id,
 			label: c.label,
 			weight: c.weight,
 		}));
 	}
 	if (kind === 'speaking') {
 		return parseSpeakingConfig(assignment.taskConfig).criteria.map((c) => ({
+			id: c.id,
 			label: c.label,
 			weight: c.weight,
 		}));
@@ -191,7 +192,7 @@ const validScore = (value: unknown): number | null =>
 function validateDraft(
 	raw: string,
 	studentText: string,
-	criteria: { label: string; weight: number }[],
+	criteria: { id?: string; label: string; weight: number }[],
 ): ValidatedDraft | null {
 	const cleaned = raw.replace(/```json|```/g, '').trim();
 	const start = cleaned.indexOf('{');
@@ -215,52 +216,9 @@ function validateDraft(
 	const findings = parseStructuredFindings(row.findings, studentText, criteria);
 
 	let recommendedScore = validScore(row.recommendedScore);
-	const rubricBreakdown: EvalRubricRow[] = [];
-	if (Array.isArray(row.rubricBreakdown)) {
-		for (const item of row.rubricBreakdown) {
-			if (!item || typeof item !== 'object') continue;
-			const b = item as Record<string, unknown>;
-			const score = validScore(b.score);
-			if (score == null) continue;
-			const label = typeof b.criterion === 'string' ? b.criterion.trim() : '';
-			if (!label) continue;
-			if (criteria.length > 0) {
-				// Only the lecturer's own stored criteria are kept — invented
-				// criteria are dropped, and the stored label wins.
-				const match = criteria.find(
-					(stored) =>
-						stored.label.toLowerCase().includes(label.toLowerCase()) ||
-						label.toLowerCase().includes(stored.label.toLowerCase()),
-				);
-				if (!match) continue;
-				if (rubricBreakdown.length >= MAX_BREAKDOWN) continue;
-				rubricBreakdown.push({
-					criterion: match.label,
-					score,
-					note: typeof b.note === 'string' ? b.note.trim().slice(0, 400) : '',
-				});
-			} else if (rubricBreakdown.length < MAX_MODEL_ASPECTS) {
-				rubricBreakdown.push({
-					criterion: label.slice(0, 200),
-					score,
-					note: typeof b.note === 'string' ? b.note.trim().slice(0, 400) : '',
-				});
-			}
-		}
-	}
-	// No model score but a validated breakdown: derive the recommendation from
-	// the breakdown (rubric weights when stored, equal weights otherwise).
-	if (recommendedScore == null && rubricBreakdown.length > 0) {
-		let earned = 0;
-		let total = 0;
-		for (const entry of rubricBreakdown) {
-			const stored = criteria.find((c) => c.label === entry.criterion);
-			const weight = stored && stored.weight > 0 ? stored.weight : 1;
-			earned += entry.score * weight;
-			total += weight;
-		}
-		if (total > 0) recommendedScore = Math.round(earned / total);
-	}
+	const rubricBreakdown: EvalRubricRow[] = criteria.length ? validatedRubric(row.rubricBreakdown, criteria) : [];
+	// Stored rubric governs the total; missing criteria cannot become zero or a partial total.
+	recommendedScore = rubricTotal(rubricBreakdown, criteria);
 
 	const summary = typeof row.summary === 'string' ? row.summary.trim().slice(0, 1500) : '';
 	if (findings.length === 0 && !summary && recommendedScore == null) {
@@ -373,7 +331,7 @@ async function runEvaluation(input: {
 			assignment.groupInfo ? `Ketentuan kelompok: ${assignment.groupInfo}` : '',
 			levelGuide,
 			criteria.length > 0
-				? `Rubrik dosen (nilai per kriteria 0–100):\n${criteria.map((c) => `- ${c.label}${c.weight ? ` (bobot relatif ${c.weight})` : ''}`).join('\n')}`
+				? `Rubrik dosen (nilai per kriteria 0–100):\n${criteria.map((c) => `- [criterionId=${c.id}] ${c.label}${c.weight ? ` (bobot relatif ${c.weight})` : ''}`).join('\n')}`
 				: 'Rubrik dosen: (belum ada kriteria tersimpan — jika memberi rincian, gunakan aspek yang jelas berbasis ketentuan tugas, maksimal 5 aspek)',
 			'',
 			'MATERI KONTEKS YANG DISETUJUI DOSEN:',
@@ -414,11 +372,12 @@ async function runEvaluation(input: {
 			'- "note" ringkas, spesifik, dan langsung menyebut masalah (mis. subjek-kata kerja tidak cocok, salah tanda baca, kata tidak tepat) — jangan gunakan komentar samar seperti "Bisa diperbaiki"; "evidence" menyebut rujukan bukti bila ada.',
 			'- "criterion" berisi label kriteria rubrik yang paling terdampak oleh temuan ini (salin persis salah satu label rubrik di atas), atau string kosong bila temuan bersifat umum untuk seluruh kiriman.',
 			'- "confidence" 0.0–1.0: keyakinan AI bahwa ini benar-benar kesalahan pembelajar (bukan variasi gaya).',
-			'- "recommendedScore" 0–100 berbasis rubrik/ketentuan; "rubricBreakdown" per kriteria rubrik di atas.',
+			'- Berikan tepat satu rubricBreakdown untuk SETIAP criterionId, salin ID dan label persis. Note wajib menyebut bukti pencapaian dalam kiriman. "recommendedScore" adalah rata-rata tertimbang skor kriteria, bukan perkiraan terpisah; "rubricBreakdown" per kriteria rubrik di atas.',
 			'- Jika bukti tidak cukup untuk temuan atau skor yang bertanggung jawab, kembalikan temuan kosong dan "recommendedScore" null.',
 			'- Jangan menandai Bahasa Jerman yang dapat diterima sebagai kesalahan hanya karena rumusan lain lebih disukai. Jika ragu, hilangkan temuan.',
+			'Summary: jelaskan kekuatan yang terbukti, 1–3 prioritas perbaikan, lalu satu latihan konkret berikutnya. Jangan mengklaim semua teks sudah benar hanya karena tidak ada temuan.',
 			'Balas HANYA satu objek JSON dengan bentuk:',
-			'{"findings":[{"severity":"minor"|"major","quote":"...","category":"Morphology","subcategory":"article","errorDescription":"...","correction":"...","explanation":"...","note":"...","evidence":"...","criterion":"...","confidence":0.0-1.0}],"recommendedScore":0-100,"rubricBreakdown":[{"criterion":"...","score":0-100,"note":"..."}],"summary":"..."}',
+			'{"findings":[{"severity":"minor"|"major","quote":"...","category":"Morphology","subcategory":"article","errorDescription":"...","correction":"...","explanation":"...","note":"...","evidence":"...","criterion":"...","confidence":0.0-1.0}],"recommendedScore":0-100,"rubricBreakdown":[{"criterionId":"...","criterion":"...","score":0-100,"note":"..."}],"summary":"..."}',
 		]
 			.filter(Boolean)
 			.join('\n');
@@ -431,7 +390,7 @@ async function runEvaluation(input: {
 			rubric: criteria, userPrompt: prompt, systemPrompt: SYSTEM_PROMPT, images,
 			link: submission.link || '', promptVersion: AI_EVALUATION_PROMPT_VERSION,
 			systemPromptVersion: AI_EVALUATION_SYSTEM_PROMPT_VERSION,
-			providerConfig: { provider: 'bynara', model: process.env.BYNARA_MODEL || 'gpt-6-luna', modelVersion: 'unknown' },
+			providerConfig: { provider: 'hostinger', model: process.env.HROUTER_MODEL || 'gpt-6-luna', modelVersion: 'unknown' },
 			buildId: process.env.APP_BUILD_ID || process.env.BUILD_ID || 'unknown',
 		});
 		// Persist before provider invocation; failure to persist must prevent an unaudited call.
@@ -567,6 +526,7 @@ export async function queueEvaluationDraft(input: {
 	assignment: Assignment;
 	submissionId?: string;
 	publicSubmissionId?: string;
+    force?: boolean;
 }): Promise<{ queued: boolean; status: string; reason?: string }> {
 	const key = input.submissionId ? `enrolled:${input.submissionId}` : `public:${input.publicSubmissionId || ''}`;
 	if (queueLocks.has(key)) return { queued: false, status: 'pending', reason: 'Draf evaluasi sedang disiapkan.' };
@@ -579,6 +539,7 @@ async function prepareEvaluationDraft(input: {
 	assignment: Assignment;
 	submissionId?: string;
 	publicSubmissionId?: string;
+    force?: boolean;
 }): Promise<{ queued: boolean; status: string; reason?: string }> {
 	try {
 		// Latihan formatif has no official evaluation — never analyzed.
@@ -606,7 +567,7 @@ async function prepareEvaluationDraft(input: {
 			return { queued: false, status: 'skipped', reason: 'Kiriman tidak cocok dengan tugas.' };
 		}
 		// Drafts are prepared for final submissions only (submitted / late).
-		if (submission.status !== 'submitted' && submission.status !== 'late') {
+		if (submission.status !== 'submitted' && submission.status !== 'late' && !(input.force && submission.status === 'graded')) {
 			return {
 				queued: false,
 				status: 'skipped',
@@ -630,7 +591,7 @@ async function prepareEvaluationDraft(input: {
 			const generatedAt = existing.generatedAt ? Date.parse(existing.generatedAt) : NaN;
 			const submittedAt = Date.parse(submission.updated || submission.created);
 			if (
-				existing.status === 'ready' &&
+				!input.force && existing.status === 'ready' &&
 				Number.isFinite(generatedAt) &&
 				Number.isFinite(submittedAt) &&
 				generatedAt >= submittedAt
@@ -649,8 +610,7 @@ async function prepareEvaluationDraft(input: {
 			generationHistory, researchSnapshot: null,
 			result: '', reason: '', rawOutput: '', findings: [], recommendedScore: null,
 			rubricBreakdown: [], summary: '', bundleId: '', citations: [], contextNote: '', generatedAt: '',
-			reviewFindings: [], reviewedAt: '', rubricScores: null, finalScore: null,
-			scoreAdjusted: false, publishedAt: '',
+			...(input.force && existing ? {} : { reviewFindings: [], reviewCriterionScores: {}, reviewedAt: '', rubricScores: null, finalScore: null, scoreAdjusted: false, publishedAt: '' }),
 			model: 'unknown', modelVersion: 'unknown', promptVersion: '', systemPromptVersion: '',
 			inputTextHash: '', outputHash: '', generationDurationMs: null, researchSchemaVersion: null,
 			usedStudentText: false, usedImages: false, usedCourseMaterial: false, usedRubric: false, usedCefr: false,

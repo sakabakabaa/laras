@@ -389,7 +389,8 @@ const prepareWriteAction = async (
 		const mode: AssignmentMode = args.mode === 'collaborative' || /kelompok|kolaboratif/i.test(hint) ? 'collaborative' : 'individual';
 		args.shape = shape;
 		args.mode = mode;
-		args.activityType = args.activityType === 'formative' ? 'formative' : 'formal';
+		if (args.activityType === 'formative') return { kind: 'message', text: 'Tugas formatif sudah dihentikan. Gunakan Latihan personal dari materi kelas.' };
+		args.activityType = 'formal';
 		let prepared: PreparedAssignment | { missing: 'skill' | 'week' | 'mapping' };
 		try {
 			prepared = await prepareAssignmentDraft(pb, userId, resolved.course, args, hint);

@@ -2752,7 +2752,10 @@
 :root.dark .lp-card h2{color:#E8EDF4}
 :root.dark .lp-card-sub{color:#9AA6B6}
 :root.dark .lp .login-role-toggle{background:#222831}
-:root.dark .lp .login-role-toggle button.active{background:#F07168}
+:root.dark .lp .login-role-indicator{background:#F07168;box-shadow:0 8px 16px rgba(240,113,104,.25)}
+:root.dark .lp .login-role-toggle button.active{background:transparent}
+:root.dark .lp .login-role-toggle button:not(.active){background:transparent;color:#9AA6B6}
+:root.dark .lp .login-role-correction{color:#F07168}
 :root.dark .lp .login-field{color:#C5CDD8}
 :root.dark .lp .login-field input,:root.dark .lp .login-input-wrap input{border-color:#2A3138;background:#12161C}
 :root.dark .lp .login-submit{background:#F07168}
@@ -2797,3 +2800,6 @@
 :root.dark .sp-consent{color:#6EE7B7;background:rgba(16,185,129,.12)}
 :root.dark .sp-preferences-panel textarea,:root.dark .sp-preferences-panel select{background:#12161C;border-color:#2A3138;color:#E8EDF4}
 :root.dark .sp-error{color:#FCA5A5}
+
+:root.dark .lp-story h1 .login-role-copy { color: #E8EDF4; }
+:root.dark .login-feature-preview { --preview-surface: #1A1F26; --preview-soft: #2b2023; --preview-border: #35303a; --preview-ink: #E8EDF4; --preview-muted: #9AA6B6; --preview-accent: #F07168; }

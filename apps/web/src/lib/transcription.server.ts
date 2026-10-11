@@ -1,9 +1,9 @@
 /**
  * Speaking-task Phase 2 — server-side transcription of a student's recorded
- * speaking submission through the AssemblyAI transcription service.
+ * speaking submission through Hostinger AI Router's Whisper endpoint.
  *
- * The transcript is produced entirely on the server: the `ASSEMBLY_API_KEY`
- * secret (also accepted as `ASSEMBLYAI_API_KEY`) never reaches the browser, and the transcript fields on
+ * The transcript is produced entirely on the server: the `HROUTER_API_KEY`
+ * secret never reaches the browser, and the transcript fields on
  * `assignment_submissions` are locked against student writes (see migration
  * `1790845100_speaking_transcript_phase2.js`). Students and lecturers only
  * read the resulting `transcriptStatus` / `transcript` / `transcriptError`.
@@ -19,7 +19,6 @@
  */
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
-import { CONFIDENCE_LOW_THRESHOLD } from '@/lib/evaluation-scoring';
 
 const AUDIO_RE = /\.(webm|mp4|m4a|mp3|wav|ogg|aac|flac)$/i;
 
@@ -47,45 +46,6 @@ type SubmissionRow = {
 	transcriptConfidence?: unknown;
 	updated: string;
 };
-
-/** Per-word confidence summary stored alongside the transcript (advisory only). */
-type ConfidenceSummary = {
-	mean: number;
-	min: number;
-	lowWords: { word: string; confidence: number; start?: number }[];
-};
-
-/**
- * Reduces AssemblyAI's per-word `words` array into a compact confidence
- * summary: mean, min, and the list of words below the low-confidence
- * threshold. Advisory only — never used to auto-penalize a grade.
- */
-function summarizeConfidence(words: unknown): ConfidenceSummary | null {
-	if (!Array.isArray(words) || words.length === 0) return null;
-	const valid = words
-		.filter(
-			(w): w is { text?: string; confidence: number; start?: number } =>
-				!!w && typeof w === 'object' && typeof (w as { confidence?: unknown }).confidence === 'number',
-		)
-		.map((w) => ({
-			text: typeof w.text === 'string' ? w.text : '',
-			confidence: w.confidence,
-			start: typeof w.start === 'number' ? w.start : undefined,
-		}));
-	if (valid.length === 0) return null;
-	const confidences = valid.map((w) => w.confidence);
-	const mean = confidences.reduce((a, b) => a + b, 0) / confidences.length;
-	const min = Math.min(...confidences);
-	const lowWords = valid
-		.filter((w) => w.confidence < CONFIDENCE_LOW_THRESHOLD)
-		.slice(0, 50)
-		.map((w) => ({
-			word: w.text,
-			confidence: Math.round(w.confidence * 100) / 100,
-			...(w.start != null ? { start: w.start } : {}),
-		}));
-	return { mean: Math.round(mean * 100) / 100, min: Math.round(min * 100) / 100, lowWords };
-}
 
 const contentTypeFor = (filename: string, header: string | null) => {
 	const headerType = (header || '').split(';')[0].trim().toLowerCase();
@@ -144,85 +104,45 @@ async function fetchAudioBytes(
 }
 
 /**
- * Transcribes audio through AssemblyAI. The raw audio bytes are uploaded
- * first (AssemblyAI requires a reachable URL), then a transcript is
- * requested and polled until completion. AssemblyAI accepts webm directly —
- * no audio conversion is performed. The `ASSEMBLYAI_API_KEY` secret stays
- * server-side (never `VITE_`).
+ * Transcribes the audio directly through Hostinger AI Router's OpenAI-compatible
+ * Whisper endpoint. No public upload URL or audio conversion is needed. Whisper
+ * does not return per-word confidence values, so confidence stays null rather
+ * than being inferred.
  */
-async function callAssemblyAI(
+async function callHostingerWhisper(
 	bytes: ArrayBuffer,
 	filename: string,
 	contentType: string,
-): Promise<{ text: string; confidence: ConfidenceSummary | null }> {
-	const apiKey = process.env.ASSEMBLY_API_KEY || process.env.ASSEMBLYAI_API_KEY;
-	if (!apiKey) throw new Error('ASSEMBLY_API_KEY is not set in apps/web/.env');
-
-	// 1. Upload the raw audio bytes; AssemblyAI returns a reachable upload_url.
-	const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
-		method: 'POST',
-		headers: { authorization: apiKey, 'content-type': contentType || 'application/octet-stream' },
-		body: bytes,
-	});
-	if (!uploadRes.ok) {
-		const detail = await uploadRes.text().catch(() => '');
-		throw new Error(
-			`assemblyai upload failed for ${filename}: ${uploadRes.status} ${uploadRes.statusText} ${detail.slice(0, 200)}`,
-		);
-	}
-	const uploadBody = (await uploadRes.json()) as { upload_url?: string };
-	const uploadUrl = uploadBody.upload_url;
-	if (!uploadUrl) throw new Error('AssemblyAI upload did not return an upload_url.');
-
-	// 2. Request a transcript (German language code).
-	const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
-		method: 'POST',
-		headers: {
-			authorization: apiKey,
-			'content-type': 'application/json',
-		},
-		body: JSON.stringify({ audio_url: uploadUrl, language_code: 'de' }),
-	});
-	if (!transcriptRes.ok) {
-		const detail = await transcriptRes.text().catch(() => '');
-		throw new Error(
-			`assemblyai transcript request failed: ${transcriptRes.status} ${transcriptRes.statusText} ${detail.slice(0, 200)}`,
-		);
-	}
-	const transcriptBody = (await transcriptRes.json()) as { id?: string };
-	const transcriptId = transcriptBody.id;
-	if (!transcriptId) throw new Error('AssemblyAI did not return a transcript id.');
-
-	// 3. Poll every 3s until completed or error, capped at 180s.
-	const deadline = Date.now() + 180_000;
-	while (Date.now() < deadline) {
-		await new Promise((resolve) => setTimeout(resolve, 3000));
-		const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
-			headers: { authorization: apiKey },
+): Promise<{ text: string; confidence: null }> {
+	const apiKey = process.env.HROUTER_API_KEY;
+	if (!apiKey) throw new Error('HROUTER_API_KEY is not set');
+	const baseUrl = (process.env.HROUTER_BASE_URL || 'https://router.hostinger.com/v1').replace(/\/+$/, '');
+	const form = new FormData();
+	form.set('model', process.env.HROUTER_STT_MODEL || 'whisper-1');
+	form.set('language', 'de');
+	form.set('response_format', 'json');
+	form.set('file', new Blob([new Uint8Array(bytes)], { type: contentType || 'application/octet-stream' }), filename);
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 90_000);
+	try {
+		const response = await fetch(`${baseUrl}/audio/transcriptions`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${apiKey}` },
+			body: form,
+			signal: controller.signal,
 		});
-		if (!pollRes.ok) {
-			const detail = await pollRes.text().catch(() => '');
-			throw new Error(
-				`assemblyai poll failed: ${pollRes.status} ${pollRes.statusText} ${detail.slice(0, 200)}`,
-			);
+		if (!response.ok) {
+			const detail = await response.text().catch(() => '');
+			throw new Error(`Hostinger Whisper request failed for ${filename} (HTTP ${response.status}) ${detail.slice(0, 200)}`);
 		}
-		const pollBody = (await pollRes.json()) as {
-			status?: string;
-			text?: string;
-			error?: string;
-			words?: unknown;
-		};
-		if (pollBody.status === 'completed') {
-			return {
-				text: (pollBody.text || '').trim(),
-				confidence: summarizeConfidence(pollBody.words),
-			};
-		}
-		if (pollBody.status === 'error') {
-			throw new Error(`AssemblyAI transcription failed: ${pollBody.error || 'unknown error'}`);
-		}
+		const result = await response.json() as { text?: unknown };
+		return { text: typeof result.text === 'string' ? result.text.trim() : '', confidence: null };
+	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw new Error('Hostinger Whisper transcription timed out after 90s.');
+		throw error;
+	} finally {
+		clearTimeout(timeout);
 	}
-	throw new Error('AssemblyAI transcription timed out after 180s.');
 }
 
 /**
@@ -271,7 +191,7 @@ export async function runTranscription(submissionId: string): Promise<void> {
 		});
 
 		const { bytes, contentType } = await fetchAudioBytes(submissionId, filename);
-		const { text, confidence } = await callAssemblyAI(bytes, filename, contentType);
+		const { text, confidence } = await callHostingerWhisper(bytes, filename, contentType);
 
 		if (!text) {
 			await pocketbaseAdmin.updateRecord('assignment_submissions', submissionId, {

@@ -19,7 +19,7 @@ type Profile = {
 };
 
 type Body = {
-	mode?: 'load' | 'save' | 'lecturer';
+	mode?: 'load' | 'save' | 'lecturer' | 'conversations';
 	courseId?: string;
 	rosterId?: string;
 	goals?: string;
@@ -102,6 +102,10 @@ export const action = withApi(async ({ request }) => {
 	const { user } = await authUser(request);
 	if (user.role !== 'student') return apiError(403, 'Preferensi ini hanya tersedia untuk mahasiswa.');
 	const current = await first<Profile>('student_learning_profiles', `student="${esc(user.id)}"`);
+	if (body.mode === 'conversations') {
+		const rows = await db.listRecords<{id:string;courseTitle:string;scenario:string;language:string;level:string;transcript:{role:string;text:string;feedback?:string;hint?:string}[];reflection?:{strengths:string[];improvements:string[];nextStep:string};completedAt:string;created:string}>('student_conversation_reflections',{filter:`owner=\"${esc(user.id)}\"`,sort:'-created',perPage:30});
+		return json({conversations:rows.items});
+	}
 	if (body.mode === 'load') {
 		return json({ profile: current ? {
 			goals: current.goals || '', priorExperience: current.priorExperience || '', confidence: current.confidence || '',

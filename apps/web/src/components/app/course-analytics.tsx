@@ -1,5 +1,5 @@
 import { PracticeMascot } from './practice-mascot';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
 	AlertTriangle,
@@ -12,7 +12,7 @@ import {
 	Sparkles,
 	Users,
 } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import pb from '@/lib/pocketbase-client';
 import type { Assignment, AssignmentSubmission } from '@/lib/assignments';
 import type { ClassSession, Course, CourseRosterEntry, StructuredItem } from '@/lib/learning';
@@ -49,6 +49,7 @@ export function CourseAnalytics({
 	routeId: string;
 	isStudent: boolean;
 }) {
+	const chartId = useId();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [week, setWeek] = useState(0);
@@ -371,15 +372,18 @@ export function CourseAnalytics({
 							) : (
 								<div className="an-chart">
 									<ResponsiveContainer width="100%" height={220}>
-										<BarChart data={model.weeks} barGap={0} barCategoryGap="10%">
+										<AreaChart data={model.weeks} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+                                            <defs>
+                                                {['#12B76A', '#3B82F6', '#F04438'].map((color, index) => <linearGradient key={color} id={`${chartId}-area-${index}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity={0.22} /><stop offset="100%" stopColor={color} stopOpacity={0.02} /></linearGradient>)}
+                                            </defs>
 											<CartesianGrid vertical={false} stroke="#EEF1F4" />
 											<XAxis dataKey="label" tick={{ fontSize: 11, fill: '#98A2B3' }} axisLine={false} tickLine={false} />
 											<YAxis tick={{ fontSize: 11, fill: '#98A2B3' }} axisLine={false} tickLine={false} domain={[0, 100]} unit="%" width={36} />
 											<Tooltip formatter={(value, name) => [`${value}%`, String(name)]} />
-											<Bar dataKey="materi" name="Materi" fill="#12B76A" radius={[3, 3, 0, 0]} barSize={6} />
-											<Bar dataKey="tugas" name="Tugas" fill="#3B82F6" radius={[3, 3, 0, 0]} barSize={6} />
-											<Bar dataKey="penilaian" name="Penilaian" fill="#F04438" radius={[3, 3, 0, 0]} barSize={6} />
-										</BarChart>
+											<Area type="monotone" dataKey="materi" name="Materi" stroke="#12B76A" strokeWidth={2.5} fill={`url(#${chartId}-area-0)`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
+											<Area type="monotone" dataKey="tugas" name="Tugas" stroke="#3B82F6" strokeWidth={2.5} fill={`url(#${chartId}-area-1)`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
+											<Area type="monotone" dataKey="penilaian" name="Penilaian" stroke="#F04438" strokeWidth={2.5} fill={`url(#${chartId}-area-2)`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
+										</AreaChart>
 									</ResponsiveContainer>
 								</div>
 							)}

@@ -34,10 +34,9 @@ export function SubmissionPdfPreview({ url, name }: { url: string; name: string 
     }, [url]);
     return <div className="eval-pdf-thumbnail">
         {status === 'loading' && <p role="status">Memuat pratinjau…</p>}
-        {status === 'failed' && <p role="alert">Pratinjau tidak tersedia. Gunakan Buka penuh untuk melihat file asli.</p>}
+        {status === 'failed' && <p role="alert">Pratinjau tidak tersedia. Buka file asli.</p>}
         <a href={url} target="_blank" rel="noreferrer" aria-label={'Buka file asli: ' + name}>
             <canvas ref={canvasRef} role="img" aria-label={'Halaman pertama: ' + name} hidden={status !== 'ready'} />
         </a>
-        {status === 'ready' && <small>Halaman pertama · klik untuk membuka seluruh dokumen</small>}
     </div>;
 }

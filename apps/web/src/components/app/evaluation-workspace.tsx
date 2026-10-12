@@ -553,7 +553,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 					<div className="asg-tags">
 						{course?.code && <span className="asg-tag">{course.code}</span>}
 						{session?.week && <span className="asg-tag">Minggu {session.week}</span>}
-						{sub && <span className="asg-tag">Sub-CPMK {sub.code || ''}</span>}
+						{sub && <span className="asg-tag">{sub.code?.startsWith('Sub-CPMK') ? sub.code : `Sub-CPMK ${sub.code || ''}`} </span>}
 						{assignment.shape && <span className="asg-tag">{SHAPE_LABEL[assignment.shape]}</span>}
 						<span className="asg-tag">{MODE_LABEL[assignment.mode]}</span>
 						{activityTypeOf(assignment) === 'formative' && (
@@ -570,7 +570,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 						{activityTypeOf(assignment) === 'formal' && assignment.allowRevision && (
 							<span className="asg-tag">Revisi diizinkan</span>
 						)}
-						<span className="asg-tag">Batas {deadlineLabel(assignment.deadline)}</span>
+						{assignment.deadline && <span className="asg-tag">{deadlineLabel(assignment.deadline)}</span>}
 						<span className={`asg-tag status-${assignment.status}`}>
 							{assignment.status === 'published' ? 'Aktif' : assignment.status}
 						</span>
@@ -909,7 +909,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 									<h2>{active.name}</h2>
 									<p>
 										{active.detail || (active.channel === 'public' ? 'Peserta publik' : 'Mahasiswa')}
-										{' · '}{active.channel === 'public' ? 'Peserta publik' : 'Terdaftar'}
+
 										{' · '}{SUBMISSION_STATUS_LABEL[active.status as SubmissionStatus] || active.status}
 										{' · '}{stamp(active.created)}
 									</p>
@@ -1071,7 +1071,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 							<FormativeReviewPanel />
 						) : (
 							<>
-{assignment.revisionWorkflow?.source === "historical" && <p className="revision-note">Analisis AI retrospektif · bukan nilai atau feedback kertas pada saat pengumpulan.</p>}
+{assignment.revisionWorkflow?.source === "historical" && <span className="asg-tag revision-ai-tag" title="Analisis dibuat setelah impor. Bukan nilai atau feedback kertas saat tugas dikumpulkan.">AI retrospektif</span>}
 <AiEvaluationPanel />
 </>
 						)
@@ -1256,7 +1256,7 @@ function SubmissionFiles({ files }: { files: { name: string; url: string }[] }) 
                 if (pdf || image) return <section key={f.url} className="eval-file-preview">
                     <header><strong>File asli</strong><a href={f.url} target="_blank" rel="noreferrer" title={f.name}><ExternalLink size={12} /> Buka penuh</a></header>
                     {image ? <a href={f.url} target="_blank" rel="noreferrer"><img src={f.url} alt={'File asli: ' + f.name} /></a> : <SubmissionPdfPreview url={f.url} name={f.name} />}
-                    <span className="eval-file-name">{f.name}</span>
+                    <span className="sr-only">{f.name}</span>
                 </section>;
 				const previewable = isPreviewableSubmissionFile(f.name);
 				return (

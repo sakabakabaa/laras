@@ -94,3 +94,18 @@
 .an-open:hover{background:#7F1D16}
 @media(max-width:1100px){.an-stats{grid-template-columns:1fr 1fr}.an-grid-2,.an-grid-3{grid-template-columns:1fr}}
 @media(max-width:720px){.an-head,.an-index-head{flex-direction:column;align-items:stretch}.an-stats{grid-template-columns:1fr}.an-people li,.an-dist li{grid-template-columns:1fr}.an-course-list li{grid-template-columns:48px 1fr}.an-open{grid-column:1 / -1;justify-content:center}}
+
+/* Zero-state nudge (audit #3): point the empty analytics page at its next step. */
+.an-nudge{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  background:linear-gradient(165deg,#fff 0%,#FFF5F4 100%);border:1px solid #FBE9E7;border-radius:16px;
+  padding:18px 20px;margin-bottom:20px}
+.an-nudge-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+.an-nudge-copy strong{font:700 14.5px var(--body,'Plus Jakarta Sans');color:#172033;letter-spacing:-.01em}
+.an-nudge-copy span{font:500 12.5px/1.5 var(--body,'Plus Jakarta Sans');color:#667085}
+.an-nudge-cta{display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 18px;flex:none;
+  border-radius:999px;background:var(--cta,#B3261E);color:#fff;font:700 13px var(--body,'Plus Jakarta Sans');
+  box-shadow:0 8px 18px rgba(127,29,22,.22);transition:background .2s,transform .2s}
+.an-nudge-cta:hover{background:var(--cta-hover,#7F1D16);transform:translateY(-1px)}
+.an-nudge-cta:active{transform:scale(.98);transition-duration:.08s}
+.an-nudge-cta svg{flex:none}
+@media(max-width:560px){.an-nudge-cta{width:100%;justify-content:center}}

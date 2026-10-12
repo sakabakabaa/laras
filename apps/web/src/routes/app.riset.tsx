@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Route } from './+types/app.riset';
 import { redirect } from 'react-router';
 import { seo } from '@/lib/seo';
@@ -33,59 +32,30 @@ export function HydrateFallback() {
 	return <div className="route-loading">Memuat riset…</div>;
 }
 
-type Tab = 'analitik' | 'personalisasi' | 'uptake' | 'ekspor';
+function scrollToSection(id: string) {
+	document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 export default function RisetPage() {
-	const [tab, setTab] = useState<Tab>('analitik');
 	return (
 		<AppShell title="Riset" eyebrow="RISET" variant="saas" hideHeading>
-			<div className="ra-tabs" role="tablist" aria-label="Bagian riset">
-				<button
-					type="button"
-					role="tab"
-					aria-selected={tab === 'analitik'}
-					className={tab === 'analitik' ? 'active' : ''}
-					onClick={() => setTab('analitik')}
-				>
-					Analitik
-				</button>
-				<button
-					type="button"
-					role="tab"
-					aria-selected={tab === 'personalisasi'}
-					className={tab === 'personalisasi' ? 'active' : ''}
-					onClick={() => setTab('personalisasi')}
-				>
-					Personalisasi
-				</button>
-				<button
-					type="button"
-					role="tab"
-					aria-selected={tab === 'uptake'}
-					className={tab === 'uptake' ? 'active' : ''}
-					onClick={() => setTab('uptake')}
-				>
-					Uptake & revisi
-				</button>
-				<button
-					type="button"
-					role="tab"
-					aria-selected={tab === 'ekspor'}
-					className={tab === 'ekspor' ? 'active' : ''}
-					onClick={() => setTab('ekspor')}
-				>
-					Ekspor data
-				</button>
+			<div className="riset-page">
+				<section id="analitik" className="riset-section">
+					<ResearchAnalyticsView onExport={() => scrollToSection('ekspor')} />
+				</section>
+
+				<section id="personalisasi" className="riset-section">
+					<PersonalizationAnalytics />
+				</section>
+
+				<section id="uptake" className="riset-section">
+					<FeedbackUptakeReview />
+				</section>
+
+				<section id="ekspor" className="riset-section">
+					<ResearchExport />
+				</section>
 			</div>
-			{tab === 'analitik' ? (
-				<ResearchAnalyticsView onExport={() => setTab('ekspor')} />
-			) : tab === 'personalisasi' ? (
-				<PersonalizationAnalytics />
-			) : tab === 'uptake' ? (
-				<FeedbackUptakeReview />
-			) : (
-				<ResearchExport />
-			)}
 		</AppShell>
 	);
 }

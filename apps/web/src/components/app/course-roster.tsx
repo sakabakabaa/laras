@@ -28,7 +28,7 @@ import { AppModal } from '@/components/app/app-modal';
 import pb from '@/lib/pocketbase-client';
 import { invalidate } from '@/lib/local-cache';
 import type { CourseRosterEntry, CourseSection } from '@/lib/learning';
-import { errorMessage } from '@/lib/learning';
+import { errorMessage, angkatanOf, deriveAngkatan } from '@/lib/learning';
 import { DEFAULT_STUDENT_LANGUAGE, LANGUAGES, type Language, useT } from '@/lib/i18n';
 import {
 	ROSTER_NIM_MAX as NIM_MAX,
@@ -437,6 +437,7 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 							<tr>
 								<th className="roster-th-nim">{t('roster.nim')}</th>
 								<th className="roster-th-name">{t('roster.name')}</th>
+								<th className="roster-th-angkatan">Angkatan</th>
 								{hasSections && <th className="roster-th-section">{t('roster.class')}</th>}
 								<th className="roster-th-status">{t('roster.accountStatus')}</th>
 								{canEdit && <th className="roster-th-language">{t('roster.language')}</th>}
@@ -452,6 +453,7 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 									<td className="roster-td-name" data-label={t('roster.name')}>
 										{canEdit ? <Link className="roster-profile-link" to={`/app/courses/${courseId}/mahasiswa/${entry.id}`}>{entry.name}<span>Profil</span></Link> : entry.name}
 									</td>
+									<td className="roster-td-angkatan" data-label="Angkatan">{angkatanOf(entry) || '—'}</td>
 									{hasSections && <td className="roster-td-section" data-label={t('roster.class')}>{sectionName(entry.section) || '—'}</td>}
 									<td className="roster-td-status" data-label={t('roster.status')}>
 										<RosterStatusBadges status={status} loading={statusLoading} />
@@ -825,6 +827,7 @@ function RosterEntryForm({
 	const t = useT();
 	const [nim, setNim] = useState(entry?.nim ?? '');
 	const [name, setName] = useState(entry?.name ?? '');
+	const [angkatan, setAngkatan] = useState(entry?.angkatan ?? '');
 	const [section, setSection] = useState(entry?.section || defaultSection || '');
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState('');
@@ -851,6 +854,7 @@ function RosterEntryForm({
 				await pb.collection('course_roster').update(entry.id, {
 					nim: trimmedNim,
 					name: trimmedName,
+					angkatan: angkatan.trim() || deriveAngkatan(trimmedNim),
 					section: section || null,
 				});
 			} else {
@@ -859,6 +863,7 @@ function RosterEntryForm({
 					owner: pb.authStore.record?.id,
 					nim: trimmedNim,
 					name: trimmedName,
+					angkatan: angkatan.trim() || deriveAngkatan(trimmedNim),
 					section: section || null,
 				});
 			}
@@ -919,6 +924,20 @@ function RosterEntryForm({
 					{nameTooLong && (
 						<p className="form-error">{t('roster.nameTooLongError', { max: String(NAME_MAX) })}</p>
 					)}
+					<label>
+						<span>Angkatan</span>
+						<input
+							type="text"
+							inputMode="numeric"
+							maxLength={10}
+							value={angkatan}
+							placeholder={deriveAngkatan(trimmedNim) || 'mis. 2021'}
+							onChange={(e) => setAngkatan(e.target.value)}
+						/>
+						<small className="field-hint">
+							Kosongkan untuk mengikuti NIM{deriveAngkatan(trimmedNim) ? ` (${deriveAngkatan(trimmedNim)})` : ''}. Angkatan tetap milik mahasiswa, berguna untuk mahasiswa mengulang atau lintas angkatan.
+						</small>
+					</label>
 					{sections.length > 0 && (
 						<label>
 							<span>{t('roster.class')}</span>

@@ -121,6 +121,10 @@ export type CourseSection = {
 	owner: string;
 	course: string;
 	name: string;
+	/** Academic year this class instance runs (e.g. "2024/2025"). Enables one course to span years. */
+	academicYear?: string;
+	/** Semester/term this class instance runs (e.g. "Ganjil"). */
+	semester?: string;
 	created: string;
 	updated: string;
 };
@@ -143,9 +147,41 @@ export type CourseRosterEntry = {
 	section?: string;
 	nim: string;
 	name: string;
+	/** Student intake cohort year (e.g. "2021"). A property of the student, not the class. */
+	angkatan?: string;
 	created: string;
 	updated: string;
 };
+
+/**
+ * Derives a student's intake cohort (angkatan) from their NIM: a leading
+ * 4-digit year (2000–2099) wins, otherwise the first two digits map to 20xx.
+ * Angkatan is a property of the student (never the course or term), so a
+ * retaker or off-cohort student keeps their original intake year regardless of
+ * which academic year the class runs in. Returns '' when it cannot be derived.
+ */
+export function deriveAngkatan(nim: string | undefined | null): string {
+	const digits = String(nim ?? '').replace(/\D/g, '');
+	if (!digits) return '';
+	const y4 = Number.parseInt(digits.slice(0, 4), 10);
+	if (y4 >= 2000 && y4 <= 2099) return String(y4);
+	const y2 = Number.parseInt(digits.slice(0, 2), 10);
+	if (!Number.isNaN(y2) && y2 >= 0 && y2 <= 99) return String(2000 + y2);
+	return '';
+}
+
+/** The effective angkatan for a roster entry: explicit value, else derived from NIM. */
+export function angkatanOf(entry: { angkatan?: string; nim: string }): string {
+	return entry.angkatan?.trim() || deriveAngkatan(entry.nim);
+}
+
+/** Compact human label for a class instance's term, e.g. "2024/2025 · Ganjil". */
+export function sectionTermLabel(section: {
+	academicYear?: string;
+	semester?: string;
+}): string {
+	return [section.academicYear?.trim(), section.semester?.trim()].filter(Boolean).join(' · ');
+}
 
 /** Structured RPS record: a single ordered CPL / CPMK / Sub-CPMK / topic. */
 export type StructuredItem = {

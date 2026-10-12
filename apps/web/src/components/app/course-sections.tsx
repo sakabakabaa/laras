@@ -5,7 +5,7 @@ import { invalidate } from '@/lib/local-cache';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { useCourseSections } from '@/hooks/use-course-sections';
 import type { CourseSection } from '@/lib/learning';
-import { errorMessage } from '@/lib/learning';
+import { errorMessage, sectionTermLabel } from '@/lib/learning';
 import { AppModal } from '@/components/app/app-modal';
 
 /**
@@ -27,10 +27,14 @@ export function SectionManager({
 }) {
 	const { sections, loading, error, reload } = useCourseSections(courseId);
 	const [name, setName] = useState('');
+	const [year, setYear] = useState('');
+	const [semester, setSemester] = useState('');
 	const [busy, setBusy] = useState(false);
 	const [actionError, setActionError] = useState('');
 	const [editing, setEditing] = useState<CourseSection | null>(null);
 	const [editName, setEditName] = useState('');
+	const [editYear, setEditYear] = useState('');
+	const [editSemester, setEditSemester] = useState('');
 	const [confirmDelete, setConfirmDelete] = useState<CourseSection | null>(null);
 
 	const create = async () => {
@@ -43,6 +47,8 @@ export function SectionManager({
 				course: courseId,
 				owner: pb.authStore.record?.id,
 				name: trimmed,
+				academicYear: year.trim(),
+				semester: semester.trim(),
 			});
 			invalidate('course_sections');
 			setName('');
@@ -61,7 +67,11 @@ export function SectionManager({
 		setBusy(true);
 		setActionError('');
 		try {
-			await pb.collection('course_sections').update(editing.id, { name: trimmed });
+			await pb.collection('course_sections').update(editing.id, {
+				name: trimmed,
+				academicYear: editYear.trim(),
+				semester: editSemester.trim(),
+			});
 			invalidate('course_sections');
 			setEditing(null);
 			reload();
@@ -102,7 +112,8 @@ export function SectionManager({
 				<p>
 					Buat beberapa kelas parale (mis. Kelas A, Kelas B) untuk mata kuliah ini.
 					Setiap kelas memiliki jadwal, daftar mahasiswa, dan progres tersendiri,
-					sedangkan RPS, materi, dan tugas tetap dibagikan.
+					sedangkan RPS, materi, dan tugas tetap dibagikan. Isi tahun akademik dan
+					semester agar satu mata kuliah bisa dipakai lintas tahun tanpa diduplikasi.
 				</p>
 
 				{error && (
@@ -125,6 +136,30 @@ export function SectionManager({
 						autoFocus
 						placeholder="Nama kelas, mis. Kelas A"
 						onChange={(e) => setName(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter') void create();
+						}}
+					/>
+					<input
+						type="text"
+						maxLength={20}
+						value={year}
+						className="section-add-term"
+						placeholder="Tahun, mis. 2024/2025"
+						aria-label="Tahun akademik kelas"
+						onChange={(e) => setYear(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter') void create();
+						}}
+					/>
+					<input
+						type="text"
+						maxLength={40}
+						value={semester}
+						className="section-add-term"
+						placeholder="Semester, mis. Ganjil"
+						aria-label="Semester kelas"
+						onChange={(e) => setSemester(e.target.value)}
 						onKeyDown={(e) => {
 							if (e.key === 'Enter') void create();
 						}}
@@ -160,6 +195,32 @@ export function SectionManager({
 											value={editName}
 											autoFocus
 											onChange={(e) => setEditName(e.target.value)}
+											onKeyDown={(e) => {
+												if (e.key === 'Enter') void saveEdit();
+												if (e.key === 'Escape') setEditing(null);
+											}}
+										/>
+										<input
+											type="text"
+											maxLength={20}
+											value={editYear}
+											className="section-add-term"
+											placeholder="2024/2025"
+											aria-label="Tahun akademik kelas"
+											onChange={(e) => setEditYear(e.target.value)}
+											onKeyDown={(e) => {
+												if (e.key === 'Enter') void saveEdit();
+												if (e.key === 'Escape') setEditing(null);
+											}}
+										/>
+										<input
+											type="text"
+											maxLength={40}
+											value={editSemester}
+											className="section-add-term"
+											placeholder="Ganjil"
+											aria-label="Semester kelas"
+											onChange={(e) => setEditSemester(e.target.value)}
 											onKeyDown={(e) => {
 												if (e.key === 'Enter') void saveEdit();
 												if (e.key === 'Escape') setEditing(null);
@@ -208,6 +269,9 @@ export function SectionManager({
 									<>
 										<span className="section-list-name">
 											<Layers size={15} /> {section.name}
+											{sectionTermLabel(section) && (
+												<small className="section-list-term">{sectionTermLabel(section)}</small>
+											)}
 										</span>
 										<div className="section-list-actions">
 											<button
@@ -218,6 +282,8 @@ export function SectionManager({
 												onClick={() => {
 													setEditing(section);
 													setEditName(section.name);
+													setEditYear(section.academicYear ?? '');
+													setEditSemester(section.semester ?? '');
 												}}
 											>
 												<Pencil size={15} />
@@ -278,11 +344,15 @@ export function SectionSelector({
 				aria-label="Pilih kelas"
 			>
 				<option value="">Semua kelas</option>
-				{sections.map((s) => (
-					<option key={s.id} value={s.id}>
-						{s.name}
-					</option>
-				))}
+				{sections.map((s) => {
+					const term = sectionTermLabel(s);
+					return (
+						<option key={s.id} value={s.id}>
+							{s.name}
+							{term ? ` · ${term}` : ''}
+						</option>
+					);
+				})}
 			</select>
 		</label>
 	);

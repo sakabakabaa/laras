@@ -256,6 +256,32 @@ export function CourseWorkspace({
 	);
 	const overallComplete = validation.complete && overallPct >= 90;
 
+	// Animated count/ring reveal (audit #6): tween 0 → overallPct on mount,
+	// transform/opacity-free but motion-honest; skipped under reduced-motion.
+	const [animatedPct, setAnimatedPct] = useState(overallPct);
+	useEffect(() => {
+		if (
+			typeof window === 'undefined' ||
+			window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+		) {
+			setAnimatedPct(overallPct);
+			return;
+		}
+		let raf = 0;
+		const target = overallPct;
+		const start = performance.now();
+		const duration = 900;
+		setAnimatedPct(0);
+		const tick = (now: number) => {
+			const t = Math.min(1, (now - start) / duration);
+			const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+			setAnimatedPct(Math.round(target * eased));
+			if (t < 1) raf = requestAnimationFrame(tick);
+		};
+		raf = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(raf);
+	}, [overallPct]);
+
 	const goRps = (step?: number) =>
 		navigate(`/app/rps/${course.id}${step ? `?step=${step}` : ''}`);
 
@@ -318,10 +344,10 @@ export function CourseWorkspace({
 							cy="24"
 							r="20"
 							className="cw-ring-fg"
-							strokeDasharray={`${(overallPct / 100) * 125.6} 125.6`}
+							strokeDasharray={`${(animatedPct / 100) * 125.6} 125.6`}
 						/>
 					</svg>
-					<span>{overallPct}%</span>
+					<span>{animatedPct}%</span>
 				</div>
 				<div className="cw-hero-copy">
 					<span className="ld-eyebrow">Status RPS</span>

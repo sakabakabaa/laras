@@ -14,6 +14,12 @@ import type { Assignment, AssignmentSubmission } from '@/lib/assignments';
 
 export type GradeComponentKind = 'manual' | 'assignment';
 
+/** Completion status of one chapter in an offline chapter-tracked task. */
+export type ChapterStatus = 'done' | 'partial' | 'missing';
+
+/** One chapter in a chapter-tracked (offline textbook) component. */
+export type ChapterDef = { id: string; label: string };
+
 export type GradeComponent = {
     sourceType?: 'attendance' | 'tasks' | 'uts' | 'uas' | 'bonus' | '';
     bonusMax?: number;
@@ -29,6 +35,8 @@ export type GradeComponent = {
 	weight: number;
 	kind: GradeComponentKind;
 	assignment: string;
+	/** Non-empty for an offline chapter-tracked task; graded by completion. */
+	chapters?: ChapterDef[];
 	order: number;
 	status: 'active' | 'archived';
 	created: string;
@@ -44,6 +52,8 @@ export type GradeEntry = {
 	value: number | null;
 	source: 'manual' | 'assignment' | '';
 	note: string;
+	/** Per-chapter status map for a chapter-tracked component ({ chapterId: status }). */
+	chapters?: Record<string, ChapterStatus>;
 	created: string;
 	updated: string;
 };
@@ -76,6 +86,8 @@ export type GradebookStudent = {
 	email: string;
 	nim: string;
 	section: string;
+	/** Student intake cohort (angkatan), derived from NIM or set explicitly. */
+	angkatan?: string;
 };
 
 /** Letter grade scale (Indonesian higher-ed standard). null when no score. */
@@ -98,6 +110,41 @@ export const LETTER_GRADES = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'D', 'E'];
 /** True when the component is active and carries weight in the final grade. */
 export function componentCounts(component: GradeComponent): boolean {
     return component.status === 'active' && component.sourceType !== 'bonus' && (component.weight ?? 0) > 0;
+}
+
+/** True when the component is an offline chapter-tracked task. */
+export function isChapterComponent(component: GradeComponent): boolean {
+	return Array.isArray(component.chapters) && component.chapters.length > 0;
+}
+
+/** Tallies chapter statuses into done/partial/missing counts and a 0–1 completion fraction. */
+export function chapterCounts(
+	chapters: ChapterDef[] | undefined,
+	map: Record<string, ChapterStatus> | undefined,
+): { done: number; partial: number; missing: number; total: number; fraction: number } {
+	const defs = chapters ?? [];
+	const status = map ?? {};
+	let done = 0;
+	let partial = 0;
+	for (const ch of defs) {
+		const s = status[ch.id];
+		if (s === 'done') done += 1;
+		else if (s === 'partial') partial += 1;
+	}
+	const total = defs.length;
+	const missing = total - done - partial;
+	// Partial chapters count as half a completed chapter.
+	const fraction = total > 0 ? (done + 0.5 * partial) / total : 0;
+	return { done, partial, missing, total, fraction };
+}
+
+/** The numeric grade (0–maxScore) a chapter component earns from its completion. */
+export function chapterValue(
+	component: GradeComponent,
+	map: Record<string, ChapterStatus> | undefined,
+): number {
+	const { fraction } = chapterCounts(component.chapters, map);
+	return Math.round(fraction * (component.maxScore || 100));
 }
 
 /**

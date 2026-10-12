@@ -3,9 +3,11 @@
 	--p-canvas: #f0efed;
 	--p-surface: #fff;
 	--p-ink: #172238;
-	--p-muted: #778190;
+	--p-muted: #667085;
 	--p-line: #e5e3e1;
 	--p-wine: #81231d;
+	--p-cta: #B3261E;
+	--p-cta-hover: #7F1D16;
 	--p-wine-soft: #f7e9e6;
 	background: var(--p-canvas);
 	color: var(--p-ink);
@@ -169,8 +171,12 @@
 	box-shadow: none;
 }
 .ld-content :is(.ld-btn-primary,.ld-card-cta,.ac2-btn.primary,.eval-btn.primary,.srs-btn.primary,.sas-btn.primary) {
-	background: var(--p-wine);
-	border-color: var(--p-wine);
+	background: var(--p-cta);
+	border-color: var(--p-cta);
+}
+.ld-content :is(.ld-btn-primary,.ld-card-cta:not(.ghost),.ac2-btn.primary,.eval-btn.primary,.srs-btn.primary,.sas-btn.primary):hover:not(:disabled) {
+	background: var(--p-cta-hover);
+	border-color: var(--p-cta-hover);
 }
 .ld-content :is(input:not([type=checkbox]):not([type=radio]),textarea,select) {
 	border-radius: 7px;
@@ -849,22 +855,22 @@
 .ld-content :is([class*="-card"],[class*="-panel"]):not(a):not(button):not([role="button"]):not(.ld-dash):not(.ld-student) {
 	background-color: var(--p-surface);
 }
-.ld-content .ld-card-cta { background: var(--p-wine); border-color: var(--p-wine); color: #fff; }
+.ld-content .ld-card-cta { background: var(--p-cta); border-color: var(--p-cta); color: #fff; }
 .ld-content .ld-card-cta.ghost { background: var(--p-wine-soft); border-color: var(--p-line); color: var(--p-wine); }
 .ld-content .mk-open {
 	min-height: 36px;
 	height: 36px;
 	padding: 0 14px;
-	border: 1px solid var(--p-wine);
+	border: 1px solid var(--p-cta);
 	border-radius: 7px;
-	background: var(--p-wine);
+	background: var(--p-cta);
 	color: #fff;
 	font-size: 12px;
 	font-weight: 600;
 	box-shadow: none;
 	transition: background-color .15s ease, border-color .15s ease;
 }
-.ld-content .mk-open:hover { background: #681b16; border-color: #681b16; }
+.ld-content .mk-open:hover { background: var(--p-cta-hover); border-color: var(--p-cta-hover); }
 .ld-content .an-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ld-dash {
 	border: 0;
@@ -962,7 +968,7 @@
 :root.dark .ld-layout .ac2-span.cat-national { color: #fda4af; }
 :root.dark .ld-layout .ac2-span.cat-collective { color: #fcd34d; }
 :root.dark .ld-layout .ac2-span :is(em,span) { color: inherit; }
-:root.dark .ld-layout .ra-tabs button.active { background: #6540b1; color: #fff; }
+:root.dark .ld-layout .ra-tabs button.active { background: #C9342B; color: #fff; }
 :root.dark .ld-layout .evx-ann i.minor { color: #302400; }
 :root.dark .ld-layout .evx-ann i.major { background: #a53830; color: #fff; }
 :root.dark .recharts-default-tooltip { background-color: #222831 !important; border-color: #4e5969 !important; border-radius: 7px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
@@ -1019,4 +1025,24 @@
 	.ld-agent-skeleton span {
 		animation: none !important;
 	}
+}
+
+/* Dashboard density (audit #4): demote the AI composer to a clean single-line
+   entry by default; its descriptive heading discloses on focus. Pure
+   presentation — the heading is non-interactive context only. */
+.ld-greet-ask-heading {
+	max-height: 0;
+	opacity: 0;
+	overflow: hidden;
+	pointer-events: none;
+	transition: max-height .24s cubic-bezier(.2,.7,.25,1), opacity .16s ease, margin .22s ease;
+}
+.ld-greet-ask:focus-within .ld-greet-ask-heading,
+.ld-greet-ask:hover .ld-greet-ask-heading {
+	max-height: 64px;
+	opacity: 1;
+	pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+	.ld-greet-ask-heading { transition: none; }
 }

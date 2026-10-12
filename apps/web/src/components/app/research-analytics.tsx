@@ -12,6 +12,7 @@
  * this view (the route's clientLoader redirects them and the server re-checks).
  */
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import {
 	AlertTriangle,
 	BarChart3,
@@ -71,38 +72,90 @@ function MetricCard({
 	);
 }
 
-function DetectionCard({ stats }: { stats: SliceStats }) {
+/** A single hero metric: large tabular number, optional unit, optional 0–100 bar. */
+function Kpi({
+	label,
+	value,
+	unit,
+	hint,
+	sufficient = true,
+	bar,
+}: {
+	label: string;
+	value: number | null;
+	unit?: string;
+	hint: string;
+	sufficient?: boolean;
+	bar?: boolean;
+}) {
+	const show = sufficient && value != null;
+	return (
+		<div className="ra-kpi">
+			<span className="ra-kpi-label">{label}</span>
+			<strong className={show ? 'ra-kpi-value' : 'ra-kpi-value ra-insufficient'}>
+				{show ? (
+					<>
+						{value}
+						{unit && <i>{unit}</i>}
+					</>
+				) : (
+					INSUFFICIENT
+				)}
+			</strong>
+			{bar && (
+				<span className="ra-kpi-track">
+					<span className="ra-kpi-fill" style={{ width: `${show ? value : 0}%` }} />
+				</span>
+			)}
+			<small>{hint}</small>
+		</div>
+	);
+}
+
+/** Proportional TP / FP / FN bar. Meaning is carried by position, color, and a count label. */
+function ConfusionBar({ d }: { d: SliceStats['detection'] }) {
+	const total = d.tp + d.fp + d.fn || 1;
+	const seg = (n: number) => `${(n / total) * 100}%`;
+	return (
+		<div className="ra-confbar">
+			<div className="ra-confbar-track" role="img" aria-label={`True positive ${d.tp}, false positive ${d.fp}, false negative ${d.fn}`}>
+				<span className="ra-confbar-seg tp" style={{ width: seg(d.tp) }} />
+				<span className="ra-confbar-seg fp" style={{ width: seg(d.fp) }} />
+				<span className="ra-confbar-seg fn" style={{ width: seg(d.fn) }} />
+			</div>
+			<div className="ra-confbar-legend">
+				<span>
+					<i className="tp" /> TP {d.tp} · AI menemukan kesalahan nyata
+				</span>
+				<span>
+					<i className="fp" /> FP {d.fp} · AI menandai bukan kesalahan
+				</span>
+				<span>
+					<i className="fn" /> FN {d.fn} · kesalahan terlewat AI (anotasi ahli)
+				</span>
+			</div>
+		</div>
+	);
+}
+
+function DetectionHero({ stats }: { stats: SliceStats }) {
 	const d = stats.detection;
 	return (
-		<div className="ra-panel">
+		<section className="ra-hero">
 			<div className="ra-panel-head">
-				<h3>Deteksi kesalahan</h3>
+				<h3>
+					<BarChart3 size={15} /> Kesepakatan deteksi kesalahan
+				</h3>
 				<span className="asg-tag">TP / FP / FN</span>
 			</div>
-			<div className="ra-confusion">
-				<div className="ra-conf-cell">
-					<span>TP</span>
-					<strong>{d.tp}</strong>
-					<small>AI menemukan kesalahan nyata</small>
-				</div>
-				<div className="ra-conf-cell">
-					<span>FP</span>
-					<strong>{d.fp}</strong>
-					<small>AI menandai bukan kesalahan</small>
-				</div>
-				<div className="ra-conf-cell">
-					<span>FN</span>
-					<strong>{d.fn}</strong>
-					<small>Kesalahan terlewat AI (anotasi ahli)</small>
-				</div>
+			<div className="ra-hero-kpis">
+				<Kpi label="Presisi" value={d.precision} unit="%" hint="TP / (TP + FP)" sufficient={d.sufficient} bar />
+				<Kpi label="Recall" value={d.recall} unit="%" hint="TP / (TP + FN)" sufficient={d.sufficient} bar />
+				<Kpi label="F1" value={d.f1} hint="harmonik presisi & recall" sufficient={d.sufficient} />
 			</div>
-			<div className="ra-metric-grid">
-				<MetricCard icon={<BarChart3 size={15} />} label="Presisi" value={pct(d.precision)} hint="TP / (TP + FP)" />
-				<MetricCard icon={<BarChart3 size={15} />} label="Recall" value={pct(d.recall)} hint="TP / (TP + FN)" />
-				<MetricCard icon={<BarChart3 size={15} />} label="F1" value={d.f1 == null ? INSUFFICIENT : String(d.f1)} hint="harmonik P & R" />
-			</div>
+			<ConfusionBar d={d} />
 			{!d.sufficient && <p className="ra-note">{INSUFFICIENT} — anotasi deteksi kurang dari minimum.</p>}
-		</div>
+		</section>
 	);
 }
 
@@ -141,31 +194,38 @@ function AccuracyCard({
 	);
 }
 
-function RateCard({
-	title,
-	icon,
+/** A scannable 0–100 rate as a labeled bar; suppresses the fill when the sample is too small. */
+function StatBar({
+	label,
 	rate,
 	hint,
+	tone,
 }: {
-	title: string;
-	icon: React.ReactNode;
-	rate: { count: number; total: number; rate: number | null; sufficient: boolean };
+	label: string;
+	rate: { count?: number; total?: number; rate: number | null; sufficient: boolean };
 	hint: string;
+	tone?: 'warn';
 }) {
+	const show = rate.sufficient && rate.rate != null;
 	return (
-		<div className="ra-panel">
-			<div className="ra-panel-head">
-				<h3>{title}</h3>
-				<span className="asg-tag">{rate.total} dinilai</span>
+		<div className={`ra-bar${tone ? ` ${tone}` : ''}`}>
+			<div className="ra-bar-top">
+				<span className="ra-bar-label">{label}</span>
+				<span className={show ? 'ra-bar-value' : 'ra-bar-value ra-insufficient'}>
+					{show ? `${rate.rate}%` : INSUFFICIENT}
+				</span>
 			</div>
-			<MetricCard icon={icon} label="Tingkat" value={rate.sufficient ? `${rate.rate}%` : INSUFFICIENT} hint={hint} />
-			<div className="ra-acc-row">
-				<span>Memenuhi</span>
-				<strong>{rate.count}</strong>
-				<span>Total dinilai</span>
-				<strong>{rate.total}</strong>
+			<span className="ra-bar-track">
+				<span className="ra-bar-fill" style={{ width: `${show ? rate.rate : 0}%` }} />
+			</span>
+			<div className="ra-bar-foot">
+				<span>{hint}</span>
+				{rate.total != null && (
+					<span className="ra-count">
+						{rate.count}/{rate.total}
+					</span>
+				)}
 			</div>
-			{!rate.sufficient && <p className="ra-note">{INSUFFICIENT} — anotasi kurang dari minimum.</p>}
 		</div>
 	);
 }
@@ -264,13 +324,13 @@ export function ResearchAnalyticsView({ onExport }: { onExport: () => void }) {
 				</span>
 				<h1>Analitik umpan balik AI</h1>
 				<p>
-					Metrik kesepakatan berbasis anotasi ahli atas data tervalidasi <code>ai_feedback_items</code>.
+					Metrik kesepakatan berbasis anotasi ahli atas data umpan balik AI yang tervalidasi.
 					Dihitung dari penilaian riset eksplisit (bukan korelasi) — presisi, recall, F1, akurasi
 					koreksi/penjelasan, kelengkapan, keperluan, kesesuaian pedagogis, serta false positive/negative.
 				</p>
 				<p className="research-export-private">
 					<ShieldCheck size={14} /> Khusus dosen pemilik atau peneliti yang diotorisasi. Tidak tersedia
-					for mahasiswa. Metrik hanya ditampilkan bila anotasi memadai; jika tidak, ditampilkan
+					untuk mahasiswa. Metrik hanya ditampilkan bila anotasi memadai; jika tidak, ditampilkan
 					“{INSUFFICIENT}”.
 				</p>
 			</div>
@@ -287,7 +347,13 @@ export function ResearchAnalyticsView({ onExport }: { onExport: () => void }) {
 						))}
 					</select>
 				</label>
-				<button type="button" className="ld-pill primary" onClick={onExport}>
+				<button
+					type="button"
+					className="ld-pill primary"
+					onClick={onExport}
+					disabled={loading || !hasData}
+					title={hasData ? undefined : 'Belum ada data riset untuk diekspor'}
+				>
 					<Download size={16} /> Ekspor data riset
 				</button>
 			</div>
@@ -311,6 +377,9 @@ export function ResearchAnalyticsView({ onExport }: { onExport: () => void }) {
 						Analitik riset muncul setelah Anda membuat anotasi riset (penilaian deteksi, koreksi,
 						penjelasan, kesalahan terlewat) pada temuan AI tugas formal Anda.
 					</p>
+					<Link to="/app/tugas" className="ld-pill primary ra-empty-cta">
+						<ClipboardCheck size={16} /> Buka tugas formal
+					</Link>
 				</div>
 			) : (
 				stats && (
@@ -333,56 +402,53 @@ export function ResearchAnalyticsView({ onExport }: { onExport: () => void }) {
 							</div>
 						</div>
 
-						<div className="ra-section-label">
-							<AlertTriangle size={13} /> Metrik berikut membedakan: observasi AI, referensi ahli,
-							dan penilaian riset. Persentase ditampilkan hanya bila anotasi memadai.
+						<div className="ra-two">
+							<DetectionHero stats={stats} />
+
+							<section className="ra-panel ra-rates">
+								<div className="ra-panel-head">
+									<h3>
+										<BarChart3 size={15} /> Kualitas umpan balik
+									</h3>
+								</div>
+								<div className="ra-bars">
+									<StatBar label="Kelengkapan" rate={stats.completeness} hint="temuan lengkap / dinilai" />
+									<StatBar label="Keperluan" rate={stats.necessity} hint="perlu ditandai / dinilai" />
+									<StatBar label="Kesesuaian pedagogis" rate={stats.pedagogical} hint="tepat secara pedagogis / dinilai" />
+									<StatBar label="False positive" rate={stats.falsePositive} hint="salah ditandai / item AI" tone="warn" />
+									<StatBar label="False negative" rate={stats.falseNegative} hint="terlewat / kesalahan nyata" tone="warn" />
+								</div>
+								<p className="ra-note">
+									Observasi AI, referensi ahli, dan penilaian riset dibedakan. Persentase hanya tampil bila
+									anotasi memadai. Untuk false positive/negative, nilai lebih rendah lebih baik.
+								</p>
+							</section>
 						</div>
 
-						<DetectionCard stats={stats} />
-						<AccuracyCard title="Akurasi koreksi AI" stats={stats} kind="correction" />
-						<AccuracyCard title="Akurasi penjelasan AI" stats={stats} kind="explanation" />
-						<RateCard
-							title="Tingkat kelengkapan"
-							icon={<ClipboardCheck size={15} />}
-							rate={stats.completeness}
-							hint="temuan lengkap / dinilai"
-						/>
-						<RateCard
-							title="Tingkat keperluan"
-							icon={<ClipboardCheck size={15} />}
-							rate={stats.necessity}
-							hint="perlu ditandai / dinilai"
-						/>
-						<RateCard
-							title="Kesesuaian pedagogis"
-							icon={<ClipboardCheck size={15} />}
-							rate={stats.pedagogical}
-							hint="tepat secara pedagogis / dinilai"
-						/>
-						<div className="ra-metric-grid">
-							<MetricCard
-								icon={<AlertTriangle size={15} />}
-								label="False positive"
-								value={stats.falsePositive.sufficient ? `${stats.falsePositive.rate}%` : INSUFFICIENT}
-								hint={`${stats.falsePositive.count} dari ${stats.falsePositive.total} item AI`}
-							/>
-							<MetricCard
-								icon={<AlertTriangle size={15} />}
-								label="False negative"
-								value={stats.falseNegative.sufficient ? `${stats.falseNegative.rate}%` : INSUFFICIENT}
-								hint={`${stats.falseNegative.count} dari ${stats.falseNegative.total} kesalahan nyata`}
-							/>
-						</div>
+						<section className="ra-sec">
+							<h3 className="ra-sec-h">
+								<ClipboardCheck size={15} /> Akurasi konten AI
+							</h3>
+							<div className="ra-grid-2">
+								<AccuracyCard title="Koreksi AI" stats={stats} kind="correction" />
+								<AccuracyCard title="Penjelasan AI" stats={stats} kind="explanation" />
+							</div>
+						</section>
 
-						<div className="ra-section-label">
-							<BarChart3 size={13} /> Rincian per kelompok
-						</div>
-						<BreakdownTable title="Kategori linguistik" rows={data!.breakdowns.byCategory} />
-						<BreakdownTable title="Subkategori linguistik" rows={data!.breakdowns.bySubcategory} />
-						<BreakdownTable title="Tingkat CEFR" rows={data!.breakdowns.byCefr} />
-						<BreakdownTable title="Tugas" rows={data!.breakdowns.byAssignment} />
-						<BreakdownTable title="Model AI" rows={data!.breakdowns.byModel} />
-						<BreakdownTable title="Versi prompt" rows={data!.breakdowns.byPromptVersion} />
+						<details className="ra-breakdowns">
+							<summary className="ra-section-label">
+								<BarChart3 size={13} /> Rincian per kelompok
+								<span className="ra-breakdowns-hint">Ketuk untuk membuka</span>
+							</summary>
+							<div className="ra-breakdowns-body">
+								<BreakdownTable title="Kategori linguistik" rows={data!.breakdowns.byCategory} />
+								<BreakdownTable title="Subkategori linguistik" rows={data!.breakdowns.bySubcategory} />
+								<BreakdownTable title="Tingkat CEFR" rows={data!.breakdowns.byCefr} />
+								<BreakdownTable title="Tugas" rows={data!.breakdowns.byAssignment} />
+								<BreakdownTable title="Model AI" rows={data!.breakdowns.byModel} />
+								<BreakdownTable title="Versi prompt" rows={data!.breakdowns.byPromptVersion} />
+							</div>
+						</details>
 
 						<UptakeAnalyticsSection assignmentId={assignmentId} />
 					</>
@@ -497,30 +563,28 @@ function UptakeAnalyticsSection({ assignmentId }: { assignmentId: string }) {
 					<span>Diberi anotasi uptake</span>
 				</div>
 			</div>
-			<div className="ra-metric-grid">
-				<MetricCard
-					icon={<ShieldCheck size={15} />}
+			<div className="ra-bars">
+				<StatBar
 					label="Uptake berhasil"
-					value={pct(data.successfulUptakeRate)}
+					rate={{ rate: data.successfulUptakeRate, sufficient: data.successfulUptakeRate != null }}
 					hint="revisi berhasil diadopsi / dianotasi"
 				/>
-				<MetricCard
-					icon={<ShieldCheck size={15} />}
+				<StatBar
 					label="Uptake sebagian"
-					value={pct(data.partialUptakeRate)}
+					rate={{ rate: data.partialUptakeRate, sufficient: data.partialUptakeRate != null }}
 					hint="sebagian diadopsi / dianotasi"
 				/>
-				<MetricCard
-					icon={<AlertTriangle size={15} />}
+				<StatBar
 					label="Uptake tidak berhasil"
-					value={pct(data.unsuccessfulUptakeRate)}
+					rate={{ rate: data.unsuccessfulUptakeRate, sufficient: data.unsuccessfulUptakeRate != null }}
 					hint="ditanggapi tapi keliru / dianotasi"
+					tone="warn"
 				/>
-				<MetricCard
-					icon={<AlertTriangle size={15} />}
+				<StatBar
 					label="Tidak diadopsi"
-					value={pct(data.noUptakeRate)}
+					rate={{ rate: data.noUptakeRate, sufficient: data.noUptakeRate != null }}
 					hint="tidak ditindaklanjuti / dianotasi"
+					tone="warn"
 				/>
 			</div>
 			<div className="ra-section-label">

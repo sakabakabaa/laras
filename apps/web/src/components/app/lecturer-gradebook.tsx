@@ -4,6 +4,7 @@ import {
 	AlertTriangle,
 	Archive,
 	BarChart3,
+	BookOpen,
 	CheckCircle2,
 	ChevronRight,
 	ClipboardList,
@@ -34,12 +35,17 @@ import { OverflowMenu } from '@/components/app/overflow-menu';
 import { activityTypeOf, type Assignment, type AssignmentSubmission } from '@/lib/assignments';
 import {
 	calculateFinalGrade,
+	chapterCounts,
+	chapterValue,
 	componentScore,
+	isChapterComponent,
 	LETTER_GRADES,
 	parseGradeInput,
 	STATUS_LABEL,
 	studentStatus,
 	totalWeight,
+	type ChapterDef,
+	type ChapterStatus,
 	type GradeComponent,
 	type GradeEntry,
 	type GradeOverride,
@@ -48,6 +54,7 @@ import {
 	type StudentStatus,
 } from '@/lib/gradebook';
 import type { Course } from '@/lib/learning';
+import { angkatanOf } from '@/lib/learning';
 import { AppModal } from '@/components/app/app-modal';
 
 type Tab = 'nilai' | 'komponen' | 'analitik';
@@ -130,6 +137,7 @@ export function LecturerGradebook({ course }: { course: Course }) {
 					name: entry.name,
 					email: matched?.email || '',
 					nim,
+					angkatan: angkatanOf(entry),
 					section: sectionName(entry.section), sectionId: entry.section || '',
 				};
 			})
@@ -350,6 +358,42 @@ export function LecturerGradebook({ course }: { course: Course }) {
 				invalidate(`grade_entries:components=${courseId}`);
 			} catch (err) {
 				console.error('Gagal menyimpan nilai', err);
+				throw err;
+			}
+		},
+		[entriesByComponent, me, courseId],
+	);
+
+	// Chapter-tracked offline tasks: persist the per-chapter status map and the
+	// completion-derived numeric value (which the final-grade math reads).
+	const saveChapterGrade = useCallback(
+		async (
+			component: GradeComponent,
+			studentId: string,
+			chapters: Record<string, ChapterStatus>,
+		) => {
+			const existing = entriesByComponent.get(component.id)?.get(studentId);
+			const value = chapterValue(component, chapters);
+			const payload = {
+				owner: me,
+				component: component.id,
+				student: studentId,
+				value,
+				source: 'manual' as const,
+				chapters,
+				note: existing?.note ?? '',
+			};
+			try {
+				if (existing) {
+					await pb.collection('grade_entries').update(existing.id, payload);
+				} else {
+					await pb.collection('grade_entries').create(payload, {
+						requestKey: `ge-${component.id}-${studentId}`,
+					});
+				}
+				invalidate(`grade_entries:components=${courseId}`);
+			} catch (err) {
+				console.error('Gagal menyimpan progres bab', err);
 				throw err;
 			}
 		},
@@ -633,6 +677,7 @@ export function LecturerGradebook({ course }: { course: Course }) {
 					setStatusFilter={setStatusFilter}
 					onSelectStudent={setSelectedStudent}
 					onSaveGrade={saveManualGrade}
+					onSaveChapters={saveChapterGrade}
 				/>
 			)}
 
@@ -825,6 +870,7 @@ function NilaiTab({
 	setStatusFilter,
 	onSelectStudent,
 	onSaveGrade,
+	onSaveChapters,
 }: {
 	students: GradebookStudent[];
 	components: GradeComponent[];
@@ -838,6 +884,7 @@ function NilaiTab({
 	setStatusFilter: (v: StudentStatus | 'all') => void;
 	onSelectStudent: (id: string) => void;
 	onSaveGrade: (c: GradeComponent, studentId: string, value: number | null, note?: string) => Promise<void>;
+	onSaveChapters: (c: GradeComponent, studentId: string, chapters: Record<string, ChapterStatus>) => Promise<void>;
 }) {
 	const t = useT();
 	if (students.length === 0) {
@@ -898,7 +945,7 @@ function NilaiTab({
 								<th key={c.id} scope="col" className="gb-th-comp">
 									<span className="gb-th-comp-name">{c.name}</span>
 									<span className="gb-th-comp-meta">
-										{c.sourceType === 'bonus' ? 'Bonus keaktivan' : c.computed || ['tasks','attendance'].includes(c.sourceType || '') ? 'Otomatis' : c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {c.sourceType === 'bonus' ? '+' + c.maxScore + ' poin maks.' : (c.weight ?? 0) + '%'}
+										{isChapterComponent(c) ? `Per bab · ${c.chapters!.length} bab` : c.sourceType === 'bonus' ? 'Bonus keaktivan' : c.computed || ['tasks','attendance'].includes(c.sourceType || '') ? 'Otomatis' : c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {c.sourceType === 'bonus' ? '+' + c.maxScore + ' poin maks.' : (c.weight ?? 0) + '%'}
 									</span>
 								</th>
 							))}
@@ -926,6 +973,7 @@ function NilaiTab({
 												<strong>{s.name}</strong>
 												<small>
 													{s.nim || t('gb.nimMissing')}
+													{s.angkatan ? ` · A${s.angkatan}` : ''}
 													{s.section ? ` · ${s.section}` : ''}
 												</small>
 											</span>
@@ -944,6 +992,7 @@ function NilaiTab({
 												entriesByComponent={entriesByComponent}
 												submissionsByAssignment={submissionsByAssignment}
 												onSave={onSaveGrade}
+												onSaveChapters={onSaveChapters}
 											/>
 										</td>
 									))}
@@ -981,12 +1030,14 @@ function GradeCell({
 	entriesByComponent,
 	submissionsByAssignment,
 	onSave,
+	onSaveChapters,
 }: {
 	component: GradeComponent;
 	studentId: string;
 	entriesByComponent: Map<string, Map<string, GradeEntry>>;
 	submissionsByAssignment: Map<string, Map<string, AssignmentSubmission>>;
 	onSave: (c: GradeComponent, studentId: string, value: number | null, note?: string) => Promise<void>;
+	onSaveChapters: (c: GradeComponent, studentId: string, chapters: Record<string, ChapterStatus>) => Promise<void>;
 }) {
 	const t = useT();
 	const { score, source, aiEvaluated } = componentScore(
@@ -1011,6 +1062,16 @@ function GradeCell({
 		if (editing) inputRef.current?.focus();
 	}, [editing]);
 
+	if (isChapterComponent(component)) {
+		return (
+			<ChapterCell
+				component={component}
+				studentId={studentId}
+				entry={entriesByComponent.get(component.id)?.get(studentId)}
+				onSave={onSaveChapters}
+			/>
+		);
+	}
 	if (component.kind === 'assignment' || component.computed) {
 		return (
 			<div className="gb-cell-assignment" title={component.computed?.[studentId]?.detail || (aiEvaluated ? t('gb.cell.aiTitle') : t('gb.cell.submissionTitle'))}>
@@ -1111,6 +1172,160 @@ function focusNextCell(studentId: string, componentId: string) {
 	targetCell?.querySelector<HTMLButtonElement>('.gb-cell-display')?.click();
 }
 
+// ── Chapter-tracked offline task cell + marker ─────────────────────────────
+const CHAPTER_STATUS_WORD: Record<ChapterStatus, string> = {
+	done: 'Selesai',
+	partial: 'Sebagian',
+	missing: 'Belum',
+};
+
+/** Grid cell for a chapter component: compact "done/total" + a per-chapter strip. */
+function ChapterCell({
+	component,
+	studentId,
+	entry,
+	onSave,
+}: {
+	component: GradeComponent;
+	studentId: string;
+	entry: GradeEntry | undefined;
+	onSave: (c: GradeComponent, studentId: string, chapters: Record<string, ChapterStatus>) => Promise<void>;
+}) {
+	const [open, setOpen] = useState(false);
+	const map = entry?.chapters;
+	const { done, partial, total } = chapterCounts(component.chapters, map);
+	return (
+		<>
+			<button
+				type="button"
+				className="gb-chapter-cell"
+				onClick={() => setOpen(true)}
+				aria-label={`Atur progres bab untuk ${component.name}`}
+				title={`${done} selesai, ${partial} sebagian, dari ${total} bab`}
+			>
+				<span className="gb-chapter-count">
+					{done}
+					<small>/{total}</small>
+				</span>
+				<span className="gb-chapter-strip" aria-hidden="true">
+					{component.chapters!.map((ch) => (
+						<i key={ch.id} className={`gb-chapter-dot ${map?.[ch.id] ?? 'missing'}`} />
+					))}
+				</span>
+			</button>
+			{open && (
+				<ChapterMarkerModal
+					component={component}
+					initial={map}
+					onClose={() => setOpen(false)}
+					onSave={async (next) => {
+						await onSave(component, studentId, next);
+						setOpen(false);
+					}}
+				/>
+			)}
+		</>
+	);
+}
+
+/** Modal to mark each chapter done / partial / missing for one student. */
+function ChapterMarkerModal({
+	component,
+	initial,
+	onClose,
+	onSave,
+}: {
+	component: GradeComponent;
+	initial: Record<string, ChapterStatus> | undefined;
+	onClose: () => void;
+	onSave: (chapters: Record<string, ChapterStatus>) => Promise<void>;
+}) {
+	const [map, setMap] = useState<Record<string, ChapterStatus>>(() => ({ ...(initial ?? {}) }));
+	const [saving, setSaving] = useState(false);
+	const [error, setError] = useState('');
+	const chapters = component.chapters ?? [];
+	const set = (id: string, status: ChapterStatus) => setMap((m) => ({ ...m, [id]: status }));
+	const bulk = (status: ChapterStatus) =>
+		setMap(Object.fromEntries(chapters.map((ch) => [ch.id, status])) as Record<string, ChapterStatus>);
+	const { done, partial, total, fraction } = chapterCounts(chapters, map);
+	const projected = Math.round(fraction * (component.maxScore || 100));
+	return (
+		<AppModal open onClose={onClose} title={component.name}>
+			<div className="modal-top">
+				<span>Progres bab</span>
+				<button type="button" aria-label="Tutup" onClick={onClose}>
+					<X size={18} />
+				</button>
+			</div>
+			<h2>{component.name}</h2>
+			<p>Tandai bab yang sudah diisi mahasiswa. Nilai komponen dihitung dari kelengkapan (sebagian = ½ bab).</p>
+			<div className="gb-chapter-bulk">
+				<button type="button" className="ld-outline-action" onClick={() => bulk('done')}>
+					Tandai semua selesai
+				</button>
+				<button type="button" className="ld-btn-quiet" onClick={() => bulk('missing')}>
+					Kosongkan
+				</button>
+			</div>
+			<ul className="gb-chapter-marklist">
+				{chapters.map((ch) => {
+					const s = map[ch.id] ?? 'missing';
+					return (
+						<li key={ch.id}>
+							<span className="gb-chapter-marklabel">{ch.label}</span>
+							<div className="gb-chapter-seg" role="group" aria-label={ch.label}>
+								{(['done', 'partial', 'missing'] as ChapterStatus[]).map((opt) => (
+									<button
+										key={opt}
+										type="button"
+										className={`gb-chapter-seg-btn ${opt}${s === opt ? ' active' : ''}`}
+										aria-pressed={s === opt}
+										onClick={() => set(ch.id, opt)}
+									>
+										{CHAPTER_STATUS_WORD[opt]}
+									</button>
+								))}
+							</div>
+						</li>
+					);
+				})}
+			</ul>
+			<div className="gb-chapter-foot">
+				<span>
+					{done}/{total} selesai{partial > 0 ? ` · ${partial} sebagian` : ''}
+				</span>
+				<strong>
+					Nilai: {projected}/{component.maxScore || 100}
+				</strong>
+			</div>
+			{error && <p className="form-error">{error}</p>}
+			<div className="modal-actions">
+				<button type="button" className="ld-btn-quiet" onClick={onClose}>
+					Batal
+				</button>
+				<button
+					type="button"
+					className="ld-btn-primary"
+					disabled={saving}
+					onClick={async () => {
+						setSaving(true);
+						setError('');
+						try {
+							await onSave(map);
+						} catch {
+							setError('Gagal menyimpan. Coba lagi.');
+							setSaving(false);
+						}
+					}}
+				>
+					{saving ? <LoaderCircle size={16} className="spin" /> : <CheckCircle2 size={16} />}
+					Simpan
+				</button>
+			</div>
+		</AppModal>
+	);
+}
+
 // ── KOMPONEN tab ──────────────────────────────────────────────────────────
 function KomponenTab({
 	components,
@@ -1165,7 +1380,7 @@ function KomponenTab({
 								<div className="gb-comp-main">
 									<strong>{c.name}</strong>
 									<small>
-										{c.sourceType === 'bonus' ? 'Bonus keaktivan' : c.computed || ['tasks','attendance'].includes(c.sourceType || '') ? 'Otomatis' : c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {t('gb.komponen.max')} {c.maxScore || 100} · {t('gb.komponen.weight')} {c.sourceType === 'bonus' ? '+' + c.maxScore + ' poin maks.' : (c.weight ?? 0) + '%'}
+										{isChapterComponent(c) ? `Tugas luring per bab · ${c.chapters!.length} bab` : c.sourceType === 'bonus' ? 'Bonus keaktivan' : c.computed || ['tasks','attendance'].includes(c.sourceType || '') ? 'Otomatis' : c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {t('gb.komponen.max')} {c.maxScore || 100} · {t('gb.komponen.weight')} {c.sourceType === 'bonus' ? '+' + c.maxScore + ' poin maks.' : (c.weight ?? 0) + '%'}
 										{c.expand?.assignment ? ` · ${c.expand.assignment.title}` : ''}
 										{graded > 0 ? ` · ${graded} ${t('gb.komponen.graded')}` : ''}
 									</small>
@@ -1348,18 +1563,35 @@ function StudentDrawer({
 								entriesByComponent,
 								submissionsByAssignment,
 							);
+							const chapterMap = isChapterComponent(c)
+								? entriesByComponent.get(c.id)?.get(studentId)?.chapters
+								: undefined;
 							return (
 								<li key={c.id}>
 									<div className="gb-drawer-grade-main">
 										<strong>{c.name}</strong>
 										<small>
-											{c.sourceType === 'bonus' ? 'Bonus keaktivan' : c.computed || ['tasks','attendance'].includes(c.sourceType || '') ? 'Otomatis' : c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {t('gb.komponen.weight')} {c.sourceType === 'bonus' ? '+' + c.maxScore + ' poin maks.' : (c.weight ?? 0) + '%'}
+											{isChapterComponent(c) ? `Per bab · ${c.chapters!.length} bab` : c.sourceType === 'bonus' ? 'Bonus keaktivan' : c.computed || ['tasks','attendance'].includes(c.sourceType || '') ? 'Otomatis' : c.kind === 'assignment' ? t('gb.fromAssignment') : t('gb.manual')} · {t('gb.komponen.weight')} {c.sourceType === 'bonus' ? '+' + c.maxScore + ' poin maks.' : (c.weight ?? 0) + '%'}
 											{aiEvaluated && (
 												<span className="gb-ai-tag" title={t('gb.cell.aiLabel')}>
 													<Sparkles size={10} /> AI
 												</span>
 											)}
 										</small>
+										{isChapterComponent(c) && (
+											<ul className="gb-drawer-chapters">
+												{c.chapters!.map((ch) => {
+													const s = chapterMap?.[ch.id] ?? 'missing';
+													return (
+														<li key={ch.id} className={`gb-drawer-chapter ${s}`}>
+															<i className={`gb-chapter-dot ${s}`} />
+															<span>{ch.label}</span>
+															<small>{CHAPTER_STATUS_WORD[s]}</small>
+														</li>
+													);
+												})}
+											</ul>
+										)}
 									</div>
 									<span className="gb-drawer-grade-value">
 										{score == null ? '—' : score}
@@ -1526,6 +1758,25 @@ function ComponentDialog({
 	);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState('');
+	// Chapter-tracked offline task (sub-mode of a manual component).
+	const [format, setFormat] = useState<'skor' | 'bab'>(
+		component && isChapterComponent(component) ? 'bab' : 'skor',
+	);
+	const [chapters, setChapters] = useState<ChapterDef[]>(component?.chapters ?? []);
+	const [bulkCount, setBulkCount] = useState('');
+	const newChapterId = () => `c${Math.random().toString(36).slice(2, 9)}`;
+	const addChapter = () =>
+		setChapters((cs) => [...cs, { id: newChapterId(), label: `Bab ${cs.length + 1}` }]);
+	const renameChapter = (id: string, label: string) =>
+		setChapters((cs) => cs.map((c) => (c.id === id ? { ...c, label } : c)));
+	const removeChapter = (id: string) => setChapters((cs) => cs.filter((c) => c.id !== id));
+	const generateChapters = () => {
+		const n = Math.max(0, Math.min(60, Math.floor(Number(bulkCount) || 0)));
+		if (!n) return;
+		setChapters(Array.from({ length: n }, (_, i) => ({ id: newChapterId(), label: `Bab ${i + 1}` })));
+		setBulkCount('');
+	};
+	const isChapterMode = kind === 'manual' && format === 'bab';
 
 	const submit = async () => {
 		setError('');
@@ -1547,6 +1798,13 @@ function ComponentDialog({
 			setError(t('gb.compDialog.errTask'));
 			return;
 		}
+		const cleanChapters = chapters
+			.map((c) => ({ id: c.id, label: c.label.trim() }))
+			.filter((c) => c.label);
+		if (isChapterMode && cleanChapters.length === 0) {
+			setError('Tambahkan minimal satu bab.');
+			return;
+		}
 		setSaving(true);
 		const order = component?.order ?? Date.now();
 		const payload = {
@@ -1560,6 +1818,7 @@ function ComponentDialog({
 			weight: component?.sourceType === 'bonus' ? 0 : w,
 			kind,
 			assignment: kind === 'assignment' ? assignmentId : '',
+			chapters: isChapterMode ? cleanChapters : [],
 			order,
 			status: component?.status ?? 'active',
 		};
@@ -1642,6 +1901,67 @@ function ComponentDialog({
 							<option value="assignment">{t('gb.compDialog.sourceAssignment')}</option>
 						</select>
 					</label>
+					{kind === 'manual' && !component?.sourceType && (
+						<label>
+							<span>Jenis komponen</span>
+							<select value={format} onChange={(e) => setFormat(e.target.value as 'skor' | 'bab')}>
+								<option value="skor">Nilai angka (satu skor)</option>
+								<option value="bab">Tugas luring per bab (buku teks)</option>
+							</select>
+						</label>
+					)}
+					{isChapterMode && (
+						<div className="gb-chapter-editor">
+							<div className="gb-chapter-editor-head">
+								<span className="ld-eyebrow">
+									<BookOpen size={13} /> Daftar bab
+								</span>
+								<div className="gb-chapter-editor-bulk">
+									<input
+										type="number"
+										inputMode="numeric"
+										min={1}
+										max={60}
+										value={bulkCount}
+										onChange={(e) => setBulkCount(e.target.value)}
+										placeholder="Jumlah"
+										aria-label="Jumlah bab"
+									/>
+									<button type="button" className="ld-outline-action" onClick={generateChapters}>
+										Buat Bab 1–N
+									</button>
+								</div>
+							</div>
+							<p className="gb-chapter-editor-hint">
+								Nilai dihitung dari kelengkapan: komponen bernilai {Number(maxScore) || 100} poin, dibagi rata
+								per bab (sebagian = ½).
+							</p>
+							<ul className="gb-chapter-editor-list">
+								{chapters.map((ch, i) => (
+									<li key={ch.id}>
+										<span className="gb-chapter-editor-no">{i + 1}</span>
+										<input
+											value={ch.label}
+											onChange={(e) => renameChapter(ch.id, e.target.value)}
+											placeholder={`Bab ${i + 1}`}
+											aria-label={`Nama bab ${i + 1}`}
+										/>
+										<button
+											type="button"
+											className="gb-chapter-editor-del"
+											aria-label={`Hapus ${ch.label || 'bab'}`}
+											onClick={() => removeChapter(ch.id)}
+										>
+											<X size={15} />
+										</button>
+									</li>
+								))}
+							</ul>
+							<button type="button" className="ld-outline-action" onClick={addChapter}>
+								<Plus size={15} /> Tambah bab
+							</button>
+						</div>
+					)}
 					{kind === 'assignment' && (
 						<label>
 							<span>{t('gb.compDialog.linkedTask')}</span>

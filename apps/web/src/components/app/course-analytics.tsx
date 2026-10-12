@@ -249,6 +249,17 @@ export function CourseAnalytics({
 				</div>
 			) : (
 				<>
+					{!isStudent && !model.taskTotal && (
+						<div className="an-nudge" role="note">
+							<div className="an-nudge-copy">
+								<strong>Belum ada data untuk dianalisis</strong>
+								<span>Analitik terisi otomatis setelah tugas pertama diterbitkan dan mahasiswa mulai mengumpulkan.</span>
+							</div>
+							<Link to="/app/tugas/buat" className="an-nudge-cta">
+								Buat tugas pertama <ChevronRight size={16} />
+							</Link>
+						</div>
+					)}
 					<div className="an-stats">
 						<Stat
 							icon={<Users size={18} />}

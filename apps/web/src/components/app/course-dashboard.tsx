@@ -740,11 +740,18 @@ export function CourseDashboard() {
 								<Link to="/app/tugas" className="ld-link-muted">Semua →</Link>
 							</div>
 							{gradingQueue.length === 0 ? (
-								<div className="ld-empty-sm">
-									{assignments.length === 0
-										? 'Belum ada tugas. Buat tugas formal untuk mulai mengumpulkan jawaban mahasiswa.'
-										: 'Tidak ada pengumpulan yang menunggu penilaian.'}
-								</div>
+								assignments.length === 0 ? (
+									<div className="ld-empty-sm">
+										Belum ada tugas. Buat tugas formal untuk mulai mengumpulkan jawaban mahasiswa.
+										<Link to="/app/tugas/buat" className="ld-empty-cta">
+											Buat tugas pertama <ArrowRight size={14} />
+										</Link>
+									</div>
+								) : (
+									<div className="ld-empty-sm">
+										Tidak ada pengumpulan yang menunggu penilaian.
+									</div>
+								)
 							) : (
 								<ul className="ld-grading-list">
 									{gradingQueue.map(({ assignment, pending, collected, graded }) => {
@@ -791,6 +798,9 @@ export function CourseDashboard() {
 							<div className="ld-empty-sm">
 								Belum ada sesi terjadwal. Tambahkan tanggal pada sesi mata kuliah untuk melihatnya
 								di sini.
+								<Link to="/app/courses" className="ld-empty-cta">
+									Tambah sesi <ArrowRight size={14} />
+								</Link>
 							</div>
 						) : (
 							<>

@@ -2184,7 +2184,7 @@
 :root.dark .research-confirm-note{background:#12161C;border:1px solid rgba(180,83,9,.35);color:#FBBF24}
 :root.dark .ra-tabs{background:#222831}
 :root.dark .ra-tabs button{color:#9AA6B6}
-:root.dark .ra-tabs button.active{background:#A78BFA}
+:root.dark .ra-tabs button.active{background:#C9342B;color:#fff}
 :root.dark .ra-count-card{background:#1A1F26;border:1px solid #2A3138}
 :root.dark .ra-count-card svg{color:#A78BFA}
 :root.dark .ra-count-card.ai svg{color:#A78BFA}
@@ -2193,7 +2193,7 @@
 :root.dark .ra-count-card strong{color:#E8EDF4}
 :root.dark .ra-count-card span{color:#9AA6B6}
 :root.dark .ra-section-label{color:#9AA6B6}
-:root.dark .ra-section-label svg{color:#A78BFA}
+:root.dark .ra-section-label svg{color:#F2A59D}
 :root.dark .ra-panel{background:#1A1F26;border:1px solid #2A3138}
 :root.dark .ra-panel-head h3{color:#E8EDF4}
 :root.dark .ra-metric{background:#12161C}
@@ -2207,6 +2207,30 @@
 :root.dark .ra-conf-cell span{color:#9AA6B6}
 :root.dark .ra-conf-cell strong{color:#E8EDF4}
 :root.dark .ra-conf-cell small{color:#9AA6B6}
+/* Riset analytics redesign — dark surfaces */
+:root.dark .ra-sec-h{color:#E8EDF4}
+:root.dark .ra-sec-h svg{color:#F2A59D}
+:root.dark .ra-hero{background:#1A1F26;border:1px solid #2A3138}
+:root.dark .ra-kpi{background:#12161C;border:1px solid #2A3138}
+:root.dark .ra-kpi-label{color:#9AA6B6}
+:root.dark .ra-kpi-value{color:#E8EDF4}
+:root.dark .ra-kpi-value i{color:#9AA6B6}
+:root.dark .ra-kpi-value.ra-insufficient{color:#9AA6B6}
+:root.dark .ra-kpi small{color:#9AA6B6}
+:root.dark :is(.ra-kpi-track,.ra-bar-track){background:#2A3138}
+:root.dark .ra-confbar-track{background:#2A3138}
+:root.dark .ra-confbar-legend span{color:#C5CDD8}
+:root.dark .ra-bar-label{color:#E8EDF4}
+:root.dark .ra-bar-value{color:#F2A59D}
+:root.dark .ra-bar-value.ra-insufficient{color:#9AA6B6}
+:root.dark .ra-bar.warn .ra-bar-value{color:#FBBF24}
+:root.dark .ra-bar-foot{color:#9AA6B6}
+/* Riset single-page layout — dark */
+:root.dark .riset-nav{background:color-mix(in srgb,#161A20 86%,transparent)}
+:root.dark .riset-nav a{color:#9AA6B6}
+:root.dark .riset-nav a:hover{color:#E8EDF4;background:#1A1F26}
+:root.dark .riset-nav a.active{background:#C9342B;color:#fff}
+:root.dark .riset-section+.riset-section{border-top-color:#2A3138}
 :root.dark .ra-acc-row{color:#9AA6B6}
 :root.dark .ra-acc-row strong{color:#E8EDF4}
 :root.dark .ra-note{color:#9AA6B6}

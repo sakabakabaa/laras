@@ -1,4 +1,5 @@
 import { useStudentHomeText } from '@/lib/student-home-copy';
+import { useLanguage } from '@/lib/i18n';
 import { Link } from 'react-router';
 import { ArrowRight, BookOpen, Check, Flag, Gamepad2, LoaderCircle, Sparkles, Trophy } from 'lucide-react';
 import { PracticeMascot } from './practice-mascot';
@@ -28,6 +29,7 @@ export function WorldScene({ variant = 0 }: { variant?: number }) {
 
 export function StudentHomeAdventure({ courses, preview = false }: { courses: Course[]; preview?: boolean }) {
  const label = useStudentHomeText();
+ const lang = useLanguage();
  const user = pb.authStore.record;
  const practice = useCachedQuery<CoursePractice[]>(!preview && courses.length ? `student-home:practice:${user?.id}:${courses.map(c => c.id).join(',')}` : null, async () => {
   const results = await Promise.allSettled(courses.map(async course => {
@@ -53,7 +55,7 @@ export function StudentHomeAdventure({ courses, preview = false }: { courses: Co
  const unavailable = !preview && practice.data && entries.some(item => !item.ready);
  return <div className="sd-game">
   {preview && <div className="sd-preview-note">{label('Pratinjau mahasiswa · Mata kuliah milik Anda. Progres pribadi muncul saat mahasiswa masuk.')} <Link to="/app">{label("Kembali ke dashboard")}</Link></div>}
-  <header className="sd-game-greeting"><div><span className="sd-game-eyebrow">{label("RUANG BELAJARMU")}</span><h1>{label('Halo,')} {name}!</h1><p>{label("Petualangan kecil. Kemajuan setiap hari.")}</p></div><a className="sd-game-profile-link" href="#progres-belajar"><Sparkles size={16} /> {practice.loading ? label("Memuat progres…") : preview ? label("Progres belajar") : !hasProgress && courses.length ? label("Progres belajar") : `${totalXp} XP`} <ArrowRight size={14} /></a></header>
+  <header className="sd-game-greeting"><div><span className="sd-game-eyebrow">{label("RUANG BELAJARMU")}{lang === 'de' && <span className="sd-immersion-badge" title="Antarmuka belajar ditampilkan dalam bahasa Jerman — mode imersi yang diatur oleh dosen Anda.">🇩🇪 Mode imersi</span>}</span><h1>{label('Halo,')} {name}!</h1><p>{label("Petualangan kecil. Kemajuan setiap hari.")}</p></div><a className="sd-game-profile-link" href="#progres-belajar"><Sparkles size={16} /> {practice.loading ? label("Memuat progres…") : preview ? label("Progres belajar") : !hasProgress && courses.length ? label("Progres belajar") : `${totalXp} XP`} <ArrowRight size={14} /></a></header>
   <section className="sd-game-hero">
    <div className="sd-game-hero-copy"><span className="sd-game-eyebrow"><Gamepad2 size={15} />{label("SATU PUTARAN, SEKITAR 5 MENIT")}</span><h2>{active ? label("Petualanganmu belum selesai.") : todayDone ? label("Satu langkah lagi?") : label("Siap bermain sambil belajar?")}</h2><p>{active ? label('Lanjutkan tantangan di {course}. Jawaban sebelumnya sudah tersimpan.', {course:active.course.title}) : focus ? label('Mari berlatih {skill}. Bagian ini masih perlu diulang berdasarkan jawaban latihanmu.', {skill:label(focus.label).toLowerCase()}) : label("Pilih dunia kelasmu, coba tantangannya, dan temukan hal baru.")}</p><Link className="sd-game-play" to={href}><PlayIcon /> {active ? label("Lanjutkan latihan") : recommended ? label("Mulai latihan") : label("Pilih petualangan")} <ArrowRight size={18} /></Link><span className="sd-game-hero-foot"><Check size={14} />{label("Boleh salah. Ada penjelasan untuk setiap jawaban.")}</span></div>
    <div className="sd-game-hero-art"><span className="sd-game-spark sd-game-spark-a">✦</span><span className="sd-game-spark sd-game-spark-b">✧</span><span className="sd-game-mascot-bubble">{todayDone ? label("Selesai satu putaran!") : label("Ayo, kita coba!")}</span><div className="sd-game-mascot"><PracticeMascot followCursor mood={todayDone ? 'happy' : 'ready'} size={190} /></div><div className="sd-game-art-ground" /><span className="sd-game-art-book"><BookOpen size={30} /></span><span className="sd-game-art-flag"><Flag size={24} /></span></div>

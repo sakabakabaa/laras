@@ -125,3 +125,10 @@
 .student-grade-detail { font-size:12px; color:var(--p-muted); line-height:1.7; margin-top:12px; }.student-grade-detail summary { cursor:pointer; color:var(--p-wine); }.student-grade-detail p { overflow-wrap:anywhere; }
 @media(max-width:750px) { .student-adventure-shell .sgr-wrap .pp-profile-skills { grid-template-columns:1fr; }.student-adventure-shell .ld-session-row { gap:12px; flex-wrap:wrap; } }
 .student-session-details { font-size:12px; margin:12px 0; }.student-session-details summary { color:var(--p-wine); cursor:pointer; }.student-session-details .ld-session-notes { margin-top:10px; }
+
+/* Immersion badge (audit #5): frames the German learning UI as an intentional
+   immersion mode instead of an untranslated-string bug. */
+.sd-immersion-badge{display:inline-flex;align-items:center;gap:6px;margin-left:10px;
+  padding:3px 10px;border-radius:999px;background:#FFF8D6;color:#8A6500;
+  font:700 11px/1 var(--body,'Plus Jakarta Sans');letter-spacing:0;text-transform:none;
+  vertical-align:middle;cursor:help;border:1px solid #FFEB99}

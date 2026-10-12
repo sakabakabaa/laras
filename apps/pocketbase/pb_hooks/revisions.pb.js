@@ -1,5 +1,5 @@
 onRecordCreate(e=>{require(`${__hooks}/revisions.js`).link(e.app,e.record);e.next();},'assignment_submissions');
-onRecordUpdate(e=>{require(`${__hooks}/revisions.js`).link(e.app,e.record);e.next();},'assignment_submissions');
+onRecordUpdate(e=>{const h=require(`${__hooks}/revisions.js`);h.validateUpdate(e.app,e.record);h.link(e.app,e.record);e.next();},'assignment_submissions');
 onRecordCreate(e=>{if(e.record.getString('revisionOf'))require(`${__hooks}/revisions.js`).validateTask(e.app,e.record,e.record.getString('revisionOf'));e.next();},'assignments');
 onRecordUpdate(e=>{
  const h=require(`${__hooks}/revisions.js`);const before=h.parse(e.record.original().getString('revisionWorkflow'));const after=h.parse(e.record.getString('revisionWorkflow'));

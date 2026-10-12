@@ -44,9 +44,16 @@ function link(app,row) {
   evidenceStatus:workflow.source==='historical'?'sequence_confirmed_comments_not_captured':'published_feedback',linkedAt:new Date().toISOString()
  });
 }
+function validateUpdate(app,row) {
+ const before=row.original();
+ if(before.getString('owner')===row.getString('owner') && before.getString('assignment')===row.getString('assignment'))return;
+ const previous=app.findRecordById('assignments',before.getString('assignment'));
+ const current=app.findRecordById('assignments',row.getString('assignment'));
+ if(previous.getString('revisionOf')||current.getString('revisionOf'))throw new BadRequestError('Identitas mahasiswa dan tugas pada revisi tidak boleh diganti.');
+}
 function plan(app,task,parentId) {
  validateTask(app,task,parentId);
  const rows=app.findRecordsByFilter('assignment_submissions','assignment={:assignment} && (status="submitted" || status="late" || status="graded")','id',10000,0,{assignment:task.id});
  return rows.map(row=>{const r=match(app,task,row,parentId);return {submissionId:row.id,originalId:r.original?r.original.id:'',status:r.reason|| (row.getString('originalSubmission')===r.original.id && parse(row.getString('revisionProvenance')).originalSubmission===r.original.id?'already_linked':'ready')};});
 }
-module.exports={parse,validateTask,link,plan};
+module.exports={parse,validateTask,validateUpdate,link,plan};

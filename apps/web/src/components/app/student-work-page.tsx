@@ -1,3 +1,4 @@
+import { SubmissionRevisionContext } from './submission-revision-context';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { LoaderCircle } from 'lucide-react';
@@ -160,6 +161,7 @@ export function StudentWorkPage({ assignmentId }: { assignmentId: string }) {
 					</div>
 				</div>
 			)}
+			{data?.assignment.revisionOf && <SubmissionRevisionContext originalAssignmentId={data.assignment.revisionOf} studentId={pb.authStore.record?.id || ""} revision={data.submission} />}
 			{data && showResult && data.submission && (
 				<StudentResultView
 					assignment={data.assignment}

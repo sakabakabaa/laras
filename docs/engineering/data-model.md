@@ -124,6 +124,7 @@ Lecturer review fields, AI raw/provenance snapshots and published feedback repre
 | [apps/pocketbase/pb_migrations/1791451100_agent_task_events.js](../../apps/pocketbase/pb_migrations/1791451100_agent_task_events.js) | `action`, `agent_task_events`, `agent_tasks`, `created`, `owner`, `revision`, `status`, `task`, `users` |
 | [apps/pocketbase/pb_migrations/1791530000_session_lesson_plans.js](../../apps/pocketbase/pb_migrations/1791530000_session_lesson_plans.js) | `assistant_lesson_plans`, `class_sessions`, `created`, `lesson_plan_revisions`, `origin`, `owner`, `revision`, `session`, `snapshot`, `status`, `users` |
 | [apps/pocketbase/pb_migrations/1791540000_create_student_conversation_reflections.js](../../apps/pocketbase/pb_migrations/1791540000_create_student_conversation_reflections.js) | `course`, `courses`, `created`, `language`, `level`, `owner`, `reflection`, `scenario`, `student_conversation_reflections`, `transcript`, `updated`, `users` |
+| [apps/pocketbase/pb_migrations/1791620000_submission_revision_workflow.js](../../apps/pocketbase/pb_migrations/1791620000_submission_revision_workflow.js) | `assignment_submissions`, `assignments` |
 
 The names column is a literal scan and includes field names in collection definitions. It is a search aid, not a table list.
 
@@ -141,6 +142,8 @@ The names column is a literal scan and includes field names in collection defini
 - [apps/pocketbase/pb_hooks/participation.pb.js](../../apps/pocketbase/pb_hooks/participation.pb.js)
 - [apps/pocketbase/pb_hooks/password-reset-send.pb.js](../../apps/pocketbase/pb_hooks/password-reset-send.pb.js)
 - [apps/pocketbase/pb_hooks/recovery-email-verify.pb.js](../../apps/pocketbase/pb_hooks/recovery-email-verify.pb.js)
+- [apps/pocketbase/pb_hooks/revisions.js](../../apps/pocketbase/pb_hooks/revisions.js)
+- [apps/pocketbase/pb_hooks/revisions.pb.js](../../apps/pocketbase/pb_hooks/revisions.pb.js)
 - [apps/pocketbase/pb_hooks/session-completion.js](../../apps/pocketbase/pb_hooks/session-completion.js)
 - [apps/pocketbase/pb_hooks/session-completion.pb.js](../../apps/pocketbase/pb_hooks/session-completion.pb.js)
 - [apps/pocketbase/pb_hooks/users-send-verification.pb.js](../../apps/pocketbase/pb_hooks/users-send-verification.pb.js)

@@ -15,6 +15,8 @@ Reviewed against source commit `a909540` on 12 October 2026. Configuration defau
 7. [Routes](routes.md): all registered URL patterns and handler files.
 8. [Configuration](configuration.md): environment-variable reference and consuming files.
 
+See also [production/correction workflow](revision-workflow.md) for historical paper-feedback provenance and the one-time importer.
+
 ## A practical example
 
 To investigate a wrong score, open the assignment route, follow it to `evaluation-workspace.tsx`, then inspect `api.evaluation-draft.ts`, `ai-evaluation.server.ts`, and `evaluation-rubric.ts`. For changes saved by the lecturer, follow `api.evaluation-review.ts` and `api.evaluation-publish.ts`. The AI draft and published submission grade are separate records; confusing them leads to incorrect analytics.

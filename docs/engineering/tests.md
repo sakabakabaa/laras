@@ -48,4 +48,5 @@ Generated from the web test directory. Run with `npm run test --prefix apps/web`
 - [apps/web/tests/rubric-suggestions.test.ts](../../apps/web/tests/rubric-suggestions.test.ts)
 - [apps/web/tests/structured-assignment.test.ts](../../apps/web/tests/structured-assignment.test.ts)
 - [apps/web/tests/student-assistant-tools.test.ts](../../apps/web/tests/student-assistant-tools.test.ts)
+- [apps/web/tests/submission-revisions.test.ts](../../apps/web/tests/submission-revisions.test.ts)
 - [apps/web/tests/worksheet-brief.test.ts](../../apps/web/tests/worksheet-brief.test.ts)

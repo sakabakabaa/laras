@@ -169,6 +169,8 @@ export type SubmissionStatus = 'draft' | 'submitted' | 'late' | 'revision' | 'gr
 export type AssignmentStage = { label: string; note?: string };
 
 export type Assignment = {
+    revisionOf?: string;
+    revisionWorkflow?: {source?: string; feedbackChannel?: string; confirmedAt?: string};
     assessmentGroup?: 'tasks' | 'uts' | 'uas' | 'excluded' | '';
     assessmentWeight?: number;
 	id: string;
@@ -233,6 +235,11 @@ export type Assignment = {
 };
 
 export type AssignmentSubmission = {
+    originalSubmission?: string;
+    parentSubmission?: string;
+    revisionNumber?: number;
+    revisionReflection?: string;
+    revisionProvenance?: {source?: string; feedbackChannel?: string; evidenceStatus?: string; feedbackSnapshot?: string; originalSubmission?: string};
 	id: string;
 	owner: string;
 	assignment: string;

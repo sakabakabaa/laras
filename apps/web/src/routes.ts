@@ -36,6 +36,7 @@ export default [
 	route('api/health', 'routes/api.health.ts'),
 	route('api/rps-import', 'routes/api.rps-import.ts'),
 	route('api/rps-assist', 'routes/api.rps-assist.ts'),
+	route('api/assignment-revisions', 'routes/api.assignment-revisions.ts'),
 	route('api/assignment-draft', 'routes/api.assignment-draft.ts'),
 	route('api/task-config-draft', 'routes/api.task-config-draft.ts'),
 	route('api/rubric-suggestions', 'routes/api.rubric-suggestions.ts'),

@@ -1,3 +1,5 @@
+import { AssignmentRevisionControls } from './assignment-revision-controls';
+import { SubmissionRevisionContext } from './submission-revision-context';
 import { SubmissionPdfPreview } from './submission-pdf-preview';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
@@ -654,6 +656,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				</section>
 			) : null)}
 
+			{!formative && <AssignmentRevisionControls assignment={assignment} />}
 			{showInstructions && (
 				<section className="eval-instructions">
 					{assignment.instructions ? <p>{assignment.instructions}</p> : <p>Belum ada instruksi tersimpan.</p>}
@@ -927,6 +930,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 							</div>
 {(
 								<div className="eval-answer">
+{assignment.revisionOf && active.enrolled && <SubmissionRevisionContext originalAssignmentId={assignment.revisionOf} studentId={active.enrolled.owner} revision={active.enrolled} lecturer />}
 									{active.status === 'draft' && (
 										<p className="eval-note">Masih draf, belum dikumpulkan secara resmi.</p>
 									)}
@@ -1066,7 +1070,10 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 						formative ? (
 							<FormativeReviewPanel />
 						) : (
-							<AiEvaluationPanel />
+							<>
+{assignment.revisionWorkflow?.source === "historical" && <p className="revision-note">Analisis AI retrospektif · bukan nilai atau feedback kertas pada saat pengumpulan.</p>}
+<AiEvaluationPanel />
+</>
 						)
 					) : formative ? (
 						<EmptyPracticePanel />

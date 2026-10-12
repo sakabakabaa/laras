@@ -38,6 +38,7 @@ Generated from [routes.ts](../../apps/web/src/routes.ts). Course child patterns 
 | `api/health` | [apps/web/src/routes/api.health.ts](../../apps/web/src/routes/api.health.ts) | loader |
 | `api/rps-import` | [apps/web/src/routes/api.rps-import.ts](../../apps/web/src/routes/api.rps-import.ts) | action |
 | `api/rps-assist` | [apps/web/src/routes/api.rps-assist.ts](../../apps/web/src/routes/api.rps-assist.ts) | action |
+| `api/assignment-revisions` | [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts) | action |
 | `api/assignment-draft` | [apps/web/src/routes/api.assignment-draft.ts](../../apps/web/src/routes/api.assignment-draft.ts) | action |
 | `api/task-config-draft` | [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts) | action |
 | `api/rubric-suggestions` | [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts) | action |

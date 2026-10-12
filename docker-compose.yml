@@ -17,7 +17,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=laras-app-net
-      - traefik.http.routers.laras-horizon-pb.rule=Host(`laras.srv1957161.hstgr.cloud`) && PathPrefix(`/hcgi/platform/api`)
+      - traefik.http.routers.laras-horizon-pb.rule=(Host(`laras.zulficar.me`) || Host(`laras.srv1957161.hstgr.cloud`)) && PathPrefix(`/hcgi/platform/api`)
       - traefik.http.routers.laras-horizon-pb.entrypoints=websecure
       - traefik.http.routers.laras-horizon-pb.tls=true
       - traefik.http.routers.laras-horizon-pb.tls.certresolver=letsencrypt
@@ -40,7 +40,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       POCKETBASE_URL: http://pocketbase:8090
-      WEBSITE_DOMAIN: laras.srv1957161.hstgr.cloud
+      WEBSITE_DOMAIN: laras.zulficar.me
       # Bynara remains configured only for course-thumbnail image generation.
       BYNARA_API_KEY: ${BYNARA_API_KEY:-}
       HROUTER_API_KEY: ${HROUTER_API_KEY:-}
@@ -58,13 +58,24 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=laras-app-net
-      - traefik.http.routers.laras-horizon-web.rule=Host(`laras.srv1957161.hstgr.cloud`)
+      - traefik.http.routers.laras-horizon-web.rule=Host(`laras.zulficar.me`)
       - traefik.http.routers.laras-horizon-web.entrypoints=websecure
       - traefik.http.routers.laras-horizon-web.tls=true
       - traefik.http.routers.laras-horizon-web.tls.certresolver=letsencrypt
       - traefik.http.routers.laras-horizon-web.priority=1
       - traefik.http.routers.laras-horizon-web.service=laras-horizon-web
       - traefik.http.services.laras-horizon-web.loadbalancer.server.port=3000
+      # Keep old page links working; legacy API/file URLs remain served by PB.
+      - traefik.http.routers.laras-legacy.rule=Host(`laras.srv1957161.hstgr.cloud`)
+      - traefik.http.routers.laras-legacy.entrypoints=websecure
+      - traefik.http.routers.laras-legacy.tls=true
+      - traefik.http.routers.laras-legacy.tls.certresolver=letsencrypt
+      - traefik.http.routers.laras-legacy.priority=1
+      - traefik.http.routers.laras-legacy.service=laras-horizon-web
+      - traefik.http.routers.laras-legacy.middlewares=laras-domain-redirect
+      - traefik.http.middlewares.laras-domain-redirect.redirectregex.regex=^https?://laras[.]srv1957161[.]hstgr[.]cloud/(.*)
+      - traefik.http.middlewares.laras-domain-redirect.redirectregex.replacement=https://laras.zulficar.me/$${1}
+      - traefik.http.middlewares.laras-domain-redirect.redirectregex.permanent=true
 
 networks:
   laras-app-net:

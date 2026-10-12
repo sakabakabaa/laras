@@ -1,9 +1,9 @@
 import { describe,it,expect } from 'vitest';
-import {createRequire} from 'node:module';
-const require=createRequire(import.meta.url);
-const {validateSection,validateCourse}=require('../../pocketbase/pb_hooks/course-term-guard.js');
-class BadRequestError extends Error {}
-Object.assign(globalThis,{BadRequestError});
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+const module={exports:{} as {validateSection:(app:unknown,record:unknown)=>void;validateCourse:(app:unknown,record:unknown)=>void}};
+runInNewContext(readFileSync(new URL('../../pocketbase/pb_hooks/course-term-guard.js',import.meta.url),'utf8'),{module,BadRequestError:Error});
+const {validateSection,validateCourse}=module.exports;
 const record=(fields:Record<string,string>)=>({id:'course',getString:(key:string)=>fields[key]||'',set:(key:string,value:string)=>{fields[key]=value;}});
 const course=record({academicYear:'2026',semester:'1'});
 const app={findRecordById:()=>course,findRecordsByFilter:()=>[{id:'existing'}]};

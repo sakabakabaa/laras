@@ -1,5 +1,5 @@
 import { AssignmentRevisionControls } from './assignment-revision-controls';
-import { SubmissionRevisionContext } from './submission-revision-context';
+import { SubmissionRevisionContext, LinkedRevisionAbove } from './submission-revision-context';
 import { SubmissionPdfPreview } from './submission-pdf-preview';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
@@ -930,7 +930,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 							</div>
 {(
 								<div className="eval-answer">
-{assignment.revisionOf && active.enrolled && <SubmissionRevisionContext originalAssignmentId={assignment.revisionOf} studentId={active.enrolled.owner} revision={active.enrolled} lecturer />}
+{!assignment.revisionOf && active.enrolled && <LinkedRevisionAbove original={active.enrolled} />}
 									{active.status === 'draft' && (
 										<p className="eval-note">Masih draf, belum dikumpulkan secara resmi.</p>
 									)}
@@ -945,7 +945,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 										</>
 									) : isSpeaking ? null : (
 										<>
-											<AiEvaluationAnswer />
+											{assignment.revisionOf && active.enrolled ? <SubmissionRevisionContext originalAssignmentId={assignment.revisionOf} studentId={active.enrolled.owner} revision={active.enrolled} lecturer><AiEvaluationAnswer /></SubmissionRevisionContext> : <AiEvaluationAnswer />}
 											{!active.content && (
 												<p className="asg-empty-line">Tidak ada catatan teks.</p>
 											)}

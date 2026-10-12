@@ -1188,7 +1188,7 @@ function RejectedFinding({ finding }: { finding: ReviewFinding }) {
 	);
 }
 
-function AnswerScript({
+export function AnswerScript({
 	textRef,
 	content,
 	segments,
@@ -1199,6 +1199,7 @@ function AnswerScript({
 	onApprove,
 	onRemove,
 	checked,
+	readOnly = false,
 }: {
 	textRef: RefObject<HTMLDivElement | null>;
 	content: string;
@@ -1212,6 +1213,7 @@ function AnswerScript({
 	onRemove: (id: string) => void;
 	/** True once an AI draft exists, so unmarked lines can be shown as checked-correct. */
 	checked: boolean;
+	readOnly?: boolean;
 }) {
 	const review = useReview();
 	const rejectingId = review?.rejectingId ?? null;
@@ -1315,20 +1317,21 @@ function AnswerScript({
 								return (
 									<mark
 										key={partIndex}
+                                        title={readOnly ? finding?.note : undefined}
 										className={`aev-mark ${part.severity}${pending ? ' pending' : ''}${focused ? ' focused' : ''}${finding && rejectingId === finding.id ? ' rejecting' : ''}`}
 										onMouseDown={(event) => {
 											const target = event.target as HTMLElement;
 											if (target.closest('textarea, input, select')) return;
-											if (event.button === 0) event.preventDefault();
+											if (!readOnly && event.button === 0) event.preventDefault();
 										}}
 										onClick={(event) => {
-											if ((event.target as HTMLElement).closest('.aev-mark-pop')) return;
+											if (readOnly || (event.target as HTMLElement).closest('.aev-mark-pop')) return;
 											if (!finding || pending) return;
 											onFocus(focused ? null : finding.id);
 										}}
 									>
 										{part.text}
-										{finding && !pending && (
+										{finding && !pending && !readOnly && (
 											<span className="aev-mark-pop" role="tooltip">
 												<span className="aev-mark-pop-head">
 													<span className="aev-chip">{SEVERITY_LABEL[finding.severity]}</span>

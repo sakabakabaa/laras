@@ -112,8 +112,7 @@ export function SectionManager({
 				<p>
 					Buat beberapa kelas parale (mis. Kelas A, Kelas B) untuk mata kuliah ini.
 					Setiap kelas memiliki jadwal, daftar mahasiswa, dan progres tersendiri,
-					sedangkan RPS, materi, dan tugas tetap dibagikan. Isi tahun akademik dan
-					semester agar satu mata kuliah bisa dipakai lintas tahun tanpa diduplikasi.
+					sedangkan RPS, materi, dan tugas tetap dibagikan. Tahun dan semester mengikuti mata kuliah. Untuk periode baru, gunakan mata kuliah terpisah agar nilai tidak tercampur.
 				</p>
 
 				{error && (

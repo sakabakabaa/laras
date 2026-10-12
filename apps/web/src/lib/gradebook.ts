@@ -179,7 +179,7 @@ export function componentScore(
 	if (!entry || entry.value == null) return { score: null, source: 'manual', aiEvaluated: false };
 	const max = component.maxScore || 100;
 	return {
-		score: Math.round((entry.value / max) * 1000) / 10,
+		score: Math.round(((isChapterComponent(component) ? chapterValue(component, entry.chapters) : entry.value) / max) * 1000) / 10,
 		source: 'manual',
 		aiEvaluated: false,
 	};

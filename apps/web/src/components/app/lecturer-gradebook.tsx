@@ -1040,16 +1040,6 @@ function GradeCell({
 	onSaveChapters: (c: GradeComponent, studentId: string, chapters: Record<string, ChapterStatus>) => Promise<void>;
 }) {
 	const t = useT();
-	if (isChapterComponent(component)) {
-		return (
-			<ChapterCell
-				component={component}
-				studentId={studentId}
-				entry={entriesByComponent.get(component.id)?.get(studentId)}
-				onSave={onSaveChapters}
-			/>
-		);
-	}
 	const { score, source, aiEvaluated } = componentScore(
 		component,
 		studentId,
@@ -1072,6 +1062,16 @@ function GradeCell({
 		if (editing) inputRef.current?.focus();
 	}, [editing]);
 
+	if (isChapterComponent(component)) {
+		return (
+			<ChapterCell
+				component={component}
+				studentId={studentId}
+				entry={entriesByComponent.get(component.id)?.get(studentId)}
+				onSave={onSaveChapters}
+			/>
+		);
+	}
 	if (component.kind === 'assignment' || component.computed) {
 		return (
 			<div className="gb-cell-assignment" title={component.computed?.[studentId]?.detail || (aiEvaluated ? t('gb.cell.aiTitle') : t('gb.cell.submissionTitle'))}>

@@ -6503,3 +6503,28 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover,input[type="datetime
   .ld-card:hover,.sd-card:hover,.mk-card:hover,.an-course-list li:hover{transform:none}
   .ld-ring-animate circle.val,.ld-count-animate{animation:none}
 }
+
+/* ── Berkas: multi-course links, bulk reprocess, preview-only notes ── */
+.flb-course-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+.flb-course-chip{display:inline-flex;align-items:center;gap:6px;background:#FBE9E7;color:#81231d;border-radius:999px;padding:3px 6px 3px 10px;font:700 12px var(--body)}
+.flb-course-chip button{border:0;background:0;cursor:pointer;color:#81231d;font-size:15px;line-height:1;padding:0 3px;border-radius:999px}
+.flb-course-chip button:hover{background:rgba(129,35,29,.12)}
+.flb-course-chip button:disabled{opacity:.5;cursor:default}
+.flb-reprocess-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 16px;padding:12px 14px;border:1px solid #E4E7EC;border-radius:12px;background:#F8FAFC;font:500 13px var(--body);color:#475467}
+.flb-reprocess-bar .ld-btn-primary{display:inline-flex;align-items:center;gap:7px}
+.flb-extract-note.info{color:#475467;background:#F8FAFC;border-color:#E4E7EC}
+
+/* ── Roster: sorting, multi-select, bulk actions ── */
+.roster-sort{border:0;background:0;padding:0;cursor:pointer;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit}
+.roster-sort:hover{color:#81231d}
+.roster-th-check,.roster-td-check{width:34px;text-align:center;padding-left:10px;padding-right:2px}
+.roster-th-check input,.roster-td-check input{width:15px;height:15px;accent-color:#B3261E;cursor:pointer}
+.roster-tr.is-selected{background:#FFF7F6}
+.roster-bulk{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid #F5D0CB;border-radius:12px;background:#FFF7F6}
+.roster-bulk-count{font:700 13px var(--body);color:#81231d;white-space:nowrap}
+.roster-bulk-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.roster-bulk-actions .ld-btn-primary{display:inline-flex;align-items:center;gap:6px}
+.roster-bulk-select{display:inline-flex;align-items:center;gap:6px;color:#475467;font:500 12px var(--body)}
+.roster-bulk-select select,.roster-bulk-select input{height:32px;border:1px solid #E4E7EC;border-radius:8px;padding:0 9px;font:500 12px var(--body);color:#172033;outline:0;background:#fff}
+.roster-bulk-select select:focus,.roster-bulk-select input:focus{border-color:#B3261E}
+.roster-bulk-select input{width:130px}

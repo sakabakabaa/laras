@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase-client';
+import { errorMessage } from '@/lib/learning';
 import type {
 	ExtractionStatus,
 	FileAccess,
@@ -162,6 +163,34 @@ export async function processLibraryFile(fileId: string, force: boolean): Promis
 		throw new Error(data?.error || data?.message || 'Pemrosesan dokumen gagal.');
 	}
 	return data;
+}
+
+/**
+ * Re-processes a batch of library files sequentially, reporting progress.
+ * Backs the bulk "Proses ulang berkas gagal" action so files uploaded before a
+ * parser existed stop showing as failures.
+ *
+ * Sequential on purpose: each file hits the STT/extraction pipeline and the
+ * server already caps work per request. Failures are collected rather than
+ * thrown so one bad file cannot abort the batch.
+ */
+export async function reprocessLibraryFiles(
+	fileIds: string[],
+	onProgress?: (done: number, total: number) => void,
+	force = true,
+): Promise<{ ok: number; failed: { id: string; message: string }[] }> {
+	const failed: { id: string; message: string }[] = [];
+	let ok = 0;
+	for (let i = 0; i < fileIds.length; i += 1) {
+		try {
+			await processLibraryFile(fileIds[i], force);
+			ok += 1;
+		} catch (err) {
+			failed.push({ id: fileIds[i], message: errorMessage(err) });
+		}
+		onProgress?.(i + 1, fileIds.length);
+	}
+	return { ok, failed };
 }
 
 /* ── Phase 3: versioning & traceability ───────────────────── */

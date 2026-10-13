@@ -102,7 +102,7 @@ export async function practiceContext(pb: PocketBase, user: { id: string; role?:
     }
     // Read with the caller's token: course enrollment was checked above and
     // PocketBase decides which linked materials are actually visible.
-    const files = await pb.collection('file_library').getFullList<File>({ filter: pb.filter('course={:c}', { c: course.id }) });
+    const files = await pb.collection('file_library').getFullList<File>({ filter: pb.filter('course~{:c}', { c: course.id }) });
     const sections: { id: string; title: string; locator: string; excerpt: string; extraction: string; session: string }[] = [];
     const detectedLanguages: string[] = [];
     const candidates: { source: PracticeSource; score: number }[] = [];

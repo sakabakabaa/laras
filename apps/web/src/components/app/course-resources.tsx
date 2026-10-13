@@ -26,7 +26,7 @@ import type {
 	FileAccess,
 	FileLibraryRecord,
 } from '@/lib/learning';
-import { dateLabel, errorMessage } from '@/lib/learning';
+import { dateLabel, errorMessage, linkIds } from '@/lib/learning';
 import { useCourseResources } from '@/hooks/use-course-resources';
 import { ResourceForm } from '@/components/app/resource-form';
 import { confirmDialog } from '@/components/confirm-dialog';
@@ -75,7 +75,8 @@ function libraryFileToItem(record: FileLibraryRecord): ResourceItem {
 		...record,
 		kind: 'file',
 		url: '',
-		session: record.session || '',
+		course: linkIds(record.course)[0] || '',
+		session: linkIds(record.session)[0] || '',
 		description: record.description || '',
 		source: 'library',
 		access: record.access,

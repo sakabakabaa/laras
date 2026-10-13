@@ -296,10 +296,15 @@ export type FileExtractionRecord = {
 export type FileLibraryRecord = {
 	id: string;
 	owner: string;
-	course: string;
-	cpmk: string;
-	subCpmk: string;
-	session: string;
+	/**
+	 * Linked courses. Multi-select since the berkas library became multi-course:
+	 * a document can belong to several mata kuliah at once. Always an array on
+	 * the wire — the migration converts legacy scalar values.
+	 */
+	course: string[];
+	cpmk: string[];
+	subCpmk: string[];
+	session: string[];
 	title: string;
 	description: string;
 	/** PocketBase file field name (single file). */
@@ -316,12 +321,25 @@ export type FileLibraryRecord = {
 	updated: string;
 	expand?: {
 		owner?: { id: string; name: string; email?: string };
-		course?: Course;
-		cpmk?: Cpmk;
-		subCpmk?: SubCpmk;
-		session?: ClassSession;
+		/** Multi-relations expand to arrays. */
+		course?: Course[];
+		cpmk?: Cpmk[];
+		subCpmk?: SubCpmk[];
+		session?: ClassSession[];
 	};
 };
+
+/**
+ * Normalises a berkas relation that may arrive as a scalar (legacy, or a
+ * not-yet-migrated payload) or an array (current) into an array, so every read
+ * site is safe across the scalar->array transition.
+ */
+export function linkIds(value: unknown): string[] {
+	if (Array.isArray(value))
+		return value.filter((v): v is string => typeof v === 'string' && !!v);
+	if (typeof value === 'string' && value) return [value];
+	return [];
+}
 
 /** Phase 4 — confirmed/corrected context language for a library file. */
 export type ContextLanguage = 'de' | 'id' | 'en' | 'other';

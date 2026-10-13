@@ -171,10 +171,10 @@ export async function applyContextSuggestion(
 		});
 		result.changedSections = true;
 	} else if (row.kind === 'course' && row.course) {
-		await pb.collection('file_library').update(fileId, { course: row.course });
+		await pb.collection('file_library').update(fileId, { course: [row.course] });
 		result.changedFile = true;
 	} else if (row.kind === 'session' && row.session) {
-		await pb.collection('file_library').update(fileId, { session: row.session });
+		await pb.collection('file_library').update(fileId, { session: [row.session] });
 		result.changedFile = true;
 	}
 

@@ -533,7 +533,7 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 				</div>
 				{canEdit && (
 					<div className="roster-head-actions">
-						<OverflowMenu label={t('roster.actionsLabel')}>
+						<OverflowMenu label={t('roster.actionsLabel')} triggerLabel={t('roster.actionsLabel')}>
 							<button
 								type="button"
 								role="menuitem"
@@ -709,7 +709,7 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 					</div>
 				)}
 
-				<label className="ld-search-bar roster-search">{t('audit.rosterSearch')}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('audit.rosterSearch')} /></label>
+				<label className="ld-search-bar roster-search"><span className="sr-only">{t('audit.rosterSearch')}</span><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('audit.rosterSearch')} /></label>
 				<div className="roster-table-wrap">
 					<table className="roster-table">
 						<thead>

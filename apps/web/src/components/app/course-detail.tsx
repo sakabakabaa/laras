@@ -10,9 +10,7 @@ import {
 	CheckCircle2,
 	Download,
 	FileText,
-	Layers,
 	LoaderCircle,
-	MoreHorizontal,
 	Pencil,
 	Plus,
 	Trash2,
@@ -34,7 +32,6 @@ import { AttendanceManager } from '@/components/app/attendance-manager';
 import { SectionManager, SectionSelector, useMySection } from '@/components/app/course-sections';
 import { useCourseSections } from '@/hooks/use-course-sections';
 import { CourseThumb } from '@/components/app/course-thumb';
-import { OverflowMenu } from '@/components/app/overflow-menu';
 import { SessionDateAutofill } from '@/components/app/session-date-autofill';
 import { confirmDialog } from '@/components/confirm-dialog';
 import { CharMeter } from '@/components/app/char-meter';
@@ -358,9 +355,9 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 				</div>
 			) : (
 				<>
-					<div className="ld-detail-head">
-						<CourseThumb course={course} className="ld-detail-thumb" />
-						<div className="ld-detail-info">
+					<div className={`ld-detail-head course-context-head${tab === 'overview' ? ' overview' : ''}`}>
+						{tab === 'overview' && <CourseThumb course={course} className="ld-detail-thumb" />}
+						<div className="ld-detail-info"><strong className="course-context-title">{course.title}</strong>
 							<span>{course.code || (isStudent ? t('student.common.noCode') : 'Kode belum diisi')}</span>
 							<span className="ld-dot" />
 							<span>{course.semester || (isStudent ? t('student.common.noSemester') : 'Semester belum diisi')}</span>
@@ -368,7 +365,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 							<span>{course.academicYear || (isStudent ? t('student.courseDetail.noAcademicYear') : 'Tahun akademik belum diisi')}</span>
 						</div>
 						<div className="ld-detail-actions">
-							<SectionSelector sections={sections} value={sectionFilter} onChange={setSectionFilter} />
+							{['ringkasan', 'mata-kuliah', 'mahasiswa', 'tugas', 'berkas'].includes(section) && <SectionSelector sections={sections} value={sectionFilter} onChange={setSectionFilter} />}
 							{isStudent ? (
 								<button
 									type="button"
@@ -388,26 +385,6 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 										</>
 									)}
 								</button>
-							) : isFacultyOwner ? (
-								<OverflowMenu label="Tindakan mata kuliah">
-									<button type="button" role="menuitem" onClick={() => setShowSections(true)}>
-										<Layers size={16} /> Kelola kelas
-									</button>
-									<button type="button" role="menuitem" onClick={() => navigate(`/app/rps/${id}`)}>
-										<FileText size={16} /> Kelola RPS
-									</button>
-									<button type="button" role="menuitem" onClick={() => setEditingCourse(true)}>
-										<Pencil size={16} /> Edit detail
-									</button>
-									<button
-										type="button"
-										role="menuitem"
-										className="danger"
-										onClick={() => void removeCourse()}
-									>
-										<Trash2 size={16} /> Hapus mata kuliah
-									</button>
-								</OverflowMenu>
 							) : null}
 						</div>
 					</div>
@@ -464,7 +441,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 									<h2>RPS {course.code ? `· ${course.code}` : ''}</h2>
 									<p>Capaian, rencana pertemuan, topik, dan penilaian dalam satu tampilan.</p>
 								</div>
-								{isFacultyOwner && <button type="button" className="ld-btn-primary" onClick={() => navigate(`/app/rps/${id}`)}><FileText size={16} /> Kelola RPS</button>}
+								{isFacultyOwner && <button type="button" className="ld-btn-primary" onClick={() => navigate(`/app/rps/${id}`)}><FileText size={16} /> Edit RPS</button>}
 							</header>
 							<div className="ld-rps-summary" aria-label="Ringkasan RPS">
 								{[
@@ -508,7 +485,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 									<span>
 										{course.code || 'Mata Kuliah'} / {'Silabus'}
 									</span>
-									<MoreHorizontal size={20} />
+
 								</div>
 								{isFacultyOwner && editingDoc === tab ? (
 									<div className="ld-document-edit">
@@ -752,6 +729,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 						course={course}
 						onEdit={() => setEditingCourse(true)}
 						onDelete={() => void removeCourse()}
+						onManageSections={() => setShowSections(true)}
 					/>
 				)}
 				{section === 'nilai' && isStudent && (

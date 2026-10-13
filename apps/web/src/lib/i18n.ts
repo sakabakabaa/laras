@@ -38,6 +38,7 @@ export function nativeName(code: string): string {
 type Dict = Record<string, string>;
 
 const id: Dict = {
+	'roster.angkatan': 'Angkatan',
 "audit.rosterSearch": "Cari nama, NIM, atau angkatan",
 "audit.noWeekly": "Belum ada progres mingguan",
 "audit.weeklyEmpty": "Grafik muncul setelah pertemuan tersedia.",
@@ -1277,6 +1278,7 @@ const id: Dict = {
 };
 
 const en: Dict = {
+	'roster.angkatan': 'Cohort',
 "audit.rosterSearch": "Search name, student number or cohort",
 "audit.noWeekly": "No weekly progress yet",
 "audit.weeklyEmpty": "The chart appears when class sessions are available.",
@@ -2496,6 +2498,7 @@ const en: Dict = {
 };
 
 const de: Dict = {
+	'roster.angkatan': 'Jahrgang',
 "audit.rosterSearch": "Name, Matrikelnummer oder Jahrgang suchen",
 "audit.noWeekly": "Noch kein Wochenfortschritt",
 "audit.weeklyEmpty": "Das Diagramm erscheint, sobald Unterrichtstermine vorhanden sind.",

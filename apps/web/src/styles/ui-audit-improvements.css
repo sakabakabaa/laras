@@ -39,3 +39,27 @@
 .roster-table-wrap { max-height:65vh; overflow:auto; }
 .roster-table thead th { position:sticky; top:0; z-index:2; background:var(--ui-panel); color:var(--ui-text); }
 @media(max-width:390px) { .an-stats { grid-template-columns:minmax(0,1fr); } .an-alert { flex-wrap:wrap; } }
+
+/* Course context stays compact; page-specific actions belong to the page header. */
+.course-context-head:not(.overview) { margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--ui-border); gap:12px; }
+.course-context-head .ld-detail-info { flex:1; justify-content:flex-start; gap:9px; flex-wrap:wrap; }
+.course-context-title { font-size:13px; color:var(--ui-text); }
+.course-context-head.overview .course-context-title { display:none; }
+.ov-menu-btn.labelled { width:auto; display:flex; align-items:center; gap:7px; padding:0 12px; white-space:nowrap; }
+.ov-menu-btn.labelled span { font-size:12px; font-weight:600; }
+.course-settings-management { margin:12px 0 18px; }
+.ld-rps-page { margin-top:0; }
+.ld-rps-page .ld-rps-head { padding:15px 18px; background:var(--ui-panel); border-color:var(--ui-border); }
+.ld-rps-page .ld-rps-head :is(h2,p) { color:var(--ui-text); }
+.ld-rps-page .ld-rps-summary { display:flex; flex-wrap:wrap; gap:8px; }
+.ld-rps-page .ld-rps-summary>div { padding:8px 12px; background:var(--ui-soft); border-color:var(--ui-border); flex:1 1 110px; }
+.ld-rps-page .ld-rps-summary :is(strong,span) { color:var(--ui-text); }
+.ld-rps-page .sr-group>.sr-list>:is(.sr-row,.sr-cpmk) { background:var(--ui-panel); border-color:var(--ui-border); }
+.ld-rps-page .sr-cpmk>.sr-row { background:transparent; }
+.ld-rps-page :is(.sr-desc,.sr-desc summary,.sr-desc p,.sr-group h3) { color:var(--ui-text); }
+.ld-rps-page .sr-code { background:var(--ui-soft); color:var(--ui-text); }
+.ld-rps-page .sr-group { scroll-margin-top:20px; }
+@media(max-width:768px) { .course-context-head .ld-detail-actions { margin-left:auto; } .course-context-head .course-context-title { flex-basis:100%; } }
+
+.roster-head>div:first-child { flex:1; min-width:240px; }
+.roster-head-actions { flex-shrink:0; }

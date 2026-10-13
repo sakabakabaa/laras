@@ -1,14 +1,16 @@
-import { Trash2, Pencil } from 'lucide-react';
+import { Trash2, Pencil, Layers } from 'lucide-react';
 import type { Course } from '@/lib/learning';
 
 export function CourseSettings({
 	course,
 	onEdit,
 	onDelete,
+	onManageSections,
 }: {
 	course: Course;
 	onEdit: () => void;
 	onDelete: () => void;
+	onManageSections: () => void;
 }) {
 	const rows = [
 		['Nama', course.title],
@@ -30,6 +32,7 @@ export function CourseSettings({
 					<Pencil size={16} /> Edit detail
 				</button>
 			</div>
+			<div className="course-settings-management"><button type="button" className="ld-outline-action" onClick={onManageSections}><Layers size={16} /> Kelola kelas</button></div>
 			<dl className="course-settings-grid">
 				{rows.map(([label, value]) => (
 					<div key={label}>

@@ -8,8 +8,10 @@ import { MoreHorizontal } from 'lucide-react';
 export function OverflowMenu({
 	label = 'Tindakan lain',
 	children,
+	triggerLabel,
 }: {
 	label?: string;
+	triggerLabel?: string;
 	children: React.ReactNode;
 }) {
 	const [open, setOpen] = useState(false);
@@ -35,14 +37,14 @@ export function OverflowMenu({
 		<div className="ov-menu" ref={ref}>
 			<button
 				type="button"
-				className="ov-menu-btn"
+				className={`ov-menu-btn${triggerLabel ? ' labelled' : ''}`}
 				aria-expanded={open}
 				aria-haspopup="menu"
 				aria-label={label}
 				title={label}
 				onClick={() => setOpen((v) => !v)}
 			>
-				<MoreHorizontal size={18} />
+				<MoreHorizontal size={18} />{triggerLabel && <span>{triggerLabel}</span>}
 			</button>
 			{open ? (
 				<div className="ov-menu-pop" role="menu" onClick={() => setOpen(false)}>

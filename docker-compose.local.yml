@@ -52,3 +52,4 @@ services:
 
 volumes:
   pocketbase-local-data:
+    name: ${LARAS_LOCAL_DATA_VOLUME:-laras_pocketbase-local-data}

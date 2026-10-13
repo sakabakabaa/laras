@@ -17,3 +17,9 @@ Native database/files backups were taken before changes:
 - Local: `pre-kelas-local-20261013.zip`
 
 A post-reconciliation production snapshot is used for the local refresh. Snapshots contain private data, stay outside Git, and must not be committed. Backend migrations/hooks must be rebuilt alongside the frontend when restoring newer data locally.
+
+## Local snapshot switching
+
+`docker-compose.local.yml` uses `LARAS_LOCAL_DATA_VOLUME` to select a named local database volume. The refreshed snapshot is in `laras_pocketbase-local-data-synced-20261013`; the original `laras_pocketbase-local-data` remains intact. The local `.env` is ignored by Git and its previous version is preserved privately for rollback. Matching encryption settings are required when restoring a PocketBase snapshot. Local app metadata points to localhost rather than the production domain.
+
+Validation: 18 focused tests, full typecheck/lint/build, a real local backend request confirming an enrollment cannot override its roster-defined class, UI roster counts A=37/B=35, and 16 shared meetings visible with B selected. Production web and backend health checks passed after deployment.

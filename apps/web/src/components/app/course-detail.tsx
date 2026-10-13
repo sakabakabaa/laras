@@ -1,3 +1,4 @@
+import { sessionInClass } from '@/lib/class-scope';
 import { useStudentHomeText } from '@/lib/student-home-copy';
 import { PracticeMascot } from './practice-mascot';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -130,7 +131,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 	// Scope the Pertemuan view to the selected kelas when a section filter is
 	// active. Unfiltered shows every session (including legacy unsectioned).
 	const visibleSessions = useMemo(
-		() => (sectionFilter ? sessions.filter((s) => s.section === sectionFilter) : sessions),
+		() => sessions.filter(s => sessionInClass(s, sectionFilter)),
 		[sessions, sectionFilter],
 	);
 	const enrolled = (enrolledQuery.data?.length ?? 0) > 0;

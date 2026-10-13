@@ -1,3 +1,4 @@
+import { sessionInClass } from '@/lib/class-scope';
 import * as Dialog from '@radix-ui/react-dialog';
 import {useEffect,useState} from 'react';
 import pb from '@/lib/pocketbase-client';
@@ -19,7 +20,7 @@ export function SessionRoster({courseId,canEdit,sectionId}:{courseId:string;canE
  const [kelas,setKelas]=useState(sectionId||''),[selected,setSelected]=useState(''),[search,setSearch]=useState(''),[filter,setFilter]=useState('all'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[saved,setSaved]=useState('Semua perubahan tersimpan');
  const [award,setAward]=useState<{entry:CourseRosterEntry;points:number}|null>(null),[reason,setReason]=useState('Menjawab'),[note,setNote]=useState('');
  const [undo,setUndo]=useState<(()=>Promise<void>)|null>(null);
- const sessions=(sq.data||[]).filter(s=>!kelas||!s.section||s.section===kelas);
+ const sessions=(sq.data||[]).filter(s=>sessionInClass(s,kelas));
  useEffect(()=>{if(!sessions.length||sessions.some(s=>s.id===selected))return;const requested=new URLSearchParams(window.location.search).get('session'),today=new Date(Date.now()+7*3600000).toISOString().slice(0,10);setSelected(sessions.find(s=>s.id===requested)?.id||[...sessions].reverse().find(s=>s.date&&s.date.slice(0,10)<=today)?.id||sessions[0].id);},[sq.data,kelas,selected]);
  useEffect(()=>setUndo(null),[selected]);
  const session=sessions.find(s=>s.id===selected),{map,loading:attLoading,error:attError,reload}=useSessionAttendance(selected);

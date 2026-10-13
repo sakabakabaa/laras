@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
 	AlertTriangle,
+	CalendarDays,
 	ClipboardCopy,
 	Copy,
 	Download,
@@ -104,6 +105,12 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 	} | null>(null);
 	const [resetBusy, setResetBusy] = useState<string | null>(null);
 	const [showAudit, setShowAudit] = useState(false);
+	/** Column sort. Default reproduces the DB order (nim) so nothing shifts. */
+	const [sortKey, setSortKey] = useState<'nim' | 'name' | 'angkatan' | 'section'>('nim');
+	const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+	/** Selected roster entry ids — always scoped to the rows currently visible. */
+	const [selected, setSelected] = useState<Set<string>>(new Set());
+	const [bulkBusy, setBulkBusy] = useState(false);
 
 	const existingNims = useMemo(
 		() => new Set(entries.map((e) => e.nim.trim())),
@@ -112,10 +119,95 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 
 	// Scope the visible roster to the selected kelas. NIM uniqueness is still
 	// checked across the whole course (the DB index is course + nim).
-	const visibleEntries = useMemo(
-		() => (sectionId ? entries.filter((e) => e.section === sectionId) : entries),
-		[entries, sectionId],
+	// Class-scoped, then sorted. Angkatan sorts numerically (2021 before 2022)
+	// because it is stored as text; an unparseable value sorts last so it is easy
+	// to spot and correct.
+	const visibleEntries = useMemo(() => {
+		const scoped = sectionId ? entries.filter((e) => e.section === sectionId) : entries;
+		const dir = sortDir === 'asc' ? 1 : -1;
+		const value = (entry: CourseRosterEntry): string | number => {
+			switch (sortKey) {
+				case 'name':
+					return entry.name.toLowerCase();
+				case 'angkatan': {
+					const year = Number.parseInt(angkatanOf(entry), 10);
+					return Number.isFinite(year) ? year : Number.MAX_SAFE_INTEGER;
+				}
+				case 'section':
+					return sectionName(entry.section).toLowerCase();
+				default:
+					return entry.nim;
+			}
+		};
+		return [...scoped].sort((a, b) => {
+			const av = value(a);
+			const bv = value(b);
+			if (av < bv) return -1 * dir;
+			if (av > bv) return 1 * dir;
+			// Stable tie-break on NIM keeps the order deterministic.
+			return a.nim.localeCompare(b.nim, 'id') * dir;
+		});
+	}, [entries, sectionId, sortKey, sortDir, sections]);
+
+	const toggleSort = (key: typeof sortKey) => {
+		if (key === sortKey) {
+			setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+			return;
+		}
+		setSortKey(key);
+		setSortDir('asc');
+	};
+
+	/** Sortable column header with an accessible sort indicator. */
+	const sortHeader = (key: typeof sortKey, label: string, className: string) => (
+		<th
+			className={className}
+			aria-sort={sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+		>
+			<button type="button" className="roster-sort" onClick={() => toggleSort(key)}>
+				{label}
+				{sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+			</button>
+		</th>
 	);
+
+	// Selection is scoped to what is on screen: with a kelas filter active,
+	// "select all" must mean the visible students, never the whole course.
+	const visibleIds = useMemo(() => visibleEntries.map((e) => e.id), [visibleEntries]);
+	const selectedVisible = useMemo(
+		() => visibleEntries.filter((e) => selected.has(e.id)),
+		[visibleEntries, selected],
+	);
+	const allVisibleSelected =
+		visibleEntries.length > 0 && selectedVisible.length === visibleEntries.length;
+
+	const toggleRow = (id: string) => {
+		setSelected((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	};
+
+	const toggleAllVisible = () => {
+		setSelected((prev) => {
+			const next = new Set(prev);
+			if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id));
+			else visibleIds.forEach((id) => next.add(id));
+			return next;
+		});
+	};
+
+	// Drop selections that fall out of view (kelas filter changed, rows deleted).
+	useEffect(() => {
+		if (selected.size === 0) return;
+		const visible = new Set(visibleIds);
+		setSelected((prev) => {
+			const next = new Set([...prev].filter((id) => visible.has(id)));
+			return next.size === prev.size ? prev : next;
+		});
+	}, [visibleIds, selected.size]);
 	const sectionName = (id?: string) => sections.find((s) => s.id === id)?.name || '';
 
 	const activate = async () => {
@@ -176,6 +268,141 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 			setActionError(errorMessage(err));
 		} finally {
 			setBusyId(null);
+		}
+	};
+
+	/**
+	 * Bulk: activate accounts for the selected students only. Reuses the same
+	 * enrolment route as the whole-course action, passing the NIM subset so the
+	 * lecturer can onboard a new intake without touching everyone else.
+	 */
+	const activateSelected = async () => {
+		const targets = selectedVisible;
+		if (targets.length === 0) return;
+		if (
+			!(await confirmDialog({
+				title: t('roster.activateDialogTitle'),
+				message: t('roster.activateSelectedMessage', { count: String(targets.length) }),
+				variant: 'default',
+				confirmLabel: t('roster.activate'),
+			}))
+		)
+			return;
+		setBulkBusy(true);
+		setActionError('');
+		try {
+			const response = await fetch('/api/roster-enroll', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${pb.authStore.token}`,
+				},
+				body: JSON.stringify({ courseId, nims: targets.map((e) => e.nim) }),
+			});
+			const data = (await response.json().catch(() => null)) as
+				| ActivateResult
+				| { error?: string }
+				| null;
+			if (!response.ok) {
+				throw new Error(
+					(data && 'error' in data && data.error) || t('roster.activateError'),
+				);
+			}
+			setActivateResult(data as ActivateResult);
+			invalidate('enrollments');
+			setSelected(new Set());
+		} catch (err) {
+			setActionError(errorMessage(err));
+		} finally {
+			setBulkBusy(false);
+		}
+	};
+
+	/** Bulk: move the selected students into a different kelas (or clear it). */
+	const moveSelected = async (target: string) => {
+		const targets = selectedVisible;
+		if (targets.length === 0) return;
+		const label = target ? sectionName(target) || target : t('roster.noSpecialClass');
+		if (
+			!(await confirmDialog({
+				title: t('roster.bulkMoveDialogTitle'),
+				message: t('roster.bulkMoveDialogMessage', {
+					count: String(targets.length),
+					target: label,
+				}),
+				variant: 'default',
+				confirmLabel: t('roster.bulkMove'),
+			}))
+		)
+			return;
+		setBulkBusy(true);
+		setActionError('');
+		try {
+			// Section is a single relation per roster row, so a plain update works.
+			for (const entry of targets) {
+				await pb.collection('course_roster').update(entry.id, { section: target || null });
+			}
+			invalidate('course_roster');
+			setSelected(new Set());
+			reload();
+		} catch (err) {
+			setActionError(errorMessage(err));
+		} finally {
+			setBulkBusy(false);
+		}
+	};
+
+	/** Bulk: set angkatan for the selected students (fixes NIM-derived values). */
+	const setAngkatanSelected = async (value: string) => {
+		const targets = selectedVisible;
+		const trimmed = value.trim();
+		if (targets.length === 0 || !trimmed) return;
+		setBulkBusy(true);
+		setActionError('');
+		try {
+			for (const entry of targets) {
+				await pb.collection('course_roster').update(entry.id, { angkatan: trimmed });
+			}
+			invalidate('course_roster');
+			setSelected(new Set());
+			reload();
+		} catch (err) {
+			setActionError(errorMessage(err));
+		} finally {
+			setBulkBusy(false);
+		}
+	};
+
+	/** Bulk: remove the selected students. Destructive - names are shown first. */
+	const removeSelected = async () => {
+		const targets = selectedVisible;
+		if (targets.length === 0) return;
+		const preview = targets.slice(0, 5).map((e) => e.name).join(', ');
+		if (
+			!(await confirmDialog({
+				title: t('roster.bulkRemoveDialogTitle'),
+				message: t('roster.bulkRemoveDialogMessage', {
+					count: String(targets.length),
+					names: targets.length > 5 ? `${preview}, …` : preview,
+				}),
+				variant: 'danger',
+				confirmLabel: t('roster.remove'),
+			}))
+		)
+			return;
+		setBulkBusy(true);
+		setActionError('');
+		try {
+			for (const entry of targets) {
+				await pb.collection('course_roster').delete(entry.id);
+			}
+			invalidate('course_roster');
+			setSelected(new Set());
+			reload();
+		} catch (err) {
+			setActionError(errorMessage(err));
+		} finally {
+			setBulkBusy(false);
 		}
 	};
 
@@ -431,24 +658,107 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 					)}
 				</div>
 			) : (
+		<>
+				{canEdit && selectedVisible.length > 0 && (
+					<div className="roster-bulk" role="region" aria-label={t('roster.bulkRegion')}>
+						<span className="roster-bulk-count">
+						{t('roster.selectedCount', { count: String(selectedVisible.length) })}
+						</span>
+						<div className="roster-bulk-actions">
+						<button type="button" className="ld-btn-primary sm" disabled={bulkBusy} onClick={() => void activateSelected()}>
+						<UserCheck size={15} /> {t('roster.bulkActivate')}
+						</button>
+						{hasSections && (
+						<label className="roster-bulk-select">
+						<Layers size={15} />
+						<select value="" disabled={bulkBusy} onChange={(e) => void moveSelected(e.target.value)} aria-label={t('roster.bulkMove')}>
+						<option value="">{t('roster.bulkMove')}…</option>
+						<option value="">{t('roster.noSpecialClass')}</option>
+						{sections.map((sec) => (
+						<option key={sec.id} value={sec.id}>
+						{t('roster.moveTo')} {sec.name}
+						</option>
+						))}
+						</select>
+						</label>
+						)}
+						<label className="roster-bulk-select">
+						<CalendarDays size={15} />
+						<input
+						type="text"
+						inputMode="numeric"
+						maxLength={10}
+						placeholder={t('roster.bulkAngkatanPlaceholder')}
+						aria-label={t('roster.bulkAngkatan')}
+						disabled={bulkBusy}
+						onKeyDown={(e) => {
+						if (e.key === 'Enter') void setAngkatanSelected(e.currentTarget.value);
+						}}
+						/>
+						</label>
+						<button type="button" className="ld-btn-primary sm danger" disabled={bulkBusy} onClick={() => void removeSelected()}>
+						<Trash2 size={15} /> {t('roster.bulkRemove')}
+						</button>
+						<button type="button" className="button-quiet" disabled={bulkBusy} onClick={() => setSelected(new Set())}>
+						{t('roster.bulkClear')}
+						</button>
+						</div>
+						{bulkBusy && <LoaderCircle size={16} className="spin" />}
+					</div>
+				)}
+
 				<div className="roster-table-wrap">
 					<table className="roster-table">
 						<thead>
 							<tr>
-								<th className="roster-th-nim">{t('roster.nim')}</th>
-								<th className="roster-th-name">{t('roster.name')}</th>
-								<th className="roster-th-angkatan">Angkatan</th>
-								{hasSections && <th className="roster-th-section">{t('roster.class')}</th>}
+								{canEdit && (
+								<th className="roster-th-check">
+								<input
+								type="checkbox"
+								checked={allVisibleSelected}
+								ref={(el) => {
+								if (el) el.indeterminate = selectedVisible.length > 0 && !allVisibleSelected;
+								}}
+								onChange={toggleAllVisible}
+								aria-label={t('roster.selectAll')}
+								/>
+								</th>
+								)}
+								{sortHeader('nim', t('roster.nim'), 'roster-th-nim')}
+								{sortHeader('name', t('roster.name'), 'roster-th-name')}
+								<th
+								className="roster-th-angkatan"
+								aria-sort={sortKey === 'angkatan' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+								>
+								<button type="button" className="roster-sort" onClick={() => toggleSort('angkatan')}>
+								{t('roster.angkatan')}
+								{sortKey === 'angkatan' ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+								</button>
+								</th>
+								{hasSections && sortHeader('section', t('roster.class'), 'roster-th-section')}
 								<th className="roster-th-status">{t('roster.accountStatus')}</th>
 								{canEdit && <th className="roster-th-language">{t('roster.language')}</th>}
-							{canEdit && <th className="roster-th-actions" aria-label={t('roster.actions')} />}
+								{canEdit && <th className="roster-th-actions" aria-label={t('roster.actions')} />}
 							</tr>
 						</thead>
 						<tbody>
 							{visibleEntries.map((entry) => {
 								const status = statusMap.get(entry.nim.trim());
 								return (
-								<tr key={entry.id} className="roster-tr">
+									<tr
+										key={entry.id}
+										className={`roster-tr${selected.has(entry.id) ? ' is-selected' : ''}`}
+									>
+										{canEdit && (
+										<td className="roster-td-check">
+										<input
+										type="checkbox"
+										checked={selected.has(entry.id)}
+										onChange={() => toggleRow(entry.id)}
+										aria-label={`${t('roster.select')} ${entry.name}`}
+										/>
+										</td>
+										)}
 									<td className="roster-td-nim" data-label={t('roster.nim')}>{entry.nim}</td>
 									<td className="roster-td-name" data-label={t('roster.name')}>
 										{canEdit ? <Link className="roster-profile-link" to={`/app/courses/${courseId}/mahasiswa/${entry.id}`}>{entry.name}<span>Profil</span></Link> : entry.name}
@@ -523,6 +833,7 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 						<GraduationCap size={15} /> {t('roster.enrolledCount', { count: String(visibleEntries.length) })}
 					</div>
 				</div>
+		</>
 			)}
 
 			{editing && (

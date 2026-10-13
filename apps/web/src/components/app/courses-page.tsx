@@ -21,7 +21,7 @@ import { useCachedQuery } from '@/hooks/use-cached-query';
 import pb from '@/lib/pocketbase-client';
 import type { Assignment } from '@/lib/assignments';
 import type { Course, ClassSession, CourseRosterEntry, Enrollment, FileLibraryRecord } from '@/lib/learning';
-import { isSessionDone } from '@/lib/learning';
+import { isSessionDone, linkIds } from '@/lib/learning';
 import { courseCoverFor } from '@/lib/course-thumb';
 
 type StatusFilter = 'all' | 'active' | 'draft';
@@ -137,7 +137,7 @@ export function CoursesPage() {
 			const tasked = new Set(formal.map((row) => row.session).filter(Boolean));
 			const gap = upcomingSessions.find((s) => !tasked.has(s.id)) ?? null;
 			const next = upcomingSessions[0] ?? null;
-			const materials = files.filter((row) => row.course === course.id);
+			const materials = files.filter((row) => linkIds(row.course).includes(course.id));
 			return {
 				course,
 				cover: courseCoverFor(course),

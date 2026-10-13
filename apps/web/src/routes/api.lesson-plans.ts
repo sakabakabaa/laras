@@ -1,3 +1,4 @@
+import { linkIds } from '@/lib/learning';
 import { withApi,apiError,json,readJsonBody } from '@/lib/api.server';
 import { authenticateUser } from '@/lib/context-retrieval.server';
 import { pocketbaseAdmin as db } from '@/lib/pocketbase-client.server';
@@ -14,7 +15,7 @@ export const action=withApi(async({request})=>{
   if(plan){
    if(b.status==='ready'&&(!plan.objective||!plan.check||!plan.activities.length))return apiError(422,'Lengkapi tujuan, rundown, dan cek pemahaman sebelum menandai Siap.');
    for(const id of plan.outcomeIds||[]){let outcome=await auth.pb.collection('cpmk').getOne(id).catch(()=>null);if(!outcome)outcome=await auth.pb.collection('sub_cpmk').getOne(id).catch(()=>null);if(!outcome||outcome.course!==session.course||outcome.owner!==auth.user.id)return apiError(422,'Capaian bukan dari mata kuliah ini.');}
-   for(const source of plan.sources){const file=await auth.pb.collection('file_library').getOne(source.id);if(file.owner!==auth.user.id||file.course!==session.course)return apiError(422,'Materi bukan dari mata kuliah ini.');}
+   for(const source of plan.sources){const file=await auth.pb.collection('file_library').getOne(source.id);if(file.owner!==auth.user.id||!linkIds(file.course).includes(session.course))return apiError(422,'Materi bukan dari mata kuliah ini.');}
    if(plan.activities.some(a=>a.sourceIds.some(id=>!plan.sources.some(s=>s.id===id))))return apiError(422,'Rujukan kegiatan tidak valid.');
   }
   const saved=await db.send('/api/lesson-plans/write',{method:'POST',body:{...b,plan,owner:auth.user.id}});return json({plan:saved});

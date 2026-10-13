@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
 import type { Course, ClassSession, FileLibraryRecord } from '@/lib/learning';
-import { dateLabel, isSessionDone } from '@/lib/learning';
+import { dateLabel, isSessionDone, linkIds } from '@/lib/learning';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import {
 	activityTypeOf,
@@ -114,7 +114,8 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 		course.id ? `file_library:course=${course.id}:sco:-created` : null,
 		() =>
 			pb.collection('file_library').getFullList<FileLibraryRecord>({
-				filter: pb.filter('course = {:id}', { id: course.id }),
+				// file_library links are multi-course: `~` matches membership.
+	filter: pb.filter('course ~ {:id}', { id: course.id }),
 				sort: '-created',
 			}),
 	);
@@ -141,7 +142,7 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 			kind: 'file',
 			file: r.file,
 			url: '',
-			session: r.session || '',
+			session: linkIds(r.session)[0] || '',
 			created: r.created,
 			source: 'library',
 			record: r,

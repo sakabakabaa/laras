@@ -3,6 +3,17 @@ import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { detectLanguage } from '@/lib/file-metadata';
+import {
+	OFFICE_EXTENSIONS,
+	OFFICE_FORMAT_LABEL,
+	extractOfficeText,
+} from '@/lib/office-text.server';
+import {
+	isAudioExtension,
+	isTranscriptionConfigured,
+	isVideoExtension,
+	transcribeAudio,
+} from '@/lib/media-transcribe.server';
 import type { FileExtractionRecord, FileLibraryRecord } from '@/lib/learning';
 
 const pocketbaseUrl = () => process.env.POCKETBASE_URL || 'http://localhost:8090';
@@ -15,13 +26,22 @@ const MIN_RELIABLE_CHARS = 200;
 const MAX_STORED_CHARS = 400000;
 const PARSER_PDF = 'pdf-parse-v2';
 const PARSER_TEXT = 'utf8-text-v1';
+const PARSER_OFFICE = 'ooxml-v1';
+const PARSER_AUDIO = 'whisper-stt-v1';
+/** Marks media that is intentionally preview-only, so it never reads as an error. */
+const PARSER_PREVIEW_ONLY = 'preview-only-v1';
 const TEXT_EXTENSIONS = new Set(['txt', 'csv', 'md', 'vtt', 'srt']);
 const TERMINAL_STATUSES = new Set(['ready', 'review', 'failed']);
+/** Office documents are text-native; a small floor catches empty/malformed ones. */
+const MIN_OFFICE_CHARS = 40;
+/** Video is served as-is — there is no offline audio extraction, so it is preview-only. */
+const VIDEO_PREVIEW_REASON =
+	'Video tidak diuraikan menjadi teks — isinya umumnya visual. Berkas dapat dipratinjau dan diunduh.';
 
 const TOO_LARGE_REASON =
 	'Ukuran berkas melebihi batas penguraian otomatis (maks. 20 MB). Berkas asli tetap tersimpan dan dapat dipratinjau atau diunduh.';
 const UNSUPPORTED_REASON =
-	'Format tidak didukung untuk penguraian teks otomatis (didukung: PDF dan teks polos). Berkas asli tetap tersimpan dan dapat dipratinjau atau diunduh.';
+	`Format tidak didukung untuk penguraian teks otomatis (didukung: PDF, teks polos, audio, dan ${OFFICE_FORMAT_LABEL}). Berkas asli tetap tersimpan dan dapat dipratinjau atau diunduh.`;
 
 type Body = { fileId?: string; force?: boolean };
 
@@ -82,8 +102,12 @@ const fetchOriginal = async (record: FileLibraryRecord): Promise<Buffer> => {
 const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 	const extension = (record.file.split('.').pop() || '').toLowerCase();
 
+	const officeFormat = OFFICE_EXTENSIONS[extension];
+	const audio = isAudioExtension(extension);
+	const video = isVideoExtension(extension);
+
 	if ((record.size ?? 0) > PARSE_MAX_BYTES) return fail(TOO_LARGE_REASON);
-	if (extension !== 'pdf' && !TEXT_EXTENSIONS.has(extension)) {
+	if (extension !== 'pdf' && !officeFormat && !audio && !video && !TEXT_EXTENSIONS.has(extension)) {
 		return fail(UNSUPPORTED_REASON);
 	}
 
@@ -135,6 +159,76 @@ const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 		} finally {
 			await parser.destroy().catch(() => {});
 		}
+	}
+
+	if (officeFormat) {
+		try {
+			const officeText = (await extractOfficeText(buffer, officeFormat)).trim();
+			if (officeText.length < MIN_OFFICE_CHARS) {
+				return {
+					status: 'review',
+					text: officeText.slice(0, MAX_STORED_CHARS),
+					language: detectLanguage(officeText),
+					pages: 0,
+					reason:
+						'Teks yang terbaca sangat sedikit — dokumen mungkin kosong, hanya berisi gambar/tabel, atau strukturnya tidak lazim. Periksa hasil dan proses ulang bila perlu.',
+					parserVersion: PARSER_OFFICE,
+				};
+			}
+			return {
+				status: 'ready',
+				text: officeText.slice(0, MAX_STORED_CHARS),
+				language: detectLanguage(officeText),
+				pages: 0,
+				reason: '',
+				parserVersion: PARSER_OFFICE,
+			};
+		} catch (error) {
+			logger.error(
+				`berkas-process office failed: ${error instanceof Error ? error.message : String(error)}`,
+			);
+			return fail(
+				'Penguraian dokumen Office gagal — berkas mungkin rusak atau terproteksi. Berkas asli tetap tersimpan.',
+			);
+		}
+	}
+
+	if (video) {
+		// Preview-only by design: video content is usually visual and there is no
+		// offline audio extraction on this host. Reported as a clean success with a
+		// note, never as a parse failure.
+		return {
+			status: 'ready',
+			text: '',
+			language: '',
+			pages: 0,
+			reason: VIDEO_PREVIEW_REASON,
+			parserVersion: PARSER_PREVIEW_ONLY,
+		};
+	}
+
+	if (audio) {
+		if (!isTranscriptionConfigured()) {
+			return {
+				status: 'ready',
+				text: '',
+				language: '',
+				pages: 0,
+				reason:
+					'Transkripsi audio tidak tersedia pada server ini. Berkas tetap tersimpan dan dapat diputar.',
+				parserVersion: PARSER_PREVIEW_ONLY,
+			};
+		}
+		const outcome = await transcribeAudio(buffer, record.file, extension);
+		if (!outcome.ok) return fail(outcome.reason);
+		return {
+			status: 'ready',
+			text: outcome.text.slice(0, MAX_STORED_CHARS),
+			language: detectLanguage(outcome.text),
+			pages: 0,
+			reason: '',
+			parserVersion: PARSER_AUDIO,
+		};
 	}
 
 	const text = buffer.toString('utf8').replace(/\u0000/g, '').trim();

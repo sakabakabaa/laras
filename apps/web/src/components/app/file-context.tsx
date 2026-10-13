@@ -18,7 +18,7 @@ import {
 import pb from '@/lib/pocketbase-client';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { invalidate } from '@/lib/local-cache';
-import { dateLabel, errorMessage } from '@/lib/learning';
+import { dateLabel, errorMessage, linkIds } from '@/lib/learning';
 import type {
 	ClassSession,
 	ContextSectionRecord,
@@ -232,34 +232,38 @@ export function FileContextView({ fileId }: { fileId: string }) {
 	const contextStale = Boolean(context && (context.version || 1) !== activeVersion);
 	const hasContext = Boolean(context) || sections.length > 0;
 
+
+	// Multi-links: these views target the primary (first) linked course/session.
+	const fileCourseId = linkIds(file?.course)[0] || '';
+	const fileSessionId = linkIds(file?.session)[0] || '';
 	const courseCpmks = useMemo(
 		() =>
 			(cpmksQuery.data ?? [])
-				.filter((c) => c.owner === me && (!file?.course || c.course === file.course))
+				.filter((c) => c.owner === me && (!fileCourseId || c.course === fileCourseId))
 				.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-		[cpmksQuery.data, me, file?.course],
+		[cpmksQuery.data, me, fileCourseId],
 	);
 	const courseSubCpmks = useMemo(
 		() =>
 			(subCpmksQuery.data ?? [])
-				.filter((c) => c.owner === me && (!file?.course || c.course === file.course))
+				.filter((c) => c.owner === me && (!fileCourseId || c.course === fileCourseId))
 				.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-		[subCpmksQuery.data, me, file?.course],
+		[subCpmksQuery.data, me, fileCourseId],
 	);
 	const courseSessions = useMemo(
 		() =>
 			(sessionsQuery.data ?? [])
-				.filter((s) => s.owner === me && (!file?.course || s.course === file.course))
+				.filter((s) => s.owner === me && (!fileCourseId || s.course === fileCourseId))
 				.sort((a, b) => a.week - b.week),
-		[sessionsQuery.data, me, file?.course],
+		[sessionsQuery.data, me, fileCourseId],
 	);
 	const courseName =
-		file?.expand?.course?.title ||
-		(coursesQuery.data ?? []).find((c) => c.id === file?.course)?.title ||
+		file?.expand?.course?.find((c) => c.id === fileCourseId)?.title ||
+		(coursesQuery.data ?? []).find((c) => c.id === fileCourseId)?.title ||
 		'';
 	const fileSession =
-		file?.expand?.session ||
-		(sessionsQuery.data ?? []).find((s) => s.id === file?.session) ||
+		file?.expand?.session?.find((s) => s.id === fileSessionId) ||
+		(sessionsQuery.data ?? []).find((s) => s.id === fileSessionId) ||
 		null;
 
 	// Page references where the parser produced page breaks (form feeds).

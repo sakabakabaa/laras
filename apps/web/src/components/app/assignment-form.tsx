@@ -40,7 +40,7 @@ import pb from '@/lib/pocketbase-client';
 import { useT } from '@/lib/i18n';
 import { invalidate } from '@/lib/local-cache';
 import type { Course } from '@/lib/learning';
-import { errorMessage, type FileLibraryRecord } from '@/lib/learning';
+import { errorMessage, type FileLibraryRecord, linkIds } from '@/lib/learning';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { useCourseRecords } from '@/hooks/use-course-records';
 import { useCourseResources } from '@/hooks/use-course-resources';
@@ -2104,7 +2104,7 @@ export function AssignmentForm({
 									) : (
 										<div className="asg-attach-picker">
 											{libraryFiles.map((f) => {
-												const sessionMatch = !sessionId || f.session === sessionId;
+												const sessionMatch = !sessionId || linkIds(f.session).includes(sessionId);
 												return (
 													<label key={f.id} className="asg-attach-option">
 														<input

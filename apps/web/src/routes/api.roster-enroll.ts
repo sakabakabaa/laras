@@ -45,6 +45,12 @@ type Outcome =
 
 type Body = {
 	courseId?: string;
+	/**
+	 * Optional subset: only activate these NIMs. Omitted = every roster entry
+	 * (the historical whole-course behaviour). Used by the bulk selection UI so a
+	 * lecturer can onboard just the new intake.
+	 */
+	nims?: string[];
 };
 
 const pocketbaseUrl = () => process.env.POCKETBASE_URL || 'http://localhost:8090';
@@ -142,9 +148,18 @@ export const action = withApi(async ({ request }) => {
 	// Pull the roster. course_roster.listRule already scopes to the course
 	// owner, so an empty result here for a non-owner is impossible (we passed
 	// the owner check above), but a genuinely empty roster is still valid.
+	// A requested subset is matched by NIM. Building the filter from the caller's
+	// own input is safe because each value is escaped and NIMs are plain strings.
+	const nims = Array.isArray(body.nims)
+		? body.nims.map((n) => String(n).trim()).filter(Boolean).slice(0, MAX_ENTRIES)
+		: [];
+	let rosterFilter = `course="${esc(courseId)}"`;
+	if (nims.length > 0) {
+		rosterFilter += ` && (${nims.map((n) => `nim="${esc(n)}"`).join(' || ')})`;
+	}
 	const roster = await pocketbaseAdmin.listRecords<CourseRosterEntry>('course_roster', {
 		perPage: MAX_ENTRIES,
-		filter: `course="${esc(courseId)}"`,
+		filter: rosterFilter,
 		sort: 'nim,name',
 	});
 	if (roster.items.length === 0) {

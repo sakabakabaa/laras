@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
 import { invalidate } from '@/lib/local-cache';
-import { errorMessage } from '@/lib/learning';
+import { errorMessage, linkIds } from '@/lib/learning';
 import type {
 	ClassSession,
 	ContextSuggestionKind,
@@ -113,10 +113,15 @@ export function FileUploadDialog({
 	const [title, setTitle] = useState(record?.title ?? '');
 	const [description, setDescription] = useState(record?.description ?? '');
 	const [access, setAccess] = useState<FileAccess>(record?.access ?? 'faculty');
-	const [courseId, setCourseId] = useState(record?.course ?? '');
-	const [cpmkId, setCpmkId] = useState(record?.cpmk || subCpmks.find((item) => item.id === record?.subCpmk)?.cpmk || '');
-	const [subCpmkId, setSubCpmkId] = useState(record?.subCpmk ?? '');
-	const [sessionId, setSessionId] = useState(record?.session ?? '');
+	// Berkas can be linked to several courses: the primary drives the CPMK /
+	// session cascade, the extras are additional links.
+	const [courseId, setCourseId] = useState(record ? linkIds(record.course)[0] || '' : '');
+	const [extraCourseIds, setExtraCourseIds] = useState<string[]>(
+		record ? linkIds(record.course).slice(1) : [],
+	);
+	const [cpmkId, setCpmkId] = useState(record ? linkIds(record.cpmk)[0] || '' : '');
+	const [subCpmkId, setSubCpmkId] = useState(record ? linkIds(record.subCpmk)[0] || '' : '');
+	const [sessionId, setSessionId] = useState(record ? linkIds(record.session)[0] || '' : '');
 	const [file, setFile] = useState<File | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState('');
@@ -276,10 +281,11 @@ export function FileUploadDialog({
 				fd.append('access', access);
 				fd.append('status', 'processing');
 				fd.append('size', String(file.size));
-				fd.append('course', courseId);
-				fd.append('cpmk', cpmkId);
-				fd.append('subCpmk', subCpmkId);
-				fd.append('session', sessionId);
+				// Multi-relations are sent as repeated fields (PocketBase reads them as an array).
+				for (const id of [courseId, ...extraCourseIds].filter(Boolean)) fd.append('course', id);
+				if (cpmkId) fd.append('cpmk', cpmkId);
+				if (subCpmkId) fd.append('subCpmk', subCpmkId);
+				if (sessionId) fd.append('session', sessionId);
 				fd.append('file', file);
 				if (editing && record) {
 					const newVersion = await snapshotLibraryFile(record.id);
@@ -305,10 +311,10 @@ export function FileUploadDialog({
 					title: title.trim(),
 					description: description.trim(),
 					access,
-					course: courseId,
-					cpmk: cpmkId,
-					subCpmk: subCpmkId,
-					session: sessionId,
+					course: [courseId, ...extraCourseIds].filter(Boolean),
+					cpmk: cpmkId ? [cpmkId] : [],
+					subCpmk: subCpmkId ? [subCpmkId] : [],
+					session: sessionId ? [sessionId] : [],
 				});
 				id = record.id;
 			}
@@ -621,6 +627,54 @@ export function FileUploadDialog({
 										Wajib — berkas harus ditautkan ke mata kuliah Anda.
 									</small>
 								</label>
+				{courses.filter((c) => c.id !== courseId).length > 0 && (
+					<label>
+					<span>Mata kuliah lain (opsional)</span>
+					<select
+					value=""
+					disabled={busy || !courseId}
+					onChange={(e) => {
+					const id = e.target.value;
+					if (id && !extraCourseIds.includes(id)) setExtraCourseIds([...extraCourseIds, id]);
+					}}
+					>
+					<option value="">
+					{courseId ? 'Tambah tautan mata kuliah…' : 'Pilih mata kuliah utama dahulu'}
+					</option>
+					{courses
+					.filter((c) => c.id !== courseId && !extraCourseIds.includes(c.id))
+					.map((course) => (
+					<option key={course.id} value={course.id}>
+					{course.title}
+					{course.code ? ` (${course.code})` : ''}
+					</option>
+					))}
+					</select>
+					{extraCourseIds.length > 0 && (
+					<div className="flb-course-chips">
+					{extraCourseIds.map((id) => {
+					const course = courses.find((c) => c.id === id);
+					return (
+					<span key={id} className="flb-course-chip">
+					{course?.title || id}
+					<button
+					type="button"
+					aria-label={`Hapus tautan ${course?.title || id}`}
+					disabled={busy}
+					onClick={() => setExtraCourseIds(extraCourseIds.filter((x) => x !== id))}
+					>
+					×
+					</button>
+					</span>
+					);
+					})}
+					</div>
+					)}
+					<small className="flb-file-info">
+					Berkas yang sama dapat dipakai beberapa mata kuliah.
+					</small>
+					</label>
+				)}
 				<label>
 					Sesi (opsional)
 					<select

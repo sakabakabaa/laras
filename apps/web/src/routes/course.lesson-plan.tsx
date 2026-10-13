@@ -1,3 +1,4 @@
+import { linkIds } from '@/lib/learning';
 import { useEffect,useMemo,useState } from 'react';
 import { Link,useParams,useSearchParams } from 'react-router';
 import pb from '@/lib/pocketbase-client';
@@ -23,7 +24,8 @@ export default function LessonPlanPage(){
  useEffect(()=>{if(!course)return;let alive=true;setError('');setForm(null);
  void (async()=>{if(course.owner!==pb.authStore.record?.id)throw new Error('Rencana pembelajaran hanya untuk dosen pemilik.');const meeting=await pb.collection('class_sessions').getOne<ClassSession>(sessionId);if(meeting.course!==course.id)throw new Error('Pertemuan tidak sesuai mata kuliah.');const p=await post({action:'ensure',sessionId});if(!alive)return;setSession(meeting);accept(p);if(!p.plan)setForm({...emptyLessonPlan(p.title),objective:meeting.learningIndicator||'',outcomeIds:[...(meeting.cpmks||[]),...(meeting.subCpmks||[])]});await history(p.id);
  const filter=pb.filter('course={:c} && owner={:u}',{c:course.id,u:pb.authStore.record?.id});
- const [files,cpmks,subs,old]=await Promise.all([pb.collection('file_library').getFullList<Material>({filter}),pb.collection('cpmk').getFullList<Outcome>({filter}),pb.collection('sub_cpmk').getFullList<Outcome>({filter}),pb.collection('assistant_lesson_plans').getFullList<SessionLessonPlan>({filter:filter+' && session=""'})]);if(alive){setMaterials(files);setOutcomes([...cpmks,...subs]);setLegacy(old);}
+ const fileFilter=pb.filter('course~{:c} && owner={:u}',{c:course.id,u:pb.authStore.record?.id});
+ const [files,cpmks,subs,old]=await Promise.all([pb.collection('file_library').getFullList<Material>({filter:fileFilter}),pb.collection('cpmk').getFullList<Outcome>({filter}),pb.collection('sub_cpmk').getFullList<Outcome>({filter}),pb.collection('assistant_lesson_plans').getFullList<SessionLessonPlan>({filter:filter+' && session=""'})]);if(alive){setMaterials(files);setOutcomes([...cpmks,...subs]);setLegacy(old);}
  })().catch(e=>alive&&setError(e.message));return()=>{alive=false;};},[course?.id,sessionId]);
  useEffect(()=>{if(!record)return;let alive=true;const timer=setInterval(()=>{void pb.collection('assistant_lesson_plans').getOne<SessionLessonPlan>(record.id).then(p=>{if(!alive||p.revision===record.revision)return;if(dirty)setRemoteChanged(true);else{accept(p);void history(p.id);}}).catch(()=>{});},5000);return()=>{alive=false;clearInterval(timer);};},[record?.id,record?.revision,dirty]);
  useEffect(()=>{if(!dirty)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);

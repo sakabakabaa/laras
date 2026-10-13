@@ -27,6 +27,7 @@ import type {
 	FileLibraryRecord,
 	SubCpmk,
 } from '@/lib/learning';
+import { linkIds } from '@/lib/learning';
 
 const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
 
@@ -161,7 +162,8 @@ export async function generateSuggestions(input: GenerateInput): Promise<Generat
 
 	// Lecturer's authorized academic records, scoped to the file's course when
 	// one is linked. These are the ONLY records the model may reference.
-	const courseId = file.course || '';
+	// Multi-course links: suggestions target the primary (first) linked course.
+	const courseId = linkIds(file.course)[0] || '';
 	const [courses, sessions, cpmks, subCpmks] = await Promise.all([
 		pocketbaseAdmin
 			.listRecords<Course>('courses', { filter: `owner = "${ownerId}"`, perPage: 200, sort: 'title' })
@@ -316,7 +318,7 @@ export async function generateSuggestions(input: GenerateInput): Promise<Generat
 
 	// Optional whole-file session link suggestion.
 	const suggestedSessionId = resolveSession(raw.sessionWeek, sessions);
-	if (suggestedSessionId && suggestedSessionId !== file.session) {
+	if (suggestedSessionId && !linkIds(file.session).includes(suggestedSessionId)) {
 		const matched = sessions.find((s) => s.id === suggestedSessionId);
 		drafts.push({
 			kind: 'session',

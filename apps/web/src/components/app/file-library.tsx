@@ -22,7 +22,7 @@ import {
 import pb from '@/lib/pocketbase-client';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { invalidate } from '@/lib/local-cache';
-import { dateLabel, errorMessage } from '@/lib/learning';
+import { dateLabel, errorMessage, linkIds } from '@/lib/learning';
 import type {
 	ClassSession,
 	Course,
@@ -40,6 +40,7 @@ import {
 	formatBytes,
 	processingStateFor,
 	processLibraryFile,
+	reprocessLibraryFiles,
 	type FileKind,
 } from '@/lib/file-library';
 import { LANGUAGE_LABELS, type DetectedLanguage } from '@/lib/file-metadata';
@@ -83,6 +84,8 @@ export function FileLibrary() {
 	const [historyFor, setHistoryFor] = useState<FileLibraryRecord | null>(null);
 	const [deleting, setDeleting] = useState('');
 	const [processingId, setProcessingId] = useState('');
+	// Bulk re-process progress (files already parsed with no usable text).
+	const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 	const [actionError, setActionError] = useState('');
 
 	const filesQuery = useCachedQuery<FileLibraryRecord[]>('file_library:all:-created', () =>
@@ -160,7 +163,8 @@ export function FileLibrary() {
 					(f.file || '').toLowerCase().includes(q),
 			);
 		}
-		if (courseFilter !== 'all') rows = rows.filter((f) => f.course === courseFilter);
+		if (courseFilter !== 'all')
+			rows = rows.filter((f) => linkIds(f.course).includes(courseFilter));
 		if (accessFilter !== 'all') rows = rows.filter((f) => f.access === accessFilter);
 		if (kindFilter !== 'all') rows = rows.filter((f) => fileKindFor(f.file) === kindFilter);
 		const sorted = [...rows];
@@ -215,6 +219,57 @@ export function FileLibrary() {
 		}
 	};
 
+	/**
+	 * Bulk re-process: files whose extraction ended without usable text — a
+	 * `failed` status, or a `review` with no characters (an unsupported format
+	 * from before the Office/audio parsers existed). Loaded files are skipped so
+	 * the batch stays fast.
+	 */
+	const reprocessOutdated = async () => {
+		const targets = files.filter((record) => {
+			const extraction = extractionByFile.get(record.id);
+			if (!extraction) return true;
+			if (extraction.status === 'failed') return true;
+			if (extraction.status === 'review') return !extraction.chars;
+			return false;
+		});
+		if (targets.length === 0) return;
+		setActionError('');
+		setBulkProgress({ done: 0, total: targets.length });
+		try {
+			const result = await reprocessLibraryFiles(
+				targets.map((r) => r.id),
+				(done, total) => setBulkProgress({ done, total }),
+			);
+			if (result.failed.length > 0) {
+				setActionError(
+					`${result.ok} berkas berhasil diproses ulang, ${result.failed.length} gagal: ${result.failed[0].message}`,
+				);
+			}
+		} catch (err) {
+			setActionError(errorMessage(err));
+		} finally {
+			setBulkProgress(null);
+			invalidate('file_extractions');
+			invalidate('file_library');
+			filesQuery.reload();
+			extractionsQuery.reload();
+		}
+	};
+
+	// Files with no usable text yet — the same rule the bulk action applies.
+	const outdatedCount = useMemo(
+		() =>
+			files.filter((record) => {
+				const extraction = extractionByFile.get(record.id);
+				if (!extraction) return true;
+				if (extraction.status === 'failed') return true;
+				if (extraction.status === 'review') return !extraction.chars;
+				return false;
+			}).length,
+		[files, extractionByFile],
+	);
+
 	return (
 		<div className="flb-page">
 			{(error || actionError) && (
@@ -232,6 +287,30 @@ export function FileLibrary() {
 				<span className="ld-eyebrow">Ruang Kerja</span>
 				<h1>Manajemen Berkas</h1>
 			</div>
+			{outdatedCount > 0 && (
+				<div className="flb-reprocess-bar">
+					<span>
+						{outdatedCount} berkas belum memiliki teks (format lama atau gagal diurai).
+					</span>
+					<button
+						type="button"
+						className="ld-btn-primary sm"
+						disabled={bulkProgress !== null}
+						onClick={() => void reprocessOutdated()}
+					>
+						{bulkProgress ? (
+							<>
+								<LoaderCircle size={15} className="spin" /> Memproses{' '}
+								{bulkProgress.done}/{bulkProgress.total}…
+							</>
+						) : (
+							<>
+								<RefreshCw size={15} /> Proses ulang {outdatedCount} berkas
+							</>
+						)}
+					</button>
+				</div>
+			)}
 			<p className="flb-intro">
 				Pustaka berkas pribadi dosen. Unggah dokumen, gambar, audio, atau video, lalu tautkan
 				ke mata kuliah, CPMK, Sub-CPMK, atau sesi. Berkas asli disimpan utuh — pratinjau dan
@@ -345,33 +424,51 @@ export function FileLibrary() {
 							const kind = fileKindFor(record.file);
 							const Icon = KIND_ICONS[kind];
 							const url = record.file ? pb.files.getURL(record, record.file) : '';
-							const courseName =
-								record.expand?.course?.title ||
-								courses.find((c) => c.id === record.course)?.title;
-							const cpmkCode =
-								record.expand?.cpmk?.code || cpmks.find((c) => c.id === record.cpmk)?.code;
-							const subCpmkCode =
-								record.expand?.subCpmk?.code ||
-								subCpmks.find((c) => c.id === record.subCpmk)?.code;
-							const sessionTitle =
-								record.expand?.session?.title ||
-								sessions.find((s) => s.id === record.session)?.title;
-							const sessionWeek =
-								record.expand?.session?.week ||
-								sessions.find((s) => s.id === record.session)?.week;
+							// Links are multi-select: resolve every id (expanded records first,
+							// then the local lookup) so a file shared across courses shows all.
+							const courseNames = linkIds(record.course)
+								.map(
+									(id) =>
+										record.expand?.course?.find((c) => c.id === id)?.title ||
+										courses.find((c) => c.id === id)?.title,
+								)
+								.filter((v): v is string => !!v);
+							const cpmkCodes = linkIds(record.cpmk)
+								.map(
+									(id) =>
+										record.expand?.cpmk?.find((c) => c.id === id)?.code ||
+										cpmks.find((c) => c.id === id)?.code,
+								)
+								.filter((v): v is string => !!v);
+							const subCpmkCodes = linkIds(record.subCpmk)
+								.map(
+									(id) =>
+										record.expand?.subCpmk?.find((c) => c.id === id)?.code ||
+										subCpmks.find((c) => c.id === id)?.code,
+								)
+								.filter((v): v is string => !!v);
+							const sessionTitles = linkIds(record.session)
+								.map((id) => {
+									const hit =
+										record.expand?.session?.find((s) => s.id === id) ||
+										sessions.find((s) => s.id === id);
+									if (!hit) return '';
+									return hit.week ? `Minggu ${hit.week} — ${hit.title}` : hit.title;
+								})
+								.filter((v): v is string => !!v);
 							const uploader =
 								record.owner === me
 									? (record.expand?.owner?.name || 'Anda')
 									: 'Dosen lain';
-							const links: { label: string; value: string }[] = [];
-							if (courseName) links.push({ label: 'Mata kuliah', value: courseName });
-							if (cpmkCode) links.push({ label: 'CPMK', value: cpmkCode });
-							if (subCpmkCode) links.push({ label: 'Sub-CPMK', value: subCpmkCode });
-							if (sessionTitle)
-								links.push({
-									label: 'Sesi',
-									value: sessionWeek ? `Minggu ${sessionWeek} — ${sessionTitle}` : sessionTitle,
-								});
+		const links: { label: string; value: string }[] = [];
+		if (courseNames.length)
+		links.push({ label: 'Mata kuliah', value: courseNames.join(' · ') });
+		if (cpmkCodes.length)
+		links.push({ label: 'CPMK', value: cpmkCodes.join(', ') });
+		if (subCpmkCodes.length)
+		links.push({ label: 'Sub-CPMK', value: subCpmkCodes.join(', ') });
+		if (sessionTitles.length)
+		links.push({ label: 'Sesi', value: sessionTitles.join(' · ') });
 							const mine = record.owner === me;
 							const extraction = extractionByFile.get(record.id);
 							const procState = processingStateFor(record, extraction);

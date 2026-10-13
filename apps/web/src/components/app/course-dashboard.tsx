@@ -1,3 +1,4 @@
+import { mergeSubmissionChannels, isCollectedSubmission, isOfficiallyGraded, needsGrading } from '@/lib/submission-state';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
@@ -43,7 +44,8 @@ import {
 	type CalendarEvent,
 } from '@/data/academic-calendar';
 
-type SubRow = { id: string; assignment: string; status: string; grade: number | null };
+type SubRow = {
+ linkedSubmission?: string; id: string; assignment: string; status: string; grade: number | null };
 
 function formatLongDate(d = new Date()) {
 	return d.toLocaleDateString('id-ID', {
@@ -255,6 +257,10 @@ export function CourseDashboard() {
 			fields: 'id,assignment,status,grade',
 		}),
 	);
+ const pubsQuery = useCachedQuery<SubRow[]>('public_submissions:all:dashboard', () =>
+  pb.collection('public_submissions').getFullList<SubRow>({ fields: 'id,assignment,status,grade,linkedSubmission' }),
+ );
+
 	const sectionsQuery = useCachedQuery<CourseSection[]>('course_sections:owner', () =>
 		pb.collection('course_sections').getFullList<CourseSection>({
 			filter: pb.filter('owner = {:id}', { id: pb.authStore.record?.id || '' }),
@@ -275,27 +281,28 @@ export function CourseDashboard() {
 		() => (assignmentsQuery.data ?? []).filter((a) => a.owner === me),
 		[assignmentsQuery.data, me],
 	);
-	const subs = subsQuery.data ?? [];
+	const subs = useMemo(() => mergeSubmissionChannels(subsQuery.data ?? [], pubsQuery.data ?? []), [subsQuery.data, pubsQuery.data]);
 	const sections = sectionsQuery.data ?? [];
 	const loading =
 		coursesQuery.loading ||
 		sessionsQuery.loading ||
 		assignmentsQuery.loading ||
-		subsQuery.loading ||
+		subsQuery.loading || pubsQuery.loading ||
 		sectionsQuery.loading;
 	const error =
 		coursesQuery.error ||
 		sessionsQuery.error ||
 		assignmentsQuery.error ||
-		subsQuery.error ||
+		subsQuery.error || pubsQuery.error ||
 		sectionsQuery.error;
 	const load = useCallback(() => {
 		coursesQuery.reload();
 		sessionsQuery.reload();
 		assignmentsQuery.reload();
 		subsQuery.reload();
+		pubsQuery.reload();
 		sectionsQuery.reload();
-	}, [coursesQuery, sessionsQuery, assignmentsQuery, subsQuery, sectionsQuery]);
+	}, [coursesQuery, sessionsQuery, assignmentsQuery, subsQuery, pubsQuery, sectionsQuery]);
 
 	const today = useMemo(() => {
 		const d = new Date();
@@ -334,11 +341,11 @@ export function CourseDashboard() {
 		// submissions that have not been graded yet.
 		const formalIds = new Set(
 			assignments
-				.filter((a) => activityTypeOf(a) === 'formal' && a.status !== 'draft')
+				.filter((a) => activityTypeOf(a) === 'formal' && a.status !== 'draft' && a.status !== 'archived')
 				.map((a) => a.id),
 		);
 		const pendingGrading = subs.filter(
-			(s) => formalIds.has(s.assignment) && (s.status === 'submitted' || s.status === 'late'),
+			(s) => formalIds.has(s.assignment) && needsGrading(s),
 		).length;
 
 		return { active, totalSessions, done, thisWeek, pendingGrading };
@@ -373,18 +380,18 @@ export function CourseDashboard() {
 	// ── Grading queue (real pending submissions) ────────────────
 	const gradingQueue = useMemo(() => {
 		const formal = assignments.filter(
-			(a) => activityTypeOf(a) === 'formal' && a.status !== 'draft',
+			(a) => activityTypeOf(a) === 'formal' && a.status !== 'draft' && a.status !== 'archived',
 		);
 		const queue = formal
 			.map((a) => {
 				const aSubs = subs.filter((s) => s.assignment === a.id);
 				const pending = aSubs.filter(
-					(s) => s.status === 'submitted' || s.status === 'late',
+					needsGrading,
 				).length;
 				const graded = aSubs.filter(
-					(s) => s.status === 'graded' || s.grade != null,
+					isOfficiallyGraded,
 				).length;
-				const collected = aSubs.filter((s) => s.status && s.status !== 'draft').length;
+				const collected = aSubs.filter(isCollectedSubmission).length;
 				return { assignment: a, pending, graded, collected };
 			})
 			.filter((row) => row.collected > 0)
@@ -542,7 +549,7 @@ export function CourseDashboard() {
 								<span className="ld-eyebrow">{formatLongDate()}</span>
 								<h1>Halo, {firstName}!</h1>
 							</div>
-							<div className="ld-greet-ask">
+							<details className="ld-greet-ask"><summary className="ld-greet-ask-toggle">Bantuan AI</summary>
 								<div className="ld-greet-ask-heading">
 									<span className="ld-greet-ask-symbol" aria-hidden="true"><Sparkles size={15} strokeWidth={1.8} /></span>
 									<div className="ld-greet-ask-copy">
@@ -636,7 +643,7 @@ export function CourseDashboard() {
 								</div>
 								</form>
 								{quickError && <p className="ld-greet-note" role="alert">{quickError}</p>}
-							</div>
+							</details>
 						</div>
 
 						<nav className="ld-action-row" aria-label="Tindakan cepat">

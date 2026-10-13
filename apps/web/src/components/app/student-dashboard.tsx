@@ -1,3 +1,4 @@
+import { isCollectedSubmission } from '@/lib/submission-state';
 import { useStudentHomeText } from '@/lib/student-home-copy';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
@@ -315,7 +316,7 @@ export function StudentDashboard({ preview = false }: { preview?: boolean }) {
 			const current = progress.get(assignment.course) ?? { submitted: 0, total: 0 };
 			current.total += 1;
 			const status = subsByAssignment.get(assignment.id)?.status;
-			if (status === 'submitted' || status === 'late' || status === 'graded') current.submitted += 1;
+			if (isCollectedSubmission({ status: status || 'draft' })) current.submitted += 1;
 			progress.set(assignment.course, current);
 		}
 		return progress;

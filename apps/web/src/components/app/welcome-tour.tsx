@@ -14,11 +14,11 @@ function preferenceKey(id: string, role: string) {
   return `laras:tour:hidden:${VERSION}:${id}:${role}`;
 }
 // Storage can be unavailable in private or restricted browser contexts.
-function read(storage: Storage, key: string) {
-  try { return storage.getItem(key) === '1'; } catch { return false; }
+function read(storage: 'localStorage' | 'sessionStorage', key: string) {
+  try { return window[storage].getItem(key) === '1'; } catch { return false; }
 }
-function write(storage: Storage, key: string, value: boolean) {
-  try { if (value) storage.setItem(key, '1'); else storage.removeItem(key); } catch { /* Keep the tour usable. */ }
+function write(storage: 'localStorage' | 'sessionStorage', key: string, value: boolean) {
+  try { if (value) window[storage].setItem(key, '1'); else window[storage].removeItem(key); } catch { /* Keep the tour usable. */ }
 }
 
 export function WelcomeTour() {
@@ -36,14 +36,14 @@ export function WelcomeTour() {
   useEffect(() => {
     if (!eligible || !id) { setOpen(false); return; }
     const hiddenKey = preferenceKey(id, role);
-    setHidden(read(localStorage, hiddenKey));
-    if (!read(localStorage, hiddenKey) && !read(sessionStorage, tourSessionKey(id, role))) {
-      write(sessionStorage, tourSessionKey(id, role), true);
+    setHidden(read('localStorage', hiddenKey));
+    if (!read('localStorage', hiddenKey) && !read('localStorage', tourSessionKey(id, role))) {
+      write('localStorage', tourSessionKey(id, role), true);
       setFailed(false);
       setOpen(true);
     }
     const replay = () => {
-      setHidden(read(localStorage, hiddenKey));
+      setHidden(read('localStorage', hiddenKey));
       setFailed(false);
       setOpen(true);
     };
@@ -70,7 +70,7 @@ export function WelcomeTour() {
         <label className="flex cursor-pointer items-start gap-3 text-sm">
           <input type="checkbox" checked={hidden} className="mt-1 h-4 w-4 accent-[#7f1d16]" onChange={(event) => {
             setHidden(event.target.checked);
-            write(localStorage, preferenceKey(id, role), event.target.checked);
+            write('localStorage', preferenceKey(id, role), event.target.checked);
           }} />
           <span>Jangan tampilkan lagi<span className="block text-xs text-muted-foreground">Untuk akun ini di browser ini. Tonton kembali lewat menu profil.</span></span>
         </label>

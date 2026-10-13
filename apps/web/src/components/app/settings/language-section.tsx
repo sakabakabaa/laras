@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n';
 import { useState } from 'react';
 import { BadgeCheck, Globe, LoaderCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -12,6 +13,7 @@ import { LANGUAGES, languageOf, type Language } from '@/lib/i18n';
  * the auth store propagates the new language across the whole app instantly.
  */
 export function LanguageSection() {
+ const t = useT();
 	const { user } = useAuth();
 	const current = languageOf(user);
 	const [value, setValue] = useState<Language>(current);
@@ -44,12 +46,11 @@ export function LanguageSection() {
 					<span className="ld-eyebrow">
 						<Globe size={13} /> Bahasa antarmuka
 					</span>
-					<h2>Bahasa</h2>
+					<h2>{t('audit.language')}</h2>
 				</div>
 			</div>
 			<p className="ld-settings-lede">
-				Pilih bahasa tampilan ruang kerja Anda. Pilihan ini disimpan ke akun Anda dan
-				diterapkan di seluruh antarmuka dosen.
+				{t('audit.languageDescription')} {t('audit.langContent')}
 			</p>
 
 			<div className="ld-settings-pref">
@@ -57,10 +58,10 @@ export function LanguageSection() {
 					<Globe size={18} />
 				</div>
 				<div className="ld-settings-pref-body">
-					<strong>Bahasa saat ini</strong>
+					<strong>{t('audit.currentLanguage')}</strong>
 					<span>{LANGUAGES.find((l) => l.code === value)?.native}</span>
 				</div>
-				<div className="ld-settings-seg" role="group" aria-label="Bahasa antarmuka">
+				<div className="ld-settings-seg" role="group" aria-label={t('audit.interfaceLanguage')}>
 					{LANGUAGES.map((l) => (
 						<button
 							key={l.code}

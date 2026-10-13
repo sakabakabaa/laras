@@ -19,6 +19,7 @@ type UsageSummary = {
  */
 export function UsageSection() {
 	const { user } = useAuth();
+	const [reloadKey, setReloadKey] = useState(0);
 	const [summary, setSummary] = useState<UsageSummary | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
@@ -31,7 +32,7 @@ export function UsageSection() {
 			try {
 				const res = await fetch('/api/ai-usage', {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
+					headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pb.authStore.token}` },
 					body: JSON.stringify({ action: 'summary' }),
 				});
 				if (!res.ok) throw new Error('Gagal memuat penggunaan AI.');
@@ -47,7 +48,7 @@ export function UsageSection() {
 		return () => {
 			cancelled = true;
 		};
-	}, [user?.id]);
+	}, [user?.id, reloadKey]);
 
 	const consumed = summary?.consumed ?? 0;
 	const budget = summary?.budget ?? 1;
@@ -74,7 +75,7 @@ export function UsageSection() {
 				</p>
 			) : error ? (
 				<p className="form-error" role="alert">
-					{error}
+					{error} <button type="button" onClick={() => setReloadKey(k => k + 1)}>Coba lagi</button>
 				</p>
 			) : (
 				<div className="ld-usage">

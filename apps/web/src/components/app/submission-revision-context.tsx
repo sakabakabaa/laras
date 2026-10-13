@@ -27,6 +27,8 @@ export function SubmissionRevisionContext({originalAssignmentId,studentId,revisi
  useEffect(()=>{let live=true;setOriginal(null);setError('');setLoading(true);
   pb.collection('assignment_submissions').getList<AssignmentSubmission>(1,2,{filter:pb.filter('assignment={:a} && owner={:o} && (status="submitted" || status="late" || status="graded")',{a:originalAssignmentId,o:studentId})}).then(r=>{if(!live)return;if(r.items.length===1)setOriginal(r.items[0]);else setError(r.items.length?'Beberapa jawaban asal ditemukan. Tautan perlu diperiksa.':'Jawaban asal belum ditemukan.');}).catch(()=>{if(live)setError('Tidak dapat memuat jawaban asal.');}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};
  },[originalAssignmentId,studentId]);
+ // Keep ordinary task content visible when there is no source submission.
+ if (!lecturer && !original) return <>{children}</>;
  const historical=revision?.revisionProvenance?.source==='historical';
  return <section className="revision-context"><h3>Revisi</h3>{children || (revision && <SavedSubmissionText submission={revision}/>)}{loading?<p>Memuat jawaban asal…</p>:error?<p role="alert">{error}</p>:original?<>
 

@@ -1,3 +1,4 @@
+import { mergeSubmissionChannels, isCollectedSubmission, isOfficiallyGraded } from '@/lib/submission-state';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { ClipboardCheck, ClipboardList, Clock3, LoaderCircle, Plus, Repeat, Search } from 'lucide-react';
@@ -19,6 +20,7 @@ import {
 import type { Course } from '@/lib/learning';
 
 type Row = {
+ linkedSubmission?: string;
 	id: string;
 	assignment: string;
 	status: string;
@@ -87,10 +89,10 @@ export function TugasBoard() {
 						expand: 'session,subCpmk,parentAssignment',
 					}),
 					pb.collection('assignment_submissions').getFullList<Row>({
-						fields: 'id,assignment,status,grade',
+						fields: 'id,assignment,status,grade,linkedSubmission',
 					}),
 					pb.collection('public_submissions').getFullList<Row>({
-						fields: 'id,assignment,status,grade',
+						fields: 'id,assignment,status,grade,linkedSubmission',
 					}),
 					pb.collection('check_attempts').getFullList<CheckRow>({
 						fields: 'id,assignment,identityKey',
@@ -144,10 +146,10 @@ export function TugasBoard() {
 			if (isFormative) formative += 1;
 			else formal += 1;
 			if (isFormative) continue;
-			const mine = [...subs, ...pubs].filter((s) => s.assignment === a.id);
-			const rows = mine.filter((s) => s.status && s.status !== 'draft');
+			const mine = mergeSubmissionChannels(subs, pubs).filter((s) => s.assignment === a.id);
+			const rows = mine.filter(isCollectedSubmission);
 			collected += rows.length;
-			graded += rows.filter((s) => s.status === 'graded' || s.grade != null).length;
+			graded += rows.filter(isOfficiallyGraded).length;
 		}
 		return {
 			total: visible.length,
@@ -320,9 +322,9 @@ export function TugasBoard() {
 								{visible.map((a) => {
 									const course = courses.find((c) => c.id === a.course);
 									const formative = activityTypeOf(a) === 'formative';
-									const mine = [...subs, ...pubs].filter((s) => s.assignment === a.id);
-									const collected = mine.filter((s) => s.status && s.status !== 'draft');
-									const graded = collected.filter((s) => s.status === 'graded' || s.grade != null);
+									const mine = mergeSubmissionChannels(subs, pubs).filter((s) => s.assignment === a.id);
+									const collected = mine.filter(isCollectedSubmission);
+									const graded = collected.filter(isOfficiallyGraded);
 									const myChecks = checks.filter((c) => c.assignment === a.id);
 									const checkers = new Set(myChecks.map((c) => c.identityKey)).size;
 									return (

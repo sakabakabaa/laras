@@ -1,3 +1,4 @@
+import { mergeSubmissionChannels, isCollectedSubmission, isOfficiallyGraded } from './submission-state';
 import type { Assignment, AssignmentSubmission } from '@/lib/assignments';
 import { activityTypeOf } from '@/lib/assignments';
 import type { ClassSession, CourseRosterEntry, StructuredItem } from '@/lib/learning';
@@ -23,10 +24,10 @@ export type RosterAccount = {
 	enrolled: boolean;
 };
 
-const COLLECTED = new Set(['submitted', 'late', 'graded', 'revision']);
+
 
 export function isCollected(status: string) {
-	return COLLECTED.has(status);
+	return isCollectedSubmission({ status });
 }
 
 function weekOf(session: ClassSession | undefined) {
@@ -46,6 +47,8 @@ export type CourseAnalyticsInput = {
 	now: number;
 	/** When set, only assignments/sessions in this week are counted. 0 = whole semester. */
 	week: number;
+	studentId?: string;
+	publicSubmissions?: (CourseAnalyticsInput['submissions'][number] & { linkedSubmission?: string })[];
 };
 
 export type WeekBar = {
@@ -162,7 +165,7 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 		(a) => activityTypeOf(a) === 'formal' && a.status !== 'draft' && a.status !== 'archived' && inWeek(a.session),
 	);
 	const formalIds = new Set(formal.map((a) => a.id));
-	const subs = input.submissions.filter((s) => formalIds.has(s.assignment));
+	const subs = input.submissions.filter((s) => formalIds.has(s.assignment) && (!input.studentId || s.owner === input.studentId));
 
 	const userByNim = new Map(input.accounts.filter((a) => a.userId).map((a) => [a.nim, a]));
 	const nameByUser = new Map<string, { name: string; nim: string }>();
@@ -190,7 +193,7 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 	if (participantIds.size === 0) {
 		for (const sub of subs) if (sub.owner) participantIds.add(sub.owner);
 	}
-	const classSize = participantIds.size || rosterPeople.length;
+	const classSize = input.studentId ? 1 : Math.max(rosterPeople.length, participantIds.size);
 
 	const active = rosterPeople.filter((p) => p.enrolled || p.hasAccount).length;
 	const inactive = Math.max(0, rosterPeople.length - active);
@@ -208,9 +211,13 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 			submittedCount += 1;
 		}
 		// A numeric field can contain a default zero before assessment is published.
-		if (sub.status === 'graded') graded += 1;
+		if (isOfficiallyGraded(sub)) graded += 1;
 	}
-	const expected = classSize * formal.length;
+	const publicRows = input.studentId ? [] : (input.publicSubmissions || []).filter(s => formalIds.has(s.assignment));
+ const gradingRows = mergeSubmissionChannels(subs, publicRows).filter(isCollectedSubmission);
+ graded = gradingRows.filter(isOfficiallyGraded).length;
+ submittedCount = gradingRows.length;
+ const expected = classSize * formal.length;
 	const collectionRate = expected ? pct(collected, expected) : null;
 	const gradedRate = submittedCount ? pct(graded, submittedCount) : null;
 
@@ -225,12 +232,12 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 			const weekSessions = input.sessions.filter((s) => weekOf(s) === week);
 			const withMaterial = weekSessions.filter((s) => (s.learningMaterial || s.topic || '').trim()).length;
 			const weekAssignments = input.assignments.filter(
-				(a) => activityTypeOf(a) === 'formal' && a.status !== 'draft' && weekOf(sessionById.get(a.session)) === week,
+				(a) => activityTypeOf(a) === 'formal' && a.status !== 'draft' && a.status !== 'archived' && weekOf(sessionById.get(a.session)) === week,
 			);
-			const weekSubs = input.submissions.filter((s) => weekAssignments.some((a) => a.id === s.assignment));
-			const weekExpected = (participantIds.size || rosterPeople.length) * weekAssignments.length;
+			const weekSubs = input.submissions.filter((s) => weekAssignments.some((a) => a.id === s.assignment) && (!input.studentId || s.owner === input.studentId));
+			const weekExpected = classSize * weekAssignments.length;
 			const weekCollected = weekSubs.filter((s) => isCollected(s.status)).length;
-			const weekGraded = weekSubs.filter((s) => s.status === 'graded').length;
+			const weekGraded = weekSubs.filter((s) => isOfficiallyGraded(s)).length;
 			return {
 				week,
 				label: `Week ${week}`,
@@ -243,7 +250,7 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 
 	const subCpmk = input.subCpmks.map((item) => {
 		const linked = formal.filter((a) => a.subCpmk === item.id);
-		const linkedSubs = subs.filter((s) => linked.some((a) => a.id === s.assignment) && s.grade != null);
+		const linkedSubs = subs.filter((s) => linked.some((a) => a.id === s.assignment) && isOfficiallyGraded(s) && s.grade != null);
 		const percent = linkedSubs.length
 			? Math.round(linkedSubs.reduce((sum, s) => sum + Number(s.grade), 0) / linkedSubs.length)
 			: null;
@@ -313,7 +320,7 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 		}
 		const mine = subs.filter((s) => s.owner === person.userId);
 		const done = new Set(mine.filter((s) => isCollected(s.status)).map((s) => s.assignment));
-		const gradedN = mine.filter((s) => s.status === 'graded').length;
+		const gradedN = mine.filter((s) => isOfficiallyGraded(s)).length;
 		const missing = Math.max(0, formal.length - done.size);
 		const completion = formal.length ? pct(done.size, formal.length) : 0;
 		const last = mine.map((s) => s.updated || s.created).sort().at(-1) || '';
@@ -363,7 +370,7 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 
 	const alerts: AlertItem[] = [];
 	const worst = distribution.filter((d) => d.missing > 0).sort((a, b) => b.missing - a.missing)[0];
-	if (worst) {
+	if (worst && !input.studentId) {
 		const deadline = formal.find((a) => a.id === worst.id)?.deadline;
 		alerts.push({
 			id: `miss-${worst.id}`,
@@ -373,8 +380,8 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 			action: 'Lihat mahasiswa',
 		});
 	}
-	const ungraded = subs.filter((s) => isCollected(s.status) && s.status !== 'graded').length;
-	if (ungraded > 0) {
+	const ungraded = gradingRows.filter(s => !isOfficiallyGraded(s)).length;
+	if (ungraded > 0 && !input.studentId) {
 		alerts.push({
 			id: 'ungraded',
 			tone: 'warn',
@@ -388,7 +395,7 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 		});
 	}
 	const bare = input.sessions.find((s) => !(s.learningMaterial || s.topic || '').trim() && !s.completed);
-	if (bare) {
+	if (bare && !input.studentId) {
 		alerts.push({
 			id: `materi-${bare.id}`,
 			tone: 'info',
@@ -398,9 +405,16 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 		});
 	}
 
+if (input.studentId) {
+ for (const row of distribution.filter(d => d.missing > 0).slice(0, 3)) {
+  alerts.push({id: `own-${row.id}`, tone: 'warn', title: `Anda belum mengumpulkan ${row.title}`, detail: '', href: `/app/kerja/${row.id}`, action: 'Buka tugas'});
+ }
+ if (ungraded) alerts.push({id: 'own-grading', tone: 'info', title: `${ungraded} jawaban menunggu penilaian dosen`, detail: 'Skor AI dan draf belum menjadi nilai resmi.', action: 'Lihat nilai'});
+}
+
 	const taskGraded = formal.filter((a) => {
-		const rows = byAssignment.get(a.id) || [];
-		return rows.some((s) => s.status === 'graded');
+		const rows = gradingRows.filter(s => s.assignment === a.id);
+		return rows.filter(isCollectedSubmission).length > 0 && rows.filter(isCollectedSubmission).every(isOfficiallyGraded);
 	}).length;
 
 	return {

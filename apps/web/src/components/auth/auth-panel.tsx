@@ -173,7 +173,7 @@ export function AuthPanel() {
 
 					<form onSubmit={submit} className="login-form">
 						<label className="login-field">
-							<span>NIM atau Alamat Email UPI</span>
+							<span>{role === 'student' ? 'NIM atau Alamat Email UPI' : 'Alamat Email'}</span>
 							<div className="login-input-wrap">
 								<Mail size={16} className="login-input-icon" aria-hidden="true" />
 								<input

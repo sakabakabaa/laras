@@ -1,0 +1,41 @@
+/* Paired surfaces: workspace documents share the active theme; actual PDF/image previews retain their source colors. */
+:root { --ui-panel:#fff; --ui-soft:#f5f7fa; --ui-text:#172238; --ui-muted:#536176; --ui-border:#d9dfe7; --ui-focus:#8a251c; }
+:root.dark { --ui-panel:#171b21; --ui-soft:#222831; --ui-text:#e8edf4; --ui-muted:#b1bdcb; --ui-border:#39424d; --ui-focus:#ff9c91; }
+.ld-content :is(.ld-document-paper,.ld-document-side,.ld-document-content,.ld-source-document,.ld-rps-summary,.ld-syllabus-topic,.revision-context,.revision-answer-section) { background:var(--ui-panel); color:var(--ui-text); border-color:var(--ui-border); }
+.ld-content :is(.ld-document-paper,.ld-rps-page,.ld-syllabus-page,.revision-context) :is(h2,h3,strong,label) { color:var(--ui-text); }
+.ld-content :is(.ld-document-side,.ld-document-paper-header,.ld-document-paper-footer,.ld-rps-summary,.ld-syllabus-topic-copy) :is(p,small,span) { color:var(--ui-muted); }
+.ld-content :is(.ld-syllabus-topic-number,.ld-source-actions,.revision-context details) { background:var(--ui-soft); color:var(--ui-text); border-color:var(--ui-border); }
+:root.dark .ld-content :is(.evx-script,.evx-script-line,.aev-answer,.tws-panel,.tws-card) { background:var(--ui-panel); color:var(--ui-text); border-color:var(--ui-border); }
+:root.dark .ld-content .evx-script mark { color:#172238; }
+.an-page :is(.an-card,.an-stat,.an-period) { background:var(--ui-panel); color:var(--ui-text); border-color:var(--ui-border); }
+.an-page :is(h1,h2,strong) { color:var(--ui-text); }
+.an-page :is(.an-muted,.an-stat-label,.an-stat-hint,.an-legend,.an-table th) { color:var(--ui-muted); }
+:root.dark .an-alert { background:var(--ui-soft); color:var(--ui-text); }
+:root.dark .an-alert :is(strong,span) { color:var(--ui-text); }
+.an-table thead th { position:sticky; top:0; z-index:1; background:var(--ui-panel); }
+.an-table-wrap { max-height:32rem; overflow:auto; }
+.ld-content :is(button,a,input,select,textarea,summary):focus-visible { outline:2px solid var(--ui-focus); outline-offset:3px; }
+.ld-greet-ask-toggle { cursor:pointer; font-size:13px; font-weight:600; padding:10px 0; color:var(--ui-text); }
+.ld-greet-ask:not([open]) > :not(summary) { display:none; }
+.flb-pagination { display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:14px; flex-wrap:wrap; }
+.flb-pagination button { border:1px solid var(--ui-border); background:var(--ui-panel); color:var(--ui-text); border-radius:8px; padding:8px 12px; }
+.flb-pagination button:disabled { opacity:.45; }
+@media(max-width:768px) {
+ .an-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .an-grid-2,.an-grid-3 { grid-template-columns:minmax(0,1fr); }
+ .ld-document-view { display:flex; flex-direction:column; }
+ .ld-document-paper,.ld-document-side { min-width:0; width:100%; }
+ .eval-grid.evx-grid { grid-template-columns:minmax(0,1fr); }
+ .eval-col { min-width:0; }
+ .flb-toolbar { flex-wrap:wrap; }
+}
+@media(prefers-reduced-motion:reduce) {
+ *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+}
+
+.an-page :is(.an-table td,.an-empty p,.an-stat small,.an-stat div>span,.an-privacy) { color:var(--ui-muted); }
+.an-page :is(.an-empty,.an-alert a,.an-period select) { background:var(--ui-soft); color:var(--ui-text); border-color:var(--ui-border); }
+.roster-search { margin:12px 0; }
+.roster-table-wrap { max-height:65vh; overflow:auto; }
+.roster-table thead th { position:sticky; top:0; z-index:2; background:var(--ui-panel); color:var(--ui-text); }
+@media(max-width:390px) { .an-stats { grid-template-columns:minmax(0,1fr); } .an-alert { flex-wrap:wrap; } }

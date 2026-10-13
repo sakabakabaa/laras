@@ -661,7 +661,7 @@ export function StudentAssignmentCard({
 							{SUBMISSION_STATUS_LABEL[(mySubmission.status || 'submitted') as SubmissionStatus]}
 						</span>
 						{mySubmission.group && <span className="asg-tag">Kelompok {mySubmission.group}</span>}
-						{mySubmission.grade != null && (
+						{mySubmission.status === 'graded' && mySubmission.grade != null && (
 							<span className="asg-tag grade">Nilai {studentGradeLabel(mySubmission.grade)}</span>
 						)}
 					</div>

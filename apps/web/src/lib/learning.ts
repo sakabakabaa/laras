@@ -561,3 +561,8 @@ export function sessionProgressPct(
 	const done = sessions.filter((s) => isSessionDone(s, nowMs)).length;
 	return Math.round((done / sessions.length) * 100);
 }
+
+/** PocketBase expands a single-select relation as an object and multi-select as an array. */
+export function relationRecords<T>(value: T | T[] | null | undefined): T[] {
+ return value == null ? [] : Array.isArray(value) ? value : [value];
+}

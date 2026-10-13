@@ -370,7 +370,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				transcriptConfidence: s.transcriptConfidence,
 			};
 		});
-		const publicRows: Participant[] = pubs.map((s) => ({
+		const publicRows: Participant[] = pubs.filter(s => !s.linkedSubmission || !subs.some(row => row.id === s.linkedSubmission)).map((s) => ({
 			key: `p:${s.id}`,
 			channel: 'public',
 			name: s.participantName || 'Peserta publik',

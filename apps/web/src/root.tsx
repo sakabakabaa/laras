@@ -15,6 +15,7 @@ import darkOverrides from '@/styles/dark-overrides.css?url';
 import studentHome from '@/styles/student-home.css?url';
 import agentTasks from '@/styles/agent-tasks.css?url';
 import lessonPlans from '@/styles/lesson-plans.css?url';
+import uiAuditImprovements from '@/styles/ui-audit-improvements.css?url';
 import premiumWorkspace from '@/styles/premium-workspace.css?url';
 import personalPractice from '@/styles/personal-practice.css?url';
 import { siteOrigin } from '@/lib/site-origin.server';
@@ -46,6 +47,7 @@ export const links: Route.LinksFunction = () => [
 	{ rel: 'stylesheet', href: studentHome },
 	{ rel: 'stylesheet', href: agentTasks },
 	{ rel: 'stylesheet', href: lessonPlans },
+	{ rel: 'stylesheet', href: uiAuditImprovements },
 	{ rel: 'icon', href: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
 	{ rel: 'icon', href: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
 	{ rel: 'icon', href: '/favicon.png', type: 'image/png', sizes: '48x48' },

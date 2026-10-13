@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n';
 import { PracticeMascot } from './practice-mascot';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router';
@@ -50,8 +51,10 @@ export function CourseAnalytics({
 	isStudent: boolean;
 }) {
 	const chartId = useId();
+	const t = useT();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
+	const [reloadKey, setReloadKey] = useState(0);
 	const [week, setWeek] = useState(0);
 	const [showAlerts, setShowAlerts] = useState(false);
 	const canSeeClass = !isStudent && course.owner === pb.authStore.record?.id;
@@ -59,6 +62,7 @@ export function CourseAnalytics({
 	const [bundle, setBundle] = useState<{
 		assignments: Assignment[];
 		submissions: AssignmentSubmission[];
+		publicSubmissions: (AssignmentSubmission & { linkedSubmission?: string })[];
 		sessions: ClassSession[];
 		subCpmks: StructuredItem[];
 		roster: CourseRosterEntry[];
@@ -96,16 +100,16 @@ export function CourseAnalytics({
 				const assignFilter = formal.length
 					? formal.map((a) => pb.filter('assignment = {:id}', { id: a.id })).join(' || ')
 					: '';
-				const [submissions, attempts, roster] = await Promise.all([
+				const [submissions, attempts, roster, publicSubmissions] = await Promise.all([
 					assignFilter
 						? pb.collection('assignment_submissions').getFullList<AssignmentSubmission>({
-								filter: assignFilter,
+								filter: isStudent ? `(${assignFilter}) && ${pb.filter('owner = {:id}', { id: pb.authStore.record?.id })}` : assignFilter,
 								fields: 'id,assignment,owner,status,grade,updated,created',
 							})
 						: Promise.resolve([] as AssignmentSubmission[]),
 					assignFilter
 						? pb.collection('check_attempts').getFullList<AnalyticsAttempt>({
-								filter: assignFilter,
+								filter: isStudent ? `(${assignFilter}) && ${pb.filter('owner = {:id}', { id: pb.authStore.record?.id })}` : assignFilter,
 								fields: 'id,assignment,area,identityKey,owner,participantName,created,level',
 							})
 						: Promise.resolve([] as AnalyticsAttempt[]),
@@ -115,6 +119,7 @@ export function CourseAnalytics({
 								sort: 'name',
 							})
 						: Promise.resolve([] as CourseRosterEntry[]),
+					canSeeClass && assignFilter ? pb.collection('public_submissions').getFullList<AssignmentSubmission & { linkedSubmission?: string }>({filter: assignFilter, fields: 'id,assignment,status,grade,updated,created,linkedSubmission'}) : Promise.resolve([]),
 				]);
 
 				const identities: Record<string, OwnerIdentity> = {};
@@ -176,6 +181,7 @@ export function CourseAnalytics({
 				setBundle({
 					assignments,
 					submissions: mine,
+					publicSubmissions,
 					sessions,
 					subCpmks,
 					roster,
@@ -185,7 +191,7 @@ export function CourseAnalytics({
 					insights,
 				});
 			} catch {
-				if (alive) setError('Analitik gagal dimuat. Muat ulang halaman.');
+				if (alive) setError(t('audit.error'));
 			} finally {
 				if (alive) setLoading(false);
 			}
@@ -193,40 +199,41 @@ export function CourseAnalytics({
 		return () => {
 			alive = false;
 		};
-	}, [course.id, canSeeClass]);
+	}, [course.id, canSeeClass, isStudent, reloadKey, t]);
 
 	const model = useMemo(() => {
 		if (!bundle || !now) return null;
-		return buildCourseAnalytics({ ...bundle, now, week });
-	}, [bundle, now, week]);
+		return buildCourseAnalytics({ ...bundle, now, week, studentId: isStudent ? pb.authStore.record?.id : undefined });
+	}, [bundle, now, week, isStudent]);
 
 	const weeks = useMemo(() => {
 		const set = new Set((bundle?.sessions || []).map((s) => s.week).filter((w) => w > 0));
 		return [...set].sort((a, b) => a - b);
 	}, [bundle]);
 
-	const visibleAlerts = showAlerts ? model?.alerts || [] : (model?.alerts || []).slice(0, 3);
+	const personalAlerts = (model?.alerts || []).map(alert => !isStudent ? alert : alert.id.startsWith('own-') && alert.id !== 'own-grading' ? { ...alert, title: t('audit.ownMissing', { title: bundle?.assignments.find(a => `/app/kerja/${a.id}` === alert.href)?.title || '' }), action: t('audit.openTask') } : { ...alert, title: t('audit.ownPending', { count: String((model?.submittedCount || 0) - (model?.graded || 0)) }), detail: t('audit.draftNote'), action: t('audit.ownGrades') });
+ const visibleAlerts = showAlerts ? personalAlerts : personalAlerts.slice(0, 3);
 
 	return (
 		<section className="an-page" aria-label={`Analitik ${course.title}`}>
 			<div className={`an-head${isStudent ? ' student-page-banner' : ''}`}>
 				<div>
 					<Link to="/analytics" className="an-back">
-						← Analitik
+						← {t('audit.analytics')}
 					</Link>
 					<h1>{course.title}</h1>
 					<p>
-						{[course.semester, course.academicYear].filter(Boolean).join(' · ') || 'Semester belum diisi'}
+						{[course.semester, course.academicYear].filter(Boolean).join(' · ') || t('audit.noPeriod')}
 					</p>
 				</div>
 				{isStudent && <span className="student-banner-mascot" aria-hidden="true"><PracticeMascot size={85} /></span>}
 				<label className="an-period">
 					<CalendarRange size={16} />
-					<select value={String(week)} onChange={(e) => setWeek(Number(e.target.value))} aria-label="Periode">
-						<option value="0">Seluruh semester</option>
+					<select value={String(week)} onChange={(e) => setWeek(Number(e.target.value))} aria-label={t('audit.period')}>
+						<option value="0">{t('audit.semester')}</option>
 						{weeks.map((w) => (
 							<option key={w} value={w}>
-								Minggu {w}
+								{t('audit.week', { week: String(w) })}
 							</option>
 						))}
 					</select>
@@ -239,7 +246,7 @@ export function CourseAnalytics({
 				</p>
 			)}
 
-			{loading || !model ? (
+			{error ? (<div className="ld-alert" role="alert">{error} <button type="button" onClick={() => setReloadKey(k => k + 1)}>{t('audit.retry')}</button></div>) : loading || !model ? (
 				<div className="an-loading">
 					<LoaderCircle size={20} className="spin" /> Memuat analitik...
 				</div>
@@ -264,14 +271,14 @@ export function CourseAnalytics({
 						<Stat
 							icon={<Users size={18} />}
 							tint="slate"
-							value={model.studentTotal ? String(model.studentTotal) : '—'}
-							label={isStudent ? 'Tugas formal' : 'Mahasiswa'}
+							value={isStudent ? String(model.taskTotal) : model.studentTotal ? String(model.studentTotal) : '—'}
+							label={isStudent ? t('audit.formal') : t('audit.students')}
 							hint={
 								isStudent
-									? `${model.taskTotal} tugas diterbitkan`
+									? String(model.taskTotal)
 									: model.studentTotal
 										? `${model.active} akun aktif · ${model.inactive} belum aktivasi`
-										: 'Belum ada daftar mahasiswa'
+										: t('audit.noRoster')
 							}
 							empty={!model.studentTotal && !isStudent}
 						/>
@@ -279,11 +286,11 @@ export function CourseAnalytics({
 							icon={<ClipboardList size={18} />}
 							tint="green"
 							value={model.collectionRate == null ? '—' : `${model.collectionRate}%`}
-							label="Tingkat pengumpulan"
+							label={t('audit.collection')}
 							hint={
 								model.expected
-									? `${model.collected} / ${model.expected} pengumpulan`
-									: 'Belum ada tugas formal'
+									? `${model.collected} / ${model.expected}`
+									: t('audit.noTask')
 							}
 							empty={model.collectionRate == null}
 						/>
@@ -291,11 +298,11 @@ export function CourseAnalytics({
 							icon={<BarChart3 size={18} />}
 							tint="amber"
 							value={model.gradedRate == null ? '—' : `${model.gradedRate}%`}
-							label="Penilaian selesai"
+							label={t('audit.grading')}
 							hint={
 								model.submittedCount
-									? `${model.graded} / ${model.submittedCount} submission`
-									: 'Belum ada yang terkumpul'
+									? `${model.graded} / ${model.submittedCount}`
+									: t('audit.noCollected')
 							}
 							empty={model.gradedRate == null}
 						/>
@@ -303,11 +310,11 @@ export function CourseAnalytics({
 							icon={<BookOpen size={18} />}
 							tint="blue"
 							value={model.sessionTotal ? String(model.sessionTotal) : '—'}
-							label="Sesi pertemuan"
+							label={t('audit.sessions')}
 							hint={
 								model.sessionTotal
 									? `${model.sessionsDone} selesai · ${model.sessionsUpcoming} mendatang`
-									: 'Belum ada pertemuan'
+									: t('audit.noSession')
 							}
 							empty={!model.sessionTotal}
 						/>
@@ -315,11 +322,11 @@ export function CourseAnalytics({
 							icon={<ClipboardList size={18} />}
 							tint="violet"
 							value={model.taskTotal ? String(model.taskTotal) : '—'}
-							label="Tugas"
+							label={t('audit.tasks')}
 							hint={
 								model.taskTotal
 									? `${model.taskGraded} dinilai · ${model.taskOpen} berlangsung`
-									: 'Belum ada tugas formal'
+									: t('audit.noTask')
 							}
 							empty={!model.taskTotal}
 						/>
@@ -333,14 +340,14 @@ export function CourseAnalytics({
 								</h2>
 								{model.alerts.length > 3 && (
 									<button type="button" className="an-text" onClick={() => setShowAlerts((v) => !v)}>
-										{showAlerts ? 'Ringkas' : 'Lihat semua'}
+										{showAlerts ? t('audit.short') : t('audit.all')}
 									</button>
 								)}
 							</header>
 							{visibleAlerts.length === 0 ? (
 								<Empty
-									title="Tidak ada hal yang perlu diperhatikan"
-									text="Peringatan muncul ketika ada tugas yang belum terkumpul, submission yang belum dinilai, atau pertemuan tanpa materi."
+									title={t('audit.noAttention')}
+									text={t('audit.emptyAttention')}
 								/>
 							) : (
 								<ul className="an-alerts">
@@ -353,9 +360,9 @@ export function CourseAnalytics({
 											{alert.action && (
 												<Link
 													to={
-														alert.action === 'Lihat penilaian'
+														alert.href ? alert.href : isStudent ? courseSectionPath(routeId, 'nilai') : alert.id === 'ungraded'
 															? courseSectionPath(routeId, 'tugas')
-															: alert.action === 'Buka pertemuan'
+															: alert.id.startsWith('materi-')
 																? courseSectionPath(routeId, 'mata-kuliah')
 																: courseSectionPath(routeId, 'mahasiswa')
 													}
@@ -371,19 +378,19 @@ export function CourseAnalytics({
 
 						<article className="an-card">
 							<header className="an-card-head">
-								<h2>Progres per minggu</h2>
+								<h2>{t('audit.progress')}</h2>
 								<div className="an-legend">
-									<span><i className="materi" /> Materi</span>
-									<span><i className="tugas" /> Tugas</span>
-									<span><i className="nilai" /> Penilaian</span>
+									<span><i className="materi" /> {t('audit.materials')}</span>
+									<span><i className="tugas" /> {t('audit.tasks')}</span>
+									<span><i className="nilai" /> {t('audit.assessment')}</span>
 								</div>
 							</header>
 							{model.weeks.length === 0 ? (
-								<Empty title="Belum ada progres mingguan" text="Tambahkan pertemuan di Mata Kuliah agar grafik minggu terisi." />
+								<Empty title={t('audit.noWeekly')} text={t('audit.weeklyEmpty')} />
 							) : (
 								<div className="an-chart">
 									<ResponsiveContainer width="100%" height={220}>
-										<AreaChart data={model.weeks} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+										<AreaChart data={model.weeks.map(row => ({ ...row, label: t('audit.week', { week: String(row.week) }) }))} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
                                             <defs>
                                                 {['#12B76A', '#3B82F6', '#F04438'].map((color, index) => <linearGradient key={color} id={`${chartId}-area-${index}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity={0.22} /><stop offset="100%" stopColor={color} stopOpacity={0.02} /></linearGradient>)}
                                             </defs>
@@ -391,9 +398,9 @@ export function CourseAnalytics({
 											<XAxis dataKey="label" tick={{ fontSize: 11, fill: '#98A2B3' }} axisLine={false} tickLine={false} />
 											<YAxis tick={{ fontSize: 11, fill: '#98A2B3' }} axisLine={false} tickLine={false} domain={[0, 100]} unit="%" width={36} />
 											<Tooltip formatter={(value, name) => [`${value}%`, String(name)]} />
-											<Area type="monotone" dataKey="materi" name="Materi" stroke="#12B76A" strokeWidth={2.5} fill={`url(#${chartId}-area-0)`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
-											<Area type="monotone" dataKey="tugas" name="Tugas" stroke="#3B82F6" strokeWidth={2.5} fill={`url(#${chartId}-area-1)`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
-											<Area type="monotone" dataKey="penilaian" name="Penilaian" stroke="#F04438" strokeWidth={2.5} fill={`url(#${chartId}-area-2)`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
+											<Area type="monotone" dataKey="materi" name={t('audit.materials')} stroke="#12B76A" strokeWidth={2.5} fill={`url(#${chartId}-area-0)`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
+											<Area type="monotone" dataKey="tugas" name={t('audit.tasks')} stroke="#3B82F6" strokeWidth={2.5} fill={`url(#${chartId}-area-1)`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
+											<Area type="monotone" dataKey="penilaian" name={t('audit.assessment')} stroke="#F04438" strokeWidth={2.5} fill={`url(#${chartId}-area-2)`} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }} />
 										</AreaChart>
 									</ResponsiveContainer>
 								</div>
@@ -404,20 +411,20 @@ export function CourseAnalytics({
 					<div className="an-grid-2">
 						<article className="an-card">
 							<header className="an-card-head">
-								<h2>Pencapaian Sub-CPMK</h2>
-								<Link to={courseSectionPath(routeId, 'rps')} className="an-text">Lihat detail</Link>
+								<h2>{isStudent ? t('audit.yourAchievement') : t('audit.achievement')}</h2>
+								<Link to={courseSectionPath(routeId, 'rps')} className="an-text">{t('audit.detail')}</Link>
 							</header>
 							{model.subCpmk.length === 0 ? (
-								<Empty title="Belum ada Sub-CPMK" text="Susun Sub-CPMK di RPS untuk melihat pencapaian kelas." />
+								<Empty title={t('audit.noOutcome')} text={isStudent ? t('audit.ownNoTasks') : 'Susun Sub-CPMK di RPS untuk melihat pencapaian kelas.'} />
 							) : (
 								<div className="an-table-wrap">
 									<table className="an-table">
 										<thead>
 											<tr>
 												<th>Sub-CPMK</th>
-												<th>Aktivitas terkait</th>
-												<th>Pencapaian kelas</th>
-												<th>Status</th>
+												<th>{t('audit.activities')}</th>
+												<th>{isStudent ? t('audit.yourAchievement') : t('audit.classAchievement')}</th>
+												<th>{t('audit.status')}</th>
 											</tr>
 										</thead>
 										<tbody>
@@ -426,10 +433,10 @@ export function CourseAnalytics({
 													<td>
 														<strong>{row.code}</strong> {row.description}
 													</td>
-													<td>{row.activities ? `${row.activities} aktivitas` : 'Belum ditautkan'}</td>
+													<td>{row.activities ? `${row.activities} aktivitas` : t('audit.unlinked')}</td>
 													<td>
 														{row.percent == null ? (
-															<span className="an-muted">Belum ada nilai</span>
+															<span className="an-muted">{t('audit.noGrade')}</span>
 														) : (
 															<span className="an-meter">
 																<span><i className={row.status} style={{ width: `${row.percent}%` }} /></span>
@@ -439,7 +446,7 @@ export function CourseAnalytics({
 													</td>
 													<td>
 														<span className={`an-pill ${row.status}`}>
-															{row.status === 'baik' ? 'Baik' : row.status === 'cukup' ? 'Cukup' : row.status === 'perhatian' ? 'Perlu perhatian' : 'Belum ada data'}
+															{row.status === 'baik' ? t('audit.good') : row.status === 'cukup' ? t('audit.adequate') : row.status === 'perhatian' ? t('audit.needsAttention') : t('audit.noData')}
 														</span>
 													</td>
 												</tr>
@@ -452,15 +459,15 @@ export function CourseAnalytics({
 
 						<article className="an-card">
 							<header className="an-card-head">
-								<h2>Distribusi pengumpulan tugas</h2>
+								<h2>{t('audit.distribution')}</h2>
 								<div className="an-legend">
-									<span><i className="materi" /> Tepat waktu</span>
-									<span><i className="late" /> Terlambat</span>
-									<span><i className="nilai" /> Tidak mengumpulkan</span>
+									<span><i className="materi" /> {t('audit.onTime')}</span>
+									<span><i className="late" /> {t('audit.late')}</span>
+									<span><i className="nilai" /> {t('audit.missing')}</span>
 								</div>
 							</header>
 							{model.distribution.length === 0 ? (
-								<Empty title="Belum ada tugas formal" text="Tugas yang diterbitkan akan menampilkan tepat waktu, terlambat, dan belum mengumpulkan." />
+								<Empty title={t('audit.noTask')} text={t('audit.ownNoTasks')} />
 							) : (
 								<ul className="an-dist">
 									{model.distribution.map((row) => {
@@ -488,7 +495,7 @@ export function CourseAnalytics({
 							<article className="an-card">
 								<header className="an-card-head">
 									<h2>Mahasiswa yang perlu perhatian</h2>
-									<Link to={courseSectionPath(routeId, 'mahasiswa')} className="an-text">Lihat semua</Link>
+									<Link to={courseSectionPath(routeId, 'mahasiswa')} className="an-text">{t('audit.all')}</Link>
 								</header>
 								{model.attention.length === 0 ? (
 									<Empty
@@ -518,11 +525,11 @@ export function CourseAnalytics({
 
 						<article className="an-card">
 							<header className="an-card-head">
-								<h2>Topik kesulitan yang sering muncul</h2>
-								{canSeeClass ? <Link to="/app/tugas/insights" className="an-text">Lihat semua</Link> : null}
+								<h2>{t('audit.topicTitle')}</h2>
+								{canSeeClass ? <Link to="/app/tugas/insights" className="an-text">{t('audit.all')}</Link> : null}
 							</header>
 							{model.topics.length === 0 ? (
-								<Empty title="Belum ada topik kesulitan" text="Topik muncul dari riwayat Cek jawaban. Ini sinyal formatif, bukan nilai resmi." />
+								<Empty title={t('audit.noTopics')} text={t('audit.topicsEmpty')} />
 							) : (
 								<ul className="an-topics">
 									{model.topics.map((topic) => {
@@ -549,7 +556,7 @@ export function CourseAnalytics({
 									<h2>
 										<Sparkles size={16} /> Insight dari AI
 									</h2>
-									<Link to="/app/tugas/insights" className="an-text">Lihat semua</Link>
+									<Link to="/app/tugas/insights" className="an-text">{t('audit.all')}</Link>
 								</header>
 								{(bundle?.insights.length || 0) === 0 ? (
 									<Empty

@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useT } from '@/lib/i18n';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
 	BookOpenText,
@@ -22,7 +23,7 @@ import {
 import pb from '@/lib/pocketbase-client';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { invalidate } from '@/lib/local-cache';
-import { dateLabel, errorMessage, linkIds } from '@/lib/learning';
+import { dateLabel, errorMessage, linkIds, relationRecords } from '@/lib/learning';
 import type {
 	ClassSession,
 	Course,
@@ -77,6 +78,8 @@ export function FileLibrary() {
 	const [courseFilter, setCourseFilter] = useState('all');
 	const [accessFilter, setAccessFilter] = useState('all');
 	const [kindFilter, setKindFilter] = useState('all');
+	const t = useT();
+	const [page, setPage] = useState(1);
 	const [sort, setSort] = useState<SortKey>('newest');
 	const [dialog, setDialog] = useState<
 		{ mode: 'create' } | { mode: 'edit'; record: FileLibraryRecord } | null
@@ -175,6 +178,11 @@ export function FileLibrary() {
 		else sorted.sort((a, b) => (b.size ?? 0) - (a.size ?? 0));
 		return sorted;
 	}, [files, query, courseFilter, accessFilter, kindFilter, sort]);
+
+ const pageCount = Math.max(1, Math.ceil(filtered.length / 30));
+ const currentPage = Math.min(page, pageCount);
+ const pageFiles = filtered.slice((currentPage - 1) * 30, currentPage * 30);
+ useEffect(() => { setPage(1); }, [query, courseFilter, accessFilter, kindFilter, sort]);
 
 	const remove = async (record: FileLibraryRecord) => {
 		if (
@@ -387,7 +395,7 @@ export function FileLibrary() {
 				<div className="ld-loading">
 					<LoaderCircle size={24} className="spin" /> Memuat berkas...
 				</div>
-			) : filtered.length === 0 ? (
+			) : error ? (<div className="ld-empty" role="status">Daftar berkas belum tersedia. Coba lagi untuk memuatnya.</div>) : filtered.length === 0 ? (
 				<div className="ld-empty ld-empty-lg">
 					<div className="ld-empty-icon">
 						<FolderOpen size={28} strokeWidth={1.4} />
@@ -419,8 +427,13 @@ export function FileLibrary() {
 				</div>
 			) : (
 				<section className="ld-panel">
+					     <nav className="flb-pagination" aria-label="Halaman berkas">
+      <span role="status">{filtered.length} berkas · {currentPage} / {pageCount}</span>
+      <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>{t('audit.previous')}</button>
+      <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>{t('audit.next')}</button>
+     </nav>
 					<ul className="flb-list">
-						{filtered.map((record) => {
+						{pageFiles.map((record) => {
 							const kind = fileKindFor(record.file);
 							const Icon = KIND_ICONS[kind];
 							const url = record.file ? pb.files.getURL(record, record.file) : '';
@@ -429,28 +442,28 @@ export function FileLibrary() {
 							const courseNames = linkIds(record.course)
 								.map(
 									(id) =>
-										record.expand?.course?.find((c) => c.id === id)?.title ||
+										relationRecords(record.expand?.course).find((c) => c.id === id)?.title ||
 										courses.find((c) => c.id === id)?.title,
 								)
 								.filter((v): v is string => !!v);
 							const cpmkCodes = linkIds(record.cpmk)
 								.map(
 									(id) =>
-										record.expand?.cpmk?.find((c) => c.id === id)?.code ||
+										relationRecords(record.expand?.cpmk).find((c) => c.id === id)?.code ||
 										cpmks.find((c) => c.id === id)?.code,
 								)
 								.filter((v): v is string => !!v);
 							const subCpmkCodes = linkIds(record.subCpmk)
 								.map(
 									(id) =>
-										record.expand?.subCpmk?.find((c) => c.id === id)?.code ||
+										relationRecords(record.expand?.subCpmk).find((c) => c.id === id)?.code ||
 										subCpmks.find((c) => c.id === id)?.code,
 								)
 								.filter((v): v is string => !!v);
 							const sessionTitles = linkIds(record.session)
 								.map((id) => {
 									const hit =
-										record.expand?.session?.find((s) => s.id === id) ||
+										relationRecords(record.expand?.session).find((s) => s.id === id) ||
 										sessions.find((s) => s.id === id);
 									if (!hit) return '';
 									return hit.week ? `Minggu ${hit.week} — ${hit.title}` : hit.title;
@@ -649,8 +662,9 @@ export function FileLibrary() {
 								</li>
 							);
 						})}
-					</ul>
-				</section>
+     </ul>
+
+    </section>
 			)}
 
 			{dialog && (

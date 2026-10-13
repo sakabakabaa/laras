@@ -106,6 +106,7 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 	const [resetBusy, setResetBusy] = useState<string | null>(null);
 	const [showAudit, setShowAudit] = useState(false);
 	/** Column sort. Default reproduces the DB order (nim) so nothing shifts. */
+	const [search, setSearch] = useState('');
 	const [sortKey, setSortKey] = useState<'nim' | 'name' | 'angkatan' | 'section'>('nim');
 	const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 	/** Selected roster entry ids — always scoped to the rows currently visible. */
@@ -123,7 +124,8 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 	// because it is stored as text; an unparseable value sorts last so it is easy
 	// to spot and correct.
 	const visibleEntries = useMemo(() => {
-		const scoped = sectionId ? entries.filter((e) => e.section === sectionId) : entries;
+		const query = search.trim().toLocaleLowerCase();
+		const scoped = entries.filter(e => (!sectionId || e.section === sectionId) && (!query || `${e.name} ${e.nim} ${angkatanOf(e)}`.toLocaleLowerCase().includes(query)));
 		const dir = sortDir === 'asc' ? 1 : -1;
 		const value = (entry: CourseRosterEntry): string | number => {
 			switch (sortKey) {
@@ -147,7 +149,7 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 			// Stable tie-break on NIM keeps the order deterministic.
 			return a.nim.localeCompare(b.nim, 'id') * dir;
 		});
-	}, [entries, sectionId, sortKey, sortDir, sections]);
+	}, [entries, sectionId, sortKey, sortDir, sections, search]);
 
 	const toggleSort = (key: typeof sortKey) => {
 		if (key === sortKey) {
@@ -707,6 +709,7 @@ export function CourseRoster({ courseId, canEdit, sectionId }: Props) {
 					</div>
 				)}
 
+				<label className="ld-search-bar roster-search">{t('audit.rosterSearch')}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('audit.rosterSearch')} /></label>
 				<div className="roster-table-wrap">
 					<table className="roster-table">
 						<thead>

@@ -163,7 +163,7 @@ export function componentScore(
     if (component.sourceType === 'bonus') return { score: entriesByComponent.get(component.id)?.get(studentId)?.value ?? 0, source: 'manual', aiEvaluated: false };
 	if (component.kind === 'assignment' && component.assignment) {
 		const sub = submissionsByAssignment.get(component.assignment)?.get(studentId);
-		const grade = sub?.grade;
+		const grade = sub?.status === 'graded' ? sub.grade : null;
 		const max = component.maxScore || 100;
 		const normalized = grade == null ? null : Math.round((grade / max) * 1000) / 10;
 		return {

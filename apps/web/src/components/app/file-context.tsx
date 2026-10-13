@@ -18,7 +18,7 @@ import {
 import pb from '@/lib/pocketbase-client';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { invalidate } from '@/lib/local-cache';
-import { dateLabel, errorMessage, linkIds } from '@/lib/learning';
+import { dateLabel, errorMessage, linkIds, relationRecords } from '@/lib/learning';
 import type {
 	ClassSession,
 	ContextSectionRecord,
@@ -258,11 +258,11 @@ export function FileContextView({ fileId }: { fileId: string }) {
 		[sessionsQuery.data, me, fileCourseId],
 	);
 	const courseName =
-		file?.expand?.course?.find((c) => c.id === fileCourseId)?.title ||
+		relationRecords(file?.expand?.course).find((c) => c.id === fileCourseId)?.title ||
 		(coursesQuery.data ?? []).find((c) => c.id === fileCourseId)?.title ||
 		'';
 	const fileSession =
-		file?.expand?.session?.find((s) => s.id === fileSessionId) ||
+		relationRecords(file?.expand?.session).find((s) => s.id === fileSessionId) ||
 		(sessionsQuery.data ?? []).find((s) => s.id === fileSessionId) ||
 		null;
 

@@ -5,7 +5,9 @@
  * model API key and proxy entrance id are read per request from the
  * environment and never logged. A 60s abort guards against a hung stream.
  */
-import { collectHostingerText, type HostingerTool } from '@/lib/hostinger-model.server';
+import { collectChatCompletion } from '@/lib/ai/openai-compatible.server';
+import { resolveModel } from '@/lib/ai/providers.server';
+import type { HostingerTool } from '@/lib/hostinger-model.server';
 import { TOOL_REGISTRY } from './tools.server';
 import { logModelRequest, logModelResult } from './logging.server';
 import type { AssistantSession } from './types';
@@ -40,7 +42,9 @@ export const collectModel = async (
 				parameters: tool.inputSchema as unknown as Record<string, unknown>,
 			},
 		}));
-		const { content, toolCalls } = await collectHostingerText({ messages, tools });
+		// Per-lecturer provider/model; falls back to the deployment default.
+		const resolved = await resolveModel(session.id, 'assistant');
+		const { content, toolCalls } = await collectChatCompletion(resolved, { messages, tools });
 		const toolProtocol = toolCalls?.map((call) => `[[TOOL_CALL]]${JSON.stringify({ name: call.name, args: call.arguments })}[[/TOOL_CALL]]`).join('\n') || '';
 		const output = [content, toolProtocol].filter(Boolean).join('\n');
 		logModelResult(session, true, Date.now() - started);

@@ -135,6 +135,9 @@ type Pages = {
   "/api/rps-assist": {
     params: {};
   };
+  "/api/assignment-revisions": {
+    params: {};
+  };
   "/api/assignment-draft": {
     params: {};
   };
@@ -234,6 +237,9 @@ type Pages = {
   "/api/practice-assist": {
     params: {};
   };
+  "/api/conversation-practice": {
+    params: {};
+  };
   "/api/personal-practice": {
     params: {};
   };
@@ -308,6 +314,15 @@ type Pages = {
   "/api/student-assistant": {
     params: {};
   };
+  "/api/ai-providers": {
+    params: {};
+  };
+  "/api/ai-providers-test": {
+    params: {};
+  };
+  "/api/ai-model-prefs": {
+    params: {};
+  };
   "/api/*": {
     params: {
       "*": string;
@@ -318,7 +333,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/hcgi/platform/api/*" | "/login" | "/app" | "/analytics" | "/app/penilaian" | "/kalender" | "/app/courses" | "/app/student" | "/app/latihan" | "/app/onboarding" | "/app/pengaturan" | "/app/coming/:slug" | "/app/tugas" | "/app/tugas/buat" | "/app/tugas/insights" | "/app/riset" | "/app/asisten" | "/app/berkas" | "/app/berkas/:fileId" | "/app/tugas/:assignmentId" | "/app/tugas/:assignmentId/pratinjau" | "/app/kerja/:assignmentId" | "/app/courses/:courseId" | "/app/courses/:courseId/pertemuan/:sessionId/rencana" | "/app/courses/:courseId/mahasiswa/:rosterId" | "/app/courses/:courseId/:section" | "/app/rps/:courseId" | "/sitemap.xml" | "/robots.txt" | "/api/health" | "/api/rps-import" | "/api/rps-assist" | "/api/assignment-draft" | "/api/task-config-draft" | "/api/rubric-suggestions" | "/api/course-thumbnail" | "/api/task-submit" | "/api/task-assist" | "/api/feedback" | "/api/evaluation-draft" | "/api/evaluation-participants" | "/api/evaluation-review" | "/api/evaluation-annotation" | "/api/evaluation-missed-error" | "/api/evaluation-publish" | "/api/research-export" | "/api/research-analytics" | "/api/personalization-analytics" | "/api/feedback-uptake" | "/api/evaluation-result" | "/api/bulk-paper-prepare" | "/api/bulk-paper-extract" | "/api/bulk-paper-submit" | "/api/transcribe" | "/api/check-answer" | "/api/roster-enroll" | "/api/roster-status" | "/api/roster-reset-password" | "/api/roster-language" | "/api/student-password" | "/api/recovery-email/request" | "/api/recovery-email/verify" | "/api/recovery-email/request-reset" | "/api/recovery-email/reset-password" | "/api/practice-assist" | "/api/personal-practice" | "/api/course-grade-summary" | "/api/student-profile" | "/api/practice-speaking" | "/api/berkas-parse" | "/api/berkas-process" | "/api/berkas-suggest" | "/api/berkas-snapshot" | "/api/berkas-restore" | "/api/context/check" | "/api/context/insights" | "/api/context/material" | "/api/recommendations/generate" | "/api/recommendations/review" | "/verifikasi-email" | "/lupa-sandi" | "/reset-password" | "/tugas/:token" | "/api/integrated-ai/stream" | "/api/ai-usage" | "/api/lesson-plans" | "/api/agent-tasks" | "/api/assistant" | "/api/student-assistant" | "/api/*";
+    page: "/" | "/hcgi/platform/api/*" | "/login" | "/app" | "/analytics" | "/app/penilaian" | "/kalender" | "/app/courses" | "/app/student" | "/app/latihan" | "/app/onboarding" | "/app/pengaturan" | "/app/coming/:slug" | "/app/tugas" | "/app/tugas/buat" | "/app/tugas/insights" | "/app/riset" | "/app/asisten" | "/app/berkas" | "/app/berkas/:fileId" | "/app/tugas/:assignmentId" | "/app/tugas/:assignmentId/pratinjau" | "/app/kerja/:assignmentId" | "/app/courses/:courseId" | "/app/courses/:courseId/pertemuan/:sessionId/rencana" | "/app/courses/:courseId/mahasiswa/:rosterId" | "/app/courses/:courseId/:section" | "/app/rps/:courseId" | "/sitemap.xml" | "/robots.txt" | "/api/health" | "/api/rps-import" | "/api/rps-assist" | "/api/assignment-revisions" | "/api/assignment-draft" | "/api/task-config-draft" | "/api/rubric-suggestions" | "/api/course-thumbnail" | "/api/task-submit" | "/api/task-assist" | "/api/feedback" | "/api/evaluation-draft" | "/api/evaluation-participants" | "/api/evaluation-review" | "/api/evaluation-annotation" | "/api/evaluation-missed-error" | "/api/evaluation-publish" | "/api/research-export" | "/api/research-analytics" | "/api/personalization-analytics" | "/api/feedback-uptake" | "/api/evaluation-result" | "/api/bulk-paper-prepare" | "/api/bulk-paper-extract" | "/api/bulk-paper-submit" | "/api/transcribe" | "/api/check-answer" | "/api/roster-enroll" | "/api/roster-status" | "/api/roster-reset-password" | "/api/roster-language" | "/api/student-password" | "/api/recovery-email/request" | "/api/recovery-email/verify" | "/api/recovery-email/request-reset" | "/api/recovery-email/reset-password" | "/api/practice-assist" | "/api/conversation-practice" | "/api/personal-practice" | "/api/course-grade-summary" | "/api/student-profile" | "/api/practice-speaking" | "/api/berkas-parse" | "/api/berkas-process" | "/api/berkas-suggest" | "/api/berkas-snapshot" | "/api/berkas-restore" | "/api/context/check" | "/api/context/insights" | "/api/context/material" | "/api/recommendations/generate" | "/api/recommendations/review" | "/verifikasi-email" | "/lupa-sandi" | "/reset-password" | "/tugas/:token" | "/api/integrated-ai/stream" | "/api/ai-usage" | "/api/lesson-plans" | "/api/agent-tasks" | "/api/assistant" | "/api/student-assistant" | "/api/ai-providers" | "/api/ai-providers-test" | "/api/ai-model-prefs" | "/api/*";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -456,6 +471,10 @@ type RouteFiles = {
     id: "routes/api.rps-assist";
     page: "/api/rps-assist";
   };
+  "routes/api.assignment-revisions.ts": {
+    id: "routes/api.assignment-revisions";
+    page: "/api/assignment-revisions";
+  };
   "routes/api.assignment-draft.ts": {
     id: "routes/api.assignment-draft";
     page: "/api/assignment-draft";
@@ -588,6 +607,10 @@ type RouteFiles = {
     id: "routes/api.practice-assist";
     page: "/api/practice-assist";
   };
+  "routes/api.conversation-practice.ts": {
+    id: "routes/api.conversation-practice";
+    page: "/api/conversation-practice";
+  };
   "routes/api.personal-practice.ts": {
     id: "routes/api.personal-practice";
     page: "/api/personal-practice";
@@ -684,6 +707,18 @@ type RouteFiles = {
     id: "routes/api.student-assistant";
     page: "/api/student-assistant";
   };
+  "routes/api.ai-providers.ts": {
+    id: "routes/api.ai-providers";
+    page: "/api/ai-providers";
+  };
+  "routes/api.ai-providers-test.ts": {
+    id: "routes/api.ai-providers-test";
+    page: "/api/ai-providers-test";
+  };
+  "routes/api.ai-model-prefs.ts": {
+    id: "routes/api.ai-model-prefs";
+    page: "/api/ai-model-prefs";
+  };
   "routes/api.$.ts": {
     id: "routes/api.$";
     page: "/api/*";
@@ -726,6 +761,7 @@ type RouteModules = {
   "routes/api.health": typeof import("./src/routes/api.health.ts");
   "routes/api.rps-import": typeof import("./src/routes/api.rps-import.ts");
   "routes/api.rps-assist": typeof import("./src/routes/api.rps-assist.ts");
+  "routes/api.assignment-revisions": typeof import("./src/routes/api.assignment-revisions.ts");
   "routes/api.assignment-draft": typeof import("./src/routes/api.assignment-draft.ts");
   "routes/api.task-config-draft": typeof import("./src/routes/api.task-config-draft.ts");
   "routes/api.rubric-suggestions": typeof import("./src/routes/api.rubric-suggestions.ts");
@@ -759,6 +795,7 @@ type RouteModules = {
   "routes/api.recovery-email-request-reset": typeof import("./src/routes/api.recovery-email-request-reset.ts");
   "routes/api.recovery-email-reset-password": typeof import("./src/routes/api.recovery-email-reset-password.ts");
   "routes/api.practice-assist": typeof import("./src/routes/api.practice-assist.ts");
+  "routes/api.conversation-practice": typeof import("./src/routes/api.conversation-practice.ts");
   "routes/api.personal-practice": typeof import("./src/routes/api.personal-practice.ts");
   "routes/api.course-grade-summary": typeof import("./src/routes/api.course-grade-summary.ts");
   "routes/api.student-profile": typeof import("./src/routes/api.student-profile.ts");
@@ -783,5 +820,8 @@ type RouteModules = {
   "routes/api.agent-tasks": typeof import("./src/routes/api.agent-tasks.ts");
   "routes/api.assistant": typeof import("./src/routes/api.assistant.ts");
   "routes/api.student-assistant": typeof import("./src/routes/api.student-assistant.ts");
+  "routes/api.ai-providers": typeof import("./src/routes/api.ai-providers.ts");
+  "routes/api.ai-providers-test": typeof import("./src/routes/api.ai-providers-test.ts");
+  "routes/api.ai-model-prefs": typeof import("./src/routes/api.ai-model-prefs.ts");
   "routes/api.$": typeof import("./src/routes/api.$.ts");
 };

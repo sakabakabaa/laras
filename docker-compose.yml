@@ -45,6 +45,8 @@ services:
       BYNARA_API_KEY: ${BYNARA_API_KEY:-}
       HROUTER_API_KEY: ${HROUTER_API_KEY:-}
       HROUTER_MODEL: ${HROUTER_MODEL:-gpt-6-luna}
+      # Phase 1 — encrypts per-lecturer provider credentials at rest.
+      AI_SETTINGS_KEY: ${AI_SETTINGS_KEY:?Set AI_SETTINGS_KEY in the deployment .env}
       HROUTER_CONVERSATION_MODEL: ${HROUTER_CONVERSATION_MODEL:-}
       TTS_PROVIDER: ${TTS_PROVIDER:-hostinger}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}

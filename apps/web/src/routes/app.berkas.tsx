@@ -4,7 +4,7 @@ import { seo } from '@/lib/seo';
 import { requireAuth } from '@/lib/require-auth';
 import { dashboardForRole } from '@/lib/learning';
 import { AppShell } from '@/components/app/app-shell';
-import { FileLibrary } from '@/components/app/file-library';
+import { FileLibraryV2 } from '@/components/app/file-library-v2';
 
 export function meta({ matches, location }: Route.MetaArgs) {
 	return seo(
@@ -33,7 +33,7 @@ export function HydrateFallback() {
 export default function BerkasPage() {
 	return (
 		<AppShell title="Manajemen Berkas" eyebrow="PUSTAKA BERKAS" variant="saas" hideHeading>
-			<FileLibrary />
+			<FileLibraryV2 />
 		</AppShell>
 	);
 }

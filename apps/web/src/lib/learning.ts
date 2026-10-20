@@ -317,6 +317,14 @@ export type FileLibraryRecord = {
 	version?: number | null;
 	/** Phase 3 — traceability: prior version number the active file was restored from. */
 	restoredFrom?: number | null;
+	/** Phase 2 — denormalised parse index, mirrors the latest extraction. */
+	parseStatus?: 'pending' | 'ready' | 'review' | 'failed' | null;
+	parsedChars?: number | null;
+	parsedAt?: string | null;
+	/** Phase 2 — SHA-256 of the uploaded bytes, for duplicate detection. */
+	contentHash?: string;
+	/** Phase 2 — cached kind so the library can filter server-side. */
+	kind?: 'document' | 'image' | 'audio' | 'video' | 'other';
 	created: string;
 	updated: string;
 	expand?: {

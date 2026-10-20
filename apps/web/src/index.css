@@ -4748,6 +4748,46 @@ summary:focus-visible,
 .ld-ai-grid small{font:500 11px var(--body);color:#667085}
 .ld-ai-check{display:flex;flex-direction:row;align-items:center;gap:9px}
 .ld-ai-check input{height:16px;width:16px;accent-color:var(--red)}
+/* Manajemen Berkas — navigation (phase 1 + 2) */
+.flb-page{display:flex;flex-direction:column;gap:16px}
+.flb-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.flb-head h1{margin:2px 0 6px;font:700 24px var(--body);color:#172033}
+.flb-tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid #E4E7EC;padding-bottom:10px}
+.flb-tab{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border:1px solid transparent;border-radius:999px;background:transparent;color:#475467;font:600 12.5px var(--body);cursor:pointer}
+.flb-tab:hover{background:#F2F4F7}
+.flb-tab.active{background:#FBE9E7;color:var(--red);border-color:#F5D0CB}
+.flb-tab-count{min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--red);color:#fff;font:700 10.5px var(--body);display:inline-flex;align-items:center;justify-content:center}
+.flb-search{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border:1px solid #D0D5DD;border-radius:10px;background:#fff;flex:1 1 240px;min-width:200px}
+.flb-search input{border:0;outline:0;background:transparent;font:500 13px var(--body);color:#172033;width:100%}
+.flb-search svg{color:#667085;flex:none}
+.flb-view-toggles{display:flex;gap:8px;flex-wrap:wrap}
+.flb-toggle{height:34px;padding:0 12px;border:1px solid #D0D5DD;border-radius:999px;background:#fff;color:#475467;font:600 12px var(--body);cursor:pointer}
+.flb-toggle.active{background:#FBE9E7;border-color:#F5D0CB;color:var(--red)}
+.flb-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font:500 12.5px var(--body);color:#667085}
+.flb-clear{border:0;background:transparent;color:var(--red);font:600 12.5px var(--body);cursor:pointer;text-decoration:underline}
+.flb-bulkbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border:1px solid #F5D0CB;border-radius:10px;background:#FFF5F4;color:#7F1D16;font:600 12px var(--body)}
+.flb-group{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.flb-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:0 2px}
+.flb-group-head strong{font:700 14px var(--body);color:#172033}
+.flb-group-head span{font:500 12px var(--body);color:#667085}
+.flb-check{display:flex;align-items:center;padding-top:2px}
+.flb-check input{width:16px;height:16px;accent-color:var(--red)}
+.flb-row:has(.flb-check){grid-template-columns:auto 56px minmax(0,1fr) auto}
+.flb-row.compact{padding:8px 10px}
+.flb-detail summary{cursor:pointer;font:600 11.5px var(--body);color:#667085;list-style:none}
+.flb-detail summary::-webkit-details-marker{display:none}
+.flb-detail summary:hover{color:var(--red)}
+.flb-detail .flb-meta{margin-top:6px}
+.flb-empty{display:grid;place-items:center;gap:8px;padding:36px 20px;border:1px dashed #E4E7EC;border-radius:14px;text-align:center;color:#667085}
+.flb-empty strong{font:700 15px var(--body);color:#172033}
+.flb-empty p{margin:0;font:500 12.5px var(--body)}
+:root.dark .flb-tab{color:#9AA6B6}
+:root.dark .flb-tab.active{background:rgba(201,52,43,.16);color:#F07168;border-color:rgba(201,52,43,.35)}
+:root.dark .flb-search{background:#1A1F26;border-color:#3A4148}
+:root.dark .flb-search input{color:#E8EDF4}
+:root.dark .flb-toggle{background:#1A1F26;border-color:#3A4148;color:#9AA6B6}
+:root.dark .flb-bulkbar{background:rgba(201,52,43,.12);border-color:rgba(201,52,43,.35);color:#F07168}
+:root.dark .flb-head h1,:root.dark .flb-group-head strong,:root.dark .flb-empty strong{color:#E8EDF4}
 :root.dark .ld-ai-row{background:#1A1F26;border-color:#2A3138}
 :root.dark .ld-ai-row-main strong{color:#E8EDF4}
 :root.dark .ld-ai-grid select{background:#1A1F26;border-color:#3A4148;color:#E8EDF4}

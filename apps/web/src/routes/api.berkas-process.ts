@@ -1,4 +1,5 @@
 import PocketBase from 'pocketbase';
+import { createHash } from 'node:crypto';
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
@@ -357,7 +358,7 @@ export const action = withApi(async ({ request }) => {
 			});
 		}
 	}
-	await pocketbaseAdmin.updateRecord('file_library', fileId, { status: 'processing' });
+	await pocketbaseAdmin.updateRecord('file_library', fileId, { status: 'processing', parseStatus: 'pending' });
 
 	const outcome = await extract(record);
 
@@ -374,10 +375,25 @@ export const action = withApi(async ({ request }) => {
 		version: record.version || 1,
 	};
 	await pocketbaseAdmin.updateRecord('file_extractions', extractionId, finalData);
-	// Coarse Phase 1 status stays in sync: extraction finished (ready/review)
-	// or could not produce text (failed). The original file is untouched.
+	// Phase 2 — keep the denormalised parse index on the library row in sync so
+	// the list can filter, count and page server-side without joining.
+	// The content hash is computed once (first parse) from the stored original;
+	// it powers duplicate detection without hashing on every re-process.
+	let contentHash = record.contentHash || '';
+	if (!contentHash) {
+		try {
+			const buffer = await fetchOriginal(record);
+			contentHash = createHash('sha256').update(buffer).digest('hex');
+		} catch {
+			/* hash is an optimisation — never fail the parse over it */
+		}
+	}
 	await pocketbaseAdmin.updateRecord('file_library', fileId, {
 		status: outcome.status === 'failed' ? 'failed' : 'ready',
+		parseStatus: outcome.status,
+		parsedChars: finalData.chars,
+		parsedAt: finalData.extractedAt,
+		...(contentHash ? { contentHash } : {}),
 	});
 
 	return json({

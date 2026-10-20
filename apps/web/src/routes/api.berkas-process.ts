@@ -4,6 +4,7 @@ import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { detectLanguage } from '@/lib/file-metadata';
+import { collectHostingerText } from '@/lib/hostinger-model.server';
 import {
 	OFFICE_EXTENSIONS,
 	OFFICE_FORMAT_LABEL,
@@ -29,6 +30,11 @@ const PARSER_PDF = 'pdf-parse-v2';
 const PARSER_TEXT = 'utf8-text-v1';
 const PARSER_OFFICE = 'ooxml-v1';
 const PARSER_AUDIO = 'whisper-stt-v1';
+/** Vision OCR for images (and, later, scanned PDFs). */
+const PARSER_IMAGE = 'vision-ocr-v1';
+/** Images below this many characters are treated as "no readable text". */
+const MIN_IMAGE_CHARS = 12;
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
 /** Marks media that is intentionally preview-only, so it never reads as an error. */
 const PARSER_PREVIEW_ONLY = 'preview-only-v1';
 const TEXT_EXTENSIONS = new Set(['txt', 'csv', 'md', 'vtt', 'srt']);
@@ -106,9 +112,10 @@ const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 	const officeFormat = OFFICE_EXTENSIONS[extension];
 	const audio = isAudioExtension(extension);
 	const video = isVideoExtension(extension);
+	const image = IMAGE_EXTENSIONS.has(extension);
 
 	if ((record.size ?? 0) > PARSE_MAX_BYTES) return fail(TOO_LARGE_REASON);
-	if (extension !== 'pdf' && !officeFormat && !audio && !video && !TEXT_EXTENSIONS.has(extension)) {
+	if (extension !== 'pdf' && !officeFormat && !audio && !video && !image && !TEXT_EXTENSIONS.has(extension)) {
 		return fail(UNSUPPORTED_REASON);
 	}
 
@@ -191,6 +198,54 @@ const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 			return fail(
 				'Penguraian dokumen Office gagal — berkas mungkin rusak atau terproteksi. Berkas asli tetap tersimpan.',
 			);
+		}
+	}
+
+	if (image) {
+		// Vision OCR. The model must fetch the image itself, so the URL has to be
+		// publicly reachable — the internal container hostname is not.
+		const domain = (process.env.WEBSITE_DOMAIN || '').trim();
+		if (!domain) {
+			return fail('OCR gambar tidak tersedia: domain publik belum dikonfigurasi pada server ini.');
+		}
+		try {
+			const token = await pocketbaseAdmin.getFileToken();
+			const url = `https://${domain}/hcgi/platform/api/files/file_library/${record.id}/${encodeURIComponent(record.file)}?token=${token}`;
+			const result = await collectHostingerText({
+				prompt:
+					'Ekstrak seluruh teks yang terlihat pada gambar ini, apa adanya, dalam urutan baca. ' +
+					'Pertahankan bahasa aslinya. Jangan menambahkan komentar, penjelasan, atau terjemahan. ' +
+					'Jika gambar tidak memuat teks yang dapat dibaca, balas tepat: TIDAK ADA TEKS',
+				systemPrompt:
+					'Anda mesin OCR. Keluarkan hanya teks yang benar-benar terlihat pada gambar. Jangan mengarang isi.',
+				images: [url],
+				timeoutMs: 90_000,
+			});
+			const text = (result.content || '').trim();
+			if (!text || /^tidak ada teks\.?$/i.test(text) || text.length < MIN_IMAGE_CHARS) {
+				return {
+					status: 'review',
+					text: '',
+					language: '',
+					pages: 1,
+					reason:
+						'Tidak ada teks yang terbaca pada gambar ini (foto, diagram, atau resolusi rendah). Periksa berkas secara manual.',
+					parserVersion: PARSER_IMAGE,
+				};
+			}
+			return {
+				status: 'ready',
+				text: text.slice(0, MAX_STORED_CHARS),
+				language: detectLanguage(text),
+				pages: 1,
+				reason: '',
+				parserVersion: PARSER_IMAGE,
+			};
+		} catch (error) {
+			logger.error(
+				`berkas-process ocr failed: ${error instanceof Error ? error.message : String(error)}`,
+			);
+			return fail('Penguraian gambar gagal — layanan OCR tidak merespons. Coba proses ulang.');
 		}
 	}
 

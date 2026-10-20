@@ -116,6 +116,17 @@ export async function transcribeAudio(
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
+      // Hostinger's edge currently challenges multipart uploads on this path
+      // (Cloudflare "Just a moment"), even though the API requires multipart.
+      // That is a provider-side block: retrying cannot help the lecturer.
+      if (/just a moment|cf-chl|cloudflare/i.test(detail)) {
+        return {
+          ok: false,
+          reason:
+            "Layanan transkripsi Hostinger memblokir permintaan otomatis (Cloudflare). Hubungi administrator untuk membuka endpoint audio.",
+          retryable: false,
+        };
+      }
       // 401/403 mean the key is wrong — retrying will not help the lecturer.
       const authIssue = response.status === 401 || response.status === 403;
       return {

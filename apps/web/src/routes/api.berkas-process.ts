@@ -223,13 +223,16 @@ const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 			});
 			const text = (result.content || '').trim();
 			if (!text || /^tidak ada teks\.?$/i.test(text) || text.length < MIN_IMAGE_CHARS) {
+				// An illustration, photo or diagram with no text is not a defect and
+				// nothing can be fixed by re-processing it, so it is 'ready' with a
+				// note — not 'review', which would sit in "Perlu tindakan" forever.
 				return {
-					status: 'review',
+					status: 'ready',
 					text: '',
 					language: '',
 					pages: 1,
 					reason:
-						'Tidak ada teks yang terbaca pada gambar ini (foto, diagram, atau resolusi rendah). Periksa berkas secara manual.',
+						'Tidak ada teks pada gambar ini (foto, ilustrasi, atau diagram). Berkas tetap dapat dipratinjau dan diunduh.',
 					parserVersion: PARSER_IMAGE,
 				};
 			}

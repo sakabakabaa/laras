@@ -4703,8 +4703,12 @@ summary:focus-visible,
 .ld-settings-avatar-actions .ld-outline-action{flex:0 0 auto}
 .ld-outline-action.sm{height:34px;padding:0 12px;font-size:12px}
 .ld-btn-primary.sm{height:36px;padding:0 14px;font-size:12px;border-radius:999px}
+.ld-settings .ld-btn-primary{min-width:150px}
 .ld-settings .ld-btn-primary:disabled,.ld-settings .ld-outline-action:disabled{opacity:1;cursor:not-allowed;transform:none;box-shadow:none}
-.ld-settings .ld-btn-primary:disabled{background:#E4E7EC;color:#475467}
+/* A broad `.ld-content :is(button…)` rule restyles buttons inside the content
+   area and was overriding the disabled background, leaving grey text on brand
+   red. Pin the disabled state here so it cannot be re-styled by page-level rules. */
+.ld-settings .ld-btn-primary:disabled,.ld-settings .ld-btn-primary:disabled:hover{background:#E4E7EC!important;color:#475467!important;border-color:#E4E7EC!important}
 .ld-settings .ld-btn-primary:not(:disabled){background:#B3261E;color:#fff}
 .ld-settings .ld-outline-action:disabled{background:#F2F4F7;color:#667085;border-color:#E4E7EC}
 

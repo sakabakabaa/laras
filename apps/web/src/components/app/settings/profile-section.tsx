@@ -185,7 +185,7 @@ export function ProfileSection() {
 
 				<form className="ld-settings-form" onSubmit={saveName}>
 					<label className="ld-settings-field">
-						<span>Nama lengkap</span>
+						<span>Nama tampilan</span>
 						<input
 							type="text"
 							value={name}

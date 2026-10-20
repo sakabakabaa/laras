@@ -165,43 +165,44 @@ export function AiModelSection() {
 					<span className="ld-eyebrow">
 						<Cpu size={13} /> Model AI
 					</span>
-					<h2>Provider model</h2>
+					<h2>Provider dan model</h2>
 				</div>
-				<button type="button" className="ld-btn ld-btn-ghost" onClick={() => setAdding((value) => !value)}>
-					<Plus size={14} /> Tambah provider
-				</button>
 			</div>
 			<p className="ld-settings-lede">
-				Hubungkan provider [OI]-compatible milik Anda dan pilih model untuk tiap bagian aplikasi. Kunci API disimpan
-				terenkripsi di server dan tidak pernah ditampilkan kembali.
+				Hubungkan provider [OI]-compatible, lalu pilih model untuk tiap bagian aplikasi. Kunci API tersimpan
+				terenkripsi dan tidak ditampilkan lagi.
 			</p>
 
-			{error && <p className="ld-settings-error">{error}</p>}
-			{notice && <p className="ld-settings-note">{notice}</p>}
+			{error && (
+				<p className="form-error" role="alert">
+					{error}
+				</p>
+			)}
+			{notice && <p className="ld-settings-success">{notice}</p>}
 
 			{adding && (
 				<div className="ld-settings-form">
-					<label>
+					<label className="ld-settings-field">
 						Nama provider
 						<input value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} placeholder="Contoh: Router kampus" />
 					</label>
-					<label>
+					<label className="ld-settings-field">
 						Base URL
 						<input value={form.baseUrl} onChange={(event) => setForm({ ...form, baseUrl: event.target.value })} placeholder="https://…/v1" />
 					</label>
-					<label>
+					<label className="ld-settings-field">
 						Model (pisahkan dengan koma)
 						<input value={form.models} onChange={(event) => setForm({ ...form, models: event.target.value })} placeholder="gpt-6-luna, gpt-6-mini" />
 					</label>
-					<label>
+					<label className="ld-settings-field">
 						Kunci API
 						<input type="password" value={form.apiKey} onChange={(event) => setForm({ ...form, apiKey: event.target.value })} placeholder="disimpan terenkripsi" autoComplete="off" />
 					</label>
-					<label className="ld-settings-check">
+					<label className="ld-settings-field ld-ai-check">
 						<input type="checkbox" checked={form.isDefault} onChange={(event) => setForm({ ...form, isDefault: event.target.checked })} />
 						Jadikan provider bawaan
 					</label>
-					<button type="button" className="ld-btn ld-btn-primary" disabled={busy === 'create'} onClick={() => void create()}>
+					<button type="button" className="ld-btn-primary" disabled={busy === 'create'} onClick={() => void create()}>
 						{busy === 'create' ? <LoaderCircle size={14} className="spin" /> : null} Simpan provider
 					</button>
 				</div>
@@ -214,22 +215,29 @@ export function AiModelSection() {
 			) : providers.length === 0 ? (
 				<p className="ld-settings-note">Belum ada provider. Aplikasi memakai model bawaan server sampai Anda menambahkan satu.</p>
 			) : (
-				<ul className="ld-settings-list">
+				<ul className="ld-ai-list">
 					{providers.map((provider) => (
-						<li key={provider.id}>
-							<div>
-								<strong>{provider.label}</strong>
-								{provider.isDefault && <span className="ld-badge">Bawaan</span>}
-								<small>
-									{provider.baseUrl} · {provider.models.join(', ')} · {provider.keyMasked || 'kunci tersimpan'}
-								</small>
+						<li key={provider.id} className="ld-ai-row">
+							<div className="ld-ai-row-main">
+								<strong>
+									{provider.label}
+									{provider.isDefault && <span className="ld-ai-default">Bawaan</span>}
+								</strong>
+								<dl className="ld-ai-meta">
+									<dt>Endpoint</dt>
+									<dd>{provider.baseUrl}</dd>
+									<dt>Model</dt>
+									<dd>{provider.models.join(', ')}</dd>
+									<dt>Kunci</dt>
+									<dd>{provider.keyMasked || 'tersimpan'}</dd>
+								</dl>
 							</div>
-							<div className="ld-settings-actions">
-								<button type="button" className="ld-btn ld-btn-ghost" disabled={busy === `test-${provider.id}`} onClick={() => void test(provider)}>
+							<div className="ld-ai-row-actions">
+								<button type="button" className="ld-outline-action sm" disabled={busy === `test-${provider.id}`} onClick={() => void test(provider)}>
 									{busy === `test-${provider.id}` ? <LoaderCircle size={14} className="spin" /> : <Zap size={14} />} Uji
 								</button>
-								<button type="button" className="ld-btn ld-btn-ghost" disabled={busy === provider.id} onClick={() => void remove(provider)}>
-									<Trash2 size={14} /> Hapus
+								<button type="button" className="ld-icon-action sm danger" aria-label={`Hapus ${provider.label}`} disabled={busy === provider.id} onClick={() => void remove(provider)}>
+									<Trash2 size={15} />
 								</button>
 							</div>
 						</li>
@@ -238,11 +246,11 @@ export function AiModelSection() {
 			)}
 
 			{providers.length > 0 && (
-				<div className="ld-settings-grid">
+				<div className="ld-ai-grid">
 					{surfaces.map((surface) => {
 						const preference = preferenceFor(surface.id);
 						return (
-							<label key={surface.id}>
+							<label key={surface.id} className="ld-settings-field">
 								{surface.label}
 								{surface.requires.length > 0 && <small> butuh: {surface.requires.join(', ')}</small>}
 								<select
@@ -250,7 +258,7 @@ export function AiModelSection() {
 									disabled={busy === `pref-${surface.id}`}
 									onChange={(event) => void choose(surface, event.target.value)}
 								>
-									<option value="">Bawaan server</option>
+									<option value="">Bawaan server (env)</option>
 									{providers.map((provider) => (
 										<option key={provider.id} value={provider.id}>
 											{provider.label} — {provider.models[0]}
@@ -262,6 +270,13 @@ export function AiModelSection() {
 					})}
 				</div>
 			)}
+
+			<div className="ld-settings-actions ld-ai-actions">
+				<button type="button" className="ld-btn-primary" onClick={() => setAdding((value) => !value)}>
+					<Plus size={15} /> {adding ? 'Tutup formulir' : 'Tambah provider'}
+				</button>
+			</div>
+			{providers.length > 0 && <p className="ld-settings-note">Pilihan model tersimpan otomatis saat diubah.</p>}
 		</section>
 	);
 }

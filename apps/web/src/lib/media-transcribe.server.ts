@@ -105,7 +105,7 @@ export async function transcribeAudio(
   form.set(
     "model",
     local
-      ? process.env.WHISPER_MODEL || "Systran/faster-whisper-base"
+      ? process.env.WHISPER_MODEL || "Systran/faster-whisper-small"
       : process.env.HROUTER_STT_MODEL || "whisper-1",
   );
   form.set("response_format", "json");

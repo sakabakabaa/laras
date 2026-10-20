@@ -5,6 +5,7 @@ import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { detectLanguage } from '@/lib/file-metadata';
 import { collectHostingerText } from '@/lib/hostinger-model.server';
+import { ocrPdf } from '@/lib/pdf-ocr.server';
 import {
 	OFFICE_EXTENSIONS,
 	OFFICE_FORMAT_LABEL,
@@ -27,6 +28,7 @@ const MIN_RELIABLE_CHARS = 200;
 /** Hard cap on stored extracted text — matches the collection field max. */
 const MAX_STORED_CHARS = 400000;
 const PARSER_PDF = 'pdf-parse-v2';
+const PARSER_PDF_OCR = 'pdf-ocr-v1';
 const PARSER_TEXT = 'utf8-text-v1';
 const PARSER_OFFICE = 'ooxml-v1';
 const PARSER_AUDIO = 'whisper-stt-v1';
@@ -139,14 +141,35 @@ const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 			const text = ((result as { text?: string }).text || '').trim();
 			const pages = (result as { total?: number }).total || 0;
 			if (text.length < MIN_RELIABLE_CHARS) {
+				// Almost certainly a scan: the text layer is empty or nearly so.
+				// Render the pages and read them with the vision model.
+				const ocr = await ocrPdf(buffer, { maxPages: 10 });
+				const ocrText = ocr.text.trim();
+				if (ocr.ok && ocrText.length >= MIN_RELIABLE_CHARS) {
+					const combined = [text.trim(), ocrText]
+						.filter(Boolean)
+						.join('\n\n')
+						.slice(0, MAX_STORED_CHARS);
+					return {
+						status: 'ready',
+						text: combined,
+						language: detectLanguage(combined),
+						pages: pages || ocr.pages,
+						reason:
+							ocr.totalPages > ocr.pages
+								? `Teks dibaca lewat OCR pada ${ocr.pages} halaman pertama dari ${ocr.totalPages} halaman.`
+								: `Teks dibaca lewat OCR pada ${ocr.pages} halaman.`,
+						parserVersion: PARSER_PDF_OCR,
+					};
+				}
 				return {
 					status: 'review',
 					text: text.slice(0, MAX_STORED_CHARS),
 					language: detectLanguage(text),
 					pages,
 					reason:
-						'Teks yang terbaca sangat sedikit — kemungkinan PDF hasil pindaian (scanned) atau berbasis gambar. Periksa hasil dan proses ulang bila perlu.',
-					parserVersion: PARSER_PDF,
+						'PDF hasil pindaian — OCR tidak menemukan teks yang dapat dibaca. Periksa berkas secara manual.',
+					parserVersion: PARSER_PDF_OCR,
 				};
 			}
 			return {

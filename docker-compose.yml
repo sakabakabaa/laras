@@ -67,7 +67,7 @@ services:
       HROUTER_CONVERSATION_MODEL: ${HROUTER_CONVERSATION_MODEL:-}
       # Local Whisper sidecar takes precedence for library audio.
       WHISPER_URL: http://whisper:8000
-      WHISPER_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-base}
+      WHISPER_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-small}
       TTS_PROVIDER: ${TTS_PROVIDER:-hostinger}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-JBFqnCBsd6RMkjVDRZzb}

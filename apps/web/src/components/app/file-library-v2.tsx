@@ -7,6 +7,9 @@ import {
 	FileText,
 	FileVideo,
 	History,
+	AlignJustify,
+	MoreHorizontal,
+	List as ListIcon,
 	LoaderCircle,
 	Pencil,
 	Plus,
@@ -88,7 +91,8 @@ export function FileLibraryV2() {
 	const [statusFilter, setStatusFilter] = useState('all');
 	const [sort, setSort] = useState<SortKey>('newest');
 	const [grouped, setGrouped] = useState(false);
-	const [compact, setCompact] = useState(false);
+	const [view, setView] = useState<'list' | 'detail'>('list');
+	const [menuFor, setMenuFor] = useState<{ id: string; top: number; left: number } | null>(null);
 	const [page, setPage] = useState(1);
 	const [reloadKey, setReloadKey] = useState(0);
 
@@ -109,8 +113,21 @@ export function FileLibraryV2() {
 	const [dialog, setDialog] = useState<{ mode: 'create' } | { mode: 'edit'; record: FileLibraryRecord } | null>(null);
 	const [historyFor, setHistoryFor] = useState<FileLibraryRecord | null>(null);
 
-	const perPage = compact ? 40 : 24;
+	const perPage = view === 'list' ? 40 : 24;
 	const reload = useCallback(() => setReloadKey((key) => key + 1), []);
+
+	// The row menu closes on any outside click or Escape; opening it stops
+	// propagation so the same click cannot close it again.
+	useEffect(() => {
+		if (!menuFor) return;
+		const close = () => setMenuFor(null);
+		document.addEventListener('click', close);
+		document.addEventListener('keydown', close);
+		return () => {
+			document.removeEventListener('click', close);
+			document.removeEventListener('keydown', close);
+		};
+	}, [menuFor]);
 
 	// Reference data for filters and labels (small collections).
 	useEffect(() => {
@@ -326,6 +343,69 @@ export function FileLibraryV2() {
 			? `${pb.baseURL}/api/files/file_library/${record.id}/${encodeURIComponent(record.file)}?token=${pb.authStore.token}`
 			: '';
 
+	const courseName = (record: FileLibraryRecord) => {
+		const id = record.course?.[0];
+		return id ? courseLabels.get(id) || 'Mata kuliah' : '—';
+	};
+
+	const statusBadge = (procState: string) => (
+		<span className={`flb-badge proc-${procState}`}>
+			{EXTRACTION_STATUS_LABELS[procState as keyof typeof EXTRACTION_STATUS_LABELS] || procState}
+		</span>
+	);
+
+	const rowMenu = (record: FileLibraryRecord) => (
+		<div className="flb-menu-wrap">
+			<button
+				type="button"
+				className="flb-kebab"
+				aria-label={`Aksi untuk ${record.title}`}
+				aria-haspopup="menu"
+				aria-expanded={menuFor?.id === record.id}
+				onClick={(event) => {
+					event.stopPropagation();
+					// The list scrolls inside a clipped container, so the menu is
+					// positioned fixed and flipped up when it would fall off-screen.
+					const rect = event.currentTarget.getBoundingClientRect();
+					const width = 188;
+					const height = 190;
+					const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+					const top = rect.bottom + height > window.innerHeight - 8 ? rect.top - height - 4 : rect.bottom + 4;
+					setMenuFor((current) => (current?.id === record.id ? null : { id: record.id, top, left }));
+				}}
+			>
+				<MoreHorizontal size={17} strokeWidth={2} />
+			</button>
+			{menuFor?.id === record.id ? (
+				<div className="flb-menu" role="menu" style={{ top: menuFor.top, left: menuFor.left }}>
+					<button type="button" role="menuitem" onClick={() => { setMenuFor(null); setDialog({ mode: 'edit', record }); }}>
+						<Pencil size={14} strokeWidth={1.75} /> Ubah berkas
+					</button>
+					<button type="button" role="menuitem" onClick={() => { setMenuFor(null); setHistoryFor(record); }}>
+						<History size={14} strokeWidth={1.75} /> Riwayat versi
+					</button>
+					<button
+						type="button"
+						role="menuitem"
+						disabled={busy === `proc-${record.id}`}
+						onClick={() => { setMenuFor(null); void reprocess(record); }}
+					>
+						<RefreshCw size={14} strokeWidth={1.75} /> Proses ulang
+					</button>
+					{record.file ? (
+						<a role="menuitem" href={fileUrl(record)} target="_blank" rel="noreferrer" onClick={() => setMenuFor(null)}>
+							<Download size={14} strokeWidth={1.75} /> Unduh
+						</a>
+					) : null}
+					<span className="flb-menu-sep" />
+					<button type="button" role="menuitem" className="danger" onClick={() => { setMenuFor(null); void remove(record); }}>
+						<Trash2 size={14} strokeWidth={1.75} /> Hapus
+					</button>
+				</div>
+			) : null}
+		</div>
+	);
+
 	const renderRow = (record: FileLibraryRecord) => {
 		const kind = (record.kind as FileKind) || 'document';
 		const Icon = KIND_ICONS[kind] || File;
@@ -334,8 +414,35 @@ export function FileLibraryV2() {
 		const linkCount =
 			linkIds(record.course).length + linkIds(record.session).length + linkIds(record.cpmk).length + linkIds(record.subCpmk).length;
 
+		if (view === 'list') {
+			return (
+				<li key={record.id} className="flb-item" data-view="list">
+					<label className="flb-check">
+						<input
+							type="checkbox"
+							checked={selected.has(record.id)}
+							onChange={() => toggleSelected(record.id)}
+							aria-label={`Pilih ${record.title}`}
+						/>
+					</label>
+					<div className="flb-icon sm" data-kind={kind}>
+						{kind === 'image' && record.file ? <img src={fileUrl(record)} alt="" loading="lazy" /> : <Icon size={18} strokeWidth={1.75} aria-hidden />}
+					</div>
+					<div className="flb-name">
+						<strong title={record.title}>{record.title}</strong>
+						<small>{record.file || 'Tanpa berkas'}</small>
+					</div>
+					{statusBadge(procState)}
+					<span className="flb-col course" title={courseName(record)}>{courseName(record)}</span>
+					<span className="flb-col size">{formatBytes(record.size)}</span>
+					<span className="flb-col date">{dateLabel(record.created)}</span>
+					{rowMenu(record)}
+				</li>
+			);
+		}
+
 		return (
-			<li key={record.id} className={`flb-row${compact ? ' compact' : ''}`}>
+			<li key={record.id} className="flb-row">
 				<label className="flb-check">
 					<input
 						type="checkbox"
@@ -350,9 +457,7 @@ export function FileLibraryV2() {
 				<div className="flb-main">
 					<div className="flb-title-row">
 						<strong>{record.title}</strong>
-						<span className={`flb-badge proc-${procState}`}>
-							{EXTRACTION_STATUS_LABELS[procState as keyof typeof EXTRACTION_STATUS_LABELS] || procState}
-						</span>
+						{statusBadge(procState)}
 						<span className={`flb-badge access-${record.access}`}>{ACCESS_LABELS[record.access]}</span>
 					</div>
 					<small className="flb-filename">{record.file || 'Tanpa berkas'}</small>
@@ -372,39 +477,7 @@ export function FileLibraryV2() {
 						</div>
 					</details>
 				</div>
-				<div className="flb-actions">
-					<button type="button" className="ld-icon-action" onClick={() => setDialog({ mode: 'edit', record })} aria-label={`Ubah ${record.title}`} title="Ubah berkas">
-						<Pencil size={16} strokeWidth={1.75} />
-					</button>
-					<button type="button" className="ld-icon-action" onClick={() => setHistoryFor(record)} aria-label={`Riwayat ${record.title}`} title="Riwayat versi">
-						<History size={16} strokeWidth={1.75} />
-					</button>
-					<button
-						type="button"
-						className="ld-icon-action"
-						onClick={() => void reprocess(record)}
-						disabled={busy === `proc-${record.id}`}
-						aria-label={`Proses ulang ${record.title}`}
-						title="Proses ulang dokumen"
-					>
-						{busy === `proc-${record.id}` ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} strokeWidth={1.75} />}
-					</button>
-					{record.file ? (
-						<a className="ld-icon-action" href={fileUrl(record)} target="_blank" rel="noreferrer" aria-label={`Unduh ${record.title}`} title="Unduh">
-							<Download size={16} strokeWidth={1.75} />
-						</a>
-					) : null}
-					<button
-						type="button"
-						className="ld-icon-action danger"
-						onClick={() => void remove(record)}
-						disabled={busy === record.id}
-						aria-label={`Hapus ${record.title}`}
-						title="Hapus berkas"
-					>
-						{busy === record.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} strokeWidth={1.75} />}
-					</button>
-				</div>
+				{rowMenu(record)}
 			</li>
 		);
 	};
@@ -497,9 +570,14 @@ export function FileLibraryV2() {
 					<button type="button" className={`flb-toggle${grouped ? ' active' : ''}`} onClick={() => setGrouped((value) => !value)} aria-pressed={grouped}>
 						Kelompokkan per mata kuliah
 					</button>
-					<button type="button" className={`flb-toggle${compact ? ' active' : ''}`} onClick={() => setCompact((value) => !value)} aria-pressed={compact}>
-						Padat
-					</button>
+					<div className="flb-seg" role="group" aria-label="Tampilan daftar">
+						<button type="button" className={view === 'list' ? 'active' : ''} onClick={() => setView('list')} aria-pressed={view === 'list'}>
+							<ListIcon size={14} strokeWidth={1.75} /> Daftar
+						</button>
+						<button type="button" className={view === 'detail' ? 'active' : ''} onClick={() => setView('detail')} aria-pressed={view === 'detail'}>
+							<AlignJustify size={14} strokeWidth={1.75} /> Detail
+						</button>
+					</div>
 				</div>
 			</div>
 
@@ -550,6 +628,25 @@ export function FileLibraryV2() {
 				</div>
 			) : grouped ? (
 				<>
+					{view === 'list' ? (
+						<div className="flb-thead">
+							<label className="flb-check">
+								<input
+									type="checkbox"
+									checked={visible.length > 0 && visible.every((record) => selected.has(record.id))}
+									onChange={selectAllVisible}
+									aria-label="Pilih semua berkas di halaman ini"
+								/>
+							</label>
+							<span />
+							<span>Nama</span>
+							<span>Status</span>
+							<span>Mata kuliah</span>
+							<span>Ukuran</span>
+							<span>Diunggah</span>
+							<span />
+						</div>
+					) : null}
 					{groups.map((group) => (
 						<section key={group.key} className="flb-group">
 							<header className="flb-group-head">
@@ -563,6 +660,25 @@ export function FileLibraryV2() {
 				</>
 			) : (
 				<>
+					{view === 'list' ? (
+						<div className="flb-thead">
+							<label className="flb-check">
+								<input
+									type="checkbox"
+									checked={visible.length > 0 && visible.every((record) => selected.has(record.id))}
+									onChange={selectAllVisible}
+									aria-label="Pilih semua berkas di halaman ini"
+								/>
+							</label>
+							<span />
+							<span>Nama</span>
+							<span>Status</span>
+							<span>Mata kuliah</span>
+							<span>Ukuran</span>
+							<span>Diunggah</span>
+							<span />
+						</div>
+					) : null}
 					<ul className="flb-list">{visible.map(renderRow)}</ul>
 					{pages > 1 ? (
 						<nav className="flb-pagination" aria-label="Halaman berkas">

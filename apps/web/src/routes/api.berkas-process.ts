@@ -138,7 +138,10 @@ const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 		const parser = new PDFParse({ data: new Uint8Array(buffer) });
 		try {
 			const result = await parser.getText();
-			const text = ((result as { text?: string }).text || '').trim();
+			const rawText = ((result as { text?: string }).text || '').trim();
+			// pdf-parse emits "-- 1 of 6 --" separators; OCR supplies its own page
+			// markers, so drop these to keep the stored text clean.
+			const text = rawText.replace(/^--\s*\d+\s+of\s+\d+\s*--\s*$/gm, '').trim();
 			const pages = (result as { total?: number }).total || 0;
 			if (text.length < MIN_RELIABLE_CHARS) {
 				// Almost certainly a scan: the text layer is empty or nearly so.

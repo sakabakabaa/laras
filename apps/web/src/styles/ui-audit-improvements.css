@@ -15,8 +15,8 @@
 .an-table thead th { position:sticky; top:0; z-index:1; background:var(--ui-panel); }
 .an-table-wrap { max-height:32rem; overflow:auto; }
 .ld-content :is(button,a,input,select,textarea,summary):focus-visible { outline:2px solid var(--ui-focus); outline-offset:3px; }
-.ld-greet-ask-toggle { cursor:pointer; font-size:13px; font-weight:600; padding:10px 0; color:var(--ui-text); }
-.ld-greet-ask:not([open]) > :not(summary) { display:none; }
+/* The AI composer is a permanent section, not a disclosure: the toggle that
+   used to collapse it is gone, so the collapsed-state rules are dropped. */
 .flb-pagination { display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:14px; flex-wrap:wrap; }
 .flb-pagination button { border:1px solid var(--ui-border); background:var(--ui-panel); color:var(--ui-text); border-radius:8px; padding:8px 12px; }
 .flb-pagination button:disabled { opacity:.45; }

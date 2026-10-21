@@ -549,7 +549,7 @@ export function CourseDashboard() {
 								<span className="ld-eyebrow">{formatLongDate()}</span>
 								<h1>Halo, {firstName}!</h1>
 							</div>
-							<details className="ld-greet-ask"><summary className="ld-greet-ask-toggle">Bantuan AI</summary>
+							<div className="ld-greet-ask">
 								<div className="ld-greet-ask-heading">
 									<span className="ld-greet-ask-symbol" aria-hidden="true"><Sparkles size={15} strokeWidth={1.8} /></span>
 									<div className="ld-greet-ask-copy">
@@ -643,7 +643,7 @@ export function CourseDashboard() {
 								</div>
 								</form>
 								{quickError && <p className="ld-greet-note" role="alert">{quickError}</p>}
-							</details>
+								</div>
 						</div>
 
 						<nav className="ld-action-row" aria-label="Tindakan cepat">

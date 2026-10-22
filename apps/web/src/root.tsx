@@ -16,9 +16,9 @@ import studentHome from '@/styles/student-home.css?url';
 import agentTasks from '@/styles/agent-tasks.css?url';
 import lessonPlans from '@/styles/lesson-plans.css?url';
 import uiAuditImprovements from '@/styles/ui-audit-improvements.css?url';
+import readabilityPass from '@/styles/readability-pass.css?url';
 import premiumWorkspace from '@/styles/premium-workspace.css?url';
 import personalPractice from '@/styles/personal-practice.css?url';
-import readabilityPass from '@/styles/readability-pass.css?url';
 import { siteOrigin } from '@/lib/site-origin.server';
 import { HorizonsPreviewScripts } from './horizons-preview-scripts';
 import { SiteHeader } from '@/components/site-header';
@@ -111,7 +111,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<script
 					dangerouslySetInnerHTML={{
-						__html: `(function(){try{var p=location.pathname;var lightOnly=p==='/'||p==='/login';var t=localStorage.getItem('laras-theme');var d=!lightOnly&&t==='dark';var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';var m=document.querySelector('meta[name="color-scheme"]');if(!m){m=document.createElement('meta');m.name='color-scheme';document.head.appendChild(m)}m.content=d?'dark light':'light'}catch(e){}})()`,
+						__html: `(function(){try{var p=location.pathname;var lightOnly=p==='/'||p==='/login';var t=localStorage.getItem('laras-theme');var d=!lightOnly&&(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches));var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';var m=document.querySelector('meta[name="color-scheme"]');if(!m){m=document.createElement('meta');m.name='color-scheme';document.head.appendChild(m)}m.content=d?'dark light':'light'}catch(e){}})()`,
 					}}
 				/>
 				<Meta />
@@ -135,8 +135,8 @@ export default function App() {
 	useClientLayoutEffect(() => {
 		const lightOnly = pathname === '/' || pathname === '/login';
 		const savedTheme = localStorage.getItem('laras-theme');
-		// Light is the default; only an explicit saved choice turns dark mode on.
-		const isDark = !lightOnly && savedTheme === 'dark';
+		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		const isDark = !lightOnly && (savedTheme === 'dark' || (!savedTheme && prefersDark));
 		const root = document.documentElement;
 		root.classList.toggle('dark', isDark);
 		root.style.colorScheme = isDark ? 'dark' : 'light';

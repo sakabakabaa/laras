@@ -259,3 +259,16 @@ Ship as reviewable frontend-only PRs; keep light/dark screenshots paired. Roughl
 - Supply the correct visual-reference screenshot when available. It can refine the detailed visual language, but the locked red/playful/dark/frontend-only decisions remain unless explicitly changed.
 
 ---
+
+---
+
+## 10. Delivery status
+
+Work is on GitHub as reviewable PRs (no production deployment yet):
+
+- **PR #4 — `redesign/plan-v1` → `main`**: this document.
+  https://github.com/sakabakabaa/laras/pull/4
+- **PR #5 — `fix/rubric-tests-and-readability` → `main`**: the rubric-test fix, the PocketBase bootstrap guards, and the UI readability pass.
+  https://github.com/sakabakabaa/laras/pull/5
+
+Both branches are based directly on GitHub's `main` and contain only their own files. The production VPS remains suspended, so deployment is blocked until it is reactivated.

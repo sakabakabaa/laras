@@ -57,9 +57,13 @@ export type TranscriptionOutcome =
   | { ok: true; text: string }
   | { ok: false; reason: string; retryable: boolean };
 
-/** True when the STT provider is configured in this environment. */
+/** Self-hosted Whisper sidecar (speaches / [OI] audio API). */
+export const whisperUrl = (): string =>
+  (process.env.WHISPER_URL || "").replace(/\/+$/, "");
+
+/** True when any STT provider is configured in this environment. */
 export const isTranscriptionConfigured = (): boolean =>
-  Boolean(process.env.HROUTER_API_KEY);
+  Boolean(whisperUrl() || process.env.HROUTER_API_KEY);
 
 const NOT_CONFIGURED_REASON =
   "Layanan transkripsi belum dikonfigurasi pada server ini. Berkas audio tetap tersimpan dan dapat diputar.";
@@ -76,8 +80,10 @@ export async function transcribeAudio(
   extension: string,
   language = "",
 ): Promise<TranscriptionOutcome> {
+  // The local sidecar needs no credentials; the hosted router needs its key.
+  const local = whisperUrl();
   const apiKey = process.env.HROUTER_API_KEY;
-  if (!apiKey)
+  if (!local && !apiKey)
     return { ok: false, reason: NOT_CONFIGURED_REASON, retryable: false };
 
   if (bytes.byteLength > STT_MAX_BYTES) {
@@ -92,8 +98,16 @@ export async function transcribeAudio(
   const baseUrl = (
     process.env.HROUTER_BASE_URL || "https://router.hostinger.com/v1"
   ).replace(/\/+$/, "");
+  const endpoint = local
+    ? `${local}/v1/audio/transcriptions`
+    : `${baseUrl}/audio/transcriptions`;
   const form = new FormData();
-  form.set("model", process.env.HROUTER_STT_MODEL || "whisper-1");
+  form.set(
+    "model",
+    local
+      ? process.env.WHISPER_MODEL || "Systran/faster-whisper-small"
+      : process.env.HROUTER_STT_MODEL || "whisper-1",
+  );
   form.set("response_format", "json");
   if (language) form.set("language", language);
   form.set(
@@ -106,16 +120,28 @@ export async function transcribeAudio(
 
   // Generous but bounded: a lecture clip can take a while on a cold provider.
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120_000);
+  // CPU inference is slower than a hosted API; allow long clips locally.
+  const timeout = setTimeout(() => controller.abort(), local ? 600_000 : 120_000);
   try {
-    const response = await fetch(`${baseUrl}/audio/transcriptions`, {
+    const response = await fetch(endpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: local ? {} : { Authorization: `Bearer ${apiKey}` },
       body: form,
       signal: controller.signal,
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
+      // Hostinger's edge currently challenges multipart uploads on this path
+      // (Cloudflare "Just a moment"), even though the API requires multipart.
+      // That is a provider-side block: retrying cannot help the lecturer.
+      if (/just a moment|cf-chl|cloudflare/i.test(detail)) {
+        return {
+          ok: false,
+          reason:
+            "Layanan transkripsi Hostinger memblokir permintaan otomatis (Cloudflare). Hubungi administrator untuk membuka endpoint audio.",
+          retryable: false,
+        };
+      }
       // 401/403 mean the key is wrong — retrying will not help the lecturer.
       const authIssue = response.status === 401 || response.status === 403;
       return {

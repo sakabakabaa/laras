@@ -95,5 +95,8 @@ export default [
 	route('api/agent-tasks', 'routes/api.agent-tasks.ts'),
 	route('api/assistant', 'routes/api.assistant.ts'),
 	route('api/student-assistant', 'routes/api.student-assistant.ts'),
+	route('api/ai-providers', 'routes/api.ai-providers.ts'),
+	route('api/ai-providers-test', 'routes/api.ai-providers-test.ts'),
+	route('api/ai-model-prefs', 'routes/api.ai-model-prefs.ts'),
 	route('api/*', 'routes/api.$.ts'),
 ] satisfies RouteConfig;

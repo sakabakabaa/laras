@@ -39,8 +39,9 @@ export function AccountInfoSection() {
 				))}
 			</dl>
 			<p className="ld-settings-note">
-				Email login, peran, dan NIM dikelola oleh sistem dan dosen. Hubungi dosen Anda jika
-				data perlu diperbarui.
+				{isStudent
+					? 'Email login, peran, dan NIM dikelola oleh sistem dan dosen. Hubungi dosen Anda jika data perlu diperbarui.'
+					: 'Email login dan peran dikelola oleh sistem. Hubungi administrator LARAS jika data perlu diperbarui.'}
 			</p>
 		</section>
 	);

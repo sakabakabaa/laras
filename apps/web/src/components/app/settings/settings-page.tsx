@@ -6,6 +6,7 @@ import { LanguageSection } from './language-section';
 import { AccountInfoSection } from './account-info-section';
 import { UsageSection } from './usage-section';
 import { LearnerProfileSection } from './learner-profile-section';
+import { AiModelSection } from './ai-model-section';
 import { useAuth } from '@/hooks/use-auth';
 
 /**
@@ -27,7 +28,8 @@ export function SettingsPage() {
 			{isStudent && <RecoverySection />}
 			{!isStudent && <LanguageSection />}
 		{!isStudent && <UsageSection />}
-			<PreferencesSection />
+		{!isStudent && <AiModelSection />}
+		<PreferencesSection />
 			<AccountInfoSection />
 		</div>
 	);

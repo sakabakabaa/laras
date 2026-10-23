@@ -22,10 +22,10 @@ export function useTheme() {
 	useEffect(() => {
 		// The root route deliberately paints public pages in light mode. When the
 		// app shell mounts, use the saved preference so its toggle stays in sync.
+		// Light is the default: the OS preference is intentionally ignored so a
+		// new account never lands in dark mode unasked.
 		const savedTheme = localStorage.getItem(STORAGE_KEY);
-		const isDark = savedTheme
-			? savedTheme === 'dark'
-			: window.matchMedia('(prefers-color-scheme: dark)').matches;
+		const isDark = savedTheme === 'dark';
 		setTheme(isDark ? 'dark' : 'light');
 	}, []);
 

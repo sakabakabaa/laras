@@ -1,8 +1,11 @@
 import PocketBase from 'pocketbase';
+import { createHash } from 'node:crypto';
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { detectLanguage } from '@/lib/file-metadata';
+import { collectHostingerText } from '@/lib/hostinger-model.server';
+import { ocrPdf } from '@/lib/pdf-ocr.server';
 import {
 	OFFICE_EXTENSIONS,
 	OFFICE_FORMAT_LABEL,
@@ -25,9 +28,15 @@ const MIN_RELIABLE_CHARS = 200;
 /** Hard cap on stored extracted text — matches the collection field max. */
 const MAX_STORED_CHARS = 400000;
 const PARSER_PDF = 'pdf-parse-v2';
+const PARSER_PDF_OCR = 'pdf-ocr-v1';
 const PARSER_TEXT = 'utf8-text-v1';
 const PARSER_OFFICE = 'ooxml-v1';
 const PARSER_AUDIO = 'whisper-stt-v1';
+/** Vision OCR for images (and, later, scanned PDFs). */
+const PARSER_IMAGE = 'vision-ocr-v1';
+/** Images below this many characters are treated as "no readable text". */
+const MIN_IMAGE_CHARS = 12;
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
 /** Marks media that is intentionally preview-only, so it never reads as an error. */
 const PARSER_PREVIEW_ONLY = 'preview-only-v1';
 const TEXT_EXTENSIONS = new Set(['txt', 'csv', 'md', 'vtt', 'srt']);
@@ -105,9 +114,10 @@ const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 	const officeFormat = OFFICE_EXTENSIONS[extension];
 	const audio = isAudioExtension(extension);
 	const video = isVideoExtension(extension);
+	const image = IMAGE_EXTENSIONS.has(extension);
 
 	if ((record.size ?? 0) > PARSE_MAX_BYTES) return fail(TOO_LARGE_REASON);
-	if (extension !== 'pdf' && !officeFormat && !audio && !video && !TEXT_EXTENSIONS.has(extension)) {
+	if (extension !== 'pdf' && !officeFormat && !audio && !video && !image && !TEXT_EXTENSIONS.has(extension)) {
 		return fail(UNSUPPORTED_REASON);
 	}
 
@@ -128,17 +138,41 @@ const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 		const parser = new PDFParse({ data: new Uint8Array(buffer) });
 		try {
 			const result = await parser.getText();
-			const text = ((result as { text?: string }).text || '').trim();
+			const rawText = ((result as { text?: string }).text || '').trim();
+			// pdf-parse emits "-- 1 of 6 --" separators; OCR supplies its own page
+			// markers, so drop these to keep the stored text clean.
+			const text = rawText.replace(/^--\s*\d+\s+of\s+\d+\s*--\s*$/gm, '').trim();
 			const pages = (result as { total?: number }).total || 0;
 			if (text.length < MIN_RELIABLE_CHARS) {
+				// Almost certainly a scan: the text layer is empty or nearly so.
+				// Render the pages and read them with the vision model.
+				const ocr = await ocrPdf(buffer, { maxPages: 10 });
+				const ocrText = ocr.text.trim();
+				if (ocr.ok && ocrText.length >= MIN_RELIABLE_CHARS) {
+					const combined = [text.trim(), ocrText]
+						.filter(Boolean)
+						.join('\n\n')
+						.slice(0, MAX_STORED_CHARS);
+					return {
+						status: 'ready',
+						text: combined,
+						language: detectLanguage(combined),
+						pages: pages || ocr.pages,
+						reason:
+							ocr.totalPages > ocr.pages
+								? `Teks dibaca lewat OCR pada ${ocr.pages} halaman pertama dari ${ocr.totalPages} halaman.`
+								: `Teks dibaca lewat OCR pada ${ocr.pages} halaman.`,
+						parserVersion: PARSER_PDF_OCR,
+					};
+				}
 				return {
 					status: 'review',
 					text: text.slice(0, MAX_STORED_CHARS),
 					language: detectLanguage(text),
 					pages,
 					reason:
-						'Teks yang terbaca sangat sedikit — kemungkinan PDF hasil pindaian (scanned) atau berbasis gambar. Periksa hasil dan proses ulang bila perlu.',
-					parserVersion: PARSER_PDF,
+						'PDF hasil pindaian — OCR tidak menemukan teks yang dapat dibaca. Periksa berkas secara manual.',
+					parserVersion: PARSER_PDF_OCR,
 				};
 			}
 			return {
@@ -190,6 +224,57 @@ const extract = async (record: FileLibraryRecord): Promise<Outcome> => {
 			return fail(
 				'Penguraian dokumen Office gagal — berkas mungkin rusak atau terproteksi. Berkas asli tetap tersimpan.',
 			);
+		}
+	}
+
+	if (image) {
+		// Vision OCR. The model must fetch the image itself, so the URL has to be
+		// publicly reachable — the internal container hostname is not.
+		const domain = (process.env.WEBSITE_DOMAIN || '').trim();
+		if (!domain) {
+			return fail('OCR gambar tidak tersedia: domain publik belum dikonfigurasi pada server ini.');
+		}
+		try {
+			const token = await pocketbaseAdmin.getFileToken();
+			const url = `https://${domain}/hcgi/platform/api/files/file_library/${record.id}/${encodeURIComponent(record.file)}?token=${token}`;
+			const result = await collectHostingerText({
+				prompt:
+					'Ekstrak seluruh teks yang terlihat pada gambar ini, apa adanya, dalam urutan baca. ' +
+					'Pertahankan bahasa aslinya. Jangan menambahkan komentar, penjelasan, atau terjemahan. ' +
+					'Jika gambar tidak memuat teks yang dapat dibaca, balas tepat: TIDAK ADA TEKS',
+				systemPrompt:
+					'Anda mesin OCR. Keluarkan hanya teks yang benar-benar terlihat pada gambar. Jangan mengarang isi.',
+				images: [url],
+				timeoutMs: 90_000,
+			});
+			const text = (result.content || '').trim();
+			if (!text || /^tidak ada teks\.?$/i.test(text) || text.length < MIN_IMAGE_CHARS) {
+				// An illustration, photo or diagram with no text is not a defect and
+				// nothing can be fixed by re-processing it, so it is 'ready' with a
+				// note — not 'review', which would sit in "Perlu tindakan" forever.
+				return {
+					status: 'ready',
+					text: '',
+					language: '',
+					pages: 1,
+					reason:
+						'Tidak ada teks pada gambar ini (foto, ilustrasi, atau diagram). Berkas tetap dapat dipratinjau dan diunduh.',
+					parserVersion: PARSER_IMAGE,
+				};
+			}
+			return {
+				status: 'ready',
+				text: text.slice(0, MAX_STORED_CHARS),
+				language: detectLanguage(text),
+				pages: 1,
+				reason: '',
+				parserVersion: PARSER_IMAGE,
+			};
+		} catch (error) {
+			logger.error(
+				`berkas-process ocr failed: ${error instanceof Error ? error.message : String(error)}`,
+			);
+			return fail('Penguraian gambar gagal — layanan OCR tidak merespons. Coba proses ulang.');
 		}
 	}
 
@@ -357,7 +442,7 @@ export const action = withApi(async ({ request }) => {
 			});
 		}
 	}
-	await pocketbaseAdmin.updateRecord('file_library', fileId, { status: 'processing' });
+	await pocketbaseAdmin.updateRecord('file_library', fileId, { status: 'processing', parseStatus: 'pending' });
 
 	const outcome = await extract(record);
 
@@ -374,10 +459,25 @@ export const action = withApi(async ({ request }) => {
 		version: record.version || 1,
 	};
 	await pocketbaseAdmin.updateRecord('file_extractions', extractionId, finalData);
-	// Coarse Phase 1 status stays in sync: extraction finished (ready/review)
-	// or could not produce text (failed). The original file is untouched.
+	// Phase 2 — keep the denormalised parse index on the library row in sync so
+	// the list can filter, count and page server-side without joining.
+	// The content hash is computed once (first parse) from the stored original;
+	// it powers duplicate detection without hashing on every re-process.
+	let contentHash = record.contentHash || '';
+	if (!contentHash) {
+		try {
+			const buffer = await fetchOriginal(record);
+			contentHash = createHash('sha256').update(buffer).digest('hex');
+		} catch {
+			/* hash is an optimisation — never fail the parse over it */
+		}
+	}
 	await pocketbaseAdmin.updateRecord('file_library', fileId, {
 		status: outcome.status === 'failed' ? 'failed' : 'ready',
+		parseStatus: outcome.status,
+		parsedChars: finalData.chars,
+		parsedAt: finalData.extractedAt,
+		...(contentHash ? { contentHash } : {}),
 	});
 
 	return json({

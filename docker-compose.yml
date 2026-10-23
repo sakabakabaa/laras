@@ -27,6 +27,23 @@ services:
       - traefik.http.routers.laras-horizon-pb.service=laras-horizon-pb
       - traefik.http.services.laras-horizon-pb.loadbalancer.server.port=8090
 
+  # Self-hosted Whisper. Internal only — no traefik labels, no published port.
+  # Speaches speaks the [OI] audio API, so the parser talks to it with the same
+  # multipart request it uses for the hosted provider.
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    restart: unless-stopped
+    volumes:
+      - whisper-cache:/home/ubuntu/.cache/huggingface/hub
+    networks:
+      - laras-app-net
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   web:
     build:
       context: .
@@ -45,7 +62,12 @@ services:
       BYNARA_API_KEY: ${BYNARA_API_KEY:-}
       HROUTER_API_KEY: ${HROUTER_API_KEY:-}
       HROUTER_MODEL: ${HROUTER_MODEL:-gpt-6-luna}
+      # Phase 1 — encrypts per-lecturer provider credentials at rest.
+      AI_SETTINGS_KEY: ${AI_SETTINGS_KEY:?Set AI_SETTINGS_KEY in the deployment .env}
       HROUTER_CONVERSATION_MODEL: ${HROUTER_CONVERSATION_MODEL:-}
+      # Local Whisper sidecar takes precedence for library audio.
+      WHISPER_URL: http://whisper:8000
+      WHISPER_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-small}
       TTS_PROVIDER: ${TTS_PROVIDER:-hostinger}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-JBFqnCBsd6RMkjVDRZzb}
@@ -86,3 +108,4 @@ volumes:
   pocketbase-data:
     name: laras-horizon-pocketbase-data
     external: true
+  whisper-cache:

@@ -1027,21 +1027,15 @@
 	}
 }
 
-/* Dashboard density (audit #4): demote the AI composer to a clean single-line
-   entry by default; its descriptive heading discloses on focus. Pure
-   presentation — the heading is non-interactive context only. */
+/* Dashboard density (audit #4): the AI composer is a permanent section, so its
+   descriptive heading is always visible — there is no longer a collapsed
+   disclosure to demote it for. Pure presentation. */
 .ld-greet-ask-heading {
-	max-height: 0;
-	opacity: 0;
-	overflow: hidden;
-	pointer-events: none;
-	transition: max-height .24s cubic-bezier(.2,.7,.25,1), opacity .16s ease, margin .22s ease;
-}
-.ld-greet-ask:focus-within .ld-greet-ask-heading,
-.ld-greet-ask:hover .ld-greet-ask-heading {
-	max-height: 64px;
+	max-height: none;
 	opacity: 1;
+	overflow: visible;
 	pointer-events: auto;
+	transition: max-height .24s cubic-bezier(.2,.7,.25,1), opacity .16s ease, margin .22s ease;
 }
 @media (prefers-reduced-motion: reduce) {
 	.ld-greet-ask-heading { transition: none; }

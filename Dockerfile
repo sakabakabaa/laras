@@ -11,6 +11,10 @@ RUN npm prune --omit=dev --no-audit --no-fund
 FROM node:22-bookworm-slim AS web
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000
+# poppler-utils renders scanned PDF pages to PNG for OCR.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=web-build /app/package.json /app/package-lock.json ./
 COPY --from=web-build /app/node_modules ./node_modules
 COPY --from=web-build /app/apps/web ./apps/web

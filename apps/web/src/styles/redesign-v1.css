@@ -568,10 +568,9 @@
 
 /* ── 6. Student: keep the adventure, unify execution ────────────────────── */
 
+/* Keep the light student shell clean white; preserve the separate dark treatment. */
 .student-adventure-shell .ld-main {
-	background:
-		radial-gradient(120% 60% at 8% -12%, rgba(201, 52, 43, 0.1), transparent 62%),
-		linear-gradient(180deg, #fff9f7 0%, var(--r-canvas) 320px);
+	background: var(--r-surface);
 }
 
 :root.dark .student-adventure-shell .ld-main {

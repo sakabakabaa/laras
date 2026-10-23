@@ -127,6 +127,22 @@ const copy: Record<string, [string, string]> = {
     "A small goal for today",
     "Ein kleines Ziel für heute"
   ],
+  "Belum dimulai": [
+    "Not started yet",
+    "Noch nicht begonnen"
+  ],
+  "Sedang berlangsung": [
+    "In progress",
+    "In Bearbeitung"
+  ],
+  "Langkah pertamamu": [
+    "Your first step",
+    "Dein erster Schritt"
+  ],
+  "Poin pengalaman dimulai setelah putaran pertamamu.": [
+    "Experience points begin after your first round.",
+    "Erfahrungspunkte gibt es nach deiner ersten Runde."
+  ],
   "Satu putaran selesai. Sampai jumpa di tantangan berikutnya.": [
     "One round complete. See you at the next challenge.",
     "Eine Runde geschafft. Bis zur nächsten Herausforderung."

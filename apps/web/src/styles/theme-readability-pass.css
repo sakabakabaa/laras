@@ -1,0 +1,63 @@
+/* Light-theme secondary text and severity chips need the same 4.5:1 floor. */
+:root:not(.dark) .ld-layout .ld-content .aev-mark-btn.major {
+	color: #B42318;
+}
+
+:root:not(.dark) .ld-layout .ld-content .fas-legend .aev-mark.minor {
+	color: #594100;
+}
+
+:root:not(.dark) .ld-layout .ld-content .fas-legend .aev-mark.major {
+	color: #881337;
+}
+
+:root:not(.dark) .ld-layout .ld-content .gb-th-comp-meta,
+:root:not(.dark) .ld-layout .ld-content .asst-session-item-when {
+	color: #586174;
+}
+
+/* The sticky gradebook action bar covers card text and the first table row on
+   compact viewports. Put it back in document flow there; keep the desktop bar. */
+@media (max-width: 1100px) {
+	.ld-layout .ld-content:has(.gb-publish-bar) {
+		padding-bottom: 112px;
+	}
+
+	.ld-layout .ld-content .gb-publish-bar {
+		position: static;
+	}
+}
+
+@media (max-width: 900px) {
+	.ld-layout .ld-content:has(.gb-publish-bar) {
+		padding-bottom: 88px;
+	}
+}
+
+/* Dark-mode readability corrections discovered in the dual-theme route audit.
+   Keep these narrowly scoped: semantic statuses retain their own colors. */
+:root.dark .ld-layout .ld-content :is(.ld-page-head, .mk-head, .cw-page-head, .ac2-head) p {
+	color: #A6B2C2;
+}
+
+:root.dark .ld-layout .ld-content .ld-settings-panel :is(small, .ld-hint, p) {
+	color: #A6B2C2;
+}
+
+:root.dark .ld-layout .ld-content .flb-summary,
+:root.dark .ld-layout .ld-content .flb-empty,
+:root.dark .ld-layout .ld-content .flb-empty p {
+	color: #A6B2C2;
+}
+
+/* Dense attendance detail is supporting information, but should not fall below
+   the existing 11px readability floor. */
+.ld-layout .ld-content .gb-cell-assignment details summary {
+	font-size: 11px;
+	line-height: 1.35;
+}
+
+.ld-layout .ld-content .gb-cell-assignment details > p {
+	font-size: 11px;
+	line-height: 1.4;
+}

@@ -17,6 +17,7 @@ import agentTasks from '@/styles/agent-tasks.css?url';
 import lessonPlans from '@/styles/lesson-plans.css?url';
 import uiAuditImprovements from '@/styles/ui-audit-improvements.css?url';
 import readabilityPass from '@/styles/readability-pass.css?url';
+import themeReadabilityPass from '@/styles/theme-readability-pass.css?url';
 import premiumWorkspace from '@/styles/premium-workspace.css?url';
 import personalPractice from '@/styles/personal-practice.css?url';
 import { siteOrigin } from '@/lib/site-origin.server';
@@ -50,6 +51,7 @@ export const links: Route.LinksFunction = () => [
 	{ rel: 'stylesheet', href: lessonPlans },
 	{ rel: 'stylesheet', href: uiAuditImprovements },
 	{ rel: 'stylesheet', href: readabilityPass },
+	{ rel: 'stylesheet', href: themeReadabilityPass },
 	{ rel: 'icon', href: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
 	{ rel: 'icon', href: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
 	{ rel: 'icon', href: '/favicon.png', type: 'image/png', sizes: '48x48' },

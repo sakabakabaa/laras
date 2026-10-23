@@ -17,18 +17,32 @@ vi.mock('@/components/app/practice-mascot', () => ({ PracticeMascot: () => null 
 import { StudentHomeAdventure } from '@/components/app/student-home-adventure';
 
 describe('student empty-course progress state', () => {
-	it('does not invent zero XP or a level goal when the student has no courses', () => {
-		const html = renderToStaticMarkup(
+	const render = (preview = false) =>
+		renderToStaticMarkup(
 			createElement(
 				MemoryRouter,
 				null,
-				createElement(StudentHomeAdventure, { courses: [] }),
+				createElement(StudentHomeAdventure, { courses: [], preview }),
 			),
 		);
 
+	it('does not invent zero XP or a level goal when the student has no courses', () => {
+		const html = render();
+
 		expect(html).not.toContain('0 XP');
 		expect(html).not.toContain('0/100');
+		expect(html).not.toContain('sd-game-level-track');
 		expect(html).toContain('Perjalananmu');
+		expect(html).toContain('—');
+	});
+
+	it('does not imply personal progress in the lecturer preview when data is unavailable', () => {
+		const html = render(true);
+
+		expect(html).toContain('Pratinjau mahasiswa');
+		expect(html).not.toContain('0 XP');
+		expect(html).not.toContain('0/100');
+		expect(html).not.toContain('sd-game-level-track');
 		expect(html).toContain('—');
 	});
 });

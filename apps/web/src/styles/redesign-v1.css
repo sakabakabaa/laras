@@ -847,17 +847,51 @@
 	[role='dialog'] label:has(input[type='checkbox']) {
 		min-height: 44px;
 	}
+
+	[role='dialog'] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+		min-height: 44px;
+	}
 }
 
-/* ── 8. Print: always light, never red-on-charcoal ──────────────────────── */
+/* Portaled dialogs render outside .ld-layout, so apply the shell control tokens
+   to them explicitly; otherwise dialog inputs stay light in dark mode. */
+[role='dialog'] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+	background: var(--r-surface);
+	border: 1px solid var(--r-border);
+	border-radius: var(--r-radius-md);
+	color: var(--r-ink);
+}
+
+[role='dialog'] :is(input, textarea)::placeholder {
+	color: var(--r-ink-3);
+}
+
+/* ── 10. Print: always light, never red-on-charcoal ─────────────────────── */
 
 @media print {
 	.ld-main,
 	.ld-body,
 	.ld-panel,
-	.ld-stat {
+	.ld-stat,
+	.sd-game,
+	.sd-game-hero,
+	.sd-game-world,
+	.sd-game-goal,
+	.sd-game-level,
+	.sd-game-skill-panel,
+	.sd-game-recent-panel,
+	.student-page-banner {
 		background: #fff !important;
 		color: #111 !important;
 		box-shadow: none !important;
+	}
+
+	.sd-game :is(h1, h2, h3, strong, p, span, small, time, a) {
+		color: #111 !important;
+	}
+
+	.sd-game-goal-ring,
+	.sd-game-level-track > span {
+		background: #111 !important;
 	}
 }

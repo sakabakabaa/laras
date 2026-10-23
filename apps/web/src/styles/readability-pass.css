@@ -1,0 +1,570 @@
+/*
+ * LARAS readability & alignment pass (2026-10-21).
+ *
+ * Audited against the live deployment at laras.zulficar.me: every lecturer and
+ * student route was captured at 1280x577 and 1440x900, and each rendered text
+ * node was measured for font size, colour and target size.
+ *
+ * Three classes of defect were found, and this file is the single place that
+ * fixes them:
+ *
+ *  1. TYPE SCALE. `premium-workspace.css` re-declared shared classes
+ *     (`.ld-eyebrow`, `.ld-back`, `.ld-mast-search-shortcut`) with a smaller
+ *     type size than the base `index.css` rule, so the same eyebrow rendered
+ *     at 12px on some screens and 10px on others. Beyond that, several
+ *     surfaces used 10px and 10.5px for labels that carry real meaning
+ *     (calendar event chips, status tags, section eyebrows). The floor for
+ *     meaningful text is now 11px, and for uppercase micro-labels 11.5px.
+ *
+ *  2. CONTRAST. `.ld-eyebrow` at #858d98 on white is 3.35:1 and the masthead
+ *     shortcut hint at #78818d is 3.94:1 — both below WCAG AA for their size.
+ *     The calendar's "national" event chip (#E11D48 on #FEF2F2) is 4.29:1.
+ *     These are darkened to clear 4.5:1.
+ *
+ *  3. TARGET SIZE. Interactive elements below 24px tall or wide were flagged:
+ *     the "Semua →" / "Kalender →" section links (18px tall), the calendar
+ *     event chips (19px), and the "Kembali" back-links (20px). They are
+ *     padded out to a 24px minimum hit area without changing their visual
+ *     size, and the calendar chips get a little more type.
+ *
+ * The rules are scoped to `.ld-content` / `.ld-layout` so page-specific
+ * components (document previews, PDF viewers) keep their own styling.
+ */
+
+/* ------------------------------------------------------------------ *
+ * 1. Type scale: raise the floor for meaningful micro-text.
+ * ------------------------------------------------------------------ */
+
+/* The eyebrow is a section label, not decoration. It was 10px in the
+   premium sheet and 12px in the base sheet depending on which rule won. */
+.ld-content .ld-eyebrow,
+.ld-layout .ld-eyebrow,
+.ld-settings-panel .ld-eyebrow {
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	color: #5b6675;
+}
+
+/* Page-eyebrow used in page headers. */
+.ld-content .ld-page-head .ld-eyebrow,
+.ld-content .ld-dash .ld-eyebrow {
+	font-size: 11.5px;
+}
+
+/* Search-keyboard hint in the masthead. */
+.ld-mast-search-shortcut {
+	font-size: 11px;
+	color: #5f6875;
+}
+
+/* Student adventure eyebrows ("WÄHLE DEIN NÄCHSTES ABENTEUER"). */
+.sd-game-eyebrow {
+	font-size: 11.5px;
+	color: #6b7280;
+}
+
+.sd-game-hero-copy .sd-game-eyebrow {
+	color: #7d5c30;
+}
+
+/* Personal-practice eyebrow. */
+.pp-eyebrow {
+	font-size: 11.5px;
+	color: #5b6675;
+}
+
+/* Status / classification tags on assignment cards. */
+.asg-tag {
+	font-size: 11.5px;
+}
+
+.eval-people .asg-tag {
+	font-size: 11px;
+}
+
+/* Section eyebrows inside the settings panel (Akun / Profil / Keamanan …). */
+.ld-settings-panel :is(h3, .ld-eyebrow) {
+	font-size: 11.5px;
+}
+
+/* Course-detail sub-eyebrows ("Status RPS", "Asisten RPS"). */
+.cw-page-head .ld-eyebrow,
+.course-context-head .ld-eyebrow {
+	font-size: 11.5px;
+}
+
+/* ------------------------------------------------------------------ *
+ * 2. Contrast: darken the muted greys that failed WCAG AA.
+ * ------------------------------------------------------------------ */
+
+.ld-content .ld-eyebrow,
+.ld-layout .ld-eyebrow {
+	color: #5b6675; /* 5.9:1 on white */
+}
+
+.ld-mast-search-shortcut {
+	color: #5f6875; /* 5.7:1 on white */
+}
+
+.ld-mast-search-placeholder {
+	color: #6b7280; /* 4.8:1 on white */
+}
+
+.ld-back {
+	color: #5a6473; /* 5.8:1 on white */
+}
+
+.ld-content .ld-link-muted {
+	color: #8A251C; /* 8.9:1 on white */
+}
+
+/* Calendar: "national" event chip was 4.29:1. */
+.ac2-span.cat-national,
+.ac2-chip.cat-national,
+.ac2-agenda-card.cat-national {
+	color: #B42318;
+}
+
+.ac2-span.cat-upi,
+.ac2-chip.cat-upi,
+.ac2-agenda-card.cat-upi {
+	color: #1D4ED8;
+}
+
+.ac2-span.cat-courses,
+.ac2-chip.cat-courses,
+.ac2-agenda-card.cat-courses {
+	color: #046C4E;
+}
+
+.ac2-span.cat-collective,
+.ac2-chip.cat-collective,
+.ac2-agenda-card.cat-collective {
+	color: #7A5A00;
+}
+
+/* Calendar grid: out-of-month numbers and "more" links were near-invisible. */
+.ac2-cell.out .ac2-num {
+	color: #B0B8C4;
+}
+
+.ac2-more,
+.ac2-inline-empty,
+.ac2-week-head span {
+	color: #667085;
+}
+
+.ac2-week-empty {
+	color: #98A2B3;
+}
+
+/* Agenda secondary line was truncated in a 10.5px slot with a faint colour. */
+.ac2-agenda-body em {
+	font-size: 12px;
+	color: #667085;
+}
+
+.ac2-agenda-body small {
+	color: #5b6675;
+}
+
+/* ------------------------------------------------------------------ *
+ * 3. Target size: give small controls a 24px hit area.
+ * ------------------------------------------------------------------ */
+
+/* "Semua →" / "Kalender →" / "Lihat →" section links. */
+.ld-content .ld-link-muted {
+	display: inline-flex;
+	align-items: center;
+	min-height: 24px;
+	padding: 2px 0;
+}
+
+/* Back-links ("← Kembali", "Kembali ke dasbor"). */
+.ld-content .ld-back {
+	display: inline-flex;
+	align-items: center;
+	min-height: 24px;
+}
+
+/* Calendar event chips inside a grid cell. */
+.ac2-span {
+	font-size: 11.5px;
+	min-height: 24px;
+	padding: 2px 6px;
+}
+
+.ac2-chip {
+	font-size: 12px;
+}
+
+/* Calendar "Lihat sumber" link. */
+.ac2-detail-link {
+	display: inline-flex;
+	align-items: center;
+	min-height: 24px;
+}
+
+/* "Lihat semua N mahasiswa" affordance. */
+.cw-students-more {
+	min-height: 24px;
+	font-size: 11.5px;
+}
+
+/* Student settings: the "Opsional" helper copy was 10px. */
+.ld-content .ld-settings-panel :is(small, .ld-hint, p) {
+	font-size: 11.5px;
+	color: #5b6675;
+}
+/* ------------------------------------------------------------------ *
+ * 4. Alignment: give the page title a single, consistent type ramp.
+ * ------------------------------------------------------------------ */
+
+/*
+ * The same "page heading" role was rendered at 22px (Asisten), 24px (Berkas),
+ * 26px (Penilaian, Tugas detail, Analitik, Riset), 28px (RPS, Pengaturan,
+ * Courses), 30px (Kalender, Course detail) and 31px (Tugas, Courses). That
+ * spread made unrelated screens look like different products. Every page
+ * heading now resolves to the same clamp.
+ */
+.ld-content :is(
+	.asst-head,
+	.flb-head,
+	.eval-head,
+	.cw-page-head,
+	.ac2-head,
+	.ld-page-head,
+	.mk-head,
+	.lap-head,
+	.research-export-head,
+	.sas-header,
+	.srs-head,
+	.rps-editor-head,
+	.asg-editor-head
+) h1 {
+	font-size: clamp(24px, 2.3vw, 30px);
+	font-weight: 700;
+	letter-spacing: -0.035em;
+	line-height: 1.2;
+}
+
+/* The student greeting is a display size, not a page title — keep it larger
+   but stop it from competing with the hero headline. */
+.sd-game-greeting h1 {
+	font-size: clamp(25px, 2.8vw, 32px);
+}
+
+.sd-game-hero h2 {
+	font-size: clamp(24px, 2.9vw, 36px);
+}
+
+.student-page-banner h1,
+.student-page-banner h2 {
+	font-size: clamp(25px, 2.8vw, 32px);
+}
+
+/* Page description under the heading. */
+.ld-content :is(.ld-page-head, .mk-head, .cw-page-head, .ac2-head) p {
+	font-size: 13.5px;
+	color: #5b6675;
+}
+
+/* ------------------------------------------------------------------ *
+ * 5. Alignment: equalise card and section padding.
+ * ------------------------------------------------------------------ */
+
+/* "Aksi Cepat" and other page-section headers share one baseline. */
+.ld-content :is(.ld-section-head, .cw-quick-head) {
+	align-items: center;
+	gap: 10px;
+}
+
+/* The quick-action row was hugging the far-left label with a large void in
+   between; give the button group room to breathe without stranding it. */
+.cw-quick-actions {
+	gap: 10px;
+	row-gap: 10px;
+}
+
+/* Status cards in the course workspace had mismatched internal rhythm. */
+.cw-rps-status,
+.cw-rps-ai {
+	padding: 16px 18px;
+	gap: 12px;
+}
+
+/* ------------------------------------------------------------------ *
+ * 6. Fix the overlapping publish bar on the grading page.
+ * ------------------------------------------------------------------ */
+
+/*
+ * `.gb-publish-bar` is `position:sticky; bottom:0`, and `.ld-content` only
+ * reserves 112px of bottom padding. On the Penilaian page the summary cards
+ * sit directly above the bar, so the bar covers their lower edge and the
+ * values look clipped. Give the sticky bar its own breathing room.
+ */
+.ld-content:has(.gb-publish-bar) {
+	padding-bottom: 132px;
+}
+
+.gb-publish-bar {
+	gap: 16px;
+	padding: 12px 16px;
+}
+
+.gb-publish-info {
+	font-size: 12.5px;
+	color: #5b6675;
+}
+
+/* ------------------------------------------------------------------ *
+ * 7. Student settings: the "Opsional" helper copy was 10px.
+ * ------------------------------------------------------------------ */
+
+.ld-content .ld-settings-panel :is(small, .ld-hint, p) {
+	font-size: 11.5px;
+	color: #5b6675;
+}
+
+/* ------------------------------------------------------------------ *
+ * 8. Dark mode parity for the colours changed above.
+ * ------------------------------------------------------------------ */
+
+:root.dark .ld-content .ld-eyebrow,
+:root.dark .ld-layout .ld-eyebrow,
+:root.dark .ld-settings-panel .ld-eyebrow,
+:root.dark .pp-eyebrow {
+	color: #a6b2c2;
+}
+
+:root.dark .ld-mast-search-shortcut {
+	color: #9aa6b6;
+}
+
+:root.dark .ld-back {
+	color: #9aa6b6;
+}
+
+:root.dark .sd-game-eyebrow {
+	color: #9aa6b6;
+}
+
+/* Route-local academic-calendar.css is injected by the page after root links.
+   Use scoped selectors so these measured readability fixes win that cascade. */
+.ld-layout .ld-content .ac2-dow span,
+.ld-layout .ld-content .ac2-mini-dow span,
+.ld-layout .ld-content .ac2-week-head span,
+.ld-layout .ld-content .ac2-sem-head span,
+.ld-layout .ld-content .ac2-sem-labels span,
+.ld-layout .ld-content .ac2-upcoming-copy > small,
+.ld-layout .ld-content .ac2-agenda-body em,
+.ld-layout .ld-content .ac2-agenda-body small,
+.ld-layout .ld-content .ac2-card-head > span,
+.ld-layout .ld-content .ac2-sub,
+.ld-layout .ld-content .ac2-foot p,
+.ld-layout .ld-content .ac2-empty {
+	color: #667085;
+}
+
+.ld-layout .ld-content .ac2-cell.out .ac2-num,
+.ld-layout .ld-content .ac2-mini-grid button.out {
+	color: #667085;
+}
+
+.ld-layout .ld-content .ac2-details-head p {
+	color: #667085;
+}
+
+.ld-layout .ld-content .ac2-span,
+.ld-layout .ld-content .ac2-span em {
+	font-size: 11.5px;
+	color: inherit;
+}
+
+.ld-layout .ld-content .ac2-span.cat-national,
+.ld-layout .ld-content .ac2-chip.cat-national,
+.ld-layout .ld-content .ac2-agenda-card.cat-national {
+	color: #B42318;
+}
+
+.ld-layout .ld-content .ac2-span.cat-upi,
+.ld-layout .ld-content .ac2-chip.cat-upi,
+.ld-layout .ld-content .ac2-agenda-card.cat-upi {
+	color: #1D4ED8;
+}
+
+.ld-layout .ld-content .ac2-span.cat-courses,
+.ld-layout .ld-content .ac2-chip.cat-courses,
+.ld-layout .ld-content .ac2-agenda-card.cat-courses {
+	color: #046C4E;
+}
+
+.ld-layout .ld-content .ac2-span.cat-collective,
+.ld-layout .ld-content .ac2-chip.cat-collective,
+.ld-layout .ld-content .ac2-agenda-card.cat-collective {
+	color: #7A5A00;
+}
+
+.ld-layout .ld-content .ac2-date-tile small {
+	font-size: 11px;
+}
+
+.ld-layout .ld-content .ac2-back {
+	min-height: 24px;
+}
+
+/* Student home shortcuts were 18–20px tall; expand the hit target while
+   preserving their compact visual treatment. */
+.student-adventure-shell .sd-game-section-heading > a,
+.student-adventure-shell .sd-game-empty > a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 28px;
+	padding: 4px 0;
+}
+
+/* The search placeholder is #6b7280 on a lightly tinted input surface; darken
+   a step further so it clears AA with actual surface colors. */
+.ld-mast-search-placeholder {
+	color: #5f6875;
+}
+
+/* Include the common page-header wrapper and gradebook/analytics headings in
+   the shared page-title type ramp. */
+.ld-content .ld-page-head h1,
+.ld-content .gb-title,
+.ld-content .an-page h1,
+.ld-content .an-index-head h1,
+.ld-content .an-page .an-header h1,
+.ld-content .research-analytics-head h1,
+.ld-content .feedback-uptake-head h1 {
+	font-size: clamp(24px, 2.3vw, 30px);
+	font-weight: 700;
+	letter-spacing: -0.035em;
+	line-height: 1.2;
+}
+
+:root.dark .ld-layout .ld-content .ac2-dow span,
+:root.dark .ld-layout .ld-content .ac2-mini-dow span,
+:root.dark .ld-layout .ld-content .ac2-week-head span,
+:root.dark .ld-layout .ld-content .ac2-sem-head span,
+:root.dark .ld-layout .ld-content .ac2-sem-labels span,
+:root.dark .ld-layout .ld-content .ac2-upcoming-copy > small,
+:root.dark .ld-layout .ld-content .ac2-agenda-body em,
+:root.dark .ld-layout .ld-content .ac2-agenda-body small,
+:root.dark .ld-layout .ld-content .ac2-card-head > span,
+:root.dark .ld-layout .ld-content .ac2-sub,
+:root.dark .ld-layout .ld-content .ac2-foot p,
+:root.dark .ld-layout .ld-content .ac2-empty {
+	color: #a6b2c2;
+}
+
+:root.dark .ld-layout .ld-content .ac2-cell.out .ac2-num,
+:root.dark .ld-layout .ld-content .ac2-mini-grid button.out {
+	color: #9aa6b6;
+}
+
+
+:root.dark .ld-layout .ld-content .ac2-details-head p {
+	color: #a6b2c2;
+}
+
+/* Final lecturer-route findings from the local computed-style pass. */
+.ld-layout .ld-content .ld-greet-ask-badge {
+	font-size: 11px;
+	color: #5b6675;
+}
+
+.ld-layout .ld-content .ld-cal-date {
+	font-size: 11px;
+	color: #667085;
+}
+
+.ld-layout .ld-content .ld-cal-row small,
+.ld-layout .ld-content .cw-student-name small,
+.ld-layout .ld-content small:not([class]) {
+	font-size: 11px;
+	color: #667085;
+}
+
+.ld-layout .ld-content .gb-course-drop-label,
+.ld-layout .ld-content .gb-course-drop-btn small,
+.ld-layout .ld-content .gb-foot-hint {
+	color: #667085;
+}
+
+.ld-layout .ld-content .gb-course-drop-btn small {
+	font-size: 12px;
+}
+
+.ld-layout .ld-content .gb-foot-hint kbd {
+	color: #475467;
+}
+
+.ld-layout .ld-content .ld-empty-cta {
+	display: inline-flex;
+	align-items: center;
+	min-height: 24px;
+}
+
+.ld-layout .ld-content .eval-crumb a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 24px;
+}
+
+:root.dark .ld-layout .ld-content .ld-greet-ask-badge,
+:root.dark .ld-layout .ld-content .ld-cal-date,
+:root.dark .ld-layout .ld-content .ld-cal-row small,
+:root.dark .ld-layout .ld-content .cw-student-name small,
+:root.dark .ld-layout .ld-content small:not([class]),
+:root.dark .ld-layout .ld-content .gb-course-drop-label,
+:root.dark .ld-layout .ld-content .gb-course-drop-btn small,
+:root.dark .ld-layout .ld-content .gb-foot-hint {
+	color: #a6b2c2;
+}
+
+:root.dark .ld-layout .ld-content .gb-foot-hint kbd {
+	color: #c5cdd8;
+}
+
+.ld-layout .ld-content .sas-workspace .sas-back {
+	min-height: 24px;
+	padding-block: 4px;
+}
+
+/* The student assistant policy badge was ellipsized in the narrow right rail.
+   Let its short label wrap instead of hiding the end of the transparency copy. */
+.ld-layout .ld-content .sa-panel .sa-toggle-policy {
+	font-size: 11px;
+	letter-spacing: 0;
+	text-transform: none;
+	line-height: 1.2;
+	max-width: 46%;
+	min-width: 0;
+	flex: 0 1 auto;
+	padding: 3px 6px;
+	white-space: normal;
+	overflow: visible;
+	text-overflow: clip;
+}
+
+/* Final low-contrast cases on task validation, gradebook metadata, assistant
+   history timestamps, and analytics course summaries. */
+.ld-layout .ld-content .asg-status-list-bad li {
+	color: #b42318;
+}
+
+.ld-layout .ld-content .gb-head-meta span,
+.ld-layout .ld-content .asst-session-item-when,
+.ld-layout .ld-content .an-course-list li > div > span {
+	color: #667085;
+}
+
+:root.dark .ld-layout .ld-content .asg-status-list-bad li,
+:root.dark .ld-layout .ld-content .gb-head-meta span,
+:root.dark .ld-layout .ld-content .asst-session-item-when,
+:root.dark .ld-layout .ld-content .an-course-list li > div > span {
+	color: #a6b2c2;
+}

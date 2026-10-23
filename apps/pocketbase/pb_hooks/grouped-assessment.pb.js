@@ -1,7 +1,16 @@
 onBootstrap(e => {
     e.next();
+    // onBootstrap runs BEFORE migrations create the collections, so the lookup
+    // must tolerate a missing one. Without this guard a fresh database failed
+    // to start with "sql: no rows in result set".
+    let courses;
+    try {
+        courses = e.app.findRecordsByFilter('courses','', '',10000);
+    } catch (error) {
+        return; // collections not created yet
+    }
     const helper = require(__hooks + '/grouped-assessment.js');
-    for (const course of e.app.findRecordsByFilter('courses','', '',10000))
+    for (const course of courses)
         helper.seed(e.app,course);
 });
 onRecordAfterCreateSuccess(e => {

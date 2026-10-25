@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const state = vi.hoisted(() => ({ row: null as any, writes: [] as any[], submission: { id: 's1', assignment: 'a1', content: '  Ich bin.\n' + 'x'.repeat(13000), files: [], link: '', status: 'submitted', taskAnswers: {}, created: '2026-01-01', updated: '2026-10-01' }, model: vi.fn() }));
+const state = vi.hoisted(() => ({ row: null as any, bundle: null as any, retrieval: vi.fn(), writes: [] as any[], submission: { id: 's1', assignment: 'a1', content: '  Ich bin.\n' + 'x'.repeat(13000), files: [], link: '', status: 'submitted', taskAnswers: {}, created: '2026-01-01', updated: '2026-10-01' }, model: vi.fn() }));
 vi.mock('@/lib/logger.server', () => ({ default: { error: vi.fn() } }));
 vi.mock('@/lib/pocketbase-client.server', () => ({ pocketbaseAdmin: {
  getRecord: vi.fn(async (collection: string) => collection === 'courses' ? { code: '' } : collection === 'ai_evaluations' ? structuredClone(state.row) : state.submission),
@@ -8,13 +8,38 @@ vi.mock('@/lib/pocketbase-client.server', () => ({ pocketbaseAdmin: {
  updateRecord: vi.fn(async (_: string, id: string, payload: any) => { state.writes.push(structuredClone(payload)); state.row = { ...state.row, id, ...structuredClone(payload) }; return state.row; }),
 } }));
 vi.mock('@/lib/task-assist.server', () => ({ collectModelWithProvenance: state.model, imageFilenames: () => [], storedFileUrl: () => '' }));
-vi.mock('@/lib/context-retrieval.server', () => ({ cpmkOfSubCpmk: async () => '', retrieveContextBundle: async () => null }));
+vi.mock('@/lib/context-retrieval.server', () => ({ cpmkOfSubCpmk: async () => '', retrieveContextBundle: state.retrieval }));
 import { queueEvaluationDraft } from '@/lib/ai-evaluation.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 const assignment = { id: 'a1', owner: 'f1', course: 'c1', title: 'Original task', shape: 'writing', activityType: 'formal', instructions: 'Write German', requirements: 'Text', taskConfig: {} } as any;
 const settle = async () => { for (let n = 0; n < 30; n++) await new Promise((resolve) => setTimeout(resolve, 0)); };
-beforeEach(() => { state.row = null; state.writes = []; state.model.mockReset(); state.model.mockResolvedValue({ content: '{"findings":[],"summary":"Review","recommendedScore":80}', model: 'gpt-6-luna', modelVersion: 'unknown', durationMs: 3 }); });
+beforeEach(() => { state.row = null; state.bundle = null; state.retrieval.mockReset(); state.retrieval.mockImplementation(async () => state.bundle); state.writes = []; state.model.mockReset(); state.model.mockResolvedValue({ content: '{"findings":[],"summary":"Review","recommendedScore":80}', model: 'gpt-6-luna', modelVersion: 'unknown', durationMs: 3 }); });
 describe('generation-time persistence', () => {
+ it('sends verified section passages beyond the old 1600-character cutoff with their own citations', async () => {
+  const text = 'a'.repeat(1700) + ' Das Verb steht an zweiter Stelle.';
+  state.bundle = { result: 'sufficient', bundleId: 'bundle1', sectionCount: 1, citations: [{ sectionId: 'section1' }], sources: [{ title: 'Grammar', version: 2, filename: 'book.pdf', text: 'UNRELATED FILE PREFIX', sections: [{ label: 'Verb position', pageRef: '30', sectionId: 'section1', passage: { text, start: 9000, end: 9000 + text.length, truncated: false } }] }] };
+  await queueEvaluationDraft({ assignment, submissionId: 's1' });
+  await settle();
+  expect(state.retrieval).toHaveBeenCalledWith(expect.objectContaining({ requirePassages: true }));
+  const [prompt, , systemPrompt] = state.model.mock.calls[0];
+  expect(prompt).toContain(text);
+  expect(prompt).toContain('[id=section1]');
+  expect(prompt).toContain('offset=9000:');
+  expect(prompt).not.toContain('UNRELATED FILE PREFIX');
+  expect(systemPrompt).toContain('Saran gaya yang opsional bukan kesalahan');
+  expect(state.row.usedCourseMaterial).toBe(true);
+  expect(state.row.researchSnapshot.userPrompt).toBe(prompt);
+  expect(state.row.citations).toEqual(state.bundle.citations);
+ });
+ it('records absent verified context and still allows an assignment-grounded draft', async () => {
+  state.bundle = { result: 'insufficient', reason: 'No exact passage', sources: [], citations: [] };
+  await queueEvaluationDraft({ assignment, submissionId: 's1' });
+  await settle();
+  expect(state.row.status).toBe('ready');
+  expect(state.row.usedCourseMaterial).toBe(false);
+  expect(state.row.citations).toEqual([]);
+  expect(state.row.contextNote).toContain('No exact passage');
+ });
  it('refuses provider invocation when snapshot read-back is missing', async () => {
   vi.mocked(pocketbaseAdmin.getRecord).mockImplementationOnce(async () => state.submission as any)
    .mockImplementationOnce(async () => state.submission as any)

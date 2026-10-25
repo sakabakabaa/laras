@@ -24,6 +24,7 @@ import { randomUUID } from 'node:crypto';
 import PocketBase from 'pocketbase';
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
+import { resolveContextPassage, type ContextPassage } from '@/lib/context-passages';
 import type {
 	ContextSectionRecord,
 	FileContextRecord,
@@ -219,6 +220,8 @@ export type ContextSectionRef = {
 	note: string;
 	links: { cpmk: string; subCpmk: string; session: string };
 	score: number;
+	/** Present only when this section's exact text was verified and supplied. */
+	passage?: ContextPassage;
 };
 
 export type ContextSource = {
@@ -292,6 +295,8 @@ export async function retrieveContextBundle(input: {
 	requester: Requester;
 	/** Lecturer whose academic scope the retrieval runs against (audit owner). */
 	ownerLecturerId: string;
+	/** Formal assessment must cite actual section text, never a file prefix. */
+	requirePassages?: boolean;
 }): Promise<ContextBundle> {
 	const config = FEATURE_CONFIGS[input.feature];
 	const scope = input.scope;
@@ -436,6 +441,7 @@ export async function retrieveContextBundle(input: {
 		const matched = all
 			.filter((section) => (section.version ?? 1) === activeVersion)
 			.map((section) => ({ section, score: scoreSection(section, scope) }))
+			.filter(({ score }) => !input.requirePassages || score > 0)
 			.sort(
 				(a, b) =>
 					b.score - a.score ||
@@ -454,7 +460,9 @@ export async function retrieveContextBundle(input: {
 	if (ranked.length === 0) {
 		return exit(
 			'insufficient',
-			'Penanda konteks belum diperbarui untuk versi berkas yang aktif saat ini.',
+			input.requirePassages
+				? 'Tidak ada bagian konteks versi aktif yang cocok dengan lingkup tugas ini.'
+				: 'Penanda konteks belum diperbarui untuk versi berkas yang aktif saat ini.',
 			[],
 		);
 	}
@@ -467,12 +475,32 @@ export async function retrieveContextBundle(input: {
 		if (sources.length >= config.maxSources) break;
 		const extraction = extractionsByFile.get(entry.file.id) || null;
 		const fullText =
-			extraction && (extraction.status === 'ready' || extraction.status === 'review')
-				? (extraction.extractedText || '').trim()
+			extraction && (extraction.status === 'ready' || extraction.status === 'review') &&
+			(!input.requirePassages || (extraction.version || 1) === (entry.file.version || 1))
+				? (extraction.extractedText || '')
 				: '';
 		const kind = sourceKindOf(entry.file.file);
 		const budget = Math.max(0, Math.min(config.maxCharsPerFile, remainingChars));
-		const text = fullText ? fullText.slice(0, budget) : '';
+		const sections: ContextSectionRef[] = [];
+		let passageBudget = budget;
+		for (const { section, score } of entry.sections) {
+			if (sections.length >= config.maxSectionsPerFile) break;
+			const passage = input.requirePassages
+				? resolveContextPassage(fullText, section.excerpt, Math.min(2000, passageBudget))
+				: null;
+			if (input.requirePassages && !passage) continue;
+			sections.push({
+				sectionId: section.id, label: section.label, pageRef: section.pageRef || '',
+				note: section.note || '',
+				links: { cpmk: section.cpmk || '', subCpmk: section.subCpmk || '', session: section.session || '' },
+				score, ...(passage ? { passage } : {}),
+			});
+			if (passage) passageBudget -= passage.text.length + 2;
+		}
+		const text = input.requirePassages
+			? sections.map((section) => section.passage!.text).join('\n\n')
+			: fullText.trim().slice(0, budget);
+		if (input.requirePassages && !text) continue;
 		// Text-grounded features never include a source without parsed text;
 		// material may cite media (image/audio/video) without text, but a
 		// textless document gives no grounding and is dropped.
@@ -497,21 +525,16 @@ export async function retrieveContextBundle(input: {
 					}
 				: null,
 			contextStatus: contextsByFile.get(entry.file.id)?.status || 'none',
-			sections: entry.sections.slice(0, config.maxSectionsPerFile).map(({ section, score }) => ({
-				sectionId: section.id,
-				label: section.label,
-				pageRef: section.pageRef || '',
-				note: section.note || '',
-				links: { cpmk: section.cpmk || '', subCpmk: section.subCpmk || '', session: section.session || '' },
-				score,
-			})),
+			sections,
 			text,
 		});
 	}
 	if (sources.length === 0) {
 		return exit(
 			'insufficient',
-			'Konteks tersedia, tetapi teks dokumen belum berhasil diproses untuk berkas yang relevan.',
+			input.requirePassages
+				? 'Belum ada kutipan bagian yang dapat diverifikasi pada ekstraksi versi aktif. Simpan kutipan persis yang unik pada bagian konteks yang cocok.'
+				: 'Konteks tersedia, tetapi teks dokumen belum berhasil diproses untuk berkas yang relevan.',
 			[],
 		);
 	}

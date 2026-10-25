@@ -44,6 +44,7 @@ import {
 } from '@/lib/file-library';
 import { LANGUAGE_LABELS } from '@/lib/file-metadata';
 import { confirmDialog } from '@/components/confirm-dialog';
+import { MAX_CONTEXT_EXCERPT_CHARS, resolveContextPassage } from '@/lib/context-passages';
 import {
 	applyContextSuggestion,
 	generateContextSuggestions,
@@ -58,6 +59,7 @@ const CONTEXT_LANGUAGE_LABELS: Record<string, string> = {
 
 type SectionDraft = {
 	label: string;
+	excerpt: string;
 	pageRef: string;
 	status: ContextSectionStatus;
 	note: string;
@@ -71,6 +73,7 @@ const EMPTY_SECTIONS: ContextSectionRecord[] = [];
 
 const EMPTY_DRAFT: SectionDraft = {
 	label: '',
+	excerpt: '',
 	pageRef: '',
 	// Safe default: a new section is NOT AI context until explicitly marked.
 	status: 'unsuitable',
@@ -82,6 +85,7 @@ const EMPTY_DRAFT: SectionDraft = {
 
 const draftFrom = (row: ContextSectionRecord): SectionDraft => ({
 	label: row.label,
+	excerpt: row.excerpt || '',
 	pageRef: row.pageRef || '',
 	status: row.status,
 	note: row.note || '',
@@ -339,7 +343,17 @@ export function FileContextView({ fileId }: { fileId: string }) {
 		setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
 	};
 
+	const validateExcerpt = (draft: SectionDraft) => {
+		if (!draft.excerpt.trim()) return true;
+		if (extractionStale || !resolveContextPassage(extraction?.extractedText || '', draft.excerpt)) {
+			setActionError('Kutipan harus disalin persis dan muncul satu kali pada teks hasil ekstraksi versi aktif. Perpanjang kutipan jika ada pengulangan.');
+			return false;
+		}
+		return true;
+	};
+
 	const addSection = async () => {
+		if (!validateExcerpt(newSection)) return;
 		if (!newSection.label.trim()) {
 			setActionError('Nama bagian wajib diisi.');
 			return;
@@ -352,6 +366,7 @@ export function FileContextView({ fileId }: { fileId: string }) {
 				owner: me,
 				version: activeVersion,
 				label: newSection.label.trim(),
+				excerpt: newSection.excerpt.trim(),
 				pageRef: newSection.pageRef.trim(),
 				status: newSection.status,
 				note: newSection.note.trim(),
@@ -376,12 +391,14 @@ export function FileContextView({ fileId }: { fileId: string }) {
 			setActionError('Nama bagian wajib diisi.');
 			return;
 		}
+		if (!validateExcerpt(draft)) return;
 		setBusyId(row.id);
 		setActionError('');
 		try {
 			await pb.collection('context_sections').update(row.id, {
 				version: activeVersion,
 				label: draft.label.trim(),
+				excerpt: draft.excerpt.trim(),
 				pageRef: draft.pageRef.trim(),
 				status: draft.status,
 				note: draft.note.trim(),
@@ -1054,6 +1071,8 @@ export function FileContextView({ fileId }: { fileId: string }) {
 					Tandai bagian dokumen sebagai cocok atau tidak cocok untuk konteks AI, lalu tautkan
 					secara eksplisit ke CPMK, Sub-CPMK, atau sesi yang sudah ada. Bagian baru default
 					<b> tidak cocok</b> — tidak ada yang menjadi konteks AI tanpa tanda eksplisit Anda.
+					 Untuk evaluasi tugas formal, simpan juga kutipan persis dari teks hasil ekstraksi
+					versi aktif. Bagian tanpa kutipan yang cocok tidak digunakan sebagai bukti evaluasi.
 				</p>
 
 				<div className="fcx-add">
@@ -1080,6 +1099,16 @@ export function FileContextView({ fileId }: { fileId: string }) {
 							/>
 						</label>
 					</div>
+					<label>
+						Kutipan sumber untuk evaluasi AI
+						<textarea
+							value={newSection.excerpt}
+							onChange={(e) => setNewSection((d) => ({ ...d, excerpt: e.target.value }))}
+							placeholder="Salin bagian yang relevan persis dari teks hasil ekstraksi di atas."
+							maxLength={MAX_CONTEXT_EXCERPT_CHARS}
+							rows={5}
+						/>
+					</label>
 					<div className="fcx-toggle" role="group" aria-label="Tanda konteks AI">
 						<button
 							type="button"
@@ -1212,6 +1241,16 @@ export function FileContextView({ fileId }: { fileId: string }) {
 											/>
 										</label>
 									</div>
+									<label>
+										Kutipan sumber untuk evaluasi AI
+										<textarea
+											value={draft.excerpt}
+											onChange={(e) => patchDraft(row.id, { excerpt: e.target.value })}
+											placeholder="Salin kutipan persis dari teks hasil ekstraksi versi aktif."
+											maxLength={MAX_CONTEXT_EXCERPT_CHARS}
+											rows={5}
+										/>
+									</label>
 									<div className="fcx-toggle" role="group" aria-label="Tanda konteks AI">
 										<button
 											type="button"

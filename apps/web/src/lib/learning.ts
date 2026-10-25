@@ -415,6 +415,8 @@ export type ContextSectionRecord = {
 	label: string;
 	/** Free-text page/section reference (e.g. "hlm. 3–5", "Bab 2"). */
 	pageRef: string;
+	/** Lecturer-selected exact quotation from this version's extracted text. */
+	excerpt?: string;
 	status: ContextSectionStatus;
 	note: string;
 	cpmk: string;

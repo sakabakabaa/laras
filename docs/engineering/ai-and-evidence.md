@@ -28,6 +28,35 @@ There is no single global prompt file. Evaluation prompts live in `ai-evaluation
 
 ## Model output validation and lifecycle
 
+### Exact passages for formal evaluation
+
+Formal evaluation calls retrieval with `requirePassages: true`. A lecturer saves
+an exact quotation in the **Kutipan sumber untuk evaluasi AI** field of a suitable
+file-context section. Retrieval checks that the section and extraction match the
+active file version, that the quotation occurs exactly once, and that the section
+matches the requested session/outcome or is course-wide. It supplies that passage
+with section ID and extraction offsets instead of the file's opening text.
+
+Passages are bounded to 2,000 characters per section, 8,000 per file and 20,000
+overall (at most four files and six sections per file). Truncation is labeled and
+offsets describe the actual text supplied. Only included sections receive material
+citations. Evaluation no longer slices each source again at 1,600 characters.
+
+Apply migration `1791700300_context_section_excerpts.js` before deploying the web
+change. Existing section approval marks are retained, but formal evaluation omits
+sections without a verified quotation; it records missing context and can still
+draft from the student's work, assignment and rubric. Other material/context
+callers retain their existing behavior. Quotation matching is rechecked on every
+retrieval, including after replacement or re-extraction of a file.
+
+Prompt version `german-gfl-feedback-v3-passages` separates optional style advice
+from error findings, requests meaning-preserving corrections and evidence-backed
+citations, and forbids judging pronunciation/intonation/fluency from transcripts.
+These are instructions, not proof that a model's feedback is correct. Compare
+against held-out lecturer-reviewed submissions before claiming a quality gain.
+This change does not add score-band descriptors, example answers, external
+reference searches or automatic model training from lecturer edits.
+
 The evaluation service records pending/ready/failed states and sufficient/insufficient results. Exact quote anchoring prevents an invented quotation from becoming an accepted finding. Structured parsing and rubric validation constrain output shape; they do not guarantee pedagogical correctness. Failed or unavailable models must produce explicit unavailable/insufficient behavior rather than fabricate an assessment.
 
 `evaluation-snapshot.server.ts`, `research-analytics.server.ts`, `research-export.server.ts` and related tests support provenance and analysis. Force regeneration uses current task/material settings, but published lecturer grades must remain a separate operation. Review endpoints and collection access rules are part of the contract.

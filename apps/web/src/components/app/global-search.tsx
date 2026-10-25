@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router';
 import {
 	BookOpen,
 	ChevronRight,
 	ClipboardList,
-	Command,
 	FileText,
 	GraduationCap,
 	Inbox,
@@ -13,25 +13,15 @@ import {
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
 import { isAbortError } from '@/lib/learning';
+import {
+	filterSearchEntries,
+	SEARCH_GROUPS,
+	type SearchEntry,
+	type SearchGroupId,
+} from '@/lib/global-search';
+import '@/styles/global-search-palette.css';
 
-type GroupId = 'courses' | 'assignments' | 'students' | 'materials' | 'submissions';
-
-type SearchItem = {
-	id: string;
-	group: GroupId;
-	title: string;
-	hint: string;
-	href: string;
-	haystack: string;
-};
-
-const GROUPS: { id: GroupId; label: string }[] = [
-	{ id: 'courses', label: 'Mata kuliah' },
-	{ id: 'assignments', label: 'Tugas' },
-	{ id: 'students', label: 'Mahasiswa' },
-	{ id: 'materials', label: 'Materi' },
-	{ id: 'submissions', label: 'Pengumpulan' },
-];
+type SearchItem = SearchEntry;
 
 const GROUP_ICON = {
 	courses: BookOpen,
@@ -52,6 +42,20 @@ let indexCache: Cache | null = null;
 
 function quote(id: string) {
 	return `"${id.replace(/"/g, '')}"`;
+}
+
+function optionId(item: SearchItem) {
+	return `gs-opt-${item.id}`;
+}
+
+/** Cmd+K on Apple platforms, Ctrl K everywhere else. */
+function useShortcutLabel() {
+	const [label, setLabel] = useState('Ctrl K');
+	useEffect(() => {
+		const ua = navigator.userAgent || '';
+		setLabel(/mac|iphone|ipad|ipod/i.test(ua) ? '\u2318K' : 'Ctrl K');
+	}, []);
+	return label;
 }
 
 async function loadIndex(userId: string, isStudent: boolean): Promise<SearchItem[]> {
@@ -120,7 +124,7 @@ async function loadIndex(userId: string, isStudent: boolean): Promise<SearchItem
 				id: `m-${file.id}`,
 				group: 'materials',
 				title: file.title || 'Materi',
-				hint: `${file.kind === 'link' ? 'Tautan' : 'Berkas'} · ${courseName.get(file.course) || 'Mata kuliah'}`,
+				hint: `${file.kind === 'link' ? 'Tautan' : 'Berkas'} \u00b7 ${courseName.get(file.course) || 'Mata kuliah'}`,
 				href: `/app/courses/${file.course}`,
 				haystack: `${file.title} ${courseName.get(file.course) || ''}`,
 			});
@@ -248,7 +252,7 @@ async function loadIndex(userId: string, isStudent: boolean): Promise<SearchItem
 				id: `u-${key}`,
 				group: 'students',
 				title: name,
-				hint: `${person?.email || 'Terdaftar'} · ${courseName.get(row.course) || 'Mata kuliah'}`,
+				hint: `${person?.email || 'Terdaftar'} \u00b7 ${courseName.get(row.course) || 'Mata kuliah'}`,
 				href: `/app/courses/${row.course}`,
 				haystack: `${name} ${person?.email || ''} ${courseName.get(row.course) || ''}`,
 			});
@@ -258,7 +262,7 @@ async function loadIndex(userId: string, isStudent: boolean): Promise<SearchItem
 				id: `m-${file.id}`,
 				group: 'materials',
 				title: file.title || 'Materi',
-				hint: `${file.kind === 'link' ? 'Tautan' : 'Berkas'} · ${courseName.get(file.course) || 'Mata kuliah'}`,
+				hint: `${file.kind === 'link' ? 'Tautan' : 'Berkas'} \u00b7 ${courseName.get(file.course) || 'Mata kuliah'}`,
 				href: `/app/courses/${file.course}`,
 				haystack: `${file.title} ${courseName.get(file.course) || ''}`,
 			});
@@ -271,7 +275,7 @@ async function loadIndex(userId: string, isStudent: boolean): Promise<SearchItem
 				id: `s-${sub.id}`,
 				group: 'submissions',
 				title: task?.title || 'Pengumpulan',
-				hint: `${who} · ${sub.status || 'terkumpul'}`,
+				hint: `${who} \u00b7 ${sub.status || 'terkumpul'}`,
 				href: task ? `/app/tugas/${task.id}` : '/app/tugas',
 				haystack: `${task?.title || ''} ${who} ${sub.content || ''} ${sub.status}`,
 			});
@@ -283,7 +287,7 @@ async function loadIndex(userId: string, isStudent: boolean): Promise<SearchItem
 				id: `p-${pub.id}`,
 				group: 'submissions',
 				title: task?.title || 'Pengumpulan publik',
-				hint: `${who}${pub.nim ? ` · ${pub.nim}` : ''} · publik`,
+				hint: `${who}${pub.nim ? ` \u00b7 ${pub.nim}` : ''} \u00b7 publik`,
 				href: task ? `/app/tugas/${task.id}` : '/app/tugas',
 				haystack: `${task?.title || ''} ${who} ${pub.nim} ${pub.groupName}`,
 			});
@@ -318,8 +322,14 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 	const [active, setActive] = useState(0);
-	const [filter, setFilter] = useState<GroupId | 'all'>('all');
+	const [filter, setFilter] = useState<SearchGroupId | 'all'>('all');
 	const inputRef = useRef<HTMLInputElement>(null);
+	const triggerRef = useRef<HTMLButtonElement>(null);
+	const listRef = useRef<HTMLDivElement>(null);
+	const restoreFocusRef = useRef(true);
+	const hasOpenedRef = useRef(false);
+	const keyboardNavRef = useRef(false);
+	const shortcut = useShortcutLabel();
 
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
@@ -334,6 +344,7 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 
 	useEffect(() => {
 		if (!open) return;
+		hasOpenedRef.current = true;
 		const prev = document.body.style.overflow;
 		document.body.style.overflow = 'hidden';
 		const timer = window.setTimeout(() => inputRef.current?.focus(), 20);
@@ -341,6 +352,19 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 			document.body.style.overflow = prev;
 			window.clearTimeout(timer);
 		};
+	}, [open]);
+
+	// Return focus to the trigger when the palette closes, unless we just navigated
+	// away (the destination page should keep its own focus).
+	useEffect(() => {
+		if (open) return;
+		if (!hasOpenedRef.current) return;
+		if (!restoreFocusRef.current) {
+			restoreFocusRef.current = true;
+			return;
+		}
+		const timer = window.setTimeout(() => triggerRef.current?.focus(), 0);
+		return () => window.clearTimeout(timer);
 	}, [open]);
 
 	useEffect(() => {
@@ -364,48 +388,45 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 		};
 	}, [open, userId, isStudent, items.length]);
 
-	const filtered = useMemo(() => {
-		const q = query.trim().toLowerCase();
-		const tokens = q.split(/\s+/).filter(Boolean);
-		const matched = tokens.length
-			? items.filter((item) => tokens.every((token) => item.haystack.toLowerCase().includes(token)))
-			: items;
-		const ranked = [...matched].sort((a, b) => {
-			if (!q) return 0;
-			const aHit = a.title.toLowerCase().startsWith(q) ? 0 : 1;
-			const bHit = b.title.toLowerCase().startsWith(q) ? 0 : 1;
-			return aHit - bHit;
-		});
-		const scoped = filter === 'all' ? ranked : ranked.filter((item) => item.group === filter);
-		const capped: SearchItem[] = [];
-		for (const group of GROUPS) {
-			capped.push(...scoped.filter((item) => item.group === group.id).slice(0, 6));
-		}
-		return capped;
-	}, [items, query, filter]);
+	const filtered = useMemo(() => filterSearchEntries(items, query, filter), [items, query, filter]);
 
 	useEffect(() => {
 		setActive(0);
 	}, [query, open, filter]);
 
-	const choose = (item: SearchItem) => {
+	// Follow the keyboard cursor inside the scroll container. Only for keyboard
+	// moves, so hovering a row does not scroll the list under the pointer.
+	useEffect(() => {
+		if (!open || !keyboardNavRef.current) return;
+		const node = listRef.current?.querySelector<HTMLElement>('[data-active="true"]');
+		node?.scrollIntoView({ block: 'nearest' });
+	}, [active, open]);
+
+	const close = (options: { restoreFocus?: boolean; resetQuery?: boolean } = {}) => {
+		restoreFocusRef.current = options.restoreFocus ?? true;
 		setOpen(false);
-		setQuery('');
+		if (options.resetQuery) setQuery('');
+	};
+
+	const choose = (item: SearchItem) => {
+		close({ restoreFocus: false, resetQuery: true });
 		navigate(item.href);
 	};
 
 	const onDialogKey = (event: React.KeyboardEvent) => {
 		if (event.key === 'Escape') {
 			event.preventDefault();
-			setOpen(false);
+			close();
 			return;
 		}
 		if (event.key === 'ArrowDown') {
 			event.preventDefault();
+			keyboardNavRef.current = true;
 			setActive((index) => Math.min(index + 1, Math.max(filtered.length - 1, 0)));
 		}
 		if (event.key === 'ArrowUp') {
 			event.preventDefault();
+			keyboardNavRef.current = true;
 			setActive((index) => Math.max(index - 1, 0));
 		}
 		if (event.key === 'Enter' && filtered[active]) {
@@ -417,6 +438,7 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 	return (
 		<>
 			<button
+				ref={triggerRef}
 				type="button"
 				className="ld-mast-icon ld-mast-search-trigger"
 				aria-label="Buka pencarian"
@@ -427,104 +449,129 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 			>
 				<Search size={18} strokeWidth={1.75} aria-hidden />
 				<span className="ld-mast-search-placeholder">Cari mata kuliah, tugas, atau halaman...</span>
-				<kbd className="ld-mast-search-shortcut">Ctrl K</kbd>
+				<kbd className="ld-mast-search-shortcut">{shortcut}</kbd>
 			</button>
 
-			{open && (
-				<div className="gs-layer" onKeyDown={onDialogKey}>
-					<button type="button" className="gs-scrim" aria-label="Tutup pencarian" onClick={() => setOpen(false)} />
-					<div className="gs-panel" role="dialog" aria-modal="true" aria-label="Pencarian">
-						<div className="gs-input">
-							<Search size={18} strokeWidth={1.75} aria-hidden />
-							<input
-								ref={inputRef}
-								value={query}
-								onChange={(event) => setQuery(event.target.value)}
-								placeholder="Cari"
-								aria-label="Kata kunci pencarian"
-								autoComplete="off"
-							/>
-							{loading && <LoaderCircle size={16} className="spin" aria-hidden />}
-							<span className="gs-shortcut" aria-hidden>
-								<Command size={13} strokeWidth={2} />
-								<kbd>K</kbd>
-							</span>
-						</div>
-						<div className="gs-pills" role="tablist" aria-label="Saring hasil">
-							<button
-								type="button"
-								role="tab"
-								aria-selected={filter === 'all'}
-								className={filter === 'all' ? 'active' : ''}
-								onClick={() => setFilter('all')}
-							>
-								Semua
-							</button>
-							{GROUPS.filter((group) => isStudent ? group.id !== 'students' : true).map((group) => (
-								<button
-									key={group.id}
-									type="button"
-									role="tab"
-									aria-selected={filter === group.id}
-									className={filter === group.id ? 'active' : ''}
-									onClick={() => setFilter(group.id)}
-								>
-									{group.label}
-								</button>
-							))}
-						</div>
-						<div className="gs-results" role="listbox" aria-label="Hasil pencarian">
-							{error && <p className="gs-empty">{error}</p>}
-							{!error && !loading && filtered.length === 0 && (
-								<p className="gs-empty">
-									{query.trim()
-										? `Tidak ada hasil untuk “${query.trim()}”.`
-										: 'Belum ada data yang cocok untuk ditampilkan.'}
-								</p>
-							)}
-							{filtered.length > 0 && (
-								<p className="gs-section-label">{query.trim() ? 'Hasil' : 'Paling sering'}</p>
-							)}
-							{GROUPS.map((group) => {
-								const rows = filtered.filter((item) => item.group === group.id);
-								if (!rows.length) return null;
-								const Icon = GROUP_ICON[group.id];
-								return (
-									<section key={group.id} className="gs-group">
-										{filter === 'all' && <h3>{group.label}</h3>}
-										<ul>
-											{rows.map((item) => {
-												const index = filtered.indexOf(item);
-												return (
-													<li key={item.id}>
-														<button
-															type="button"
-															role="option"
-															aria-selected={index === active}
-															className={index === active ? 'active' : ''}
-															onMouseEnter={() => setActive(index)}
-															onClick={() => choose(item)}
-														>
-															<span className="gs-row-icon" aria-hidden>
-																<Icon size={18} strokeWidth={1.75} />
-															</span>
-															<span className="gs-row-copy">
-																<strong>{highlight(item.title, query)}</strong>
-																<small>{highlight(item.hint, query)}</small>
-															</span>
-															<ChevronRight size={16} strokeWidth={1.75} className="gs-chevron" aria-hidden />
-														</button>
-													</li>
-												);
-											})}
-										</ul>
-									</section>
-								);
-							})}
-						</div>
-					</div>
-				</div>
-			)}
+			{/*
+			 * The palette is portalled to <body>. `.ld-mast-search-zone` is centred with
+			 * `transform: translateX(-50%)`, which makes it the containing block for
+			 * fixed-position descendants - rendering the overlay in place trapped it
+			 * inside the 440x36px search box (a ~408px panel with the scrim only
+			 * covering the masthead).
+			 */}
+			{open && typeof document !== 'undefined'
+				? createPortal(
+						<div className="gs-layer" onKeyDown={onDialogKey}>
+							<button type="button" className="gs-scrim" aria-label="Tutup pencarian" onClick={() => close()} />
+							<div className="gs-panel" role="dialog" aria-modal="true" aria-label="Pencarian">
+								<div className="gs-input">
+									<Search size={18} strokeWidth={1.75} aria-hidden />
+									<input
+										ref={inputRef}
+										value={query}
+										onChange={(event) => setQuery(event.target.value)}
+										placeholder="Cari"
+										aria-label="Kata kunci pencarian"
+										autoComplete="off"
+										role="combobox"
+										aria-expanded
+										aria-controls="gs-listbox"
+										aria-autocomplete="list"
+										aria-activedescendant={filtered[active] ? optionId(filtered[active]) : undefined}
+									/>
+									{loading && <LoaderCircle size={16} className="spin" aria-hidden />}
+									<kbd className="gs-esc" aria-hidden>esc</kbd>
+								</div>
+								<div className="gs-pills" role="tablist" aria-label="Saring hasil">
+									<button
+										type="button"
+										role="tab"
+										aria-selected={filter === 'all'}
+										className={filter === 'all' ? 'active' : ''}
+										onClick={() => setFilter('all')}
+									>
+										Semua
+									</button>
+									{SEARCH_GROUPS.filter((group) => isStudent ? group.id !== 'students' : true).map((group) => (
+										<button
+											key={group.id}
+											type="button"
+											role="tab"
+											aria-selected={filter === group.id}
+											className={filter === group.id ? 'active' : ''}
+											onClick={() => setFilter(group.id)}
+										>
+											{group.label}
+										</button>
+									))}
+								</div>
+								<div className="gs-results">
+									{error && <p className="gs-empty">{error}</p>}
+									{!error && !loading && filtered.length === 0 && (
+										<p className="gs-empty">
+											{query.trim()
+												? `Tidak ada hasil untuk \u201c${query.trim()}\u201d.`
+												: 'Belum ada data yang cocok untuk ditampilkan.'}
+										</p>
+									)}
+									{filtered.length > 0 && (
+										<p className="gs-section-label">{query.trim() ? 'Hasil' : 'Paling sering'}</p>
+									)}
+									<div id="gs-listbox" ref={listRef} className="gs-listbox" role="listbox" aria-label="Hasil pencarian">
+										{SEARCH_GROUPS.map((group) => {
+											const rows = filtered.filter((item) => item.group === group.id);
+											if (!rows.length) return null;
+											const Icon = GROUP_ICON[group.id];
+											return (
+												<div key={group.id} className="gs-group" role="group" aria-label={group.label}>
+													{filter === 'all' && <h3 aria-hidden>{group.label}</h3>}
+													<ul role="presentation">
+														{rows.map((item) => {
+															const index = filtered.indexOf(item);
+															const isActive = index === active;
+															return (
+																<li key={item.id} role="presentation">
+																	<button
+																		type="button"
+																		id={optionId(item)}
+																		role="option"
+																		aria-selected={isActive}
+																		data-active={isActive}
+																		className={isActive ? 'active' : ''}
+																		onMouseEnter={() => {
+																			keyboardNavRef.current = false;
+																			setActive(index);
+																		}}
+																		onClick={() => choose(item)}
+																	>
+																		<span className="gs-row-icon" aria-hidden>
+																			<Icon size={18} strokeWidth={1.75} />
+																		</span>
+																		<span className="gs-row-copy">
+																			<strong>{highlight(item.title, query)}</strong>
+																			<small>{highlight(item.hint, query)}</small>
+																		</span>
+																		<ChevronRight size={16} strokeWidth={1.75} className="gs-chevron" aria-hidden />
+																	</button>
+																</li>
+															);
+														})}
+													</ul>
+												</div>
+											);
+										})}
+									</div>
+								</div>
+								<div className="gs-foot" aria-hidden>
+									<span><kbd>&#8593;</kbd><kbd>&#8595;</kbd> navigasi</span>
+									<span><kbd>&#8629;</kbd> buka</span>
+									<span><kbd>esc</kbd> tutup</span>
+								</div>
+							</div>
+						</div>,
+						document.body,
+					)
+				: null}
 		</>
 	);
 }

@@ -1,0 +1,99 @@
+/*
+ * Manajemen Berkas - filter bar alignment.
+ *
+ * index.css laid the filter bar out with `display:flex; flex-wrap:wrap` and no
+ * column sizing, so the controls drifted out of line: the search field is 40px
+ * tall and vertically centred while every select sits under an uppercase
+ * caption, and the "Kelompokkan per mata kuliah" + view-toggle pair wraps onto
+ * a second line as soon as the row fills up. On a wide screen that produced
+ * three different alignments inside a single toolbar.
+ *
+ * This sheet replaces the flex wrapping with an explicit grid: one row of
+ * equal-width selects with a wider search column, every control 40px tall and
+ * bottom-aligned so captions and boxes share a baseline. The view toggles keep
+ * their own full-width row but are right-aligned to the grid, so nothing is
+ * left hanging under the search field.
+ *
+ * Loaded after index.css (see root.tsx). Only `.flb-filters` needs the doubled
+ * selector to beat the existing `display:flex`; the rest wins on specificity.
+ */
+
+.flb-filters.flb-filters {
+	display: grid;
+	grid-template-columns: minmax(200px, 1.7fr) repeat(5, minmax(0, 1fr));
+	gap: 10px;
+	align-items: end;
+	margin: 0 0 12px;
+}
+
+/* Controls share one height so captions and boxes align on a single baseline. */
+.flb-filters .flb-search {
+	height: 40px;
+	min-width: 0;
+	align-self: end;
+	border-color: #e4e7ec;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.flb-filters .flb-search:focus-within {
+	border-color: var(--red);
+	box-shadow: 0 0 0 3px rgba(127, 29, 22, 0.08);
+}
+
+.flb-filters .flb-select {
+	min-width: 0;
+}
+
+.flb-filters .flb-select select {
+	height: 40px;
+	width: 100%;
+	min-width: 0;
+	padding: 0 8px;
+	text-overflow: ellipsis;
+}
+
+/* View tools sit on their own row, right-aligned to the same grid. */
+.flb-filters .flb-view-toggles {
+	grid-column: 1 / -1;
+	justify-self: end;
+	margin-top: 2px;
+}
+
+/* -- Responsive -------------------------------------------------
+ * Below ~1200px six columns stop being legible, so the search takes the full
+ * width and the selects reflow into even rows instead of wrapping one by one. */
+@media (max-width: 1200px) {
+	.flb-filters.flb-filters {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.flb-filters .flb-search {
+		grid-column: 1 / -1;
+	}
+}
+
+@media (max-width: 760px) {
+	.flb-filters.flb-filters {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.flb-filters .flb-view-toggles {
+		justify-self: start;
+	}
+}
+
+@media (max-width: 460px) {
+	.flb-filters.flb-filters {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* -- Dark mode ------------------------------------------------- */
+:root.dark .flb-filters .flb-search {
+	background: #1a1f26;
+	border-color: #3a4148;
+}
+
+:root.dark .flb-filters .flb-search input {
+	color: #e8edf4;
+}

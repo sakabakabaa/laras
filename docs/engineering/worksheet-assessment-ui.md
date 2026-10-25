@@ -40,3 +40,7 @@ remains available on editable worksheets.
 The shared answer checker mounts only for explicitly formative activities, so stale
 check-enabled flags cannot expose it on formal work. Formal instructions describe
 manual review and lecturer grading; lecturer AI-assisted assessment is unchanged.
+
+The dashboard mast uses the neutral surface token in the final redesign layer,
+replacing the red gradient and brand-colored shadow that overrode the existing
+white shell. Light mode is white; dark mode retains its dark surface.

@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/require-auth';
 import { dashboardForRole } from '@/lib/learning';
 import { AppShell } from '@/components/app/app-shell';
 import { FileLibraryV2 } from '@/components/app/file-library-v2';
+import '@/styles/file-library-filters.css';
 
 export function meta({ matches, location }: Route.MetaArgs) {
 	return seo(

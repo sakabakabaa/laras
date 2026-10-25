@@ -59,6 +59,33 @@
 	margin-top: 2px;
 }
 
+/*
+ * The component's own docstring promises "a sticky filter bar", but nothing
+ * implemented it: on a 40-row page the filters scroll away and the only way
+ * back is scrolling up. Stick the bar under the 58px saas masthead so search
+ * and filters stay reachable. The background must be opaque, otherwise rows
+ * show through while scrolling.
+ */
+.flb-filters.flb-filters {
+	position: sticky;
+	top: 58px;
+	z-index: 20;
+	background: #fff;
+	padding: 10px 0 12px;
+	margin: -10px 0 0;
+	border-bottom: 1px solid #e4e7ec;
+}
+
+/* The segmented control was 28px, below the 32px comfortable-target floor. */
+.flb-filters .flb-seg button {
+	height: 32px;
+}
+
+.flb-filters :is(.flb-toggle, .flb-seg button):focus-visible {
+	outline: 2px solid var(--red);
+	outline-offset: 2px;
+}
+
 /* -- Responsive -------------------------------------------------
  * Below ~1200px six columns stop being legible, so the search takes the full
  * width and the selects reflow into even rows instead of wrapping one by one. */
@@ -89,6 +116,11 @@
 }
 
 /* -- Dark mode ------------------------------------------------- */
+:root.dark .flb-filters.flb-filters {
+	background: #171b21;
+	border-bottom-color: #2a3038;
+}
+
 :root.dark .flb-filters .flb-search {
 	background: #1a1f26;
 	border-color: #3a4148;

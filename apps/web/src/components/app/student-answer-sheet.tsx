@@ -1,6 +1,7 @@
 import { useRef, type ReactNode } from 'react';
 import { FormStepper } from '@/components/form-stepper';
 import { WorksheetArt } from '@/components/app/worksheet-art';
+import '@/styles/assessment-clarity.css';
 import { useT } from '@/lib/i18n';
 import {
 	ArrowLeft,
@@ -153,7 +154,7 @@ export function StudentAnswerSheet({
 	// Full-screen non-speaking work is one sheet: no identity step, no stepper card.
 	const flat = Boolean(workspace);
 	const showAnswer = flat || visibleStep === answerStep || Boolean(workspace && visibleStep === checkStep);
-	const sideReview = Boolean((flat || visibleStep === checkStep) && reviewAside);
+	const sideReview = Boolean(formative && (flat || visibleStep === checkStep) && reviewAside);
 	const stepAdvance = /^(Lanjut|Cek jawaban|Tinjau pengumpulan)$/.test(primaryLabel);
 	const stepper = !flat ? (
 		<div className={workspace ? 'sas-step-row' : undefined}>
@@ -168,7 +169,7 @@ export function StudentAnswerSheet({
 	) : null;
 
 	return (
-		<section className={`sas${workspace ? ' sas-workspace' : ''}`} aria-label="Lembar jawaban">
+		<section className={`sas${workspace ? ' sas-workspace worksheet-clarity' : ''}`} aria-label="Lembar jawaban">
 			{workspace ? stepper : null}
 			<div className="sas-main">
 				{onBack && !workspace && (
@@ -289,8 +290,7 @@ export function StudentAnswerSheet({
 										<span className={`ws-must-ico tone-${index % 4}`} aria-hidden="true">
 											<Icon size={16} />
 										</span>
-										<strong>{chip.label}</strong>
-										<small>{chip.detail}</small>
+										<strong>{chip.detail || chip.label}</strong>
 									</li>
 								);
 							})}
@@ -383,7 +383,7 @@ export function StudentAnswerSheet({
 								<p>
 									{formative
 										? 'Cek jawaban dan panduan AI hanya formatif. Nilai resmi hanya ada pada tugas formal.'
-										: 'Setelah terkirim, Cek jawaban ditutup dan hasil menunggu penilaian dosen. Tidak ada nilai yang terbit otomatis.'}
+										: 'Setelah terkirim, jawaban menunggu penilaian dosen. Tidak ada nilai yang terbit otomatis.'}
 								</p>
 							</div>
 						</div>
@@ -467,7 +467,7 @@ export function StudentAnswerSheet({
 			</div>
 
 			<aside className="sas-side">
-				{workspace && (
+				{workspace && formative && (
 					<div className="sas-ai-rail" aria-label="Bantuan AI">
 						<span className="sas-ai-rail-label">
 							<Sparkles size={14} /> Bantuan AI
@@ -475,7 +475,7 @@ export function StudentAnswerSheet({
 						<div id="sas-review-portal" className="sas-review-portal" />
 					</div>
 				)}
-				{!workspace && <div id="sas-review-portal" className="sas-review-portal" />}
+				{!workspace && formative && <div id="sas-review-portal" className="sas-review-portal" />}
 				{assistant}
 				<details className={`sas-card sas-info-card${workspace ? ' collapsible' : ''}`} open={!workspace} hidden={sideReview && !workspace}>
 					<summary className="sas-info-summary">
@@ -670,4 +670,3 @@ export function instructionLines(text: string, fallback: string) {
 		.slice(0, 6);
 	return parts.length ? parts : [fallback];
 }
-

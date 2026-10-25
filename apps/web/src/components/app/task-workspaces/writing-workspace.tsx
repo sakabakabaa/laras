@@ -15,6 +15,8 @@ import {
 	X,
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
+import { useUnsavedWork } from '@/hooks/use-unsaved-work';
+import '@/styles/assessment-clarity.css';
 import { invalidate } from '@/lib/local-cache';
 import { errorMessage } from '@/lib/learning';
 import {
@@ -45,7 +47,26 @@ type NewFile = { file: File; url: string; isImage: boolean };
  * document upload, photo capture/upload for handwritten work with preview and
  * reordering, draft saving, and final submission.
  */
-export function WritingWorkspace({
+type WritingProps = {
+ assignment: Assignment; submission: AssignmentSubmission | null; onSaved: () => void;
+ asideChecks?: boolean; reviewing?: boolean;
+};
+
+export function WritingWorkspace(props: WritingProps) {
+ const config = useMemo(() => parseWritingConfig(props.assignment.taskConfig), [props.assignment.taskConfig]);
+ return hasWritingQuestions(config) ? <MultiQuestionWriting {...props} /> : <SingleQuestionWriting {...props} />;
+}
+
+function WritingSaveStatus({ dirty, busy, savedAt }: { dirty: boolean; busy: boolean; savedAt: string }) {
+ const time = savedAt ? new Date(savedAt) : null;
+ const label = time && Number.isFinite(time.getTime()) ? time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+ return <span className={`worksheet-save-state ${dirty ? 'unsaved' : ''}`} role="status">
+  {busy ? <LoaderCircle size={14} className="spin" /> : dirty ? <Pencil size={14} /> : <CheckCircle2 size={14} />}
+  {busy ? 'Menyimpan…' : dirty ? 'Perubahan belum disimpan' : label ? `Tersimpan pukul ${label}` : 'Belum ada draf tersimpan'}
+ </span>;
+}
+
+function SingleQuestionWriting({
 	assignment,
 	submission,
 	onSaved,
@@ -104,20 +125,6 @@ export function WritingWorkspace({
 		[],
 	);
 
-	// Multi-question writing: each block is answered separately and submitted
-	// together as one assignment. The legacy single-block editor handles
-	// assignments without configured question blocks.
-	if (hasWritingQuestions(config)) {
-		return (
-			<MultiQuestionWriting
-				assignment={assignment}
-				submission={submission}
-				onSaved={onSaved}
-				asideChecks={asideChecks}
-				reviewing={reviewing}
-			/>
-		);
-	}
 	const updateText = (v: string) => {
 		setText(v);
 		setLatestFeedback(null);
@@ -127,6 +134,13 @@ export function WritingWorkspace({
 	const past = isPastDeadline(assignment.deadline);
 	const submittedAlready = Boolean(submission && submission.status !== 'draft' && submission.status !== 'revision');
 	const canWork = assignment.status === 'published' && (!past || revision) && !submittedAlready;
+
+
+ const fingerprint = JSON.stringify({ text, group, link, keptFiles, pending: newFiles.map(f => [f.file.name, f.file.size, f.file.lastModified]) });
+ const [savedFingerprint, setSavedFingerprint] = useState(fingerprint);
+ const [savedAt, setSavedAt] = useState(saved?.writing?.savedAt || submission?.updated || '');
+ const dirty = fingerprint !== savedFingerprint;
+ useUnsavedWork(dirty && canWork);
 
 	const words = countWords(text);
 	const lengthHint =
@@ -191,7 +205,7 @@ export function WritingWorkspace({
 			final &&
 			!(await confirmDialog({
 				title: 'Kumpulkan tugas?',
-				message: 'Kumpulkan versi terakhir ini sebagai pengumpulan resmi? Setelah terkirim, Cek jawaban ditutup dan hasil menunggu penilaian dosen.',
+				message: 'Kumpulkan versi terakhir ini sebagai pengumpulan resmi? Setelah terkirim, jawaban menunggu penilaian dosen.',
 				variant: 'default',
 				confirmLabel: 'Kumpulkan',
 			}))
@@ -277,7 +291,10 @@ export function WritingWorkspace({
 			});
 
 			invalidate('assignment_submissions');
+			setKeptFiles(finalFiles);
 			setNewFiles([]);
+			setSavedFingerprint(JSON.stringify({ text, group, link, keptFiles: finalFiles, pending: [] }));
+			setSavedAt(new Date().toISOString());
 			// Background AI evaluation draft for the lecturer (formal tasks only —
 			// the endpoint skips Latihan formatif). The submission is already
 			// stored, so a failed analysis never affects it.
@@ -326,7 +343,7 @@ export function WritingWorkspace({
 			{asideChecks && !reviewing && (
 				<div className="ws-compose-head">
 					<h2>
-						<Pencil size={16} /> Tulisan Anda
+						<Pencil size={16} /> Jawaban Anda
 					</h2>
 					<div className="ws-compose-meta">
 						{config.language && <span>Bahasa: {config.language}</span>}
@@ -527,9 +544,11 @@ export function WritingWorkspace({
 				</div>
 			)}
 
+			<div className="worksheet-submit-bar">
+				<div className="worksheet-save-copy"><WritingSaveStatus dirty={dirty} busy={busy !== null} savedAt={savedAt} /><small>Draf dapat dilanjutkan nanti. Kumpulkan jika jawaban sudah siap dinilai dosen.</small></div>
 			<div className="tws-actions">
 				<button type="button" className="ld-outline-action sm" onClick={() => void save(false)} disabled={busy !== null}>
-					{busy === 'save' ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />} {asideChecks ? 'Simpan sebagai draft' : 'Simpan draf'}
+					{busy === 'save' ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />} Simpan draf
 				</button>
 				<button type="button" className="ld-btn-primary" onClick={() => void save(true)} disabled={busy !== null}>
 					{busy === 'submit' ? (
@@ -538,10 +557,11 @@ export function WritingWorkspace({
 						</>
 					) : (
 						<>
-							<Send size={15} /> {asideChecks ? 'Kirim jawaban' : 'Kumpulkan pekerjaan'}
+							<Send size={15} /> Kumpulkan tugas
 						</>
 					)}
 				</button>
+			</div>
 			</div>
 			{lengthWarn && (
 				<p className="tws-hint">
@@ -1261,6 +1281,13 @@ function MultiQuestionWriting({
 	const submittedAlready = Boolean(submission && submission.status !== 'draft' && submission.status !== 'revision');
 	const canWork = assignment.status === 'published' && (!past || revision) && !submittedAlready;
 
+
+ const fingerprint = JSON.stringify({ answers, group, link, keptFiles, pending: newFiles.map(f => [f.file.name, f.file.size, f.file.lastModified]) });
+ const [savedFingerprint, setSavedFingerprint] = useState(fingerprint);
+ const [savedAt, setSavedAt] = useState(saved?.writing?.savedAt || submission?.updated || '');
+ const dirty = fingerprint !== savedFingerprint;
+ useUnsavedWork(dirty && canWork);
+
 	const words = totalQuestionWords(questions, answers);
 	const combined = combineQuestionAnswers(questions, answers);
 
@@ -1321,7 +1348,7 @@ function MultiQuestionWriting({
 			final &&
 			!(await confirmDialog({
 				title: 'Kumpulkan tugas?',
-				message: 'Kumpulkan seluruh jawaban blok sebagai pengumpulan resmi? Setelah terkirim, Cek jawaban ditutup dan hasil menunggu penilaian dosen.',
+				message: 'Kumpulkan seluruh jawaban blok sebagai pengumpulan resmi? Setelah terkirim, jawaban menunggu penilaian dosen.',
 				variant: 'default',
 				confirmLabel: 'Kumpulkan',
 			}))
@@ -1418,7 +1445,10 @@ function MultiQuestionWriting({
 			}
 
 			invalidate('assignment_submissions');
+			setKeptFiles(finalFiles);
 			setNewFiles([]);
+			setSavedFingerprint(JSON.stringify({ answers, group, link, keptFiles: finalFiles, pending: [] }));
+			setSavedAt(new Date().toISOString());
 			if (final) void requestEvaluationDraft(record.id);
 			onSaved();
 		} catch (err) {
@@ -1463,7 +1493,7 @@ function MultiQuestionWriting({
 			{asideChecks && !reviewing && (
 				<div className="ws-compose-head">
 					<h2>
-						<Pencil size={16} /> Tulisan Anda
+						<Pencil size={16} /> Jawaban Anda
 					</h2>
 					<div className="ws-compose-meta">
 						{config.language && <span>Bahasa: {config.language}</span>}
@@ -1690,9 +1720,11 @@ function MultiQuestionWriting({
 				</div>
 			)}
 
+			<div className="worksheet-submit-bar">
+				<div className="worksheet-save-copy"><WritingSaveStatus dirty={dirty} busy={busy !== null} savedAt={savedAt} /><small>Draf dapat dilanjutkan nanti. Kumpulkan jika jawaban sudah siap dinilai dosen.</small></div>
 			<div className="tws-actions">
 				<button type="button" className="ld-outline-action sm" onClick={() => void save(false)} disabled={busy !== null}>
-					{busy === 'save' ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />} {asideChecks ? 'Simpan sebagai draft' : 'Simpan draf'}
+					{busy === 'save' ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />} Simpan draf
 				</button>
 				<button type="button" className="ld-btn-primary" onClick={() => void save(true)} disabled={busy !== null}>
 					{busy === 'submit' ? (
@@ -1701,10 +1733,11 @@ function MultiQuestionWriting({
 						</>
 					) : (
 						<>
-							<Send size={15} /> {asideChecks ? 'Kirim jawaban' : 'Kumpulkan pekerjaan'}
+							<Send size={15} /> Kumpulkan tugas
 						</>
 					)}
 				</button>
+			</div>
 			</div>
 			<ReviewSlot aside={asideChecks}>
 				<CheckAnswerPanel

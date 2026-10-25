@@ -159,7 +159,7 @@ export function EnrolledAnswerSheet({
 			]
 		: [
 				'Simpan draf sebelum menutup halaman. Progres tersimpan di akun Anda.',
-				'Periksa jawaban sebelum mengumpulkan. Hasil AI bukan nilai.',
+				'Tinjau kelengkapan jawaban sebelum mengumpulkan.',
 				'Setelah terkumpul, hanya dosen yang dapat menerbitkan nilai dan umpan balik.',
 			];
 
@@ -440,7 +440,7 @@ export function EnrolledAnswerSheet({
 		if (
 			!(await confirmDialog({
 				title: 'Kumpulkan tugas?',
-				message: 'Kumpulkan versi terakhir ini sebagai pengumpulan resmi? Setelah terkirim, Cek jawaban ditutup dan hasil menunggu penilaian dosen.',
+				message: 'Kumpulkan versi terakhir ini sebagai pengumpulan resmi? Setelah terkirim, jawaban menunggu penilaian dosen.',
 				variant: 'default',
 				confirmLabel: 'Kumpulkan',
 			}))
@@ -661,7 +661,7 @@ export function EnrolledAnswerSheet({
 								: t('worksheet.sendAnswer')
 						: step < 3
 							? t('worksheet.continue')
-							: formative || specialized
+							: formative
 								? t('worksheet.checkAnswer')
 								: step === 3
 									? t('worksheet.reviewSubmission')
@@ -778,7 +778,7 @@ export function EnrolledAnswerSheet({
 					</div>
 				)
 			}
-			review={speakingNode || (
+			review={speakingNode || (formative ? (
 				<div className="sas-review">
 					{specialized || formative ? (
 						<p className="sas-disclaimer">
@@ -796,9 +796,9 @@ export function EnrolledAnswerSheet({
 						<Sparkles size={13} /> Hasil pemeriksaan bersifat formatif dan bukan nilai resmi.
 					</p>
 				</div>
-			)}
+			) : <p className="sas-disclaimer">Tinjau jawaban dan lampiran sebelum mengumpulkan. Penilaian dilakukan oleh dosen.</p>)}
 			reviewAside={
-				speakingConfig ? (
+				formative && speakingConfig ? (
 					<div className="spk-ai">
 						<CheckAnswerPanel
 							assignment={assignment}

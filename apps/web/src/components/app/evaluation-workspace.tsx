@@ -1,7 +1,8 @@
 import { AssignmentRevisionControls } from './assignment-revision-controls';
 import { SubmissionRevisionContext, LinkedRevisionAbove } from './submission-revision-context';
 import { SubmissionPdfPreview } from './submission-pdf-preview';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { confirmDialog } from '@/components/confirm-dialog';
 import { Link } from 'react-router';
 import {
 	AlertCircle,
@@ -189,6 +190,18 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	const [filterOpen, setFilterOpen] = useState(false);
 	const [sort, setSort] = useState<'time' | 'name' | 'grade'>('time');
 	const [selected, setSelected] = useState<string | null>(null);
+	const reviewDirty = useRef(false);
+	const choosingParticipant = useRef(false);
+	const reportReviewDirty = useCallback((dirty: boolean) => { reviewDirty.current = dirty; }, []);
+	const selectParticipant = useCallback(async (key: string) => {
+		if (choosingParticipant.current) return;
+		choosingParticipant.current = true;
+		try {
+			if (reviewDirty.current && !(await confirmDialog({ title: 'Draf belum disimpan', message: 'Simpan draf penilaian sebelum berpindah agar nilai dan catatan tidak hilang.', confirmLabel: 'Pindah tanpa menyimpan', cancelLabel: 'Tetap menilai' }))) return;
+			reviewDirty.current = false;
+			setSelected(key);
+		} finally { choosingParticipant.current = false; }
+	}, []);
 	const [showInstructions, setShowInstructions] = useState(false);
 	// Enrolled submission owners' display identity (name + NIM), resolved
 	// server-side because the `users` viewRule blocks expanding other students'
@@ -314,14 +327,14 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				const prev = list[index - 1];
 				if (prev) {
 					event.preventDefault();
-					setSelected(prev.key);
+					void selectParticipant(prev.key);
 
 				}
 			} else if (key === 'arrowright' || key === 'j') {
 				const next = list[index + 1];
 				if (next) {
 					event.preventDefault();
-					setSelected(next.key);
+					void selectParticipant(next.key);
 
 				}
 			} else if (key === 'g') {
@@ -334,7 +347,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
-	}, []);
+	}, [selectParticipant]);
 
 	const participants = useMemo<Participant[]>(() => {
 		const enrolled: Participant[] = subs.map((s) => {
@@ -710,13 +723,13 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 						<button type="button" aria-label="Peserta sebelumnya" disabled={!active || filtered.findIndex((p) => p.key === active.key) <= 0} onClick={() => {
 							const index = filtered.findIndex((p) => p.key === active?.key);
 							const prev = filtered[index - 1];
-							if (prev) { setSelected(prev.key);  }
+							if (prev) { void selectParticipant(prev.key);  }
 						}}><ChevronLeft size={16} /></button>
 						<span>{active ? filtered.findIndex((p) => p.key === active.key) + 1 : 0} dari {filtered.length}</span>
 						<button type="button" aria-label="Peserta berikutnya" disabled={!active || filtered.findIndex((p) => p.key === active.key) >= filtered.length - 1} onClick={() => {
 							const index = filtered.findIndex((p) => p.key === active?.key);
 							const next = filtered[index + 1];
-							if (next) { setSelected(next.key);  }
+							if (next) { void selectParticipant(next.key);  }
 						}}><ChevronRight size={16} /></button>
 					</div>
 				</div>
@@ -761,11 +774,13 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 						invalidate('public_submissions');
 						void reload();
 					}}
+					onDirtyChange={reportReviewDirty}
 					onAdvance={() => {
+						reviewDirty.current = false;
 						const index = filtered.findIndex((p) => p.key === active?.key);
 						const next = filtered[index + 1];
 						if (next) {
-							setSelected(next.key);
+							void selectParticipant(next.key);
 
 						}
 					}}
@@ -860,7 +875,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 										type="button"
 										className={`${formative ? '' : 'evx-person '}${active?.key === p.key ? 'active' : ''}${formative ? '' : p.status === 'graded' ? ' graded' : ' pending-grade'}`}
 										onClick={() => {
-											setSelected(p.key);
+											void selectParticipant(p.key);
 
 										}}
 									>

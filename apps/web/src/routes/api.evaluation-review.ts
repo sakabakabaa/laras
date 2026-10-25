@@ -19,8 +19,10 @@
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { loadEvaluationTarget, validateReviewFindings } from '@/lib/evaluation-review.server';
+import { parseAssessmentDraft } from '@/lib/assessment-draft';
 
 type Body = {
+	reviewDraft?: unknown;
     criterionScores?: Record<string, number>;
 	submissionId?: string;
 	publicSubmissionId?: string;
@@ -34,6 +36,8 @@ export const action = withApi(async ({ request }) => {
 	const loaded = await loadEvaluationTarget(request, body);
 	if ('error' in loaded) return apiError(loaded.error.status, loaded.error.message);
 	const { target } = loaded;
+	const reviewDraft = body.reviewDraft === undefined ? undefined : parseAssessmentDraft(body.reviewDraft);
+	if (reviewDraft === null) return apiError(422, 'Draf penilaian tidak valid. Nilai harus 0–100 dan catatan maksimal 2000 karakter.');
 
 	const validated = validateReviewFindings(body.findings, target.content);
 	if (!validated) {
@@ -65,6 +69,7 @@ export const action = withApi(async ({ request }) => {
 		await pocketbaseAdmin.updateRecord('ai_evaluations', existing.id, {
             reviewFindings: findings,
             reviewCriterionScores,
+			...(reviewDraft ? { reviewDraft } : {}),
 			reviewedAt: now,
 		});
 		return json({ ok: true, saved: findings.length, omitted });
@@ -84,6 +89,7 @@ export const action = withApi(async ({ request }) => {
 		summary: '',
         reviewFindings: findings,
         reviewCriterionScores,
+		...(reviewDraft ? { reviewDraft } : {}),
 		reviewedAt: now,
 		generatedAt: now,
 		...(target.channel === 'enrolled'

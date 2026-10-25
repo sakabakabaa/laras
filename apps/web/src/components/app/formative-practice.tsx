@@ -219,6 +219,7 @@ export function FormativePractice({
 			{!closed && (
 				<CheckAnswerPanel
 					assignment={{
+						activityType: assignment.activityType,
 						id: assignment.id,
 						status: assignment.status,
 						deadline: assignment.deadline,

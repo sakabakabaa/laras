@@ -212,8 +212,9 @@
 }
 
 .ld-mast {
-	background: linear-gradient(118deg, var(--r-red-900) 0%, #5f1511 58%, var(--r-red-700) 100%);
-	box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12), 0 6px 18px rgba(127, 29, 22, 0.18);
+	background: var(--r-surface);
+	color: var(--r-ink);
+	box-shadow: var(--r-shadow-xs);
 }
 
 .ld-mast-logo-link,

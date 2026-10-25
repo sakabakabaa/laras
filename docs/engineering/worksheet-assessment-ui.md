@@ -34,3 +34,9 @@ confirm the published grade remains unchanged after a draft save; check narrow
 layouts and both themes. API regression tests cover draft validation, ownership,
 legacy clients and separation from the published record. Existing failures in the
 untouched repository test suite are documented in the pull request.
+
+Formal worksheets do not mount the formative answer checker. The learning assistant
+remains available on editable worksheets.
+The shared answer checker mounts only for explicitly formative activities, so stale
+check-enabled flags cannot expose it on formal work. Formal instructions describe
+manual review and lecturer grading; lecturer AI-assisted assessment is unchanged.

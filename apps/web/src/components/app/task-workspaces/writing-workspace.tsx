@@ -205,7 +205,7 @@ function SingleQuestionWriting({
 			final &&
 			!(await confirmDialog({
 				title: 'Kumpulkan tugas?',
-				message: 'Kumpulkan versi terakhir ini sebagai pengumpulan resmi? Setelah terkirim, Cek jawaban ditutup dan hasil menunggu penilaian dosen.',
+				message: 'Kumpulkan versi terakhir ini sebagai pengumpulan resmi? Setelah terkirim, jawaban menunggu penilaian dosen.',
 				variant: 'default',
 				confirmLabel: 'Kumpulkan',
 			}))
@@ -1348,7 +1348,7 @@ function MultiQuestionWriting({
 			final &&
 			!(await confirmDialog({
 				title: 'Kumpulkan tugas?',
-				message: 'Kumpulkan seluruh jawaban blok sebagai pengumpulan resmi? Setelah terkirim, Cek jawaban ditutup dan hasil menunggu penilaian dosen.',
+				message: 'Kumpulkan seluruh jawaban blok sebagai pengumpulan resmi? Setelah terkirim, jawaban menunggu penilaian dosen.',
 				variant: 'default',
 				confirmLabel: 'Kumpulkan',
 			}))

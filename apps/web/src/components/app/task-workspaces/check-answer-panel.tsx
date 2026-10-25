@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { LoaderCircle, RotateCcw, ScanText, ShieldCheck, Sparkles } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
 import { errorMessage } from '@/lib/learning';
-import type { AssignmentMode } from '@/lib/assignments';
+import { activityTypeOf, type ActivityType, type AssignmentMode } from '@/lib/assignments';
 import {
 	checkMaxOf,
 	CHECK_LEVEL_LABEL,
@@ -14,6 +14,7 @@ import { CheckEvidence } from '@/components/app/task-workspaces/check-feedback-b
 import { PointFeedback } from '@/components/app/task-workspaces/point-feedback';
 
 export type CheckAssignmentInfo = {
+	activityType?: ActivityType | '' | null;
 	/** Enrolled: the assignment id. */
 	id?: string;
 	/** Public: the assignment's public token. */
@@ -88,7 +89,12 @@ export type LatestFeedback = { feedback: string; evidence: string; area: string;
  * must present their continuation code — it is the only credential that may
  * spend that identity's check quota.
  */
-export function CheckAnswerPanel({
+export function CheckAnswerPanel(props: Parameters<typeof FormativeCheckAnswerPanel>[0]) {
+	if (activityTypeOf(props.assignment) !== 'formative') return null;
+	return <FormativeCheckAnswerPanel {...props} />;
+}
+
+function FormativeCheckAnswerPanel({
 	assignment,
 	channel,
 	buildResponse,

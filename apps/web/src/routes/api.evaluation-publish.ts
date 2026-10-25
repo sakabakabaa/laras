@@ -170,6 +170,7 @@ export const action = withApi(async ({ request }) => {
 			: null;
 
     const publishPayload = {
+		reviewDraft: { version: 1, finalScore: adjusted ? finalScore : null, note },
         reviewCriterionScores: criterionScores,
 		reviewFindings: findings,
 		reviewedAt: now,

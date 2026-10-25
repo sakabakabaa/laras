@@ -38,6 +38,9 @@ import {
 	X,
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
+import { parseAssessmentDraft } from '@/lib/assessment-draft';
+import { useUnsavedWork } from '@/hooks/use-unsaved-work';
+import '@/styles/assessment-clarity.css';
 import { useT } from '@/lib/i18n';
 import type { Assignment } from '@/lib/assignments';
 import { letterGrade } from '@/lib/assignments';
@@ -321,6 +324,7 @@ export function AiEvaluationReviewProvider({
 	transcriptError,
 	onPublished,
 	onAdvance,
+	onDirtyChange,
 	children,
 }: {
 	assignment: Assignment;
@@ -338,6 +342,7 @@ export function AiEvaluationReviewProvider({
 	onPublished?: () => void;
 	/** After a confirmed publish, move the lecturer to the next participant. */
 	onAdvance?: () => void;
+	onDirtyChange?: (dirty: boolean) => void;
 	children: ReactNode;
 }) {
 	const [row, setRow] = useState<AiEvaluationRow | null>(null);
@@ -377,6 +382,8 @@ export function AiEvaluationReviewProvider({
 	// an explicit lecturer adjustment from the untouched AI-recommendation autofill.
 	const overrideTouched = useRef(false);
     const criterionScoresTouched = useRef(false);
+	const draftLoadedKey = useRef('');
+	const currentDraftFingerprint = useRef('');
 
 	// Phase 4 — lecturer-only research items for this evaluation: human missed
 	// errors (AI false negatives) and AI-finding research annotations. Loaded
@@ -407,6 +414,8 @@ export function AiEvaluationReviewProvider({
 			: participant.publicId
 		: '';
 	const filter = recordKey ? `${relationField}="${recordKey}"` : '';
+	const activeRecordKey = useRef(recordKey);
+	activeRecordKey.current = recordKey;
 
 	const load = useCallback(async () => {
 		if (!filter) {
@@ -416,22 +425,34 @@ export function AiEvaluationReviewProvider({
 		}
 		try {
 			const found = await pb.collection('ai_evaluations').getFirstListItem<AiEvaluationRow>(filter);
+			if (activeRecordKey.current !== recordKey) return;
 			setRow(found);
-            if (found?.publishedAt && typeof found.finalScore === 'number' && Number.isFinite(found.finalScore)) {
+			if (draftLoadedKey.current !== recordKey || resyncFromSaved.current) {
+				draftLoadedKey.current = recordKey || '';
+				const draft = parseAssessmentDraft(found.reviewDraft);
+				setPublishNote(draft?.note || '');
+				if (draft) {
+					setOverride(draft.finalScore == null ? '' : String(draft.finalScore));
+					overrideTouched.current = draft.finalScore != null;
+				}
+            if (!draft && found?.publishedAt && typeof found.finalScore === 'number' && Number.isFinite(found.finalScore)) {
                 setOverride(String(found.finalScore)); overrideTouched.current = true;
             }
-            if (found?.reviewCriterionScores && Object.keys(found.reviewCriterionScores).length) { setCriterionScores(found.reviewCriterionScores); } else if (found && found.scoringVersion === 4 && found.rubricScores && typeof found.rubricScores === 'object') {
+            if (found?.reviewedAt || (found?.reviewCriterionScores && Object.keys(found.reviewCriterionScores).length)) { setCriterionScores(found.reviewCriterionScores || {}); } else if (found && found.scoringVersion === 4 && found.rubricScores && typeof found.rubricScores === 'object') {
                 const savedRows = (found.rubricScores as RubricScores).rows || [];
                 setCriterionScores(Object.fromEntries(savedRows.map(r => [r.id, r.score])));
             }
+			}
 		} catch {
+			if (activeRecordKey.current !== recordKey) return;
 			setRow(null);
 		} finally {
-			setLoading(false);
+			if (activeRecordKey.current === recordKey) setLoading(false);
 		}
-	}, [filter]);
+	}, [filter, recordKey]);
 
 	useEffect(() => {
+		draftLoadedKey.current = '';
 		setLoading(true);
 		setRow(null);
         setWorking(null);
@@ -548,7 +569,7 @@ export function AiEvaluationReviewProvider({
 		if (row.status !== 'ready' && row.status !== 'failed') return;
 		const stored = normalizeReviewFindings(parseReviewFindings(row.reviewFindings), criteria);
 		const ai = row.status === 'ready' ? parseFindings(row.findings) : [];
-		const sig = JSON.stringify([stored, ai]);
+		const sig = JSON.stringify([stored, ai, row.reviewedAt]);
 		if (mergedSig.current === sig) return;
 		mergedSig.current = sig;
 		setWorking((prev) => {
@@ -558,13 +579,13 @@ export function AiEvaluationReviewProvider({
 			// dropped from the working copy rather than lingering in the UI.
 			if (resyncFromSaved.current) {
 				resyncFromSaved.current = false;
-				return stored.length > 0 ? stored : deriveAiReviewFindings(ai, criteria);
+				return row.reviewedAt || stored.length > 0 ? stored : deriveAiReviewFindings(ai, criteria);
 			}
 			const current = prev ?? [];
-			if (current.length === 0) return stored.length > 0 ? stored : deriveAiReviewFindings(ai, criteria);
+			if (current.length === 0) return row.reviewedAt || stored.length > 0 ? stored : deriveAiReviewFindings(ai, criteria);
 			const hasAi = current.some((f) => f.source === 'ai');
 			const derived = deriveAiReviewFindings(ai, criteria);
-			if (hasAi || derived.length === 0) return current;
+			if (hasAi || derived.length === 0 || row.reviewedAt) return current;
 			// Manual-only review saved while the draft was still preparing:
 			// lay the AI recommendations under the lecturer's own findings
 			// without touching them.
@@ -575,7 +596,7 @@ export function AiEvaluationReviewProvider({
 
 	// Seed an unsaved rubric from validated AI criteria; never overwrite lecturer work.
     useEffect(() => {
-        if (loading || row?.status !== 'ready' || criterionScoresTouched.current) return;
+        if (loading || row?.status !== 'ready' || row.reviewedAt || criterionScoresTouched.current) return;
         if (row.reviewCriterionScores && Object.keys(row.reviewCriterionScores).length) return;
         if (row.scoringVersion === 4 && row.rubricScores) return;
         const scores = validatedRubric(parseRubric(row.rubricBreakdown), criteria);
@@ -608,19 +629,23 @@ export function AiEvaluationReviewProvider({
 			(!row && participant && (participant.status === 'submitted' || participant.status === 'late')),
 	);
 	const saved = row ? normalizeReviewFindings(parseReviewFindings(row.reviewFindings), criteria) : [];
-	const dirty = working != null && (JSON.stringify(items) !== JSON.stringify(saved) || JSON.stringify(criterionScores) !== JSON.stringify(row?.reviewCriterionScores || {}));
-
-	// Warn before navigating away (tab close / reload) with unsaved review edits,
-	// so a draft grade or feedback is not silently lost.
-	useEffect(() => {
-		if (!dirty) return;
-		const onBeforeUnload = (event: BeforeUnloadEvent) => {
-			event.preventDefault();
-			event.returnValue = '';
-		};
-		window.addEventListener('beforeunload', onBeforeUnload);
-		return () => window.removeEventListener('beforeunload', onBeforeUnload);
-	}, [dirty]);
+	const savedDraft = parseAssessmentDraft(row?.reviewDraft);
+	const initialFindings = row?.reviewedAt || saved.length ? saved : deriveAiReviewFindings(parseFindings(row?.findings), criteria);
+	const initialScores = row?.reviewedAt || (row?.reviewCriterionScores && Object.keys(row.reviewCriterionScores).length)
+		? row?.reviewCriterionScores || {}
+		: row?.scoringVersion === 4 && row.rubricScores
+			? Object.fromEntries(((row.rubricScores as RubricScores).rows || []).map(entry => [entry.id, entry.score]))
+			: Object.fromEntries(validatedRubric(parseRubric(row?.rubricBreakdown), criteria).map(entry => [matchCriterion(entry, criteria)!.id!, entry.score]));
+	const savedOverride = savedDraft ? savedDraft.finalScore : row?.publishedAt ? row.finalScore : null;
+	const workingOverride = overrideTouched.current && override.trim() !== '' ? Number(override) : null;
+	const dirty = !loading && working != null && (
+		JSON.stringify(items) !== JSON.stringify(initialFindings) ||
+		JSON.stringify(criterionScores) !== JSON.stringify(initialScores) ||
+		publishNote !== (savedDraft?.note || '') || workingOverride !== (savedOverride ?? null)
+	);
+	currentDraftFingerprint.current = JSON.stringify({ items, criterionScores, override, publishNote });
+	useUnsavedWork(dirty);
+	useEffect(() => { onDirtyChange?.(dirty || saving); }, [dirty, saving, onDirtyChange]);
 	const aiCount = visible.filter((f) => f.source === 'ai').length;
 	const lecturerCount = visible.filter((f) => f.source === 'lecturer').length;
 
@@ -639,7 +664,7 @@ export function AiEvaluationReviewProvider({
 	// until the lecturer edits the grade. Rejected findings are already excluded.
 	useEffect(() => {
 		if (loading || overrideTouched.current || working == null) return;
-		const next = criteria.some(c => c.weight > 0 && criterionScores[c.id] == null) ? '' : String(calc.total);
+		const next = !criteria.some(c => c.weight > 0) || criteria.some(c => c.weight > 0 && criterionScores[c.id] == null) ? '' : String(calc.total);
 		setOverride((prev) => (prev === next ? prev : next));
 	}, [loading, working, calc.total, criteria, criterionScores]);
 	const overrideTrim = override.trim();
@@ -785,6 +810,11 @@ export function AiEvaluationReviewProvider({
 				? saved
 				: deriveAiReviewFindings(parseFindings(ready?.findings), criteria),
 		);
+		setCriterionScores(initialScores);
+		criterionScoresTouched.current = false;
+		setOverride(savedOverride == null ? '' : String(savedOverride));
+		overrideTouched.current = savedOverride != null;
+		setPublishNote(savedDraft?.note || '');
 		setEditingId(null);
 		setNotice('');
 		setSaveError('');
@@ -822,6 +852,9 @@ export function AiEvaluationReviewProvider({
 
 	const saveReview = async () => {
 		if (!recordKey || !participant) return;
+		if (override.trim() && !overrideValid) { setSaveError('Nilai harus angka 0–100.'); return; }
+		const reviewDraft = { version: 1, finalScore: overrideTouched.current && overrideValid ? Number(override) : null, note: publishNote };
+		const savedFingerprint = currentDraftFingerprint.current;
 		setSaving(true);
 		setSaveError('');
 		setNotice('');
@@ -834,8 +867,8 @@ export function AiEvaluationReviewProvider({
 				},
 				body: JSON.stringify(
 					participant.channel === 'enrolled'
-						? { submissionId: recordKey, findings: items, criterionScores }
-						: { publicSubmissionId: recordKey, findings: items, criterionScores },
+						? { submissionId: recordKey, findings: items, criterionScores, reviewDraft }
+						: { publicSubmissionId: recordKey, findings: items, criterionScores, reviewDraft },
 				),
 			});
 			const data = (await res.json().catch(() => ({}))) as {
@@ -846,13 +879,14 @@ export function AiEvaluationReviewProvider({
 			if (!res.ok) {
 				throw new Error(data.message || data.error || 'Gagal menyimpan tinjauan temuan.');
 			}
+			if (activeRecordKey.current !== recordKey) return;
 			const omittedCount = typeof data.omitted === 'number' ? data.omitted : 0;
 			setNotice(
 				omittedCount > 0
 					? `Tinjauan temuan tersimpan. ${omittedCount} temuan tidak disimpan karena catatan kosong atau kutipan tidak cocok dengan teks kiriman peserta — periksa kembali daftar temuan.`
-					: 'Tinjauan temuan tersimpan.',
+					: 'Draf penilaian tersimpan, termasuk nilai dan catatan. Belum diterbitkan.',
 			);
-			resyncFromSaved.current = true;
+			resyncFromSaved.current = currentDraftFingerprint.current === savedFingerprint;
 			await load();
 		} catch (err) {
 			setSaveError(err instanceof Error ? err.message : 'Gagal menyimpan tinjauan temuan.');
@@ -2672,22 +2706,34 @@ export function AiEvaluationPanel() {
 	const wordsNote = ctx.publishNote.length;
 
 	return (
-		<section className="evx-panel evx-compact" aria-label="Tinjauan temuan dan penilaian">
+		<section className="evx-panel evx-compact assessment-clarity" aria-label="Tinjauan temuan dan penilaian">
 			<header className="evx-panel-head">
 				<h3>
-					<Sparkles size={14} /> {t('aevr.review')}
+					<ListChecks size={14} /> Penilaian &amp; umpan balik
 				</h3>
 				<span className={`evx-draft${ctx.published ? ' live' : ''}`}>{ctx.published ? t('aevr.published') : t('aevr.draft')}</span>
 			</header>
 
+			<div className="assessment-status" aria-live="polite">
+				<span className="assessment-eyebrow">RUANG PENILAIAN DOSEN</span>
+				<strong>{ctx.published ? 'Nilai resmi sudah diterbitkan' : 'Tinjau sebelum menerbitkan'}</strong>
+				<p>{ctx.published ? `Nilai resmi saat ini ${ctx.published.finalScore ?? '—'}/100. Perubahan draf tidak mengubah nilai tersebut sampai diterbitkan ulang.` : 'Tinjau temuan, periksa skor rubrik, lalu terbitkan kepada mahasiswa.'}</p>
+				<span className={`assessment-save-state ${ctx.dirty ? 'unsaved' : ''}`}>
+					{ctx.saving ? 'Menyimpan draf…' : ctx.dirty ? 'Perubahan belum disimpan' : ctx.row?.reviewedAt ? `Draf tersimpan · ${stamp(ctx.row.reviewedAt)}` : 'Usulan AI · belum disimpan sebagai tinjauan'}
+				</span>
+			</div>
+			<div className="assessment-progress" aria-label="Progres penilaian">
+				<span><b>1</b> Tinjau temuan <em>{ctx.pendingCount ? `${ctx.pendingCount} tersisa` : 'Selesai'}</em></span>
+				<span><b>2</b> Periksa rubrik</span><span><b>3</b> Terbitkan</span>
+			</div>
 			<div className="evx-ai-card score-only">
 				<div className="evx-ai-score">
 					<strong>
-						{ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) ? 'Belum dinilai' : <>{ctx.calc.total}<small> / 100{letterGrade(ctx.calc.total) ? ` · ${letterGrade(ctx.calc.total)}` : ''}</small></>}
+						{!ctx.criteria.some(c => c.weight > 0) || ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) ? 'Belum dinilai' : <>{ctx.calc.total}<small> / 100{letterGrade(ctx.calc.total) ? ` · ${letterGrade(ctx.calc.total)}` : ''}</small></>}
 					</strong>
-					<span>Skor rubrik · belum menjadi nilai resmi</span>
+					<span>Skor rubrik pada draf ini</span>
 				</div>
-                <button type="button" className="evx-refresh" aria-label="Minta skor AI baru" title="Minta skor AI baru dengan kriteria dan materi terbaru" onClick={ctx.regenerate} disabled={ctx.regenerating || ctx.preparing}>{ctx.regenerating || ctx.preparing ? <LoaderCircle size={14} className="spin" /> : <RotateCcw size={14} />}</button>
+                <button type="button" className="evx-refresh" aria-label="Buat ulang draf AI" title="Buat ulang analisis AI menggunakan kriteria dan materi terbaru" onClick={ctx.regenerate} disabled={ctx.regenerating || ctx.preparing}>{ctx.regenerating || ctx.preparing ? <LoaderCircle size={14} className="spin" /> : <RotateCcw size={14} />}<span>Buat ulang AI</span></button>
 			</div>
 
 			<section className="evx-block">
@@ -2701,8 +2747,9 @@ export function AiEvaluationPanel() {
 							</span>
 						</span>
 					</h4>
-					{ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) && <span>Belum lengkap</span>}
+					{ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) && <span>{ctx.criteria.filter(c => c.weight > 0 && ctx.criterionScores[c.id] != null).length}/{ctx.criteria.filter(c => c.weight > 0).length} kriteria terisi</span>}
 				</header>
+				<p className="assessment-rubric-help">Nilai setiap kriteria berdasarkan bukti pada jawaban. Total mengikuti bobot rubrik; jumlah koreksi tidak otomatis mengurangi skor.</p>
 				{ctx.calc.rows.length === 0 && (
 					<p className="evx-muted">
 						Skor hitung {ctx.calc.total}/100 dari temuan yang disetujui
@@ -2719,7 +2766,7 @@ export function AiEvaluationPanel() {
 									<button type="button" aria-expanded={open} onClick={() => setOpenRubric(open ? null : row.id)}>
 										<span>{shortCriterionLabel(row.label)}</span>
 										<span className="evx-bar"><i style={{ width: `${row.score}%` }} /></span>
-										<strong>{ctx.criterionScores[row.id] == null ? '—' : row.score}</strong><ChevronDown size={12} aria-hidden="true" />
+										<strong>{ctx.criterionScores[row.id] == null ? '—' : row.score}</strong><span className="assessment-weight">{Math.round(100 * row.weight / (ctx.criteria.reduce((sum, criterion) => sum + Math.max(0, criterion.weight), 0) || 1))}%</span><ChevronDown size={12} aria-hidden="true" />
 									</button>
 									{open && <div className="evx-criterion-achievement">
     <label>Pencapaian · bobot {row.weight}
@@ -2769,6 +2816,7 @@ export function AiEvaluationPanel() {
 				<textarea
 					ref={noteRef}
 					className="aev-publish-note"
+					aria-label="Catatan untuk mahasiswa"
 					rows={4}
 					maxLength={2000}
 					value={ctx.publishNote}
@@ -2906,9 +2954,10 @@ export function AiEvaluationPanel() {
 			)}
             </details>
             <div className="evx-sticky-actions">
+			<p className="assessment-publish-help">Simpan draf untuk melanjutkan nanti. Terbitkan agar nilai dan umpan balik terlihat oleh mahasiswa.</p>
 			<section className="evx-block evx-final-block">
 				<label>
-					Nilai akhir
+					Nilai yang akan diterbitkan
 					<span className="evx-score-field">
 						<input
 							id="evx-score-input"
@@ -2981,10 +3030,10 @@ export function AiEvaluationPanel() {
 					<button
 						type="button"
 						className="evx-next-btn"
-						disabled={ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.ungradable || ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.publishing || ctx.pendingCount > 0 || (ctx.override.trim() !== '' && !ctx.overrideValid)}
+						disabled={ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.ungradable || (!ctx.criteria.some(c => c.weight > 0) && !ctx.overrideValid) || ctx.publishing || ctx.saving || ctx.pendingCount > 0 || (ctx.override.trim() !== '' && !ctx.overrideValid)}
 						onClick={ctx.requestConfirmPublish}
 					>
-						<Send size={14} /> Terbitkan &amp; lanjut
+						<Send size={14} /> {ctx.published ? 'Terbitkan ulang & lanjut' : 'Terbitkan nilai & lanjut'}
 					</button>
 				</div>
 			)}

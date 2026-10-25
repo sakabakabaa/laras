@@ -490,6 +490,8 @@ export function parseProvenance(row: Record<string, unknown>): ResearchProvenanc
 }
 
 export type AiEvaluationRow = {
+	/** Complete lecturer working copy, independent of the published grade. */
+	reviewDraft?: unknown;
 	id: string;
 	assignment: string;
 	submission: string;

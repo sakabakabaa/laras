@@ -1,6 +1,7 @@
 import { useRef, type ReactNode } from 'react';
 import { FormStepper } from '@/components/form-stepper';
 import { WorksheetArt } from '@/components/app/worksheet-art';
+import '@/styles/assessment-clarity.css';
 import { useT } from '@/lib/i18n';
 import {
 	ArrowLeft,
@@ -168,7 +169,7 @@ export function StudentAnswerSheet({
 	) : null;
 
 	return (
-		<section className={`sas${workspace ? ' sas-workspace' : ''}`} aria-label="Lembar jawaban">
+		<section className={`sas${workspace ? ' sas-workspace worksheet-clarity' : ''}`} aria-label="Lembar jawaban">
 			{workspace ? stepper : null}
 			<div className="sas-main">
 				{onBack && !workspace && (
@@ -289,8 +290,7 @@ export function StudentAnswerSheet({
 										<span className={`ws-must-ico tone-${index % 4}`} aria-hidden="true">
 											<Icon size={16} />
 										</span>
-										<strong>{chip.label}</strong>
-										<small>{chip.detail}</small>
+										<strong>{chip.detail || chip.label}</strong>
 									</li>
 								);
 							})}
@@ -670,4 +670,3 @@ export function instructionLines(text: string, fallback: string) {
 		.slice(0, 6);
 	return parts.length ? parts : [fallback];
 }
-

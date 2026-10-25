@@ -610,7 +610,7 @@ async function prepareEvaluationDraft(input: {
 			generationHistory, researchSnapshot: null,
 			result: '', reason: '', rawOutput: '', findings: [], recommendedScore: null,
 			rubricBreakdown: [], summary: '', bundleId: '', citations: [], contextNote: '', generatedAt: '',
-			...(input.force && existing ? {} : { reviewFindings: [], reviewCriterionScores: {}, reviewedAt: '', rubricScores: null, finalScore: null, scoreAdjusted: false, publishedAt: '' }),
+			...(input.force && existing ? {} : { reviewDraft: null, reviewFindings: [], reviewCriterionScores: {}, reviewedAt: '', rubricScores: null, finalScore: null, scoreAdjusted: false, publishedAt: '' }),
 			model: 'unknown', modelVersion: 'unknown', promptVersion: '', systemPromptVersion: '',
 			inputTextHash: '', outputHash: '', generationDurationMs: null, researchSchemaVersion: null,
 			usedStudentText: false, usedImages: false, usedCourseMaterial: false, usedRubric: false, usedCefr: false,

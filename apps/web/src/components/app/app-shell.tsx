@@ -209,10 +209,11 @@ export function AppShell({
       }
     };
     document.addEventListener('keydown', onKey);
-    sidebarCloseRef.current?.focus();
+    const focusFrame = window.requestAnimationFrame(() => sidebarCloseRef.current?.focus());
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
       mobileMenuBtnRef.current?.focus();

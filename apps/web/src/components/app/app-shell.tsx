@@ -245,7 +245,7 @@ export function AppShell({
     return <AssistantPageContextProvider><div className={`ld-layout${isStudent ? ' student-adventure-shell' : ''}`} data-mobile-nav={compactNav && mobileOpen ? 'open' : 'closed'}>
 				<header className="ld-mast" inert={compactNav && mobileOpen}>
 					<div className="ld-mast-brand">
-						{!hideSidebar && <button type="button" ref={mobileMenuBtnRef} className="ld-mobile-menu" aria-label="Buka navigasi" aria-controls={sidebarId} aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}>
+						{!hideSidebar && <button type="button" ref={mobileMenuBtnRef} className="ld-mobile-menu" aria-label={t('nav.openNav')} aria-controls={sidebarId} aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}>
 							<Menu size={22} />
 						</button>}
 						<Link to={home} className="ld-mast-logo-link" aria-label="LARAS"><LarasMark size={28} /></Link>
@@ -294,7 +294,7 @@ export function AppShell({
 
 				<div className={`ld-stage${agentOpen && !isStudent && !isAssistantPage ? ' agent-open' : ''}`}>
 				<div className={`ld-body${rail ? ' has-rail' : ''}${hideSidebar ? ' no-sidebar' : ''}`}>
-					{!hideSidebar && <aside id={sidebarId} ref={sidebarRef} inert={compactNav && !mobileOpen} aria-hidden={compactNav && !mobileOpen ? true : undefined} role={compactNav ? 'dialog' : undefined} aria-modal={compactNav && mobileOpen ? true : undefined} aria-label="Navigasi utama" className={`ld-sidebar ${mobileOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}${animating ? ' ld-animating' : ''}`}>
+					{!hideSidebar && <aside id={sidebarId} ref={sidebarRef} inert={compactNav && !mobileOpen} aria-hidden={compactNav && !mobileOpen ? true : undefined} role={compactNav ? 'dialog' : undefined} aria-modal={compactNav && mobileOpen ? true : undefined} aria-label={t('nav.mainNav')} className={`ld-sidebar ${mobileOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}${animating ? ' ld-animating' : ''}`}>
 						<div className="ld-sidebar-brand">
                             <strong>LARAS</strong>
 							<button type="button" ref={sidebarCloseRef} className="ld-sidebar-close" aria-label={t('nav.closeNav')} onClick={() => setMobileOpen(false)}>
@@ -302,7 +302,7 @@ export function AppShell({
 							</button>
 						</div>
 
-						<nav className="ld-nav" data-guide="navigation" aria-label="Navigasi utama">
+						<nav className="ld-nav" data-guide="navigation" aria-label={t('nav.mainNav')}>
 							{navItems.map(item => {
               const Icon = item.icon;
               const studentLabels: Record<string, Record<string, string>> = { id: { Dashboard: 'Beranda', 'Mata Kuliah': 'Kelas', Analitik: 'Progres' }, en: { Dashboard: 'Home', 'Mata Kuliah': 'Classes', Analitik: 'Progress' }, de: { Dashboard: 'Start', 'Mata Kuliah': 'Kurse', Analitik: 'Fortschritt' } };

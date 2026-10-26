@@ -10,10 +10,18 @@ export type HostingerMessage = {
 };
 
 const MODEL = 'gpt-6-luna';
-const apiUrl = () => `${(process.env.HROUTER_BASE_URL || 'https://router.hostinger.com/v1').replace(/\/+$/, '')}/chat/completions`;
+const DEFAULT_BASE_URL = 'https://router.hostinger.com/v1';
+const apiUrl = (baseUrl?: string) => `${(baseUrl || process.env.HROUTER_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, '')}/chat/completions`;
 
 /**
- * Keep tool parameters within standard JSON Schema for the OpenAI-compatible router.
+ * A provider resolved for one surface (see `lib/ai/providers.server.ts`).
+ * When absent, the deployment environment (`HROUTER_*`) is used, which is the
+ * old behaviour and still the last-resort fallback.
+ */
+export type ResolvedProvider = { baseUrl: string; apiKey: string; model: string };
+
+/**
+ * Keep tool parameters within standard JSON Schema for the [OI]-compatible router.
  * Some locally-authored schemas mark individual properties with
  * `required: true`; JSON Schema expresses required fields as a string array
  * on the containing object instead. The registry already has those arrays,
@@ -30,7 +38,7 @@ const normalizeToolParameters = (value: unknown): unknown => {
 	return normalized;
 };
 
-/** Call Hostinger AI Router's OpenAI-compatible Chat Completions API, collecting SSE or JSON output. */
+/** Call Hostinger AI Router's [OI]-compatible Chat Completions API, collecting SSE or JSON output. */
 export async function collectHostingerText({
 	prompt,
 	model: requestedModel,
@@ -40,6 +48,7 @@ export async function collectHostingerText({
 	tools,
 	responseFormat,
 	timeoutMs = 60_000,
+	resolved,
 }: {
 	prompt?: string;
 	model?: string;
@@ -49,10 +58,12 @@ export async function collectHostingerText({
 	tools?: HostingerTool[];
 	responseFormat?: {type:'json_object'};
 	timeoutMs?: number;
+	/** Provider resolved for this surface. Falls back to the deployment env. */
+	resolved?: ResolvedProvider | null;
 }): Promise<HostingerResult> {
-	const apiKey = process.env.HROUTER_API_KEY;
+	const apiKey = resolved?.apiKey || process.env.HROUTER_API_KEY;
 	if (!apiKey) throw new Error('HROUTER_API_KEY is not set');
-	const model = requestedModel || process.env.HROUTER_MODEL || MODEL;
+	const model = requestedModel || resolved?.model || process.env.HROUTER_MODEL || MODEL;
 	const requestMessages = messages || [
 		...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
 		{
@@ -68,7 +79,7 @@ export async function collectHostingerText({
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), timeoutMs);
 	try {
-		const response = await fetch(apiUrl(), {
+		const response = await fetch(apiUrl(resolved?.baseUrl), {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${apiKey}`,

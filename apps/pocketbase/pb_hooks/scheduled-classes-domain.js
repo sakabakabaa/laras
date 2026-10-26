@@ -1,6 +1,11 @@
 // Pure rules shared by the PocketBase transaction service and Vitest.
 function fail(message) { throw new Error(message); }
 function text(value, max) { return typeof value === 'string' ? value.trim().slice(0, max) : ''; }
+function ids(value,max) {
+  if(value===undefined)return [];
+  if(!Array.isArray(value)||value.length>max||value.some(id=>typeof id!=='string'||!/^[a-zA-Z0-9]{15}$/.test(id)))fail('Pemetaan materi atau capaian tidak valid.');
+  return [...new Set(value)];
+}
 function safeUrl(value) {
   const url = text(value, 2000);
   if (url && (!/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/i.test(url) || /[<>"\\]/.test(url))) fail('Tautan materi harus menggunakan HTTPS.');
@@ -27,10 +32,11 @@ function validatePlan(body, now, publish) {
         if (options.length < 2 || options.length > 6 || !Number.isInteger(q.correctIndex) || q.correctIndex < -1 || q.correctIndex >= options.length || (publish && (!text(q.text, 2000) || options.some(o => !o) || q.correctIndex < 0))) fail('Lengkapi soal, pilihan, dan kunci jawaban kuis.');
         const points = Number(q.points);
         if (!Number.isFinite(points) || points < 0 || (publish && points === 0) || points > 100) fail('Poin soal harus lebih dari 0 hingga 100.');
-        return {id: 'q' + index, text: text(q.text, 2000), options, correctIndex: q.correctIndex, points, explanation: text(q.explanation, 2000)};
+        const evidence=q.sourceId&&ids(a.materialIds,8).includes(q.sourceId)?{sourceId:q.sourceId,sourceQuote:text(q.sourceQuote,2000)}:{};
+        return {id: 'q' + index, text: text(q.text, 2000), options, correctIndex: q.correctIndex, points, explanation: text(q.explanation, 2000),...evidence};
       });
-    } else if (publish && !content && !url) fail('Isi materi atau instruksi kegiatan.');
-    return {position, kind: a.kind, title: name, minutes, required: a.required !== false, snapshot: {content, url, questions}};
+    } else if (publish && !content && !url && !(a.kind==='material'&&(a.materialIds||[]).length)) fail('Isi materi atau instruksi kegiatan.');
+    return {position, kind: a.kind, title: name, minutes, required: a.required !== false, materialIds:ids(a.materialIds,8),cpmkIds:ids(a.cpmkIds,20),subCpmkIds:ids(a.subCpmkIds,20), snapshot: {content, url, questions}};
   });
   const endsAt = startsAt + activities.reduce((sum, a) => sum + a.minutes * 60000, 0);
   if (endsAt - startsAt > 24 * 3600000 || (publish && (joinUntil < startsAt || joinUntil >= endsAt))) fail('Batas masuk harus berada dalam jadwal kelas (maksimal 24 jam).');

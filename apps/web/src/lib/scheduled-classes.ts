@@ -6,6 +6,9 @@ export const ACTIVITY_LABELS: Record<ActivityKind, string> = {material: 'Materi'
 export type ScheduledActivity = {
   id: string; kind: ActivityKind; title: string; minutes: number; required: boolean;
   startsAt: string; endsAt: string; content?: string; url?: string; questions?: QuizQuestionEditable[];
+  materialIds?: string[]; cpmkIds?: string[]; subCpmkIds?: string[];
+  sources?: {title:string;version:number;available:boolean;url?:string}[];
+  academic?: {cpmks:{id:string;code:string;description:string}[];subCpmks:{id:string;code:string;description:string}[]};
 };
 export type ScheduledAttempt = {
   id: string; activity: string; student: string; answers: Record<string, unknown>; revision: number;

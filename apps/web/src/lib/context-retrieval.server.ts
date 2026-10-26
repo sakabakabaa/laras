@@ -297,6 +297,8 @@ export async function retrieveContextBundle(input: {
 	ownerLecturerId: string;
 	/** Formal assessment must cite actual section text, never a file prefix. */
 	requirePassages?: boolean;
+	/** Explicit source selection, applied before ranking and feature caps. */
+	fileIds?: string[];
 }): Promise<ContextBundle> {
 	const config = FEATURE_CONFIGS[input.feature];
 	const scope = input.scope;
@@ -377,8 +379,10 @@ export async function retrieveContextBundle(input: {
 	};
 
 	// ── Candidates: files in the authorized course the requester may read ──
+	if(input.fileIds && (input.fileIds.length===0 || input.fileIds.length>20))throw new Error('invalid context source selection');
+	const selectedFilter=input.fileIds ? ` && (${input.fileIds.map(id=>`id = "${idOrThrow('file',id)}"`).join(' || ')})` : '';
 	const filesResult = await pocketbaseAdmin.listRecords<FileLibraryRecord>('file_library', {
-		filter: `course = "${idOrThrow('course', scope.course)}" && ${fileAccessFilter(input.requester)}`,
+		filter: `course = "${idOrThrow('course', scope.course)}" && ${fileAccessFilter(input.requester)}${selectedFilter}`,
 		perPage: 200,
 		sort: '-updated',
 	});

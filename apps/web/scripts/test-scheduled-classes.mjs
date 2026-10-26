@@ -61,18 +61,24 @@ try {
   const endpoint = '/api/laras/scheduled-classes';
   const call = (user, action, body = {}) => ok(endpoint, {sessionId: meeting.id, action, ...body}, user.token);
   const denied = async (user, action, body = {}) => {const r = await api(endpoint, {sessionId: meeting.id, action, ...body}, user?.token || ''); assert(r.status >= 400 && r.status < 500, JSON.stringify(r)); assertions++;};
+  const outcome=await create('cpmk',{owner:teacher.id,course:course.id,code:'CPMK1',description:'Construct a sentence.',order:1});
+  const shared=await create('file_library',{owner:teacher.id,course:[course.id],title:'Student handout',access:'student',status:'ready',version:1});
+  const privateFile=await create('file_library',{owner:teacher.id,course:[course.id],title:'PRIVATE FACULTY REFERENCE',access:'faculty',status:'ready',version:1});
+  const foreign=await create('file_library',{owner:otherTeacher.id,course:[course.id],title:'Foreign',access:'faculty',status:'ready',version:1});
   const future = Date.now() + 3600000;
   let state = await call(teacher, 'savePlan', {baseRevision: 0, title: 'Scheduled class', startsAt: new Date(future).toISOString(), joinUntil: new Date(future + 120000).toISOString(), lateAfterMin: 10, activities: [
-    {kind: 'material', title: 'Read', content: 'Private scheduled material', minutes: 1, required: true},
+    {kind: 'material', title: 'Read', content: 'Private scheduled material', minutes: 1, required: true,materialIds:[shared.id,privateFile.id],cpmkIds:[outcome.id]},
     {kind: 'quiz', title: 'Quiz', minutes: 1, required: true, questions: [{text: 'Pick A', options: ['A', 'B'], correctIndex: 0, points: 1, explanation: 'Private explanation'}]},
     {kind: 'assignment', title: 'Write', content: 'Explain your reasoning.', minutes: 1, required: true},
     {kind: 'exit_ticket', title: 'Reflect', content: 'What did you learn?', minutes: 1, required: true},
   ]});
   await denied(student, 'state'); await denied(otherTeacher, 'state'); await denied(outsider, 'state'); await denied(wrongClass, 'state'); await denied(null, 'state');
+  assert.deepEqual(state.activities[0].materialIds,[shared.id,privateFile.id]); assert.deepEqual(state.activities[0].cpmkIds,[outcome.id]); assert.equal(state.class.academicSnapshot.session.id,meeting.id); assertions+=3;
+  await denied(teacher,'savePlan',{...state.class,baseRevision:1,activities:state.activities.map((a,i)=>i===0?{...a,materialIds:[foreign.id]}:a)});
   const classId = state.class.id;
   await denied(student, 'schedule', {baseRevision: 1});
   state = await call(teacher, 'schedule', {...state.class, baseRevision: 1, activities: state.activities});
-  let s = await call(student, 'state'); assert(!JSON.stringify(s).includes('Private')); assertions++;
+  let s = await call(student, 'state'); assert(!JSON.stringify(s).includes('Private')); assert(!JSON.stringify(s).includes(shared.id));assert(!s.class.academicSnapshot);assert(!s.activities[0].academic);assertions+=4;
   await denied(student, 'join');
   for (const name of ['scheduled_classes', 'scheduled_class_activities', 'scheduled_activity_attempts', 'scheduled_class_events']) {
     const r = await api(records(name), {}, student.token, 'GET'); assert(r.status !== 200 || r.data.items.length === 0); assertions++;
@@ -81,6 +87,7 @@ try {
   await retime(15000);
   s = await call(student, 'join'); const joined = s.participant.checkedInAt;
   assert.equal(s.activities[0].content, 'Private scheduled material'); assert(!s.activities[1].questions); assertions += 2;
+  assert.equal(s.activities[0].sources.length,1);assert.equal(s.activities[0].sources[0].title,'Student handout');assert.equal(s.activities[0].academic.cpmks[0].id,outcome.id);assert(!JSON.stringify(s).includes('PRIVATE FACULTY REFERENCE'));assertions+=4;
   await call(second, 'join');
   await ok(records('scheduled_classes') + '/' + classId, {joinUntil: new Date(Date.now() - 1000).toISOString()}, admin, 'PATCH');
   await denied(noShow, 'join');

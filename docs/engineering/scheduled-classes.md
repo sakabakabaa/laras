@@ -25,10 +25,34 @@ is **Pertemuan → Kelas terjadwal**, available to lecturers and students.
   Closed attendance must be reopened through the existing attendance screen.
 - Scheduled class work does not write official assignment grades or gradebook entries.
 
-Games, audio/video, screen monitoring, file uploads, automatic material-library
-imports, per-student accommodations and make-up sessions are future increments.
-Materials in this release are text and external HTTPS links; ensure external
-materials are accessible to students. The preview is lecturer-only and includes keys.
+Games, audio/video, screen monitoring, student file uploads, per-student
+accommodations and make-up sessions are future increments. The preview is
+lecturer-only and includes keys.
+
+## Academic links and AI autofill
+
+Each activity can explicitly relate to up to eight library materials and twenty
+CPMK/Sub-CPMK records from its course. Saving captures the source titles, versions,
+outcome descriptions and meeting RPS fields. Publishing freezes these snapshots.
+Students see linked student-access materials only after the activity opens;
+faculty-only references remain private. Removed or replaced files show an
+unavailable notice instead of silently substituting a newer version.
+
+The lecturer editor loads its context through authenticated POST
+`/api/scheduled-class-draft`. **Buat dengan AI** uses the meeting RPS, selected
+outcomes, an existing saved lesson plan, and up to four explicitly selected
+approved material passages. It uses the lecturer's `lesson_plan` model preference
+and existing AI access/quota controls. Selection is enforced before retrieval caps.
+Insufficient context is rejected. RPS-only plans omit quizzes; every generated
+quiz question must cite an exact quotation from a selected source. Exact text
+matching verifies the quotation, not whether the answer is academically correct.
+Lecturers must review factual correctness and proposed answer keys.
+
+AI returns a proposal without writing a scheduled class. Applying a proposal
+requires a replacement confirmation and changes the local editor only. Saving
+and scheduling remain explicit actions. Generated durations sum exactly to the
+requested total (10–240 minutes). Faculty-only material can inform a draft, so
+lecturers should review its generated contents before sharing with students.
 
 ## Architecture and records
 

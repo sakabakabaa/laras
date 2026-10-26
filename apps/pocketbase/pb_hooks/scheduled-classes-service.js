@@ -7,7 +7,7 @@ function data(record) {
   const value = JSON.parse(JSON.stringify(record.publicExport()));
   // JSVM publicExport exposes JSON fields as raw byte slices. Serializing
   // through JSON.stringify otherwise turns saved answers into numeric arrays.
-  for (const field of ['snapshot', 'answers', 'detail']) {
+  for (const field of ['snapshot', 'answers', 'detail', 'academicSnapshot']) {
     if (Object.prototype.hasOwnProperty.call(value, field)) value[field] = JSON.parse(record.getString(field) || '{}');
   }
   return value;
@@ -78,16 +78,17 @@ function view(app, c, ctx, user, now) {
   const participants = rows(app, 'scheduled_class_participants', 'class={:c}' + (owner ? '' : ' && student={:u}'), {c: c.id, u: user.id}).map(data);
   const attempts = rows(app, 'scheduled_activity_attempts', 'class={:c}' + (owner ? '' : ' && student={:u}'), {c: c.id, u: user.id}).map(data);
   const participant = participants.find(p => p.student === user.id);
+  if(!owner)delete info.academicSnapshot;
   const released = info.releaseResults && ['closed', 'reviewed'].includes(currentPhase);
   const safeAttempts = attempts.map(a => { if (!owner && !released) delete a.score; return a; });
   return {
     serverNow: new Date(now).toISOString(), owner, session: {id: ctx.session.id, title: ctx.session.getString('title'), course: ctx.course.id, section: ctx.session.getString('section')},
     class: {...info, phase: currentPhase}, participant: participant || null,
     activities: plan.map(a => {
-      const {snapshot, ...meta} = a;
-      if (owner) return {...meta, ...snapshot};
+      const {snapshot,materials,cpmks,subCpmks, ...meta} = a;
+      if (owner) return {...meta, ...snapshot, materialIds:materials||[],cpmkIds:cpmks||[],subCpmkIds:subCpmks||[]};
       if (!participant || now < Date.parse(a.startsAt) || currentPhase === 'cancelled') return meta;
-      return {...meta, content: snapshot.content, url: snapshot.url, questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
+      return {...meta, content: snapshot.content, url: snapshot.url, academic:snapshot.academic,sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
     }),
     attempts: safeAttempts,
     report: owner ? rosterReport(app, c, plan, participants, attempts) : [],
@@ -105,9 +106,10 @@ function handle(app, body, user, now) {
     if (!Number.isInteger(body.baseRevision) || body.baseRevision !== (c?.getInt('revision') || 0)) bad('Draf berubah. Muat ulang sebelum menyimpan.');
     let plan;
     try { plan = rules.validatePlan(body, now, action === 'schedule'); } catch (e) { bad(e.message); }
+    const academicSnapshot=require(__hooks+'/scheduled-class-academic.js').attach(app,ctx,plan);
     const section = ctx.session.getString('section') || (typeof body.section === 'string' ? body.section : '');
     if (section && app.findRecordById('course_sections', section).getString('course') !== ctx.course.id) bad('Rombel bukan dari mata kuliah ini.');
-    const fields = {session: ctx.session.id, course: ctx.course.id, owner: user.id, section, title: plan.title, instructions: plan.instructions, startsAt: plan.startsAt, endsAt: plan.endsAt, joinUntil: plan.joinUntil, lateAfterMin: plan.lateAfterMin, status: action === 'schedule' ? 'scheduled' : 'draft', revision: (c?.getInt('revision') || 0) + 1};
+    const fields = {session: ctx.session.id, course: ctx.course.id, owner: user.id, section, title: plan.title, instructions: plan.instructions, startsAt: plan.startsAt, endsAt: plan.endsAt, joinUntil: plan.joinUntil, lateAfterMin: plan.lateAfterMin, status: action === 'schedule' ? 'scheduled' : 'draft', revision: (c?.getInt('revision') || 0) + 1,academicSnapshot};
     if (!c) c = create(app, 'scheduled_classes', fields); else {c.load(fields); app.save(c);}
     for (const old of rows(app, 'scheduled_class_activities', 'class={:c}', {c: c.id})) app.delete(old);
     for (const a of plan.activities) create(app, 'scheduled_class_activities', {...a, class: c.id});

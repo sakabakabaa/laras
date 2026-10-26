@@ -40,6 +40,7 @@ export default [
 	route('api/assignment-revisions', 'routes/api.assignment-revisions.ts'),
 	route('api/assignment-draft', 'routes/api.assignment-draft.ts'),
 	route('api/task-config-draft', 'routes/api.task-config-draft.ts'),
+	route('api/scheduled-class-draft', 'routes/api.scheduled-class-draft.ts'),
 	route('api/rubric-suggestions', 'routes/api.rubric-suggestions.ts'),
 	route('api/course-thumbnail', 'routes/api.course-thumbnail.ts'),
 	route('api/task-submit', 'routes/api.task-submit.ts'),

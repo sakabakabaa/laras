@@ -14,7 +14,7 @@ import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import type { ProviderConfig } from './openai-compatible.server';
 import { decryptSecret, encryptSecret, maskSecret, secretLast4 } from './secrets.server';
 
-export type AiSurface = 'assistant' | 'evaluation' | 'lesson_plan' | 'practice' | 'rps_import';
+export type AiSurface = 'assistant' | 'evaluation' | 'lesson_plan' | 'practice' | 'rps_import' | 'student_help';
 
 export type Capabilities = { tools: boolean; vision: boolean; json: boolean; streaming: boolean };
 
@@ -31,6 +31,9 @@ export const AI_SURFACES: SurfaceDescriptor[] = [
 	{ id: 'lesson_plan', label: 'Rencana pembelajaran', requires: ['json'] },
 	{ id: 'practice', label: 'Latihan personal', requires: [] },
 	{ id: 'rps_import', label: 'Impor RPS', requires: ['json'] },
+	// Student-facing help on an assignment. It has no owner of its own, so it
+	// resolves against the course lecturer who set the provider up.
+	{ id: 'student_help', label: 'Bantuan mahasiswa', requires: [] },
 ];
 
 export type ProviderRecord = {
@@ -179,6 +182,46 @@ export const resolveModel = async (ownerId: string, surface: AiSurface): Promise
 	const env = envProvider();
 	if (!env) throw new Error('Belum ada model yang dikonfigurasi. Tambahkan provider di Pengaturan → Model AI.');
 	return { ...env, capabilities: assertCapabilities(env.capabilities, surface, env.providerLabel) };
+};
+
+/**
+ * Resolves a surface for a course, using the lecturer who owns that course.
+ *
+ * Student features have no provider of their own: the worksheet assistant and
+ * personal practice used to call the deployment env directly, so a lecturer who
+ * configured a provider in Settings saw it apply to their own assistant and to
+ * nothing a student touched. Resolving through the course owner makes the
+ * lecturer's configuration (surface preference, then default provider, then the
+ * deployment env) apply to student work too.
+ *
+ * Resolution never makes a feature unavailable that used to work: if the
+ * lecturer's provider cannot serve the surface, the deployment env is used.
+ */
+export const resolveModelForCourse = async (
+	courseId: string | null | undefined,
+	surface: AiSurface,
+): Promise<ResolvedModel> => {
+	const envOrThrow = (): ResolvedModel => {
+		const env = envProvider();
+		if (!env) throw new Error('Belum ada model yang dikonfigurasi. Tambahkan provider di Pengaturan → Model AI.');
+		return { ...env, capabilities: assertCapabilities(env.capabilities, surface, env.providerLabel) };
+	};
+	if (!courseId) return envOrThrow();
+	let ownerId: string | null = null;
+	try {
+		const course = await pocketbaseAdmin.getRecord<{ owner: string }>('courses', courseId);
+		ownerId = course.owner || null;
+	} catch {
+		// An unknown course must not break generation.
+		return envOrThrow();
+	}
+	if (!ownerId) return envOrThrow();
+	try {
+		return await resolveModel(ownerId, surface);
+	} catch {
+		// The lecturer's provider cannot serve this surface; keep the feature up.
+		return envOrThrow();
+	}
 };
 
 const validateProviderInput = (input: {

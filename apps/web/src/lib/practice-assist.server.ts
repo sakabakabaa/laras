@@ -9,6 +9,7 @@
  * grades, and nothing is persisted or fed into evaluation/grading/publishing.
  */
 import { collectModel } from '@/lib/task-assist.server';
+import { resolveModelForCourse } from '@/lib/ai/providers.server';
 import { parseModelJson, TASK_KIND_GUIDANCE, type HintCriterion } from '@/lib/feedback.server';
 import type { TaskKind } from '@/lib/task-types';
 import type { Assignment } from '@/lib/assignments';
@@ -96,7 +97,9 @@ export async function buildPracticeAssist(input: {
 		const system = input.kind
 			? [PRACTICE_ASSIST_SYSTEM, TASK_KIND_GUIDANCE[input.kind]].join(' ')
 			: PRACTICE_ASSIST_SYSTEM;
-		const raw = await collectModel(prompt, [], system);
+		// Personal practice is a student surface: the course lecturer's provider applies.
+		const resolved = await resolveModelForCourse(assignment.course, 'practice');
+		const raw = await collectModel(prompt, [], system, resolved);
 		const parsed = parseModelJson(raw);
 		if (!parsed) return null;
 		const guidance = clip(typeof parsed.guidance === 'string' ? parsed.guidance : '', 3000);

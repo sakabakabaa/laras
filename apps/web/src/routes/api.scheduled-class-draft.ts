@@ -14,6 +14,7 @@ export const action=withApi(async({request})=>{
   if(error instanceof Response)return error;
   const e=error as {status?:number;message?:string};
   if(e.status&&e.status>=400&&e.status<500)return apiError(e.status,e.message||'Draf belum dapat dibuat.');
+  if(/request failed \(HTTP (401|403)\)$/.test(e.message||''))return apiError(503,'Provider AI menolak kredensial. Periksa Pengaturan → Model AI, atau minta administrator memperbarui kunci AI bawaan server.');
   return apiError(502,'Draf AI belum berhasil dibuat. Periksa materi dan pengaturan model AI, lalu coba kembali.');
  }
 });

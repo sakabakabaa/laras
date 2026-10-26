@@ -3,6 +3,7 @@ import { authenticateUser } from '@/lib/context-retrieval.server';
 import { createRateLimiter } from '@/lib/rate-limit.server';
 import { practiceContext } from '@/lib/personal-practice.server';
 import { collectHostingerText } from '@/lib/hostinger-model.server';
+import { resolveModelForCourse } from '@/lib/ai/providers.server';
 import { synthesizeHostingerSpeech } from '@/lib/hostinger-tts.server';
 import { synthesizeElevenLabsSpeech } from '@/lib/elevenlabs-tts.server';
 import { parseModelJson } from '@/lib/feedback.server';
@@ -19,7 +20,7 @@ const summarySchema = z.object({ strengths: z.array(z.string().max(250)).max(3),
 const languageCode = (language: string) => /jerman|deutsch|german/i.test(language) ? 'de' : /inggris|english/i.test(language) ? 'en' : /prancis|french/i.test(language) ? 'fr' : /spanyol|spanish/i.test(language) ? 'es' : /jepang|japanese/i.test(language) ? 'ja' : /korea/i.test(language) ? 'ko' : /mandarin|chinese/i.test(language) ? 'zh' : /arab/i.test(language) ? 'ar' : undefined;
 
 type Reflection = {id:string;owner:string;sessionKey:string;created:string;updated:string;[key:string]:unknown};
-const findConversation = async(owner:string,sessionKey:string) => {
+ const findConversation = async(owner:string,sessionKey:string) => {
   const filter=`owner="${owner}" && sessionKey="${sessionKey}"`;
   return (await db.listRecords<Reflection>('student_conversation_reflections',{filter,perPage:1})).items[0] || null;
 };
@@ -79,7 +80,11 @@ export const action = withApi(async ({request}) => {
   const access = await enforceAiAccess({userId:auth.user.id,role:'student',capability:'generate_practice',inputChars:prompt.length+systemPrompt.length});
   if (!access.ok) return apiError(access.status,access.message);
   try {
-    const generated = await collectHostingerText({prompt,systemPrompt,model:process.env.HROUTER_CONVERSATION_MODEL || undefined,responseFormat:{type:'json_object'}});
+    // Conversation practice is a student surface: use the course lecturer's
+    // provider when they configured one, otherwise keep the deployment model.
+    const resolved = await resolveModelForCourse(ctx.course.id, 'practice');
+    const envModel = resolved.source === 'env' ? process.env.HROUTER_CONVERSATION_MODEL || undefined : undefined;
+    const generated = await collectHostingerText({prompt,systemPrompt,model:envModel,resolved,responseFormat:{type:'json_object'}});
     const value = parseModelJson(generated.content);
     const validated = body.action === 'summary' ? summarySchema.safeParse(value) : replySchema.safeParse(value);
     if (!validated.success) return apiError(502,'Balasan AI belum valid. Coba lagi; jawabanmu tetap ada.');

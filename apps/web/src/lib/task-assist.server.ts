@@ -6,7 +6,7 @@
  * anything is saved.
  */
 import logger from '@/lib/logger.server';
-import { collectHostingerText } from '@/lib/hostinger-model.server';
+import { collectHostingerText, type ResolvedProvider } from '@/lib/hostinger-model.server';
 
 const requireEnv = (name: string) => {
 	const value = process.env[name];
@@ -57,8 +57,9 @@ export async function collectModel(
 	prompt: string,
 	images: string[],
 	systemPrompt?: string,
+	resolved?: ResolvedProvider | null,
 ): Promise<string> {
-	return (await collectModelWithProvenance(prompt, images, systemPrompt)).content;
+	return (await collectModelWithProvenance(prompt, images, systemPrompt, resolved)).content;
 }
 
 /**
@@ -72,11 +73,13 @@ export async function collectModelWithProvenance(
 	prompt: string,
 	images: string[],
 	systemPrompt?: string,
+	resolved?: ResolvedProvider | null,
 ): Promise<ModelProvenance> {
 	const startedAt = Date.now();
 	const result = await collectHostingerText({
 		prompt,
 		images: images.slice(0, MAX_IMAGES),
+		resolved,
 		systemPrompt:
 			systemPrompt ||
 			'Anda asisten penilaian dosen dalam Bahasa Indonesia. Bekerja HANYA dari materi yang benar-benar dikirim: teks dan gambar kiriman mahasiswa serta rubrik dosen. Jangan mengarang nilai, kriteria, fakta, atau isi yang tidak ada. Jangan mengarang angka nilai. Balas teks ringkas dan siap tinjau dosen.',

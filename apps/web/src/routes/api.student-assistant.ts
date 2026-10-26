@@ -172,6 +172,8 @@ export const action = withApi(async ({ request }) => {
 			currentHintLevel: chat.hintLevel || 1,
 		});
 
+		if (result.outcome === 'unavailable') return apiError(503, 'assistant_unavailable');
+
 		const now = new Date().toISOString();
 		const userMessage: AssistantMessage = {
 			role: 'user',
@@ -183,6 +185,7 @@ export const action = withApi(async ({ request }) => {
 		const assistantMessage: AssistantMessage = {
 			role: 'assistant',
 			content: result.text,
+			outcome: result.outcome,
 			mode: result.mode,
 			level: result.level || undefined,
 			kind: result.kind,

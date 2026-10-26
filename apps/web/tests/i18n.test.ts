@@ -39,3 +39,21 @@ describe('interface language', () => {
 		expect(duplicates).toEqual([]);
 	});
 });
+
+it('keeps all locales complete with matching interpolation placeholders', () => {
+ const source = ts.createSourceFile('i18n.ts', readFileSync(new URL('../src/lib/i18n.ts', import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true);
+ const dictionaries: Record<string, Record<string, string>> = {};
+ for (const statement of source.statements) {
+  if (!ts.isVariableStatement(statement)) continue;
+  for (const declaration of statement.declarationList.declarations) {
+   const name = declaration.name.getText(source);
+   if (!['id', 'en', 'de'].includes(name) || !declaration.initializer || !ts.isObjectLiteralExpression(declaration.initializer)) continue;
+   dictionaries[name] = Object.fromEntries(declaration.initializer.properties.flatMap(property => ts.isPropertyAssignment(property) && ts.isStringLiteral(property.name) && ts.isStringLiteral(property.initializer) ? [[property.name.text, property.initializer.text]] : []));
+  }
+ }
+ const placeholders = (text: string) => [...new Set(text.match(/\{\w+\}/g) || [])].sort();
+ for (const locale of ['en', 'de']) {
+  expect(Object.keys(dictionaries[locale]).sort()).toEqual(Object.keys(dictionaries.id).sort());
+  for (const key of Object.keys(dictionaries.id)) expect(placeholders(dictionaries[locale][key]), `${locale}:${key}`).toEqual(placeholders(dictionaries.id[key]));
+ }
+});

@@ -354,8 +354,8 @@ export function StudentDashboard({ preview = false }: { preview?: boolean }) {
 				</div>
 			) : (
 				<div className="ld-student sd-adventure-page">
-                    <StudentHomeAdventure courses={myCourses} preview={preview} />
                     {primary && <Link to={primary.href} className="sd-game-task-reminder"><span className="sd-game-task-icon"><BookOpen size={18} /></span><span><small>{label('Tugas kelas')} · {primary.course.title}</small><strong>{primary.assignment.title}</strong></span><span className="sd-game-task-action">{t(`sd.cta.${primary.kind}`)} <ArrowRight size={16} /></span></Link>}
+                    <StudentHomeAdventure courses={myCourses} preview={preview} />
                     <details className="sd-game-coursework">
                         <summary>{label('Kelas & tugas')} <span>{primary ? `${primary.course.title} · ${primary.assignment.title}` : label('Materi, tugas, dan jadwal kelasmu')}</span></summary>
                         {primary && <section className="sd-resume"><div className="sd-resume-primary"><div className="sd-resume-copy"><span className="sd-resume-eyebrow">{primary.label}</span><h2>{primary.assignment.title}</h2><p className="sd-resume-meta">{primary.course.title}</p></div><Link to={primary.href} className="sd-resume-cta">{t(`sd.cta.${primary.kind}`)} <ArrowRight size={16} /></Link></div></section>}

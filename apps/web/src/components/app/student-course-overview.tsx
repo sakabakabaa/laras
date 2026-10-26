@@ -318,8 +318,9 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 									{nextSession.topic && <p>{nextSession.topic}</p>}
 									{nextSession.notes && <p className="sco-next-notes">{nextSession.notes}</p>}
 									{nextSessionMaterials.length > 0 && (
+										<>
 										<ul className="sco-next-materials">
-											{nextSessionMaterials.map((r) => (
+											{nextSessionMaterials.slice(0, 4).map((r) => (
 												<li key={r.id}>
 													<FileText size={13} />
 													{r.kind === 'link' ? (
@@ -334,6 +335,8 @@ export function StudentCourseOverview({ course, routeId, sessions }: Props) {
 												</li>
 											))}
 										</ul>
+          {nextSessionMaterials.length > 4 && <Link to={courseSectionPath(routeId, 'berkas')}>{t('materials.showAll', { n: String(nextSessionMaterials.length) })}</Link>}
+										</>
 									)}
 									{nextSession.references && (
 										<p className="sco-next-prep">

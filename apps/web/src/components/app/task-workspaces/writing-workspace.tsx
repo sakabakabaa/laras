@@ -1,3 +1,4 @@
+import { useT, useLanguage, localeOf } from '@/lib/i18n';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -17,6 +18,7 @@ import {
 import pb from '@/lib/pocketbase-client';
 import { useUnsavedWork } from '@/hooks/use-unsaved-work';
 import '@/styles/assessment-clarity.css';
+import '@/styles/ui-audit-fixes.css';
 import { invalidate } from '@/lib/local-cache';
 import { errorMessage } from '@/lib/learning';
 import {
@@ -40,6 +42,11 @@ import { WorksheetArt } from '@/components/app/worksheet-art';
 const IMAGE_EXT = /\.(jpe?g|png|webp)$/i;
 const isImageFile = (name: string) => IMAGE_EXT.test(name);
 
+function orderedWritingFiles(files: string[], imageOrder: string[]) {
+ const ordered = imageOrder.filter(name => files.includes(name) && isImageFile(name));
+ return [...files.filter(name => !isImageFile(name)), ...ordered, ...files.filter(name => isImageFile(name) && !ordered.includes(name))];
+}
+
 type NewFile = { file: File; url: string; isImage: boolean };
 
 /**
@@ -57,12 +64,31 @@ export function WritingWorkspace(props: WritingProps) {
  return hasWritingQuestions(config) ? <MultiQuestionWriting {...props} /> : <SingleQuestionWriting {...props} />;
 }
 
+function WritingSource({ config }: { config: WritingConfig }) {
+ const t = useT();
+ if (config.sourceText?.trim()) return <section className="writing-source"><h2>{t('writing.source')}</h2><div className="writing-receipt-text">{config.sourceText}</div></section>;
+ return config.requiresSourceText ? <p role="alert" className="form-error">{t('writing.sourceMissing')}</p> : null;
+}
+
+function WritingReceipt({ submission, text }: { submission: AssignmentSubmission; text: string }) {
+ const t = useT();
+ return <section className="tws-done" aria-label={t('writing.receipt')}>
+  <div className="tws-done-head"><CheckCircle2 size={16} /><strong>{t('writing.submitted')}</strong></div>
+  <p>{t('writing.awaitingReview')}</p>
+  {text.trim() && <><h3>{t('writing.yourAnswer')}</h3><div className="writing-receipt-text">{text}</div></>}
+  {!!submission.files?.length && <ul>{submission.files.map(name => <li key={name}><a href={submissionFileUrl(submission, name)} target="_blank" rel="noopener noreferrer">{name}</a></li>)}</ul>}
+  {submission.link && <p><a href={submission.link} target="_blank" rel="noopener noreferrer">{submission.link}</a></p>}
+ </section>;
+}
+
 function WritingSaveStatus({ dirty, busy, savedAt }: { dirty: boolean; busy: boolean; savedAt: string }) {
+ const t = useT();
+ const language = useLanguage();
  const time = savedAt ? new Date(savedAt) : null;
- const label = time && Number.isFinite(time.getTime()) ? time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+ const label = time && Number.isFinite(time.getTime()) ? time.toLocaleTimeString(localeOf(language), { hour: '2-digit', minute: '2-digit' }) : '';
  return <span className={`worksheet-save-state ${dirty ? 'unsaved' : ''}`} role="status">
   {busy ? <LoaderCircle size={14} className="spin" /> : dirty ? <Pencil size={14} /> : <CheckCircle2 size={14} />}
-  {busy ? 'Menyimpan…' : dirty ? 'Perubahan belum disimpan' : label ? `Tersimpan pukul ${label}` : 'Belum ada draf tersimpan'}
+  {busy ? t('writing.saving') : dirty ? t('writing.unsaved') : label ? t('writing.savedAt', { time: label }) : t('writing.noDraft')}
  </span>;
 }
 
@@ -81,6 +107,7 @@ function SingleQuestionWriting({
 	/** Check step: numbered answer instead of the editor. */
 	reviewing?: boolean;
 }) {
+	const t = useT();
 	const config: WritingConfig = useMemo(() => parseWritingConfig(assignment.taskConfig), [assignment]);
 	const saved = useMemo(() => parseTaskAnswers(submission?.taskAnswers), [submission]);
 	const [text, setText] = useState(submission?.content || '');
@@ -92,8 +119,9 @@ function SingleQuestionWriting({
 		const files = submission?.files || [];
 		const order = saved?.writing?.imageOrder || [];
 		const images = order.filter((f) => files.includes(f));
-		const rest = files.filter((f) => !images.includes(f));
-		return [...rest, ...images];
+		const docs = files.filter((f) => !isImageFile(f));
+		const remainingImages = files.filter((f) => isImageFile(f) && !images.includes(f));
+		return [...docs, ...images, ...remainingImages];
 	});
 	const [newFiles, setNewFiles] = useState<NewFile[]>([]);
 	const [busy, setBusy] = useState<'save' | 'submit' | null>(null);
@@ -145,8 +173,8 @@ function SingleQuestionWriting({
 	const words = countWords(text);
 	const lengthHint =
 		config.minWords > 0 || config.maxWords > 0
-			? `${words} kata${config.minWords > 0 ? ` · minimal ${config.minWords}` : ''}${config.maxWords > 0 ? ` · maksimal ${config.maxWords}` : ''}`
-			: `${words} kata`;
+			? `${t('writing.words', { n: String(words) })}${config.minWords > 0 ? ` · ${t('writing.min', { n: String(config.minWords) })}` : ''}${config.maxWords > 0 ? ` · ${t('writing.max', { n: String(config.maxWords) })}` : ''}`
+			: t('writing.words', { n: String(words) });
 	const lengthWarn =
 		(config.minWords > 0 && words < config.minWords) ||
 		(config.maxWords > 0 && words > config.maxWords);
@@ -158,7 +186,7 @@ function SingleQuestionWriting({
 
 	const addFiles = (list: FileList | null, expectImage: boolean) => {
 		setFileError('');
-		if (!list || list.length === 0) return;
+		if (busy || !list || list.length === 0) return;
 		const next: NewFile[] = [];
 		for (const file of Array.from(list)) {
 			const vErr = validateFile(file);
@@ -167,12 +195,13 @@ function SingleQuestionWriting({
 				return;
 			}
 			if (expectImage && !file.type.startsWith('image/')) {
-				setFileError('Hanya berkas gambar yang dapat diunggah sebagai foto tulisan.');
+				setFileError(t('writing.onlyImage'));
 				return;
 			}
 			next.push({ file, url: URL.createObjectURL(file), isImage: file.type.startsWith('image/') });
 		}
-		setNewFiles((prev) => [...prev, ...next].slice(0, 10));
+		if (keptFiles.length + newFiles.length + next.length > 10) { next.forEach(item => URL.revokeObjectURL(item.url)); setFileError(t('writing.fileCount')); return; }
+		setNewFiles((prev) => [...prev, ...next]);
 	};
 
 	const moveImage = (filename: string, dir: -1 | 1) => {
@@ -201,28 +230,30 @@ function SingleQuestionWriting({
 	const save = async (final: boolean) => {
 		setError('');
 		setFileError('');
-		if (
-			final &&
-			!(await confirmDialog({
-				title: 'Kumpulkan tugas?',
-				message: 'Kumpulkan versi terakhir ini sebagai pengumpulan resmi? Setelah terkirim, jawaban menunggu penilaian dosen.',
-				variant: 'default',
-				confirmLabel: 'Kumpulkan',
-			}))
-		) {
-			return;
-		}
+		if (final && config.requiresSourceText && !config.sourceText?.trim()) { setError(t('writing.sourceMissing')); return; }
 		const hasWork = text.trim() || newFiles.length > 0 || keptFiles.length > 0 || link.trim();
 		if (!hasWork) {
-			setError('Tulis teks, unggah dokumen/foto, atau tempel tautan sebelum menyimpan.');
+			setError(t('writing.empty'));
 			return;
 		}
 		if (final && config.allowText && !text.trim() && !keptDocs.length && !newDocs.length && !newImages.length && !keptImages.length && !link.trim()) {
-			setError('Kumpulkan setidaknya satu hasil pekerjaan.');
+			setError(t('writing.oneResult'));
 			return;
 		}
 		if (link.trim() && !/^https?:\/\//i.test(link.trim())) {
-			setError('Tautan harus dimulai dengan http:// atau https://');
+			setError(t('writing.invalidLink'));
+			return;
+		}
+		if (
+			final &&
+			!(await confirmDialog({
+				title: t('writing.confirmTitle'),
+				message: t('writing.confirm'),
+				variant: 'default',
+				confirmLabel: t('writing.submit'),
+				cancelLabel: t('assistant.cancel'),
+			}))
+		) {
 			return;
 		}
 		setBusy(final ? 'submit' : 'save');
@@ -233,6 +264,7 @@ function SingleQuestionWriting({
 					: 'submitted'
 				: 'draft';
 			const prevFiles = submission?.files || [];
+			const taskAnswers = { ...saved, writing: { imageOrder: keptFiles.filter(isImageFile), savedAt: new Date().toISOString(), wordCount: words } };
 			let record: AssignmentSubmission;
 
 			if (newFiles.length > 0) {
@@ -241,6 +273,7 @@ function SingleQuestionWriting({
 				fd.append('link', link.trim());
 				fd.append('group', group.trim());
 				fd.append('status', status);
+				fd.append('taskAnswers', JSON.stringify(taskAnswers));
 				for (const f of keptFiles) fd.append('files', f);
 				for (const f of newFiles) fd.append('files', f.file);
 				if (submission) {
@@ -256,6 +289,7 @@ function SingleQuestionWriting({
 					link: link.trim(),
 					group: group.trim(),
 					status,
+					taskAnswers,
 					...(keptFiles.length !== prevFiles.length || keptFiles.join() !== prevFiles.join()
 						? { files: keptFiles }
 						: {}),
@@ -268,31 +302,15 @@ function SingleQuestionWriting({
 					link: link.trim(),
 					group: group.trim(),
 					status,
+					taskAnswers,
 				});
 			}
 
-			// Persist the image order (kept order + newly uploaded images, whose
-			// final filenames only exist after the upload response).
-			const finalFiles = record.files || [];
-			const newFinals = finalFiles.filter((f) => !prevFiles.includes(f));
-			const imageOrder = [
-				...keptFiles.filter(isImageFile).filter((f) => finalFiles.includes(f)),
-				...newFinals.filter(isImageFile),
-			];
-			await pb.collection('assignment_submissions').update(record.id, {
-				taskAnswers: {
-					...saved,
-					writing: {
-						imageOrder,
-						savedAt: new Date().toISOString(),
-						wordCount: words,
-					},
-				},
-			});
+			const finalFiles = orderedWritingFiles(record.files || [], keptFiles.filter(isImageFile));
 
 			invalidate('assignment_submissions');
 			setKeptFiles(finalFiles);
-			setNewFiles([]);
+			setNewFiles((current) => current.filter((file) => !newFiles.includes(file)));
 			setSavedFingerprint(JSON.stringify({ text, group, link, keptFiles: finalFiles, pending: [] }));
 			setSavedAt(new Date().toISOString());
 			// Background AI evaluation draft for the lecturer (formal tasks only —
@@ -308,34 +326,21 @@ function SingleQuestionWriting({
 		}
 	};
 
-	if (submittedAlready) {
-		return (
-			<div className="tws-done">
-				<div className="tws-done-head">
-					<CheckCircle2 size={16} />
-					<strong>Pekerjaan sudah dikumpulkan</strong>
-				</div>
-				<p>
-					{words > 0 && `${words} kata tersimpan. `}
-					{keptImages.length > 0 && `${keptImages.length} foto tulisan tersimpan. `}
-					{revision
-						? 'Dosen meminta revisi — perbarui pekerjaan Anda lalu kumpulkan ulang.'
-						: 'Menunggu penilaian dosen.'}
-				</p>
-			</div>
-		);
+	if (submittedAlready && submission) {
+		return <WritingReceipt submission={submission} text={text} />;
 	}
 	if (!canWork) {
 		return (
-			<p className="asg-empty-line overdue">Batas waktu pengumpulan sudah terlewat. Pengumpulan tidak dapat diubah.</p>
+			<p className="asg-empty-line overdue">{t('writing.closed')}</p>
 		);
 	}
 
 	return (
 		<div className={`tws-workspace tws-writing${reviewing ? ' reviewing' : ''}${asideChecks ? ' ws-compose' : ''}`}>
+			<WritingSource config={config} />
 			{config.prompt && !asideChecks && <p className="tws-prompt">{config.prompt}</p>}
 			<div className="tws-meta">
-				{config.language && <span className="tws-chip">Bahasa: {config.language}</span>}
+				{config.language && <span className="tws-chip">{t('writing.language', { language: config.language })}</span>}
 				<span className={`tws-chip${lengthWarn ? ' warn' : ''}`}>{lengthHint}</span>
 			</div>
 			{config.formatGuidance && !asideChecks && <p className="tws-guidance">{config.formatGuidance}</p>}
@@ -343,23 +348,23 @@ function SingleQuestionWriting({
 			{asideChecks && !reviewing && (
 				<div className="ws-compose-head">
 					<h2>
-						<Pencil size={16} /> Jawaban Anda
+						<Pencil size={16} /> {t('writing.yourAnswer')}
 					</h2>
 					<div className="ws-compose-meta">
-						{config.language && <span>Bahasa: {config.language}</span>}
-						<span className={lengthWarn ? 'warn' : ''}>{words} kata</span>
+						{config.language && <span>{t('writing.language', { language: config.language })}</span>}
+						<span className={lengthWarn ? 'warn' : ''}>{t('writing.words', { n: String(words) })}</span>
 					</div>
 				</div>
 			)}
 
 			{assignment.mode === 'collaborative' && (
 				<label className="tws-field">
-					Nama kelompok
+					{t('writing.group')}
 					<input
 						maxLength={200}
 						value={group}
 						onChange={(e) => setGroup(e.target.value)}
-						placeholder="mis. Kelompok 3"
+						placeholder={t('writing.groupExample')}
 					/>
 				</label>
 			)}
@@ -377,7 +382,7 @@ function SingleQuestionWriting({
 			)}
 			{config.allowText && !reviewing && (!hasInline || editing) && (
 				<label className="tws-field">
-					TULISAN ANDA
+					{t('writing.textLabel')}
 					<LinedTextarea value={text} onChange={updateText} textareaRef={areaRef} />
 					<small>{lengthHint}</small>
 					{hasInline && editing && (
@@ -389,7 +394,7 @@ function SingleQuestionWriting({
 			)}
 
 			{config.allowDocument && (
-				<div className="tws-upload">
+				<div className="tws-upload" inert={busy !== null}>
 					<input
 						ref={docRef}
 						type="file"
@@ -405,14 +410,14 @@ function SingleQuestionWriting({
 						<span className="pdf-dropzone-icon">
 							<UploadCloud size={24} />
 						</span>
-						<strong>Unggah dokumen (PDF/DOCX/dll.)</strong>
-						<span className="pdf-dropzone-hint">Maks 10 berkas @ 100 MB</span>
+						<strong>{t('writing.upload')}</strong>
+						<span className="pdf-dropzone-hint">{t('writing.fileLimit')}</span>
 					</button>
 				</div>
 			)}
 
 			{config.allowPhotos && (
-				<div className="tws-upload">
+				<div className="tws-upload" inert={busy !== null}>
 					<input
 						ref={photoRef}
 						type="file"
@@ -427,21 +432,21 @@ function SingleQuestionWriting({
 					/>
 					<div className="tws-photo-actions">
 						<button type="button" className="ld-outline-action sm" onClick={() => photoRef.current?.click()}>
-							<Camera size={14} /> Foto / unggah tulisan tangan
+							<Camera size={14} /> {t('writing.photo')}
 						</button>
-						<span className="tws-photo-hint">Foto dapat dipratinjau dan diurutkan.</span>
+						<span className="tws-photo-hint">{t('writing.photoHint')}</span>
 					</div>
 				</div>
 			)}
 
 			{(keptDocs.length > 0 || newDocs.length > 0) && (
-				<div className="tws-docs">
+				<div className="tws-docs" inert={busy !== null}>
 					{keptDocs.map((f) => (
 						<span key={f} className="asg-file-chip">
 							<FileUp size={11} /> {f}
 							<button
 								type="button"
-								aria-label={`Hapus ${f}`}
+								aria-label={t('writing.remove', { name: f })}
 								onClick={() => setKeptFiles((prev) => prev.filter((x) => x !== f))}
 							>
 								<X size={12} />
@@ -453,7 +458,7 @@ function SingleQuestionWriting({
 							<FileUp size={11} /> {nf.file.name}
 							<button
 								type="button"
-								aria-label={`Hapus ${nf.file.name}`}
+								aria-label={t('writing.remove', { name: nf.file.name })}
 								onClick={() => setNewFiles((prev) => prev.filter((_, idx) => idx !== prev.findIndex((p) => p.url === nf.url)))}
 							>
 								<X size={12} />
@@ -464,26 +469,26 @@ function SingleQuestionWriting({
 			)}
 
 			{(keptImages.length > 0 || newImages.length > 0) && (
-				<div className="tws-photos">
-					<span className="tws-photos-label">Foto tulisan tangan ({keptImages.length + newImages.length})</span>
+				<div className="tws-photos" inert={busy !== null}>
+					<span className="tws-photos-label">{t('writing.photos', { n: String(keptImages.length + newImages.length) })}</span>
 					<ol className="tws-photo-list">
 						{keptImages.map((f, i) => (
 							<li key={f} className="tws-photo">
-								<img src={submissionFileUrl(submission!, f)} alt={`Foto tulisan ${i + 1}`} loading="lazy" />
+								<img src={submissionFileUrl(submission!, f)} alt={t('writing.photoNumber', { n: String(i + 1) })} loading="lazy" />
 								<div className="tws-photo-tools">
-									<button type="button" aria-label={`Geser kiri foto ${i + 1}`} disabled={i === 0} onClick={() => moveImage(f, -1)}>
+									<button type="button" aria-label={t('writing.moveLeft', { n: String(i + 1) })} disabled={i === 0} onClick={() => moveImage(f, -1)}>
 										<ArrowLeft size={13} />
 									</button>
 									<span>{i + 1}</span>
 									<button
 										type="button"
-										aria-label={`Geser kanan foto ${i + 1}`}
-										disabled={i === keptImages.length - 1 && newImages.length === 0}
+										aria-label={t('writing.moveRight', { n: String(i + 1) })}
+										disabled={i === keptImages.length - 1}
 										onClick={() => moveImage(f, 1)}
 									>
 										<ArrowRight size={13} />
 									</button>
-									<button type="button" aria-label={`Hapus foto ${i + 1}`} className="danger" onClick={() => setKeptFiles((prev) => prev.filter((x) => x !== f))}>
+									<button type="button" aria-label={t('writing.remove', { name: t('writing.photoNumber', { n: String(i + 1) }) })} className="danger" onClick={() => setKeptFiles((prev) => prev.filter((x) => x !== f))}>
 										<Trash2 size={13} />
 									</button>
 								</div>
@@ -491,12 +496,12 @@ function SingleQuestionWriting({
 						))}
 						{newImages.map((nf, i) => (
 							<li key={nf.url} className="tws-photo">
-								<img src={nf.url} alt={`Foto baru ${i + 1}`} />
+								<img src={nf.url} alt={t('writing.newPhoto', { n: String(i + 1) })} />
 								<div className="tws-photo-tools">
 									<button
 										type="button"
-										aria-label={`Geser kiri foto baru ${i + 1}`}
-										disabled={keptImages.length === 0 && i === 0}
+										aria-label={t('writing.moveLeft', { n: String(i + 1) })}
+										disabled={i === 0}
 										onClick={() => moveNewImage(i, -1)}
 									>
 										<ArrowLeft size={13} />
@@ -504,7 +509,7 @@ function SingleQuestionWriting({
 									<span>{keptImages.length + i + 1}</span>
 									<button
 										type="button"
-										aria-label={`Geser kanan foto baru ${i + 1}`}
+										aria-label={t('writing.moveRight', { n: String(i + 1) })}
 										disabled={i === newImages.length - 1}
 										onClick={() => moveNewImage(i, 1)}
 									>
@@ -512,7 +517,7 @@ function SingleQuestionWriting({
 									</button>
 									<button
 										type="button"
-										aria-label={`Hapus foto baru ${i + 1}`}
+										aria-label={t('writing.remove', { name: t('writing.photoNumber', { n: String(i + 1) }) })}
 										className="danger"
 										onClick={() => setNewFiles((prev) => prev.filter((p) => p.url !== nf.url))}
 									>
@@ -540,24 +545,24 @@ function SingleQuestionWriting({
 					<div className="res-progress-bar">
 						<span style={{ width: `${progress.percent}%` }} />
 					</div>
-					<em>Mengunggah {progress.percent}%</em>
+					<em>{t('writing.uploading', { n: String(progress.percent) })}</em>
 				</div>
 			)}
 
 			<div className="worksheet-submit-bar">
-				<div className="worksheet-save-copy"><WritingSaveStatus dirty={dirty} busy={busy !== null} savedAt={savedAt} /><small>Draf dapat dilanjutkan nanti. Kumpulkan jika jawaban sudah siap dinilai dosen.</small></div>
+				<div className="worksheet-save-copy"><WritingSaveStatus dirty={dirty} busy={busy !== null} savedAt={savedAt} /><small>{t('writing.saveHint')}</small></div>
 			<div className="tws-actions">
 				<button type="button" className="ld-outline-action sm" onClick={() => void save(false)} disabled={busy !== null}>
-					{busy === 'save' ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />} Simpan draf
+					{busy === 'save' ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />} {t('writing.save')}
 				</button>
 				<button type="button" className="ld-btn-primary" onClick={() => void save(true)} disabled={busy !== null}>
 					{busy === 'submit' ? (
 						<>
-							<LoaderCircle size={15} className="spin" /> Mengumpulkan...
+							<LoaderCircle size={15} className="spin" /> {t('writing.submitting')}
 						</>
 					) : (
 						<>
-							<Send size={15} /> Kumpulkan tugas
+							<Send size={15} /> {t('writing.submitTask')}
 						</>
 					)}
 				</button>
@@ -566,8 +571,8 @@ function SingleQuestionWriting({
 			{lengthWarn && (
 				<p className="tws-hint">
 					{config.minWords > 0 && words < config.minWords
-						? `Tulisan belum mencapai panjang minimal ${config.minWords} kata.`
-						: `Tulisan melebihi panjang maksimal ${config.maxWords} kata.`}
+						? t('writing.underMin', { n: String(config.minWords) })
+						: t('writing.overMax', { n: String(config.maxWords) })}
 				</p>
 			)}
 			<ReviewSlot aside={asideChecks}>
@@ -694,6 +699,7 @@ function LinedTextarea({
 	onChange: (value: string) => void;
 	textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }) {
+	const t = useT();
 	const areaRef = useRef<HTMLTextAreaElement>(null);
 	const gutterRef = useRef<HTMLDivElement>(null);
 	const [count, setCount] = useState(() => Math.max(value.split('\n').length, 1));
@@ -772,8 +778,8 @@ function LinedTextarea({
 						gutterRef.current.scrollTop = areaRef.current.scrollTop;
 					}
 				}}
-				placeholder="Tulis pekerjaan Anda di sini…"
-				aria-label="Tulisan Anda, bernomor per baris yang terlihat"
+				placeholder={t('writing.placeholder')}
+				aria-label={t('writing.textarea')}
 			/>
 		</div>
 	);
@@ -792,6 +798,7 @@ function ReviewSlot({ aside, children }: { aside?: boolean; children: ReactNode 
 
 /** Read-only numbered answer for the check step. Does not invent line grades. */
 function NumberedAnswer({ text, words }: { text: string; words: number }) {
+	const t = useT();
 	const probeRef = useRef<HTMLOListElement>(null);
 	const [lines, setLines] = useState<string[]>(() => text.split('\n'));
 
@@ -816,13 +823,13 @@ function NumberedAnswer({ text, words }: { text: string; words: number }) {
 	return (
 		<div className="ans-sheet">
 			<div className="ans-sheet-head">
-				<strong>Jawaban kamu</strong>
-				<span>{words} kata</span>
+				<strong>{t('writing.yourAnswer')}</strong>
+				<span>{t('writing.words', { n: String(words) })}</span>
 			</div>
 			{visible.length === 0 ? (
 				<div className="ws-empty">
 					<WorksheetArt name="empty" size="md" />
-					<p className="fbp-empty">Belum ada tulisan. Kembali ke langkah Jawaban untuk mengisi.</p>
+					<p className="fbp-empty">{t('writing.emptyReview')}</p>
 				</div>
 			) : (
 				<ol className="ans-lines" ref={probeRef}>
@@ -1249,6 +1256,7 @@ function MultiQuestionWriting({
 	asideChecks?: boolean;
 	reviewing?: boolean;
 }) {
+	const t = useT();
 	const config = useMemo(() => parseWritingConfig(assignment.taskConfig), [assignment]);
 	const saved = useMemo(() => parseTaskAnswers(submission?.taskAnswers), [submission]);
 	const questions = config.questions;
@@ -1265,8 +1273,9 @@ function MultiQuestionWriting({
 		const files = submission?.files || [];
 		const order = saved?.writing?.imageOrder || [];
 		const images = order.filter((f) => files.includes(f));
-		const rest = files.filter((f) => !images.includes(f));
-		return [...rest, ...images];
+		const docs = files.filter((f) => !isImageFile(f));
+		const remainingImages = files.filter((f) => isImageFile(f) && !images.includes(f));
+		return [...docs, ...images, ...remainingImages];
 	});
 	const [newFiles, setNewFiles] = useState<NewFile[]>([]);
 	const [busy, setBusy] = useState<'save' | 'submit' | null>(null);
@@ -1302,7 +1311,7 @@ function MultiQuestionWriting({
 
 	const addFiles = (list: FileList | null, expectImage: boolean) => {
 		setFileError('');
-		if (!list || list.length === 0) return;
+		if (busy || !list || list.length === 0) return;
 		const next: NewFile[] = [];
 		for (const file of Array.from(list)) {
 			const vErr = validateFile(file);
@@ -1311,12 +1320,13 @@ function MultiQuestionWriting({
 				return;
 			}
 			if (expectImage && !file.type.startsWith('image/')) {
-				setFileError('Hanya berkas gambar yang dapat diunggah sebagai foto tulisan.');
+				setFileError(t('writing.onlyImage'));
 				return;
 			}
 			next.push({ file, url: URL.createObjectURL(file), isImage: file.type.startsWith('image/') });
 		}
-		setNewFiles((prev) => [...prev, ...next].slice(0, 10));
+		if (keptFiles.length + newFiles.length + next.length > 10) { next.forEach(item => URL.revokeObjectURL(item.url)); setFileError(t('writing.fileCount')); return; }
+		setNewFiles((prev) => [...prev, ...next]);
 	};
 
 	const moveImage = (filename: string, dir: -1 | 1) => {
@@ -1344,25 +1354,27 @@ function MultiQuestionWriting({
 	const save = async (final: boolean) => {
 		setError('');
 		setFileError('');
-		if (
-			final &&
-			!(await confirmDialog({
-				title: 'Kumpulkan tugas?',
-				message: 'Kumpulkan seluruh jawaban blok sebagai pengumpulan resmi? Setelah terkirim, jawaban menunggu penilaian dosen.',
-				variant: 'default',
-				confirmLabel: 'Kumpulkan',
-			}))
-		) {
-			return;
-		}
+		if (final && config.requiresSourceText && !config.sourceText?.trim()) { setError(t('writing.sourceMissing')); return; }
 		const hasText = questions.some((q) => answers[q.id]?.trim());
 		const hasWork = hasText || newFiles.length > 0 || keptFiles.length > 0 || link.trim();
 		if (!hasWork) {
-			setError('Isi minimal satu blok jawaban, unggah dokumen/foto, atau tempel tautan sebelum menyimpan.');
+			setError(t('writing.emptyMulti'));
 			return;
 		}
 		if (link.trim() && !/^https?:\/\//i.test(link.trim())) {
-			setError('Tautan harus dimulai dengan http:// atau https://');
+			setError(t('writing.invalidLink'));
+			return;
+		}
+		if (
+			final &&
+			!(await confirmDialog({
+				title: t('writing.confirmTitle'),
+				message: t('writing.confirmMulti'),
+				variant: 'default',
+				confirmLabel: t('writing.submit'),
+				cancelLabel: t('assistant.cancel'),
+			}))
+		) {
 			return;
 		}
 		setBusy(final ? 'submit' : 'save');
@@ -1428,25 +1440,11 @@ function MultiQuestionWriting({
 				});
 			}
 
-			// Persist the final image order once uploaded filenames are known.
-			const finalFiles = record.files || [];
-			const newFinals = finalFiles.filter((f) => !prevFiles.includes(f));
-			const imageOrder = [
-				...keptFiles.filter(isImageFile).filter((f) => finalFiles.includes(f)),
-				...newFinals.filter(isImageFile),
-			];
-			if (imageOrder.length > 0 || newFiles.length > 0) {
-				await pb.collection('assignment_submissions').update(record.id, {
-					taskAnswers: {
-						...taskAnswers,
-						writing: { ...taskAnswers.writing!, imageOrder },
-					},
-				});
-			}
+			const finalFiles = orderedWritingFiles(record.files || [], keptFiles.filter(isImageFile));
 
 			invalidate('assignment_submissions');
 			setKeptFiles(finalFiles);
-			setNewFiles([]);
+			setNewFiles((current) => current.filter((file) => !newFiles.includes(file)));
 			setSavedFingerprint(JSON.stringify({ answers, group, link, keptFiles: finalFiles, pending: [] }));
 			setSavedAt(new Date().toISOString());
 			if (final) void requestEvaluationDraft(record.id);
@@ -1459,57 +1457,45 @@ function MultiQuestionWriting({
 		}
 	};
 
-	if (submittedAlready) {
-		return (
-			<div className="tws-done">
-				<div className="tws-done-head">
-					<CheckCircle2 size={16} />
-					<strong>Pekerjaan sudah dikumpulkan</strong>
-				</div>
-				<p>
-					{words > 0 && `${words} kata tersimpan. `}
-					{revision
-						? 'Dosen meminta revisi — perbarui jawaban Anda lalu kumpulkan ulang.'
-						: 'Menunggu penilaian dosen.'}
-				</p>
-			</div>
-		);
+	if (submittedAlready && submission) {
+		return <WritingReceipt submission={submission} text={combined} />;
 	}
 	if (!canWork) {
 		return (
-			<p className="asg-empty-line overdue">Batas waktu pengumpulan sudah terlewat. Pengumpulan tidak dapat diubah.</p>
+			<p className="asg-empty-line overdue">{t('writing.closed')}</p>
 		);
 	}
 
 	return (
 		<div className={`tws-workspace tws-writing tws-writing-multi${reviewing ? ' reviewing' : ''}${asideChecks ? ' ws-compose' : ''}`}>
+			<WritingSource config={config} />
 			{config.prompt && !asideChecks && <p className="tws-prompt">{config.prompt}</p>}
 			<div className="tws-meta">
-				{config.language && <span className="tws-chip">Bahasa: {config.language}</span>}
-				<span className="tws-chip">{words} kata total</span>
+				{config.language && <span className="tws-chip">{t('writing.language', { language: config.language })}</span>}
+				<span className="tws-chip">{t('writing.words', { n: String(words) })} total</span>
 			</div>
 			{config.formatGuidance && !asideChecks && <p className="tws-guidance">{config.formatGuidance}</p>}
 
 			{asideChecks && !reviewing && (
 				<div className="ws-compose-head">
 					<h2>
-						<Pencil size={16} /> Jawaban Anda
+						<Pencil size={16} /> {t('writing.yourAnswer')}
 					</h2>
 					<div className="ws-compose-meta">
-						{config.language && <span>Bahasa: {config.language}</span>}
-						<span>{words} kata</span>
+						{config.language && <span>{t('writing.language', { language: config.language })}</span>}
+						<span>{t('writing.words', { n: String(words) })}</span>
 					</div>
 				</div>
 			)}
 
 			{assignment.mode === 'collaborative' && (
 				<label className="tws-field">
-					Nama kelompok
+					{t('writing.group')}
 					<input
 						maxLength={200}
 						value={group}
 						onChange={(e) => setGroup(e.target.value)}
-						placeholder="mis. Kelompok 3"
+						placeholder={t('writing.groupExample')}
 					/>
 				</label>
 			)}
@@ -1522,8 +1508,8 @@ function MultiQuestionWriting({
 					const maxW = q.maxWords || config.maxWords;
 					const hint =
 						minW > 0 || maxW > 0
-							? `${w} kata${minW > 0 ? ` · minimal ${minW}` : ''}${maxW > 0 ? ` · maksimal ${maxW}` : ''}`
-							: `${w} kata`;
+							? `${t('writing.words', { n: String(w) })}${minW > 0 ? ` · ${t('writing.min', { n: String(minW) })}` : ''}${maxW > 0 ? ` · ${t('writing.max', { n: String(maxW) })}` : ''}`
+							: t('writing.words', { n: String(w) });
 					const warn =
 						(minW > 0 && w < minW) || (maxW > 0 && w > maxW);
 					return (
@@ -1537,14 +1523,14 @@ function MultiQuestionWriting({
 							</div>
 							{config.allowText && !reviewing && (
 								<label className="tws-field">
-									JAWABAN ANDA — BLOK {i + 1}
+									{t('writing.block', { n: String(i + 1) })}
 									<textarea
 										rows={6}
 										maxLength={100000}
 										value={value}
 										onChange={(e) => setAnswer(q.id, e.target.value)}
-										placeholder={`Tulis jawaban untuk pertanyaan ${i + 1} di sini…`}
-										aria-label={`Jawaban pertanyaan ${i + 1}`}
+										placeholder={t('writing.questionPlaceholder', { n: String(i + 1) })}
+										aria-label={t('writing.question', { n: String(i + 1) })}
 									/>
 									<small className={warn ? 'warn' : ''}>{hint}</small>
 								</label>
@@ -1554,7 +1540,7 @@ function MultiQuestionWriting({
 									{value.trim() ? (
 										<p className="tsr-text">{value}</p>
 									) : (
-										<p className="asg-empty-line">Belum dijawab.</p>
+										<p className="asg-empty-line">{t('writing.unanswered')}</p>
 									)}
 									<small>{hint}</small>
 								</div>
@@ -1565,7 +1551,7 @@ function MultiQuestionWriting({
 			</ol>
 
 			{config.allowDocument && (
-				<div className="tws-upload">
+				<div className="tws-upload" inert={busy !== null}>
 					<input
 						ref={docRef}
 						type="file"
@@ -1581,14 +1567,14 @@ function MultiQuestionWriting({
 						<span className="pdf-dropzone-icon">
 							<UploadCloud size={24} />
 						</span>
-						<strong>Unggah dokumen (PDF/DOCX/dll.)</strong>
-						<span className="pdf-dropzone-hint">Maks 10 berkas @ 100 MB</span>
+						<strong>{t('writing.upload')}</strong>
+						<span className="pdf-dropzone-hint">{t('writing.fileLimit')}</span>
 					</button>
 				</div>
 			)}
 
 			{config.allowPhotos && (
-				<div className="tws-upload">
+				<div className="tws-upload" inert={busy !== null}>
 					<input
 						ref={photoRef}
 						type="file"
@@ -1603,21 +1589,21 @@ function MultiQuestionWriting({
 					/>
 					<div className="tws-photo-actions">
 						<button type="button" className="ld-outline-action sm" onClick={() => photoRef.current?.click()}>
-							<Camera size={14} /> Foto / unggah tulisan tangan
+							<Camera size={14} /> {t('writing.photo')}
 						</button>
-						<span className="tws-photo-hint">Foto dapat dipratinjau dan diurutkan.</span>
+						<span className="tws-photo-hint">{t('writing.photoHint')}</span>
 					</div>
 				</div>
 			)}
 
 			{(keptDocs.length > 0 || newDocs.length > 0) && (
-				<div className="tws-docs">
+				<div className="tws-docs" inert={busy !== null}>
 					{keptDocs.map((f) => (
 						<span key={f} className="asg-file-chip">
 							<FileUp size={11} /> {f}
 							<button
 								type="button"
-								aria-label={`Hapus ${f}`}
+								aria-label={t('writing.remove', { name: f })}
 								onClick={() => setKeptFiles((prev) => prev.filter((x) => x !== f))}
 							>
 								<X size={12} />
@@ -1629,7 +1615,7 @@ function MultiQuestionWriting({
 							<FileUp size={11} /> {nf.file.name}
 							<button
 								type="button"
-								aria-label={`Hapus ${nf.file.name}`}
+								aria-label={t('writing.remove', { name: nf.file.name })}
 								onClick={() => setNewFiles((prev) => prev.filter((p) => p.url !== nf.url))}
 							>
 								<X size={12} />
@@ -1640,26 +1626,26 @@ function MultiQuestionWriting({
 			)}
 
 			{(keptImages.length > 0 || newImages.length > 0) && (
-				<div className="tws-photos">
-					<span className="tws-photos-label">Foto tulisan tangan ({keptImages.length + newImages.length})</span>
+				<div className="tws-photos" inert={busy !== null}>
+					<span className="tws-photos-label">{t('writing.photos', { n: String(keptImages.length + newImages.length) })}</span>
 					<ol className="tws-photo-list">
 						{keptImages.map((f, i) => (
 							<li key={f} className="tws-photo">
-								<img src={submissionFileUrl(submission!, f)} alt={`Foto tulisan ${i + 1}`} loading="lazy" />
+								<img src={submissionFileUrl(submission!, f)} alt={t('writing.photoNumber', { n: String(i + 1) })} loading="lazy" />
 								<div className="tws-photo-tools">
-									<button type="button" aria-label={`Geser kiri foto ${i + 1}`} disabled={i === 0} onClick={() => moveImage(f, -1)}>
+									<button type="button" aria-label={t('writing.moveLeft', { n: String(i + 1) })} disabled={i === 0} onClick={() => moveImage(f, -1)}>
 										<ArrowLeft size={13} />
 									</button>
 									<span>{i + 1}</span>
 									<button
 										type="button"
-										aria-label={`Geser kanan foto ${i + 1}`}
-										disabled={i === keptImages.length - 1 && newImages.length === 0}
+										aria-label={t('writing.moveRight', { n: String(i + 1) })}
+										disabled={i === keptImages.length - 1}
 										onClick={() => moveImage(f, 1)}
 									>
 										<ArrowRight size={13} />
 									</button>
-									<button type="button" aria-label={`Hapus foto ${i + 1}`} className="danger" onClick={() => setKeptFiles((prev) => prev.filter((x) => x !== f))}>
+									<button type="button" aria-label={t('writing.remove', { name: t('writing.photoNumber', { n: String(i + 1) }) })} className="danger" onClick={() => setKeptFiles((prev) => prev.filter((x) => x !== f))}>
 										<Trash2 size={13} />
 									</button>
 								</div>
@@ -1667,12 +1653,12 @@ function MultiQuestionWriting({
 						))}
 						{newImages.map((nf, i) => (
 							<li key={nf.url} className="tws-photo">
-								<img src={nf.url} alt={`Foto baru ${i + 1}`} />
+								<img src={nf.url} alt={t('writing.newPhoto', { n: String(i + 1) })} />
 								<div className="tws-photo-tools">
 									<button
 										type="button"
-										aria-label={`Geser kiri foto baru ${i + 1}`}
-										disabled={keptImages.length === 0 && i === 0}
+										aria-label={t('writing.moveLeft', { n: String(i + 1) })}
+										disabled={i === 0}
 										onClick={() => moveNewImage(i, -1)}
 									>
 										<ArrowLeft size={13} />
@@ -1680,7 +1666,7 @@ function MultiQuestionWriting({
 									<span>{keptImages.length + i + 1}</span>
 									<button
 										type="button"
-										aria-label={`Geser kanan foto baru ${i + 1}`}
+										aria-label={t('writing.moveRight', { n: String(i + 1) })}
 										disabled={i === newImages.length - 1}
 										onClick={() => moveNewImage(i, 1)}
 									>
@@ -1688,7 +1674,7 @@ function MultiQuestionWriting({
 									</button>
 									<button
 										type="button"
-										aria-label={`Hapus foto baru ${i + 1}`}
+										aria-label={t('writing.remove', { name: t('writing.photoNumber', { n: String(i + 1) }) })}
 										className="danger"
 										onClick={() => setNewFiles((prev) => prev.filter((p) => p.url !== nf.url))}
 									>
@@ -1716,24 +1702,24 @@ function MultiQuestionWriting({
 					<div className="res-progress-bar">
 						<span style={{ width: `${progress.percent}%` }} />
 					</div>
-					<em>Mengunggah {progress.percent}%</em>
+					<em>{t('writing.uploading', { n: String(progress.percent) })}</em>
 				</div>
 			)}
 
 			<div className="worksheet-submit-bar">
-				<div className="worksheet-save-copy"><WritingSaveStatus dirty={dirty} busy={busy !== null} savedAt={savedAt} /><small>Draf dapat dilanjutkan nanti. Kumpulkan jika jawaban sudah siap dinilai dosen.</small></div>
+				<div className="worksheet-save-copy"><WritingSaveStatus dirty={dirty} busy={busy !== null} savedAt={savedAt} /><small>{t('writing.saveHint')}</small></div>
 			<div className="tws-actions">
 				<button type="button" className="ld-outline-action sm" onClick={() => void save(false)} disabled={busy !== null}>
-					{busy === 'save' ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />} Simpan draf
+					{busy === 'save' ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />} {t('writing.save')}
 				</button>
 				<button type="button" className="ld-btn-primary" onClick={() => void save(true)} disabled={busy !== null}>
 					{busy === 'submit' ? (
 						<>
-							<LoaderCircle size={15} className="spin" /> Mengumpulkan...
+							<LoaderCircle size={15} className="spin" /> {t('writing.submitting')}
 						</>
 					) : (
 						<>
-							<Send size={15} /> Kumpulkan tugas
+							<Send size={15} /> {t('writing.submitTask')}
 						</>
 					)}
 				</button>

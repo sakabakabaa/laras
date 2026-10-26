@@ -7,11 +7,10 @@ import { errorMessage } from '@/lib/learning';
 import { validateFile } from '@/lib/resources';
 import { requestEvaluationDraft } from '@/lib/ai-evaluation';
 import { useAuth } from '@/hooks/use-auth';
-import { useLanguage, useT } from '@/lib/i18n';
+import { useLanguage, useT, localeOf } from '@/lib/i18n';
 import {
 	activityTypeOf,
 	ACTIVITY_TYPE_LABEL,
-	deadlineLabel,
 	isPastDeadline,
 	MODE_LABEL,
 	SHAPE_LABEL,
@@ -113,6 +112,8 @@ export function EnrolledAnswerSheet({
 		}
 	}, []);
 
+	const deadlineDate = new Date(assignment.deadline);
+	const deadlineText = assignment.deadline && Number.isFinite(deadlineDate.getTime()) ? new Intl.DateTimeFormat(localeOf(uiLanguage), { dateStyle: 'medium', timeStyle: 'short' }).format(deadlineDate) : t('worksheet.noDeadline');
 	const week = assignment.expand?.session?.week;
 	const localizedSubmissionStatus = (value: AssignmentSubmission | null | undefined) =>
 		value?.status ? t(`worksheet.status.${value.status}`) : t('worksheet.notSubmitted');
@@ -125,9 +126,9 @@ export function EnrolledAnswerSheet({
 		},
 		...(assignment.shape ? [{ label: SHAPE_LABEL[assignment.shape] }] : []),
 		...(speakingConfig?.language ? [{ label: speakingConfig.language }] : []),
-		...(deadlineLabel(assignment.deadline) === 'Tanpa batas waktu'
+		...(deadlineText === t('worksheet.noDeadline')
 			? []
-			: [{ label: deadlineLabel(assignment.deadline) }]),
+			: [{ label: deadlineText }]),
 		...(submission?.linkedFromPublic
 			? [{ label: 'Ditautkan dari publik', tone: 'green' as const }]
 			: []),
@@ -144,7 +145,7 @@ export function EnrolledAnswerSheet({
 		{ label: 'Jenis', value: ACTIVITY_TYPE_LABEL[formative ? 'formative' : 'formal'] },
 		{ label: 'Format kerja', value: MODE_LABEL[assignment.mode] },
 		{ label: 'Format jawaban', value: kind === 'speaking' ? 'Rekaman audio' : specialized ? 'Sesuai jenis tugas' : 'Teks atau file' },
-		{ label: 'Batas waktu', value: deadlineLabel(assignment.deadline) },
+		{ label: t('worksheet.deadline'), value: deadlineText },
 		{ label: 'Bobot nilai', value: formative ? 'Tidak dinilai' : 'Dinilai dosen' },
 		...(submission?.linkedFromPublic
 			? [{ label: 'Sumber jawaban', value: 'Ditautkan dari pengumpulan publik (NIM cocok)' }]
@@ -158,9 +159,9 @@ export function EnrolledAnswerSheet({
 					: 'Latihan ini tidak mengubah nilai mata kuliah.',
 			]
 		: [
-				'Simpan draf sebelum menutup halaman. Progres tersimpan di akun Anda.',
-				'Tinjau kelengkapan jawaban sebelum mengumpulkan.',
-				'Setelah terkumpul, hanya dosen yang dapat menerbitkan nilai dan umpan balik.',
+				t('worksheet.tip.save'),
+				t('worksheet.tip.review'),
+				t('worksheet.tip.grade'),
 			];
 
 	const finallySubmitted = Boolean(
@@ -172,7 +173,7 @@ export function EnrolledAnswerSheet({
 			<>
 				<div className="sas-result-head">
 					<CheckCircle2 size={18} />
-					<strong>Hasil penilaian dosen</strong>
+					<strong>{t('worksheet.lecturerResult')}</strong>
 					<span className={`sas-result-status ${graded ? 'graded' : 'pending'}`}>
 						{localizedSubmissionStatus(submission)}
 					</span>
@@ -180,7 +181,7 @@ export function EnrolledAnswerSheet({
 				<div className="sas-result-body">
 					{graded && submission?.grade != null && (
 						<div className="sas-result-grade">
-							<small>Nilai</small>
+							<small>{t('worksheet.grade')}</small>
 							<strong>{studentGradeLabel(submission.grade)}</strong>
 						</div>
 					)}
@@ -189,7 +190,7 @@ export function EnrolledAnswerSheet({
 					)}
 					{!graded && (
 						<p className="sas-result-pending">
-							Pengumpulan Anda tercatat. Nilai dan umpan balik dari dosen akan muncul di sini setelah dinilai.
+							{t('worksheet.pendingReview')}
 						</p>
 					)}
 				</div>
@@ -503,7 +504,7 @@ export function EnrolledAnswerSheet({
 				submission={submission}
 				onSaved={onSaved}
 				asideChecks={fullscreen}
-				reviewing={fullscreen && step === 3}
+				reviewing={!fullscreen && step === 3}
 			/>
 		) : kind === 'reading' ? (
 			<ReadingWorkspace assignment={assignment} submission={submission} onSaved={onSaved} />
@@ -592,6 +593,7 @@ export function EnrolledAnswerSheet({
 	return (
 		<StudentAnswerSheet
 			workspace={fullscreen}
+			workspaceOwnsActions={fullscreen && specialized && !speakingConfig}
 			onBack={onBack}
 			backLabel={t('worksheet.backToTasks')}
 			badges={badges}

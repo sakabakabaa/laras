@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n';
 import { FileText, ListOrdered, PenLine, Plus, Trash2 } from 'lucide-react';
 import type { WritingConfig } from '@/lib/task-types';
 import { NumberField, RowActions, ToggleField, newRowId } from '@/components/app/task-builders/builder-shared';
@@ -13,6 +14,7 @@ export function WritingBuilder({
 	value: WritingConfig;
 	onChange: (next: WritingConfig) => void;
 }) {
+	const t = useT();
 	const addCriterion = () => {
 		onChange({ ...value, criteria: [...value.criteria, { id: newRowId('c'), label: '', weight: 1 }] });
 	};
@@ -68,6 +70,9 @@ export function WritingBuilder({
 					placeholder="mis. Tulis esai argumentatif 500–700 kata tentang topik pertemuan ini…"
 				/>
 			</label>
+
+   <label className="tkb-num tkb-wide"><span><input type="checkbox" checked={Boolean(value.requiresSourceText)} onChange={event => onChange({ ...value, requiresSourceText: event.target.checked })} /> {t('writing.requiresSource')}</span></label>
+   <label className="tkb-num tkb-wide"><span>{t('writing.source')}</span><textarea rows={6} maxLength={20000} value={value.sourceText || ''} onChange={event => onChange({ ...value, sourceText: event.target.value })} /><small>{t('writing.sourceHint')}</small></label>
 
 			<div className="tkb-grid">
 				<label className="tkb-num">

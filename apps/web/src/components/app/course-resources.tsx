@@ -109,10 +109,10 @@ export function CourseResources({ courseId, canEdit, isStudent }: Props) {
 	// PocketBase access rules enforce visibility — students see course-linked
 	// files shared with them, while faculty sees their own files.
 	const libraryQuery = useCachedQuery<FileLibraryRecord[]>(
-		courseId ? `file_library:course=${courseId}:-created` : null,
+		courseId ? `file_library:course=${courseId}:membership:-created` : null,
 		() =>
 			pb.collection('file_library').getFullList<FileLibraryRecord>({
-				filter: pb.filter('course = {:id}', { id: courseId }),
+				filter: pb.filter('course ~ {:id}', { id: courseId }),
 				sort: '-created',
 			}),
 	);

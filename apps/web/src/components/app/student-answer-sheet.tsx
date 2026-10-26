@@ -43,7 +43,7 @@ export type SheetMaterial = {
 };
 export type SheetInfo = { label: string; value: string };
 
-const STEP_LABELS = ['Identitas', 'Jawaban', 'Periksa jawaban', 'Kirim'] as const;
+const STEP_KEYS = ['identity', 'answer', 'review', 'send'] as const;
 
 /**
  * Student answer sheet chrome shared by enrolled tasks and public links.
@@ -65,6 +65,7 @@ export function StudentAnswerSheet({
 	onStep,
 	hideSubmitStep,
 	workspace,
+	workspaceOwnsActions = false,
 	prepare,
 	identity,
 	answer,
@@ -106,6 +107,8 @@ export function StudentAnswerSheet({
 	hideSubmitStep?: boolean;
 	/** Full-screen student workspace: answer stays visible beside the AI panel. */
 	workspace?: boolean;
+	/** Specialized workspaces provide their own save/submit controls. */
+	workspaceOwnsActions?: boolean;
 	/** Speaking flow: Persiapan sits between identity and the recorder. */
 	prepare?: ReactNode;
 	identity: ReactNode;
@@ -141,12 +144,12 @@ export function StudentAnswerSheet({
 	const t = useT();
 	const speaking = Boolean(prepare);
 	const focused = Boolean(workspace && brief);
-	const deadlineFact = info.find((row) => row.label === 'Batas waktu');
+	const deadlineFact = info.find((row) => row.label === t('worksheet.deadline') || row.label === 'Batas waktu');
 	const steps = speaking
-		? (['Identitas', 'Persiapan', 'Rekam', 'Periksa jawaban', 'Kirim'] as const)
+		? ['identity', 'prepare', 'record', 'review', 'send'].map(key => t(`worksheet.step.${key}`))
 		: hideSubmitStep
-			? STEP_LABELS.slice(0, 3)
-			: STEP_LABELS;
+			? STEP_KEYS.slice(0, 3).map(key => t(`worksheet.step.${key}`))
+			: STEP_KEYS.map(key => t(`worksheet.step.${key}`));
 	const visibleStep = !speaking && hideSubmitStep && step === 4 ? 3 : step;
 	const checkStep = speaking ? 4 : 3;
 	const sendStep = steps.length;
@@ -155,11 +158,10 @@ export function StudentAnswerSheet({
 	const flat = Boolean(workspace);
 	const showAnswer = flat || visibleStep === answerStep || Boolean(workspace && visibleStep === checkStep);
 	const sideReview = Boolean(formative && (flat || visibleStep === checkStep) && reviewAside);
-	const stepAdvance = /^(Lanjut|Cek jawaban|Tinjau pengumpulan)$/.test(primaryLabel);
 	const stepper = !flat ? (
 		<div className={workspace ? 'sas-step-row' : undefined}>
 			<FormStepper
-				ariaLabel="Tahapan pengerjaan"
+				ariaLabel={t('worksheet.stepper')}
 				current={visibleStep}
 				steps={steps.map((label, i) => ({ id: i + 1, label }))}
 				canSelect={() => true}
@@ -169,7 +171,7 @@ export function StudentAnswerSheet({
 	) : null;
 
 	return (
-		<section className={`sas${workspace ? ' sas-workspace worksheet-clarity' : ''}`} aria-label="Lembar jawaban">
+		<section className={`sas${workspace ? ' sas-workspace worksheet-clarity' : ''}`} aria-label={t('worksheet.sheet')}>
 			{workspace ? stepper : null}
 			<div className="sas-main">
 				{onBack && !workspace && (
@@ -259,7 +261,7 @@ export function StudentAnswerSheet({
 				)}
 
 				{focused && brief && (
-					<section className="ws-task" aria-label="Tugas kamu">
+					<section className="ws-task" aria-label={t('worksheet.taskForYou')}>
 						<div className="ws-task-copy">
 							<h2>
 								<Target size={16} /> {t('worksheet.taskForYou')}
@@ -419,7 +421,7 @@ export function StudentAnswerSheet({
 				{focused && brief?.fullText && (
 					<details className="ws-full">
 						<summary>
-							<FileText size={15} /> Lihat petunjuk lengkap
+							<FileText size={15} /> {t('worksheet.fullInstructions')}
 						</summary>
 						<p>{brief.fullText}</p>
 						{brief.sections.length > 0 && (
@@ -441,7 +443,7 @@ export function StudentAnswerSheet({
 					</p>
 				)}
 
-				<footer className="sas-foot" hidden={focused && !onSaveDraft && stepAdvance}>
+				{!workspaceOwnsActions && <footer className="sas-foot">
 					<span className={`sas-draft${busy ? ' saving' : ''}`} aria-live="polite">
 						{busy ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />}{' '}
 						{busy ? 'Menyimpan…' : draftStatus || 'Belum ada draf tersimpan'}
@@ -452,7 +454,7 @@ export function StudentAnswerSheet({
 								{busy ? <LoaderCircle size={14} className="spin" /> : <Save size={14} />} Simpan draf
 							</button>
 						)}
-						{onPrimary && !(flat && stepAdvance) && (
+						{onPrimary && !workspaceOwnsActions && (
 						<button
 						type="button"
 						className="sas-btn primary"
@@ -463,7 +465,7 @@ export function StudentAnswerSheet({
 					</button>
 						)}
 					</div>
-				</footer>
+				</footer>}
 			</div>
 
 			<aside className="sas-side">
@@ -479,7 +481,7 @@ export function StudentAnswerSheet({
 				{assistant}
 				<details className={`sas-card sas-info-card${workspace ? ' collapsible' : ''}`} open={!workspace} hidden={sideReview && !workspace}>
 					<summary className="sas-info-summary">
-						<Info size={16} /> Informasi tugas
+						<Info size={16} /> {t('worksheet.taskInfo')}
 					</summary>
 					<dl className="sas-info">
 						{info.map((row) => (
@@ -494,7 +496,7 @@ export function StudentAnswerSheet({
 					<div className="ws-before">
 						<div className="ws-before-head">
 						<h2>
-							<CheckCircle2 size={15} /> Sebelum mengirim
+							<CheckCircle2 size={15} /> {t('worksheet.beforeSubmit')}
 						</h2>
 						<WorksheetArt name="books" size="sm" />
 						</div>

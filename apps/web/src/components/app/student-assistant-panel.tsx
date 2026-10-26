@@ -1,3 +1,5 @@
+import { useT } from '@/lib/i18n';
+import { confirmDialog } from '@/components/confirm-dialog';
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
 	ArrowUp,
@@ -56,70 +58,17 @@ type Starter = { mode: AssistantMode; label: string; message?: string };
 
 /** Friendly transparency badge for the active AI assistance level. */
 const POLICY_BADGE: Record<string, { label: string; note: string; tone: 'learn' | 'guided' | 'assessment' }> = {
-	learning_support: {
-		label: 'Dukungan Pembelajaran',
-		note: 'Saya menjelaskan konsep, petunjuk, dan memeriksa drafmu — tanpa menulis jawaban untukmu.',
-		tone: 'learn',
-	},
-	guided_assistance: {
-		label: 'Bantuan Terbimbing',
-		note: 'Saya membantu dengan contoh dan saran terbatas, tetap tanpa menyusun jawaban lengkap.',
-		tone: 'guided',
-	},
-	assessment_mode: {
-		label: 'Mode Penilaian',
-		note: 'Bantuan AI dibatasi untuk tugas ini. Saya tidak dapat menulis jawaban untuk Anda, tetapi saya bisa membantu dengan aksi yang diizinkan.',
-		tone: 'assessment',
-	},
+ learning_support: { label: 'assistant.policy.learning_support', note: 'assistant.policy.learning_support.note', tone: 'learn' },
+ guided_assistance: { label: 'assistant.policy.guided_assistance', note: 'assistant.policy.guided_assistance.note', tone: 'guided' },
+ assessment_mode: { label: 'assistant.policy.assessment_mode', note: 'assistant.policy.assessment_mode.note', tone: 'assessment' },
 };
-
-/** Contextual starters per page. Each maps to one controlled mode. */
 const CONTEXTUAL_STARTERS: Record<AssistantPage, Starter[]> = {
-	assignment: [
-		{ mode: 'explain_instruction', label: 'Jelaskan tugas ini' },
-		{ mode: 'give_hint', label: 'Beri saya petunjuk' },
-		{ mode: 'vocabulary', label: 'Latihan kosakata' },
-		{ mode: 'give_practice', label: 'Contoh kalimat' },
-		{ mode: 'check_draft', label: 'Periksa jawaban saya' },
-	],
-	speaking: [
-		{ mode: 'explain_instruction', label: 'Jelaskan tugas ini' },
-		{ mode: 'give_hint', label: 'Beri saya petunjuk' },
-		{ mode: 'vocabulary', label: 'Latihan kosakata' },
-		{ mode: 'give_practice', label: 'Contoh kalimat' },
-		{ mode: 'check_draft', label: 'Periksa jawaban saya' },
-	],
-	writing: [
-		{ mode: 'explain_instruction', label: 'Jelaskan tugas ini' },
-		{ mode: 'give_hint', label: 'Beri saya petunjuk' },
-		{ mode: 'vocabulary', label: 'Jelaskan kosakata' },
-		{
-			mode: 'give_practice',
-			label: 'Beri contoh struktur',
-			message: 'Beri contoh struktur untuk tulisan ini, tanpa menulis jawaban lengkap.',
-		},
-	],
-	feedback: [
-		{ mode: 'explain_mistake', label: 'Jelaskan umpan balik ini' },
-		{
-			mode: 'check_draft',
-			label: 'Apa yang harus saya perbaiki dulu?',
-			message: 'Apa yang sebaiknya saya perbaiki terlebih dahulu?',
-		},
-		{ mode: 'give_practice', label: 'Beri latihan' },
-	],
+ assignment: [{ mode: 'explain_instruction', label: 'assistant.mode.explain_instruction' }, { mode: 'give_hint', label: 'assistant.mode.give_hint' }, { mode: 'vocabulary', label: 'assistant.mode.vocabulary' }],
+ writing: [{ mode: 'explain_instruction', label: 'assistant.mode.explain_instruction' }, { mode: 'give_hint', label: 'assistant.mode.give_hint' }, { mode: 'vocabulary', label: 'assistant.mode.vocabulary' }],
+ speaking: [{ mode: 'explain_instruction', label: 'assistant.mode.explain_instruction' }, { mode: 'give_hint', label: 'assistant.mode.give_hint' }, { mode: 'vocabulary', label: 'assistant.mode.vocabulary' }],
+ feedback: [{ mode: 'explain_mistake', label: 'assistant.mode.explain_mistake' }, { mode: 'check_draft', label: 'assistant.mode.check_draft' }, { mode: 'give_practice', label: 'assistant.mode.give_practice' }],
 };
-
-const TOOL_LABEL: Record<string, string> = {
-	get_current_assignment: 'Ringkasan tugas',
-	get_assignment_instructions: 'Instruksi & ketentuan',
-	get_allowed_course_materials: 'Materi yang disetujui',
-	get_my_draft: 'Draf saya',
-	get_my_previous_submission: 'Pengumpulan lalu',
-	analyze_my_draft: 'Analisis draf',
-	explain_assignment_requirement: 'Jelaskan ketentuan',
-	generate_practice_activity: 'Latihan singkat',
-};
+const TOOL_LABEL: Record<string, string> = Object.fromEntries(['get_current_assignment','get_assignment_instructions','get_allowed_course_materials','get_my_draft','get_my_previous_submission','analyze_my_draft','explain_assignment_requirement','generate_practice_activity'].map(name => [name, `assistant.tool.${name}`]));
 
 const MODE_ICON: Record<AssistantMode, typeof Sparkles> = {
 	chat: MessageSquareText,
@@ -132,22 +81,7 @@ const MODE_ICON: Record<AssistantMode, typeof Sparkles> = {
 	explain_mistake: HelpCircle,
 };
 
-const HINT_LEVEL_LABEL: Record<number, string> = {
-	1: 'Petunjuk konsep',
-	2: 'Penjelasan aturan',
-	3: 'Struktur/contoh sebagian',
-	4: 'Umpan balik terarah',
-};
-
-/** Phrases that signal a helpful boundary/refusal message from the assistant. */
-const BOUNDARY_PHRASES = [
-	'tidak tersedia',
-	'tidak bisa',
-	'tidak diizinkan',
-	'sedang dinilai',
-	'tidak dapat',
-	'tidak boleh',
-];
+const HINT_LEVEL_LABEL: Record<number, string> = { 1: 'assistant.hint.1', 2: 'assistant.hint.2', 3: 'assistant.hint.3', 4: 'assistant.hint.4' };
 
 function renderInline(text: string, key: string): ReactNode[] {
 	const nodes: ReactNode[] = [];
@@ -222,11 +156,6 @@ function AssistantMarkdown({ text }: { text: string }) {
 	return <div className="sa-md">{blocks}</div>;
 }
 
-function isBoundaryMessage(text: string): boolean {
-	const lower = text.toLocaleLowerCase('id-ID');
-	return BOUNDARY_PHRASES.some((phrase) => lower.includes(phrase));
-}
-
 /**
  * Student Learning Assistant panel. A tutor-first AI helper mounted in the
  * student worksheet side rail. It is context-aware (loads the assignment,
@@ -247,6 +176,8 @@ export function StudentAssistantPanel({
 	page?: AssistantPage;
 	variant?: 'card' | 'rail';
 }) {
+	const t = useT();
+	const [requirement, setRequirement] = useState<string | null>(null);
 	const [messages, setMessages] = useState<AssistantMessage[]>([]);
 	const [modes, setModes] = useState<ModeInfo[]>([]);
 	const [tools, setTools] = useState<ToolInfo[]>([]);
@@ -329,7 +260,7 @@ export function StudentAssistantPanel({
 	const send = async (mode: AssistantMode, text?: string) => {
 		const message = (text ?? input).trim();
 		if ((!message && mode === 'chat') || busy) return;
-		const payload = mode === 'chat' ? message : message || MODE_LABEL_PLACEHOLDER[mode];
+		const payload = mode === 'chat' ? message : message || t(`assistant.mode.${mode}`);
 		if (!payload) return;
 		setInput('');
 		setError('');
@@ -352,7 +283,7 @@ export function StudentAssistantPanel({
 				body: JSON.stringify({ action: 'send', assignmentId, mode, message: payload }),
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.message || data.error || 'Asisten gagal merespons.');
+			if (!res.ok) throw new Error(res.status === 503 ? t('assistant.unavailable') : data.message || data.error || t('assistant.failed'));
 			setMessages((prev) => [...prev, data.message as AssistantMessage]);
 			setHintLevel(data.hintLevel || hintLevel);
 			// Refresh mode availability (submission state may have changed).
@@ -360,6 +291,7 @@ export function StudentAssistantPanel({
 		} catch (err) {
 			setError(errorMessage(err));
 			setMessages((prev) => prev.slice(0, -1));
+			setInput(payload);
 		} finally {
 			setBusy(false);
 			requestAnimationFrame(autoGrow);
@@ -367,28 +299,23 @@ export function StudentAssistantPanel({
 	};
 
 	const clearAll = async () => {
-		try {
-			await fetch('/api/student-assistant', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					...(token ? { Authorization: `Bearer ${token}` } : {}),
-				},
-				body: JSON.stringify({ action: 'clear', assignmentId }),
-			});
-			setMessages([]);
-			setHintLevel(1);
-			setError('');
-		} catch {
-			/* ignore */
-		}
-	};
+  if (busy || !(await confirmDialog({ title: t('assistant.clearTitle'), message: t('assistant.clearConfirm'), confirmLabel: t('assistant.clear'), cancelLabel: t('assistant.cancel'), variant: 'danger' }))) return;
+  setBusy(true);
+  try {
+   const res = await fetch('/api/student-assistant', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ action: 'clear', assignmentId }) });
+   if (!res.ok) throw new Error(t('assistant.clearFailed'));
+   setMessages([]); setHintLevel(1); setError('');
+  } catch (err) { setError(errorMessage(err)); }
+  finally { setBusy(false); }
+ };
 
 	// Phase 4 — invoke a context-aware student tool (audited server-side).
-	const runTool = async (tool: string) => {
+	const runTool = async (tool: string, params: Record<string, string> = {}) => {
 		setToolsOpen(false);
 		if (busy) return;
-		const label = TOOL_LABEL[tool] || tool;
+		if (tool === 'explain_assignment_requirement' && !params.requirement?.trim()) { setRequirement(''); return; }
+		setRequirement(null);
+		const label = t(TOOL_LABEL[tool] || tool);
 		const userMsg: AssistantMessage = {
 			role: 'user',
 			content: label,
@@ -406,12 +333,12 @@ export function StudentAssistantPanel({
 					'Content-Type': 'application/json',
 					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				},
-				body: JSON.stringify({ action: 'invoke_tool', assignmentId, tool, params: {} }),
+				body: JSON.stringify({ action: 'invoke_tool', assignmentId, tool, params }),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.message || data.error || 'Tool gagal dijalankan.');
 			const result = data.result;
-			const text = result?.ok ? formatToolResult(tool, result.data) : `Maaf, ${label.toLowerCase()} tidak dapat dijalankan saat ini.`;
+			const text = result?.ok ? formatToolResult(tool, result.data, t) : t('assistant.failed');
 			setMessages((prev) => [
 				...prev,
 				{
@@ -453,12 +380,12 @@ export function StudentAssistantPanel({
 
 	const policy = context ? POLICY_BADGE[context.policyLabel] : null;
 	const lastHint = [...messages].reverse().find((m) => m.role === 'assistant' && m.mode === 'give_hint');
-	const showHintLadder = Boolean(lastHint) && hintLevel > 0;
+	const showHintLadder = Boolean(lastHint?.level) && lastHint?.outcome !== 'unavailable' && hintLevel > 0;
 
 	const rail = variant === 'rail';
 	const expanded = rail ? (narrow ? open : true) : open;
 	return (
-		<section className={`sa-panel${expanded ? ' open' : ''}${rail ? ' sa-rail' : ''}`} aria-label="Asisten Belajar">
+		<section className={`sa-panel${expanded ? ' open' : ''}${rail ? ' sa-rail' : ''}`} aria-label={t('assistant.title')}>
 			<button
 				type="button"
 				className="sa-toggle"
@@ -472,13 +399,13 @@ export function StudentAssistantPanel({
 					<GraduationCap size={16} strokeWidth={1.75} />
 				</span>
 				<span className="sa-toggle-text">
-					<strong>Asisten Belajar</strong>
-					<small>{context ? context.stateLabel : 'Memuat…'}</small>
+					<strong>{t('assistant.title')}</strong>
+					<small>{context ? t(`assistant.${context.state}`) : t('assistant.loading')}</small>
 				</span>
 				{policy && (
-					<span className={`sa-toggle-policy sa-policy-${policy.tone}`} title={policy.label}>
+					<span className={`sa-toggle-policy sa-policy-${policy.tone}`} title={t(policy.label)}>
 						<ShieldCheck size={12} strokeWidth={2} />
-						{policy.label}
+						{t(policy.label)}
 					</span>
 				)}
 				<Sparkles size={14} className="sa-toggle-spark" />
@@ -488,22 +415,22 @@ export function StudentAssistantPanel({
 				<div className="sa-body" id={`${panelId}-body`}>
 					{loading ? (
 						<div className="sa-loading">
-							<LoaderCircle size={18} className="spin" /> Memuat asisten…
+							<LoaderCircle size={18} className="spin" /> {t('assistant.loading')}
 						</div>
 					) : disabled ? (
 						<div className="sa-empty-state">
 							<span className="sa-empty-ico"><X size={18} /></span>
-							<h4>Bantuan AI tidak aktif</h4>
-							<p>Bantuan AI tidak diaktifkan untuk tugas ini.</p>
+							<h4>{t('assistant.inactive')}</h4>
+							<p>{t('assistant.inactiveNote')}</p>
 						</div>
 					) : (
 						<>
 							{context && (
 								<div className="sa-context">
-									<span className={`sa-state ${context.state}`}>{context.stateLabel}</span>
+									<span className={`sa-state ${context.state}`}>{t(`assistant.${context.state}`)}</span>
 									{context.materialsResult === 'insufficient' && (
 										<span className="sa-mat-note" title={context.materialsReason}>
-											<Info size={13} aria-hidden="true" /> Materi bantuan terbatas
+											<Info size={13} aria-hidden="true" /> {t('assistant.limitedMaterials')}
 										</span>
 									)}
 								</div>
@@ -518,31 +445,31 @@ export function StudentAssistantPanel({
 										onClick={() => setPolicyOpen((o) => !o)}
 									>
 										<span className="sa-policy-ico"><ShieldCheck size={13} strokeWidth={2} /></span>
-										<span className="sa-policy-label">{policy.label}</span>
+										<span className="sa-policy-label">{t(policy.label)}</span>
 										<Info size={12} className="sa-policy-info" />
 									</button>
-									{policyOpen && <p className="sa-policy-note">{policy.note}</p>}
+									{policyOpen && <p className="sa-policy-note">{t(policy.note)}</p>}
 								</div>
 							)}
 
-							{rail && policy && <p className="sa-rail-intro">{policy.note}</p>}
+							{rail && policy && <p className="sa-rail-intro">{t(policy.note)}</p>}
 
 							{starters.length > 0 && (
-								<div className="sa-starters" role="group" aria-label="Aksi bantuan kontekstual">
+								<div className="sa-starters" role="group" aria-label={t('assistant.actions')}>
 									{starters.map((s) => {
 										const Icon = MODE_ICON[s.mode];
 										const modeInfo = availableModes.find((m) => m.mode === s.mode)!;
 										return (
 											<button
-												key={s.label}
+												key={t(s.label)}
 												type="button"
 												className={`sa-starter ${modeInfo.kind}`}
 												onClick={() => void send(s.mode, s.message)}
 												disabled={busy}
-												title={modeInfo.reason || s.label}
+												title={t(s.label)}
 											>
 												<Icon size={14} strokeWidth={1.75} />
-												<span>{s.label}</span>
+												<span>{t(s.label)}</span>
 												{rail && <ChevronRight size={14} className="sa-starter-go" aria-hidden="true" />}
 											</button>
 										);
@@ -560,23 +487,23 @@ export function StudentAssistantPanel({
 										aria-haspopup="menu"
 										disabled={busy}
 									>
-										<Wrench size={13} strokeWidth={1.75} /> Alat bantu
+										<Wrench size={13} strokeWidth={1.75} /> {t('assistant.tools')}
 										<ChevronDown size={13} className={toolsOpen ? 'open' : ''} />
 									</button>
 									{toolsOpen && (
 										<div className="sa-tools-menu" role="menu">
-											{availableTools.map((t) => (
+											{availableTools.map((toolInfo) => (
 												<button
-													key={t.name}
+													key={toolInfo.name}
 													type="button"
 													role="menuitem"
 													className="sa-tools-item"
-													onClick={() => void runTool(t.name)}
+													onClick={() => void runTool(toolInfo.name)}
 													disabled={busy}
-													title={t.description}
+													title={t(TOOL_LABEL[toolInfo.name] || toolInfo.name)}
 												>
-													{TOOL_LABEL[t.name] || t.name}
-													<small>{t.description}</small>
+													{t(TOOL_LABEL[toolInfo.name] || toolInfo.name)}
+
 												</button>
 											))}
 										</div>
@@ -584,25 +511,29 @@ export function StudentAssistantPanel({
 								</div>
 							)}
 
+       {requirement !== null && <form className="sa-requirement" onSubmit={event => { event.preventDefault(); void runTool('explain_assignment_requirement', { requirement: requirement.trim() }); }}>
+        <label>{t('assistant.requirementLabel')}<textarea autoFocus value={requirement} maxLength={500} onChange={event => setRequirement(event.target.value)} /></label>
+        <button type="submit" className="ld-btn-primary" disabled={!requirement.trim() || busy}>{t('assistant.explain')}</button>
+        <button type="button" className="ld-text-btn" onClick={() => setRequirement(null)}>{t('assistant.cancel')}</button>
+       </form>}
+       <p className="sa-saved-draft-note">{t('assistant.savedDraftNote')}</p>
 							<div
 								className="sa-thread"
 								ref={scrollRef}
 								aria-live="polite"
-								aria-label="Riwayat percakapan dengan asisten belajar"
+								aria-label={t('assistant.thread')}
 							>
 								{messages.length === 0 && !busy && !rail && (
 									<div className="sa-empty-state">
 										<span className="sa-empty-ico"><Sparkles size={20} /></span>
-										<h4>Halo! Saya asisten belajar kamu.</h4>
+										<h4>{t('assistant.title')}</h4>
 										<p>
-											Saya bantu kamu memahami instruksi, memberi petunjuk bertahap, menjelaskan
-											tata bahasa &amp; kosakata, dan memeriksa drafmu. Pilih salah satu aksi di
-											atas, atau tulis pertanyaan di bawah.
+											{t('assistant.disclaimer')}
 										</p>
 									</div>
 								)}
 								{messages.map((m, i) => {
-									const boundary = m.role === 'assistant' && isBoundaryMessage(m.content);
+									const boundary = m.role === 'assistant' && m.outcome === 'restricted';
 									return (
 										<div
 											key={i}
@@ -612,15 +543,15 @@ export function StudentAssistantPanel({
 												<span className="sa-msg-tag">
 													{boundary ? (
 														<>
-															<Info size={11} /> Batas bantuan
+															<Info size={11} /> {t('assistant.boundary')}
 														</>
 													) : m.kind === 'feedback' ? (
-														'Feedback AI'
+														t('assistant.feedback')
 													) : (
-														'Bantuan AI'
+														t('assistant.help')
 													)}
 													{m.mode === 'give_hint' && m.level
-														? ` · ${HINT_LEVEL_LABEL[m.level] || `Tingkat ${m.level}`}`
+														? ` · ${t(HINT_LEVEL_LABEL[m.level] || String(m.level))}`
 														: ''}
 												</span>
 											)}
@@ -632,7 +563,7 @@ export function StudentAssistantPanel({
 								})}
 								{showHintLadder && (
 									<div className="sa-hint-ladder" aria-label={`Petunjuk bertahap, tingkat ${hintLevel} dari 4`}>
-										<span className="sa-hint-ladder-label">Petunjuk bertahap</span>
+										<span className="sa-hint-ladder-label">{t('assistant.hintLadder')}</span>
 										<ol className="sa-hint-steps">
 											{[1, 2, 3, 4].map((lvl) => (
 												<li
@@ -641,19 +572,18 @@ export function StudentAssistantPanel({
 													aria-current={lvl === hintLevel ? 'step' : undefined}
 												>
 													<span className="sa-hint-dot" />
-													<small>{HINT_LEVEL_LABEL[lvl]}</small>
+													<small>{t(HINT_LEVEL_LABEL[lvl])}</small>
 												</li>
 											))}
 										</ol>
 										<p className="sa-hint-note">
-											Minta petunjuk berikutnya untuk bantuan lebih lanjut. Saya membantu belajar,
-											bukan menuliskan jawaban akhir.
+											{t('assistant.hintNote')}
 										</p>
 									</div>
 								)}
 								{busy && (
 									<div className="sa-msg sa-msg-assistant">
-										<span className="sa-msg-tag">Asisten sedang menulis…</span>
+										<span className="sa-msg-tag">{t('assistant.thinking')}</span>
 										<div className="sa-bubble sa-bubble-thinking">
 											<span className="sa-dot" />
 											<span className="sa-dot" />
@@ -667,7 +597,7 @@ export function StudentAssistantPanel({
 
 							{messages.length > 0 && (
 								<button type="button" className="sa-clear" onClick={() => void clearAll()} disabled={busy}>
-									<Trash2 size={12} /> Hapus percakapan
+									<Trash2 size={12} /> {t('assistant.clear')}
 								</button>
 							)}
 
@@ -681,7 +611,7 @@ export function StudentAssistantPanel({
 								<textarea
 									ref={inputRef}
 									className="sa-input"
-									placeholder="Tulis pertanyaan untuk asisten belajar…"
+									placeholder={t('assistant.placeholder')}
 									value={input}
 									onChange={(e) => setInput(e.target.value)}
 									onKeyDown={(e) => {
@@ -692,15 +622,14 @@ export function StudentAssistantPanel({
 									}}
 									rows={1}
 									disabled={busy}
-									aria-label="Pesan untuk asisten belajar"
+									aria-label={t('assistant.input')}
 								/>
-								<button type="submit" className="sa-send" disabled={busy || !input.trim()} aria-label="Kirim pesan">
+								<button type="submit" className="sa-send" disabled={busy || !input.trim()} aria-label={t('assistant.send')}>
 									{busy ? <LoaderCircle size={15} className="spin" /> : <ArrowUp size={15} />}
 								</button>
 							</form>
 							<p className="sa-foot-note">
-								<Sparkles size={11} /> Bantuan AI — bukan umpan balik dosen. Bantu belajar, bukan
-								menyelesaikan tugas untukmu.
+								<Sparkles size={11} /> {t('assistant.disclaimer')}
 							</p>
 						</>
 					)}
@@ -709,17 +638,6 @@ export function StudentAssistantPanel({
 		</section>
 	);
 }
-
-const MODE_LABEL_PLACEHOLDER: Record<AssistantMode, string> = {
-	chat: '',
-	explain_instruction: 'Tolong jelaskan instruksi tugas ini.',
-	give_hint: 'Beri saya petunjuk untuk tugas ini.',
-	explain_grammar: 'Jelaskan tata bahasa yang relevan dengan tugas ini.',
-	vocabulary: 'Bantu saya dengan kosakata untuk tugas ini.',
-	check_draft: 'Tolong periksa draf saya dan beri umpan balik formatif.',
-	give_practice: 'Buatkan latihan singkat terkait tugas ini.',
-	explain_mistake: 'Jelaskan kesalahan pada jawaban saya.',
-};
 
 function modeKindOf(mode: AssistantMode): 'help' | 'feedback' {
 	return mode === 'check_draft' || mode === 'explain_mistake' ? 'feedback' : 'help';
@@ -730,40 +648,40 @@ function modeKindOf(mode: AssistantMode): 'help' | 'feedback' {
  * authorized fields are surfaced; internal ids and security metadata are
  * omitted. Falls back to a compact JSON view for unfamiliar shapes.
  */
-function formatToolResult(tool: string, data: unknown): string {
-	if (!data || typeof data !== 'object') return 'Tidak ada data.';
+function formatToolResult(tool: string, data: unknown, t: (key: string, vars?: Record<string, string>) => string): string {
+	if (!data || typeof data !== 'object') return t('assistant.noData');
 	const d = data as Record<string, unknown>;
 	switch (tool) {
 		case 'get_current_assignment': {
 			const a = d as { title?: string; mode?: string; activityType?: string; deadline?: string; submissionState?: string };
 			return [
-				`Ringkasan tugas: ${a.title || '—'}`,
+				`${t('assistant.tool.get_current_assignment')}: ${a.title || '—'}`,
 				`Format: ${a.mode || '—'} · Jenis: ${a.activityType === 'formative' ? 'Latihan formatif' : 'Tugas formal'}`,
-				a.deadline ? `Tenggat: ${a.deadline}` : 'Tanpa tenggat',
+				a.deadline ? `${t('worksheet.deadline')}: ${a.deadline}` : t('worksheet.noDeadline'),
 				`Status pengerjaan: ${a.submissionState || '—'}`,
 			].join('\n');
 		}
 		case 'get_assignment_instructions': {
 			const i = d as { instructions?: string; requirements?: string };
 			return [
-				i.instructions ? `Instruksi:\n${i.instructions}` : 'Instruksi belum diisi.',
-				i.requirements ? `\nKetentuan/rubrik:\n${i.requirements}` : '',
+				i.instructions ? `${t('assistant.instructions')}:\n${i.instructions}` : t('assistant.noInstructions'),
+				i.requirements ? `\n${t('assistant.requirements')}:\n${i.requirements}` : '',
 			].filter(Boolean).join('\n');
 		}
 		case 'get_allowed_course_materials': {
 			const m = d as { result?: string; reason?: string; materials?: Array<{ title?: string; sections?: string[]; excerpt?: string }> };
 			if (d.result === 'insufficient' || !m.materials?.length) {
-				return `Materi yang disetujui dosen belum tersedia untuk tugas ini.${m.reason ? ` (${m.reason})` : ''}`;
+				return t('assistant.noMaterials');
 			}
 			return m.materials.map((s) => `• ${s.title}${s.sections?.length ? ` — ${s.sections.join(', ')}` : ''}${s.excerpt ? `\n  ${s.excerpt.slice(0, 240)}${s.excerpt.length > 240 ? '…' : ''}` : ''}`).join('\n');
 		}
 		case 'get_my_draft': {
 			const r = d as { hasDraft?: boolean; draft?: string };
-			return r.hasDraft ? `Draf kamu saat ini:\n${r.draft}` : 'Kamu belum menulis draf apa pun.';
+			return r.hasDraft ? `${t('assistant.savedDraft')}:\n${r.draft}` : t('assistant.noDraft');
 		}
 		case 'get_my_previous_submission': {
 			const r = d as { count?: number; submissions?: Array<{ status?: string; gradeLetter?: string; feedback?: string }> };
-			if (!r.submissions?.length) return 'Belum ada pengumpulan sebelumnya.';
+			if (!r.submissions?.length) return t('assistant.noPrevious');
 			return `Pengumpulan sebelumnya (${r.count}):\n` + r.submissions.map((s, i) => `${i + 1}. ${s.status}${s.gradeLetter ? ` · ${s.gradeLetter}` : ''}${s.feedback ? `\n   Umpan balik: ${s.feedback.slice(0, 200)}` : ''}`).join('\n');
 		}
 		case 'analyze_my_draft': {

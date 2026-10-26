@@ -31,6 +31,7 @@ import { useCachedQuery } from '@/hooks/use-cached-query';
 import { useAuth } from '@/hooks/use-auth';
 import pb from '@/lib/pocketbase-client';
 import { useT } from '@/lib/i18n';
+import '@/styles/ui-audit-fixes.css';
 
 const ICONS: Record<CourseSection, typeof LayoutDashboard> = {
 	ringkasan: LayoutDashboard,
@@ -61,6 +62,9 @@ export function CourseRail({
 	isOwner: boolean;
 }) {
 	const t = useT();
+	const location = useLocation();
+	const navigate = useNavigate();
+	const currentSection = sectionFromPath(location.pathname, routeId);
 	const id = routeId || '';
 	const baseSections = isStudent ? STUDENT_COURSE_SECTIONS : FACULTY_COURSE_SECTIONS;
 	const sections = baseSections.filter((section) => {
@@ -79,6 +83,7 @@ export function CourseRail({
 			) : (
 				<CourseSwitcher course={course} routeId={id} />
 			)}
+   <label className="course-section-picker"><span>{t('student.courseRail.navigation')}</span><select value={currentSection} onChange={event => navigate(courseSectionPath(id, event.target.value as CourseSection))}>{sections.map(section => <option key={section} value={section}>{isStudent ? t(`student.courseRail.${section}`) : SECTION_LABEL[section]}</option>)}</select></label>
 			<nav>
 				{sections.map((section) => {
 					const Icon = ICONS[section];

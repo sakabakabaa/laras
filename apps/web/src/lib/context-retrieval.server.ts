@@ -139,7 +139,7 @@ const idOrThrow = (label: string, value: string) => {
 
 const pocketbaseUrl = () => process.env.POCKETBASE_URL || 'http://localhost:8090';
 
-export type AuthedUser = { id: string; role?: string; name?: string; email?: string };
+export type AuthedUser = { id: string; role?: string; name?: string; email?: string; language?: string };
 export type AuthFailure = { error: { status: number; message: string } };
 
 /**
@@ -164,7 +164,7 @@ export async function authenticateUser(
 	}
 	const user = pb.authStore.record as AuthedUser | null;
 	if (!user?.id) return { error: { status: 401, message: 'Sesi tidak valid. Masuk kembali.' } };
-	return { pb, user: { id: user.id, role: user.role, name: user.name, email: user.email } };
+	return { pb, user: { id: user.id, role: user.role, name: user.name, email: user.email, language: user.language } };
 }
 
 /** The CPMK a Sub-CPMK belongs to ('' when unknown), for scope prioritization. */

@@ -1,0 +1,13 @@
+.course-section-picker { display:none; }
+.writing-receipt-text { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.7; font-size:16px; padding:16px; border:1px solid var(--p-line, #ddd); border-radius:8px; }
+.sa-saved-draft-note { font-size:13px; line-height:1.6; color:var(--p-muted); }
+.sa-requirement { display:grid; gap:10px; padding:12px; }
+.sa-requirement label { display:grid; gap:8px; font-size:14px; }
+.sa-requirement textarea { width:100%; min-height:88px; font:inherit; padding:10px; color:var(--p-ink); background:var(--p-surface); border:1px solid var(--p-line); border-radius:8px; }
+.student-page-banner p, .res-area .res-empty p { font-size:14px; line-height:1.65; }
+.sd-game-task-reminder { margin-bottom:20px; }
+@media (max-width:900px) {
+ .ld-course-rail .course-section-picker { display:grid; gap:6px; width:100%; padding:10px 16px; font-size:13px; }
+ .course-section-picker select { min-height:44px; max-width:100%; width:100%; font:inherit; padding:10px; border:1px solid var(--p-line,#ddd); border-radius:8px; color:var(--p-ink); background:var(--p-surface,#fff); }
+ aside.ld-course-rail > nav { display:none; }
+}

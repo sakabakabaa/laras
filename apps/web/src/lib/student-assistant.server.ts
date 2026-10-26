@@ -21,6 +21,7 @@
  *     allowed alternative.
  */
 import type PocketBase from 'pocketbase';
+import { languageOf, type Language } from '@/lib/i18n';
 import { collectModel } from '@/lib/task-assist.server';
 import {
 	authenticateUser,
@@ -40,6 +41,7 @@ import {
 import type { Capability } from '@/lib/ai-capabilities';
 import { activityTypeOf, type Assignment, type AssignmentSubmission } from '@/lib/assignments';
 import type { AuthedUser } from '@/lib/context-retrieval.server';
+import { parseWritingConfig } from '@/lib/task-types';
 import { parseStructuredContentFromConfig, structuredChecklist } from '@/lib/structured-assignment';
 
 // ── Modes ────────────────────────────────────────────────────
@@ -193,6 +195,7 @@ export type AssistantMessage = {
 	level?: number;
 	kind: 'help' | 'feedback';
 	createdAt: string;
+	outcome?: 'response' | 'restricted' | 'unavailable';
 };
 
 export type AssistantChat = {
@@ -247,6 +250,7 @@ export function renderStudentDraft(submission: AssignmentSubmission | null): str
 // ── Context resolution ───────────────────────────────────────
 
 export type AssistantContext = {
+	interfaceLanguage?: Language;
 	assignment: Assignment;
 	courseId: string;
 	submission: AssignmentSubmission | null;
@@ -326,6 +330,7 @@ export async function loadAssistantContext(input: {
 	return {
 		ok: true,
 		context: {
+			interfaceLanguage: languageOf(user),
 			assignment,
 			courseId: assignment.course,
 			submission,
@@ -354,7 +359,7 @@ function buildSystemPrompt(ctx: AssistantContext, mode: AssistantMode, level: nu
 					: 'Status: tugas sudah dinilai. Mahasiswa boleh belajar dari umpan balik dan menjelaskan kesalahannya.';
 
 	return [
-		'Anda adalah "Asisten Belajar" LARAS — tutor belajar untuk mahasiswa, dalam Bahasa Indonesia.',
+		`You are the LARAS learning assistant. Respond in ${{ id: 'Indonesian', en: 'English', de: 'German' }[ctx.interfaceLanguage || 'id']}. Preserve the language of quoted task text and examples.`,
 		'Prinsip utama: "Tutor dulu, jawaban kedua." Anda membantu mahasiswa memahami, berlatih, dan memperbaiki pekerjaan mereka sendiri — bukan menyelesaikan tugas untuk mereka.',
 		`Tingkat bantuan tugas ini: ${ctx.policyLabel} — ${ctx.policyDescription}`,
 		stateLine,
@@ -365,7 +370,7 @@ function buildSystemPrompt(ctx: AssistantContext, mode: AssistantMode, level: nu
 		'- Jika mahasiswa meminta jawaban langsung, JANGAN menolak mentah-mentah. Arahkan ke petunjuk bertahap atau alternatif yang diizinkan, mis: "Saya tidak bisa menulis jawaban lengkap untuk tugas ini, tapi saya bisa membantu menyusunnya. Mari mulai dari kalimat pertama."',
 		'- Bedakan "Bantuan AI" (bantuan saat mengerjakan) dari "Feedback" (analisis jawaban mahasiswa). Jangan membuat feedback terlihat seperti umpan balik dosen — sebut sebagai panduan AI formatif.',
 		'- Tetap membantu setelah menolak: tawarkan alternatif yang diizinkan.',
-		'- Jawab ringkas, hangat, dan dalam Bahasa Indonesia. Maksimal ~180 kata kecuali diminta lebih rinci.',
+		'- Keep responses concise and supportive: at most 180 words unless asked for more detail.',
 		'- Jangan menyebutkan kebijakan AI, tingkat bantuan, atau istilah teknis internal kepada mahasiswa.',
 	].join('\n');
 }
@@ -397,6 +402,7 @@ export type AssistantTurnResult = {
 	nextHintLevel: number;
 	/** True only when the model was actually invoked (usage is committed then). */
 	modelCalled: boolean;
+	outcome?: 'response' | 'restricted' | 'unavailable';
 };
 
 /**
@@ -419,6 +425,7 @@ export async function buildAssistantTurn(input: {
 	const availability = modeAvailability(mode, ctx.state, ctx.formative);
 	if (!availability.available) {
 		return {
+			outcome: 'restricted',
 			text: availability.reason || 'Bantuan ini tidak tersedia pada status tugas saat ini.',
 			mode,
 			level: 0,
@@ -435,6 +442,7 @@ export async function buildAssistantTurn(input: {
 		// Helpful refusal: explain the boundary and redirect to an allowed alternative.
 		const redirect = helpfulRefusal(mode, ctx);
 		return {
+			outcome: 'restricted',
 			text: redirect,
 			mode,
 			level: 0,
@@ -459,7 +467,7 @@ export async function buildAssistantTurn(input: {
 	// 4. Sanitize context (filter before the model).
 	const sanitized = sanitizeStudentContext({
 		studentResponse: ctx.studentDraft,
-		instructions: ctx.assignment.instructions,
+		instructions: [ctx.assignment.instructions, ctx.assignment.shape === 'writing' ? parseWritingConfig(ctx.assignment.taskConfig).sourceText : ''].filter(Boolean).join('\n\n'),
 		requirements: ctx.assignment.requirements,
 		materialContext: ctx.materialContext,
 		focus: message,
@@ -520,6 +528,7 @@ export async function buildAssistantTurn(input: {
 		const raw = await collectModel(prompt, [], system);
 		const text = (raw || '').trim() || 'Maaf, saya belum bisa menjawab saat ini. Coba tulis ulang pertanyaan Anda.';
 		return {
+			outcome: 'response',
 			text: text.slice(0, 4000),
 			mode,
 			level: mode === 'give_hint' ? level : 0,
@@ -529,7 +538,8 @@ export async function buildAssistantTurn(input: {
 		};
 	} catch {
 		return {
-			text: 'Asisten AI sedang tidak tersedia. Coba lagi beberapa saat — sementara itu, Anda bisa membaca instruksi tugas atau menggunakan Cek jawaban.',
+			outcome: 'unavailable',
+			text: 'Asisten AI sedang tidak tersedia. Coba lagi beberapa saat. Instruksi dan ketentuan tugas tetap dapat dibaca.',
 			mode,
 			level: mode === 'give_hint' ? level : 0,
 			kind: MODE_KIND[mode],

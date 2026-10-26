@@ -44,7 +44,7 @@ export function LanguageSection() {
 			<div className="ld-card-head">
 				<div>
 					<span className="ld-eyebrow">
-						<Globe size={13} /> Bahasa antarmuka
+						<Globe size={13} /> {t('audit.interfaceLanguage')}
 					</span>
 					<h2>{t('audit.language')}</h2>
 				</div>
@@ -86,7 +86,7 @@ export function LanguageSection() {
 			)}
 			{success && (
 				<p className="ld-settings-success">
-					<BadgeCheck size={14} /> Bahasa berhasil disimpan.
+					<BadgeCheck size={14} /> {t('language.saved')}
 				</p>
 			)}
 
@@ -103,8 +103,7 @@ export function LanguageSection() {
 			</div>
 
 			<p className="ld-settings-note">
-				<Globe size={13} /> Bahasa berlaku untuk antarmuka dosen Anda. Bahasa dashboard
-				mahasiswa diatur oleh dosen pada halaman daftar mahasiswa.
+				<Globe size={13} /> {t('language.note')}
 			</p>
 		</section>
 	);

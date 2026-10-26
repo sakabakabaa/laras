@@ -318,7 +318,7 @@ const runAnalyzeMyDraft = async (
 		`"""\n${ctx.studentDraft.slice(0, 8000)}\n"""`,
 	].filter(Boolean).join('\n');
 	try {
-		const raw = await collectModel(prompt, [], system);
+		const raw = await collectModel(prompt, [], `${system}\nRespond in ${{ id: 'Indonesian', en: 'English', de: 'German' }[ctx.interfaceLanguage || 'id']}. Preserve quoted source language.`);
 		return {
 			ok: true,
 			capability: 'analyze_own_draft',
@@ -359,7 +359,7 @@ const runExplainRequirement = async (
 		ctx.materialContext ? `Materi terkait:\n"""\n${ctx.materialContext.slice(0, 3000)}\n"""` : '',
 	].filter(Boolean).join('\n');
 	try {
-		const raw = await collectModel(prompt, [], system);
+		const raw = await collectModel(prompt, [], `${system}\nRespond in ${{ id: 'Indonesian', en: 'English', de: 'German' }[ctx.interfaceLanguage || 'id']}. Preserve quoted source language.`);
 		return {
 			ok: true,
 			capability: 'explain_instruction',
@@ -393,7 +393,7 @@ const runGeneratePractice = async (
 		ctx.materialContext ? `Materi terkait:\n"""\n${ctx.materialContext.slice(0, 3000)}\n"""` : '',
 	].filter(Boolean).join('\n');
 	try {
-		const raw = await collectModel(prompt, [], system);
+		const raw = await collectModel(prompt, [], `${system}\nRespond in ${{ id: 'Indonesian', en: 'English', de: 'German' }[ctx.interfaceLanguage || 'id']}. Preserve quoted source language.`);
 		return {
 			ok: true,
 			capability: 'generate_practice',

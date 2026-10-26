@@ -166,6 +166,8 @@ export type WritingQuestion = {
 };
 
 export type WritingConfig = {
+	sourceText?: string;
+	requiresSourceText?: boolean;
 	prompt: string;
 	formatGuidance: string;
 	/** Free-text language guidance, e.g. "Indonesia" or "English". */
@@ -184,6 +186,8 @@ export type WritingConfig = {
 };
 
 export const DEFAULT_WRITING_CONFIG: WritingConfig = {
+	sourceText: '',
+	requiresSourceText: false,
 	prompt: '',
 	formatGuidance: '',
 	language: '',
@@ -465,6 +469,8 @@ export function parseWritingConfig(value: unknown): WritingConfig {
 		: [];
 	return {
 		prompt: str(raw.prompt),
+		sourceText: str(raw.sourceText),
+		requiresSourceText: bool(raw.requiresSourceText, false),
 		formatGuidance: str(raw.formatGuidance),
 		language: str(raw.language),
 		minWords: Math.max(0, Math.round(num(raw.minWords, 0))),
@@ -832,6 +838,8 @@ export function normalizeEditableConfig(editable: EditableTaskConfig): EditableT
 		kind: 'writing',
 		writing: {
 			prompt: str(w.prompt),
+			sourceText: str(w.sourceText),
+			requiresSourceText: bool(w.requiresSourceText, false),
 			formatGuidance: str(w.formatGuidance),
 			language: str(w.language),
 			minWords: Math.max(0, Math.round(num(w.minWords, 0))),
@@ -939,6 +947,7 @@ export function validateEditableConfig(editable: EditableTaskConfig): TaskConfig
 	}
 	if (editable.kind === 'writing') {
 		const w = asObj(raw.writing);
+		if (bool(w.requiresSourceText, false) && !str(w.sourceText).trim()) warnings.push({ field: 'sourceText', message: 'Teks sumber wajib diisi untuk tugas yang memerlukan teks sumber.' });
 		const questions = asList(w.questions);
 		if (!str(w.prompt).trim() && questions.length === 0)
 			warnings.push({ field: 'prompt', message: 'Prompt/ instruksi menulis belum diisi.' });

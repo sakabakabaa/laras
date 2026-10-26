@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router';
@@ -315,6 +316,7 @@ function highlight(text: string, query: string) {
 }
 
 export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent: boolean }) {
+	const t = useT();
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState('');
@@ -441,14 +443,14 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 				ref={triggerRef}
 				type="button"
 				className="ld-mast-icon ld-mast-search-trigger"
-				aria-label="Buka pencarian"
+				aria-label={t('search.open')}
 				aria-keyshortcuts="Control+K Meta+K"
 				aria-expanded={open}
 				aria-haspopup="dialog"
 				onClick={() => setOpen(true)}
 			>
 				<Search size={18} strokeWidth={1.75} aria-hidden />
-				<span className="ld-mast-search-placeholder">Cari mata kuliah, tugas, atau halaman...</span>
+				<span className="ld-mast-search-placeholder">{t('search.placeholder')}</span>
 				<kbd className="ld-mast-search-shortcut">{shortcut}</kbd>
 			</button>
 
@@ -462,16 +464,16 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 			{open && typeof document !== 'undefined'
 				? createPortal(
 						<div className="gs-layer" onKeyDown={onDialogKey}>
-							<button type="button" className="gs-scrim" aria-label="Tutup pencarian" onClick={() => close()} />
-							<div className="gs-panel" role="dialog" aria-modal="true" aria-label="Pencarian">
+							<button type="button" className="gs-scrim" aria-label={t('search.close')} onClick={() => close()} />
+							<div className="gs-panel" role="dialog" aria-modal="true" aria-label={t('search.title')}>
 								<div className="gs-input">
 									<Search size={18} strokeWidth={1.75} aria-hidden />
 									<input
 										ref={inputRef}
 										value={query}
 										onChange={(event) => setQuery(event.target.value)}
-										placeholder="Cari"
-										aria-label="Kata kunci pencarian"
+										placeholder={t('search.title')}
+										aria-label={t('search.query')}
 										autoComplete="off"
 										role="combobox"
 										aria-expanded
@@ -482,7 +484,7 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 									{loading && <LoaderCircle size={16} className="spin" aria-hidden />}
 									<kbd className="gs-esc" aria-hidden>esc</kbd>
 								</div>
-								<div className="gs-pills" role="tablist" aria-label="Saring hasil">
+								<div className="gs-pills" role="tablist" aria-label={t('search.filter')}>
 									<button
 										type="button"
 										role="tab"
@@ -490,7 +492,7 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 										className={filter === 'all' ? 'active' : ''}
 										onClick={() => setFilter('all')}
 									>
-										Semua
+										{t('search.all')}
 									</button>
 									{SEARCH_GROUPS.filter((group) => isStudent ? group.id !== 'students' : true).map((group) => (
 										<button
@@ -501,7 +503,7 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 											className={filter === group.id ? 'active' : ''}
 											onClick={() => setFilter(group.id)}
 										>
-											{group.label}
+											{t(`search.group.${group.id}`)}
 										</button>
 									))}
 								</div>
@@ -510,21 +512,21 @@ export function GlobalSearch({ userId, isStudent }: { userId: string; isStudent:
 									{!error && !loading && filtered.length === 0 && (
 										<p className="gs-empty">
 											{query.trim()
-												? `Tidak ada hasil untuk \u201c${query.trim()}\u201d.`
-												: 'Belum ada data yang cocok untuk ditampilkan.'}
+												? t('search.noResults', { query: query.trim() })
+												: t('search.empty')}
 										</p>
 									)}
 									{filtered.length > 0 && (
-										<p className="gs-section-label">{query.trim() ? 'Hasil' : 'Paling sering'}</p>
+										<p className="gs-section-label">{query.trim() ? t('search.results') : t('search.suggestions')}</p>
 									)}
-									<div id="gs-listbox" ref={listRef} className="gs-listbox" role="listbox" aria-label="Hasil pencarian">
+									<div id="gs-listbox" ref={listRef} className="gs-listbox" role="listbox" aria-label={t('search.results')}>
 										{SEARCH_GROUPS.map((group) => {
 											const rows = filtered.filter((item) => item.group === group.id);
 											if (!rows.length) return null;
 											const Icon = GROUP_ICON[group.id];
 											return (
-												<div key={group.id} className="gs-group" role="group" aria-label={group.label}>
-													{filter === 'all' && <h3 aria-hidden>{group.label}</h3>}
+												<div key={group.id} className="gs-group" role="group" aria-label={t(`search.group.${group.id}`)}>
+													{filter === 'all' && <h3 aria-hidden>{t(`search.group.${group.id}`)}</h3>}
 													<ul role="presentation">
 														{rows.map((item) => {
 															const index = filtered.indexOf(item);

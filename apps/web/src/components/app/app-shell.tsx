@@ -1,7 +1,7 @@
 import { TOUR_REPLAY_EVENT } from '@/components/app/welcome-tour';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import { BarChart3, BookOpen, CalendarDays, ClipboardList, FlaskConical, FolderOpen, Gamepad2, GraduationCap, Home, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Menu, Settings, Sparkles, Sun, User, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useT, useLanguage } from '@/lib/i18n';
 import { dashboardForRole } from '@/lib/learning';
@@ -138,6 +138,9 @@ export function AppShell({
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [compactNav, setCompactNav] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 1100px)').matches);
+  const sidebarId = useId();
+  const sidebarRef = useRef<HTMLElement | null>(null);
 	const [collapsed, setCollapsed] = useState(() => typeof window === 'undefined' ? true : localStorage.getItem('ld-sidebar-collapsed') !== '0');
   const [animating, setAnimating] = useState(false);
   const animTimer = useRef<number | undefined>(undefined);
@@ -148,6 +151,13 @@ export function AppShell({
   const [agentSeed, setAgentSeed] = useState<AssistantSeed | null>(null);
   const mobileMenuBtnRef = useRef<HTMLButtonElement | null>(null);
   const sidebarCloseRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 1100px)');
+    const resize = () => {setCompactNav(query.matches); setMobileOpen(false);};
+    resize(); query.addEventListener('change', resize);
+    return () => query.removeEventListener('change', resize);
+  }, []);
+  useEffect(() => {setMobileOpen(false);}, [location.pathname, location.hash, location.search]);
   useEffect(() => {
     return onQuickAssistantSend((seed) => {
       setAgentSeed(seed);
@@ -190,13 +200,20 @@ export function AppShell({
   useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileOpen(false);
+      if (e.key === 'Escape') {e.preventDefault(); setMobileOpen(false);}
+      if (e.key === 'Tab') {
+        const items = Array.from(sidebarRef.current?.querySelectorAll<HTMLElement>('a[href],button:not(:disabled),[tabindex="0"]') || []).filter(el => el.getClientRects().length > 0);
+        const first = items[0], last = items.at(-1);
+        if (e.shiftKey && (document.activeElement === first || !sidebarRef.current?.contains(document.activeElement))) {e.preventDefault(); last?.focus();}
+        else if (!e.shiftKey && document.activeElement === last) {e.preventDefault(); first?.focus();}
+      }
     };
     document.addEventListener('keydown', onKey);
-    sidebarCloseRef.current?.focus();
+    const focusFrame = window.requestAnimationFrame(() => sidebarCloseRef.current?.focus());
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
       mobileMenuBtnRef.current?.focus();
@@ -225,10 +242,10 @@ export function AppShell({
   }, [displayName]);
   const sidebarCollapsed = Boolean(rail) || collapsed;
   if (variant === 'saas') {
-    return <AssistantPageContextProvider><div className={`ld-layout${isStudent ? ' student-adventure-shell' : ''}`}>
-				<header className="ld-mast">
+    return <AssistantPageContextProvider><div className={`ld-layout${isStudent ? ' student-adventure-shell' : ''}`} data-mobile-nav={compactNav && mobileOpen ? 'open' : 'closed'}>
+				<header className="ld-mast" inert={compactNav && mobileOpen}>
 					<div className="ld-mast-brand">
-						{!hideSidebar && <button type="button" ref={mobileMenuBtnRef} className="ld-mobile-menu" aria-label="Buka navigasi" onClick={() => setMobileOpen(true)}>
+						{!hideSidebar && <button type="button" ref={mobileMenuBtnRef} className="ld-mobile-menu" aria-label={t('nav.openNav')} aria-controls={sidebarId} aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}>
 							<Menu size={22} />
 						</button>}
 						<Link to={home} className="ld-mast-logo-link" aria-label="LARAS"><LarasMark size={28} /></Link>
@@ -277,14 +294,15 @@ export function AppShell({
 
 				<div className={`ld-stage${agentOpen && !isStudent && !isAssistantPage ? ' agent-open' : ''}`}>
 				<div className={`ld-body${rail ? ' has-rail' : ''}${hideSidebar ? ' no-sidebar' : ''}`}>
-					{!hideSidebar && <aside className={`ld-sidebar ${mobileOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}${animating ? ' ld-animating' : ''}`}>
+					{!hideSidebar && <aside id={sidebarId} ref={sidebarRef} inert={compactNav && !mobileOpen} aria-hidden={compactNav && !mobileOpen ? true : undefined} role={compactNav ? 'dialog' : undefined} aria-modal={compactNav && mobileOpen ? true : undefined} aria-label={t('nav.mainNav')} className={`ld-sidebar ${mobileOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}${animating ? ' ld-animating' : ''}`}>
 						<div className="ld-sidebar-brand">
+                            <strong>LARAS</strong>
 							<button type="button" ref={sidebarCloseRef} className="ld-sidebar-close" aria-label={t('nav.closeNav')} onClick={() => setMobileOpen(false)}>
 								<X size={20} />
 							</button>
 						</div>
 
-						<nav className="ld-nav" data-guide="navigation" aria-label="Navigasi utama">
+						<nav className="ld-nav" data-guide="navigation" aria-label={t('nav.mainNav')}>
 							{navItems.map(item => {
               const Icon = item.icon;
               const studentLabels: Record<string, Record<string, string>> = { id: { Dashboard: 'Beranda', 'Mata Kuliah': 'Kelas', Analitik: 'Progres' }, en: { Dashboard: 'Home', 'Mata Kuliah': 'Classes', Analitik: 'Progress' }, de: { Dashboard: 'Start', 'Mata Kuliah': 'Kurse', Analitik: 'Fortschritt' } };
@@ -313,10 +331,10 @@ export function AppShell({
 						</div>}
 					</aside>}
 
-					{!hideSidebar && mobileOpen && <button type="button" className="ld-scrim" aria-label={t('nav.closeNav')} onClick={() => setMobileOpen(false)} />}
+					{!hideSidebar && compactNav && mobileOpen && <button type="button" className="ld-scrim" tabIndex={-1} aria-label={t('nav.closeNav')} onClick={() => setMobileOpen(false)} />}
 					{rail}
 
-					<div className="ld-main">
+					<div className="ld-main" inert={compactNav && mobileOpen}>
 						<main className={`ld-content${pageAnimating ? ' page-enter' : ''}`}>
 							{back && <Link to={home} className="ld-back">
 									← {t('shell.back')}

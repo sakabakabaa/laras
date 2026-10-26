@@ -1,3 +1,5 @@
+import {useT} from '@/lib/i18n';
+import {useEffect, useState} from 'react';
 import { redirect } from 'react-router';
 import type { Route } from './+types/app.latihan';
 import { requireAuth } from '@/lib/require-auth';
@@ -17,5 +19,16 @@ export function clientLoader() {
 }
 clientLoader.hydrate = true as const;
 
-export function HydrateFallback() { return <div className="route-loading">Membuka arena latihan...</div>; }
-export default function PracticeRoute() { return <StudentPractice />; }
+export function HydrateFallback() {
+ const t = useT();
+ const [mounted, setMounted] = useState(false);
+ useEffect(() => setMounted(true), []);
+ // The stored language is available only in the browser. Keep initial markup
+ // identical to the server until hydration finishes.
+ return <div className="route-loading" role="status">{mounted ? t('practiceUi.practiceLoading') : '…'}</div>;
+}
+export default function PracticeRoute() {
+ const t=useT();
+ useEffect(()=>{document.title=`${t('practice.title')} | LARAS`;},[t]);
+ return <StudentPractice />;
+}

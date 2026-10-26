@@ -12,32 +12,10 @@
 // lecturer can still mark attendance; the student simply cannot self-view
 // until their account exists.
 onRecordCreate((e) => {
-    linkStudent(e.record);
+    require(__hooks + '/attendance-student-link.js').linkStudent(e.app, e.record);
     e.next();
 }, "attendance");
-
 onRecordUpdate((e) => {
-    linkStudent(e.record);
+    require(__hooks + '/attendance-student-link.js').linkStudent(e.app, e.record);
     e.next();
 }, "attendance");
-
-function linkStudent(record) {
-    const rosterId = record.get("roster");
-    if (!rosterId) return;
-    let roster;
-    try {
-        roster = $app.findRecordById("course_roster", rosterId);
-    } catch (_) {
-        return;
-    }
-    const nim = roster.getString("nim");
-    if (!nim) return;
-    // NIM is alphanumeric (max 32); escape any single quotes defensively.
-    const safeNim = nim.replace(/'/g, "''");
-    try {
-        const user = $app.findFirstRecordByFilter("users", "nim = '" + safeNim + "'");
-        record.set("student", user.get("id"));
-    } catch (_) {
-        record.set("student", "");
-    }
-}

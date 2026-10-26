@@ -40,7 +40,7 @@ export function StudentPractice() {
 			{activeCourse ? <div className="pp-practice-course-view">
 				<div className="pp-practice-course-heading">
 					<button type="button" className="pp-back" onClick={() => setSelectedCourse('')}><ChevronLeft size={16} /> {t('practice.choose')}</button>
-					<div><span className="pp-eyebrow">{activeCourse.code || 'MATA KULIAH'}</span><strong>{activeCourse.title}</strong></div>
+					<div><span className="pp-eyebrow">{activeCourse.code || t('practiceUi.courseUpper')}</span><strong>{activeCourse.title}</strong></div>
 				</div>
 				<div className="cp-mode-picker" aria-label={t('practice.kind')}><button type="button" aria-pressed={practiceMode === 'questions'} onClick={() => setPracticeMode('questions')}><BookOpenCheck size={17} /> {t('practice.questions')}</button><button type="button" aria-pressed={practiceMode === 'conversation'} onClick={() => setPracticeMode('conversation')}><MessageCircle size={17} /> {t('practice.conversation')}</button></div>
                 {practiceMode === 'conversation' ? <ConversationPractice key={activeCourse.id} courseId={activeCourse.id} /> : <PersonalPractice key={activeCourse.id} courseId={activeCourse.id} />}
@@ -51,11 +51,11 @@ export function StudentPractice() {
 				</header>
 
 				{enrollmentQuery.loading ? <div className="ld-loading"><LoaderCircle size={22} className="spin" /> {t('student.courses.loading')}</div> : enrollmentQuery.error ? <div className="ld-alert" role="alert">{enrollmentQuery.error} <button type="button" onClick={enrollmentQuery.reload}>{t('student.common.retry')}</button></div> : courses.length === 0 ? <section className="ld-panel pp-practice-empty"><BookOpen size={25} /><h2>{t('student.courses.emptyTitle')}</h2><p>{t('student.courses.emptyBody')}</p></section> : <>
-					<div className="pp-practice-section-heading"><h2>{t('practice.courses')}</h2><span>{courses.length} {courses.length === 1 ? 'mata kuliah' : 'mata kuliah'}</span></div>
-					<nav className="pp-practice-courses" aria-label="Pilih mata kuliah untuk latihan">
+					<div className="pp-practice-section-heading"><h2>{t('practice.courses')}</h2><span>{t(courses.length === 1 ? 'practiceUi.courseCountOne' : 'practiceUi.courseCountMany', {count:String(courses.length)})}</span></div>
+					<nav className="pp-practice-courses" aria-label={t('practiceUi.chooseCourse')}>
 						{courses.map((course, index) => { const CourseIcon = courseIcons[index % courseIcons.length]; return <button key={course.id} type="button" className="pp-practice-course" onClick={() => setSelectedCourse(course.id)}>
 							<span className="pp-practice-course-icon" aria-hidden="true"><CourseIcon size={21} strokeWidth={1.8} /></span>
-							<span className="pp-practice-course-copy"><small>{course.code || 'Mata kuliah'}{course.semester ? ` · ${course.semester}` : ''}</small><strong>{course.title}</strong><span>{t('practice.start')} <ArrowRight size={15} /></span></span>
+							<span className="pp-practice-course-copy"><small>{course.code || t('practiceUi.course')}{course.semester ? ` · ${course.semester}` : ''}</small><strong>{course.title}</strong><span>{t('practice.start')} <ArrowRight size={15} /></span></span>
 						</button>; })}
 					</nav>
 				</>}

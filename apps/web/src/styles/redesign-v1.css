@@ -52,6 +52,17 @@
 	--r-text-2xl: 24px;
 	--r-text-3xl: 32px;
 
+	/* Semantic typography: shared by page layouts and feature styles. */
+	--r-type-title-size: clamp(24px, 2.3vw, 30px);
+	--r-type-section-size: 20px;
+	--r-type-card-size: 16px;
+	--r-type-body-size: var(--r-text-base);
+	--r-type-label-size: var(--r-text-md);
+	--r-type-meta-size: var(--r-text-sm);
+	--r-type-heading-weight: 700;
+	--r-type-control-weight: 600;
+	--r-type-body-leading: 1.6;
+
 	--r-radius-sm: 6px;
 	--r-radius-md: 10px;
 	--r-radius-lg: 14px;
@@ -894,4 +905,114 @@
 	.sd-game-level-track > span {
 		background: #111 !important;
 	}
+}
+
+
+/* Shared app typography. Role selectors cover legacy headers while new feature
+   styles consume these same tokens. Public landing/display styles stay separate. */
+.ld-layout .ld-content {
+ font-family: var(--body);
+ font-size: var(--r-type-body-size);
+ line-height: var(--r-type-body-leading);
+}
+.ld-content :is(.ld-page-head,.ld-greet-copy,.flb-head,.eval-head,.cw-page-head,.ac2-head,.mk-head,.lap-head,.research-export-head,.sas-header,.srs-head,.rps-editor-head,.asg-editor-head,.sc-heading,.lp-head,.pp-heading,.pp-practice-home-heading,.sd-game-greeting,.student-page-banner) :is(h1,h2),
+.ld-content :is(.res-title,.ld-sessions-head h2,.ld-rps-head h2,.cp-practice > h1) {
+ font-family: var(--body);
+ font-size: var(--r-type-title-size);
+ font-weight: var(--r-type-heading-weight);
+ line-height: 1.2;
+ letter-spacing: -.03em;
+}
+.ld-content :is(.ld-page-head,.ld-greet-copy,.flb-head,.eval-head,.cw-page-head,.ac2-head,.mk-head,.lp-head,.pp-heading,.sc-heading) p,
+.ld-content :is(.res-sub,.ld-session-desc p) {
+ font-size: var(--r-type-body-size);
+ line-height: var(--r-type-body-leading);
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page,.cp-practice) {
+ font-family: var(--body);
+ font-size: var(--r-type-body-size);
+ line-height: var(--r-type-body-leading);
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page,.cp-practice) p {
+ font-size: var(--r-type-body-size);
+ line-height: var(--r-type-body-leading);
+}
+.ld-layout .ld-content :is(.sc-card > h2,.pp-panel > h3,.lp-card > h2,.cp-practice > h2) {
+ font-size: var(--r-type-section-size);
+ font-weight: var(--r-type-heading-weight);
+ line-height: 1.3;
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page,.cp-practice) :is(small,.pp-muted,.pp-eyebrow,.sc-badge,.pp-badge) {
+ font-size: var(--r-type-meta-size);
+ line-height: 1.5;
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page,.cp-practice) :is(input,select,textarea) {
+ font-family: var(--body);
+ font-size: var(--r-type-body-size);
+ font-weight: 400;
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page,.cp-practice) button {
+ font-family: var(--body);
+ font-size: var(--r-type-label-size);
+ font-weight: var(--r-type-control-weight);
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page,.cp-practice) :is(summary,label) {
+ font-size: var(--r-type-label-size);
+}
+
+.ld-content :is(.ld-card-head h2,.ld-greet-ask-title,.ld-session-desc h3,.mk-card-title-row h3) {
+ font-size: var(--r-type-card-size);
+ font-weight: var(--r-type-control-weight);
+ line-height: 1.4;
+}
+.ld-content .sd-game-hero h2 {
+ font-size: var(--r-text-3xl);
+ font-weight: var(--r-type-heading-weight);
+ line-height: 1.2;
+}
+.ld-content .pp-page .ld-btn-primary:disabled {
+ border-color: transparent;
+ box-shadow: none;
+ transform: none;
+}
+
+/* One drawer breakpoint for phones and tablets; desktop collapse is independent. */
+@media (max-width: 1100px) {
+ .ld-layout .ld-mast { grid-template-columns: auto minmax(0,1fr) auto; gap: 8px; min-height: 56px; padding: 6px 10px; }
+ .ld-layout .ld-mast-brand { justify-content: flex-start; gap: 6px; }
+ .ld-layout .ld-mast-search-zone { position: static; transform: none; width: 100%; min-width: 0; }
+ .ld-layout .ld-mast-search-trigger { width: 100%; }
+ .ld-layout .ld-mast-search-shortcut { display: none; }
+ .ld-layout .ld-mobile-menu { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 8px; }
+ .ld-layout .ld-sidebar {
+  position: fixed; inset: 0 auto 0 0; width: min(304px,calc(100vw - 48px)); max-width: calc(100vw - 48px); flex-basis: auto;
+  height: 100dvh; max-height: 100dvh; padding: max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));
+  z-index: 120; background: var(--r-surface); border-right: 1px solid var(--r-border); border-radius: 0;
+  transform: translateX(-100%); visibility: hidden; pointer-events: none; transition: transform .18s ease;
+ }
+ .ld-layout .ld-sidebar.open { transform: translateX(0); visibility: visible; pointer-events: auto; box-shadow: var(--r-shadow-md); }
+ .ld-layout .ld-sidebar .ld-sidebar-brand { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 12px; }
+ .ld-layout .ld-sidebar-close { display: grid; place-items: center; min-width: 44px; min-height: 44px; color: var(--r-ink); }
+ .ld-layout .ld-sidebar .ld-nav { display: flex; flex-direction: column; justify-content: flex-start; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; gap: 4px; padding: 0 2px; }
+ .ld-layout .ld-sidebar .ld-nav-link { flex-direction: row; justify-content: flex-start; width: 100%; min-height: 46px; height: auto; margin: 0; padding: 12px; gap: 12px; text-align: left; font-size: 14px; }
+ .ld-layout .ld-sidebar .ld-nav-link > span { position: static; width: auto; height: auto; max-width: none; max-height: none; opacity: 1; transform: none; overflow: visible; clip: auto; white-space: normal; line-height: 1.4; }
+ .ld-layout .ld-sidebar .ld-nav-link > svg { flex-shrink: 0; }
+ .ld-layout .ld-sidebar .ld-nav-link::after { display: none; }
+ .ld-layout .ld-sidebar-foot { display: none; }
+ .ld-layout .ld-scrim { display: block; position: fixed; inset: 0; z-index: 110; border: 0; background: rgb(0 0 0 / .45); touch-action: none; }
+ .ld-layout[data-mobile-nav="open"] .ld-main { overflow: hidden; }
+ .ld-layout .ld-body.has-rail { flex-direction: column; }
+ .ld-layout .ld-course-rail { width: 100%; flex-direction: row; align-items: center; padding: 8px 10px; border-right: 0; border-bottom: 1px solid var(--r-border); }
+ .ld-layout .ld-course-rail > nav,.ld-layout .ld-course-rail-head { display: none; }
+ .ld-layout .ld-course-rail .course-section-picker { display: grid; gap: 6px; width: 100%; min-width: 0; padding: 4px 8px; font-size: var(--r-type-label-size); }
+ .ld-layout .course-section-picker select { min-height: 44px; width: 100%; max-width: 100%; padding: 10px; border: 1px solid var(--r-border); border-radius: var(--r-radius-sm); font: inherit; color: var(--r-ink); background: var(--r-surface); }
+ .ld-layout .ld-course-switch { flex: 0 1 220px; min-width: 0; padding: 0; }
+ .ld-layout .ld-course-switch-kicker { display: none; }
+}
+@media (max-width: 600px) {
+ .ld-layout .ld-course-rail { flex-wrap: wrap; }
+ .ld-layout .ld-course-switch { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .ld-layout .ld-sidebar { transition: none; }
 }

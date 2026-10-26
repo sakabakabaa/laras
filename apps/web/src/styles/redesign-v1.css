@@ -52,6 +52,17 @@
 	--r-text-2xl: 24px;
 	--r-text-3xl: 32px;
 
+	/* Semantic typography: shared by page layouts and feature styles. */
+	--r-type-title-size: clamp(24px, 2.3vw, 30px);
+	--r-type-section-size: 20px;
+	--r-type-card-size: 16px;
+	--r-type-body-size: var(--r-text-base);
+	--r-type-label-size: var(--r-text-md);
+	--r-type-meta-size: var(--r-text-sm);
+	--r-type-heading-weight: 700;
+	--r-type-control-weight: 600;
+	--r-type-body-leading: 1.6;
+
 	--r-radius-sm: 6px;
 	--r-radius-md: 10px;
 	--r-radius-lg: 14px;
@@ -894,4 +905,57 @@
 	.sd-game-level-track > span {
 		background: #111 !important;
 	}
+}
+
+
+/* Shared app typography. Role selectors cover legacy headers while new feature
+   styles consume these same tokens. Public landing/display styles stay separate. */
+.ld-layout .ld-content {
+ font-family: var(--body);
+ font-size: var(--r-type-body-size);
+ line-height: var(--r-type-body-leading);
+}
+.ld-content :is(.ld-page-head,.ld-greet-copy,.flb-head,.eval-head,.cw-page-head,.ac2-head,.mk-head,.lap-head,.research-export-head,.sas-header,.srs-head,.rps-editor-head,.asg-editor-head,.sc-heading,.lp-head,.pp-heading) :is(h1,h2),
+.ld-content :is(.res-title,.ld-sessions-head h2,.ld-rps-head h2) {
+ font-family: var(--body);
+ font-size: var(--r-type-title-size);
+ font-weight: var(--r-type-heading-weight);
+ line-height: 1.2;
+ letter-spacing: -.03em;
+}
+.ld-content :is(.ld-page-head,.ld-greet-copy,.flb-head,.eval-head,.cw-page-head,.ac2-head,.mk-head,.lp-head,.pp-heading,.sc-heading) p,
+.ld-content :is(.res-sub,.ld-session-copy p) {
+ font-size: var(--r-type-body-size);
+ line-height: var(--r-type-body-leading);
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page) {
+ font-family: var(--body);
+ font-size: var(--r-type-body-size);
+ line-height: var(--r-type-body-leading);
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page) p {
+ font-size: var(--r-type-body-size);
+ line-height: var(--r-type-body-leading);
+}
+.ld-layout .ld-content :is(.sc-card > h2,.pp-panel > h3,.lp-card > h2) {
+ font-size: var(--r-type-section-size);
+ font-weight: var(--r-type-heading-weight);
+ line-height: 1.3;
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page) :is(small,.pp-muted,.pp-eyebrow,.sc-badge,.pp-badge) {
+ font-size: var(--r-type-meta-size);
+ line-height: 1.5;
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page) :is(input,select,textarea) {
+ font-family: var(--body);
+ font-size: var(--r-type-body-size);
+ font-weight: 400;
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page) button {
+ font-family: var(--body);
+ font-size: var(--r-type-label-size);
+ font-weight: var(--r-type-control-weight);
+}
+.ld-layout .ld-content :is(.sc-page,.pp-page,.lp-page) :is(summary,label) {
+ font-size: var(--r-type-label-size);
 }

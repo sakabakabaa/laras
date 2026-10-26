@@ -1,11 +1,11 @@
 .pp-page { color: var(--p-ink); display: grid; gap: 22px; min-width: 0; padding: 4px 0 24px; }
 .pp-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
-.pp-heading h2 { font-size: clamp(23px,3vw,30px); letter-spacing: -.04em; margin: 8px 0; line-height: 1.25; }
+.pp-heading h2 { font-size: var(--r-type-title-size); font-weight: var(--r-type-heading-weight); letter-spacing: -.04em; margin: 8px 0; line-height: 1.25; }
 .pp-heading p,.pp-start p { color: var(--p-muted); font-size: 13px; line-height: 1.65; margin: 5px 0; }
-.pp-eyebrow { color: var(--p-muted); font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+.pp-eyebrow { color: var(--p-muted); font-size: var(--r-type-meta-size); font-weight: 700; letter-spacing: .08em; }
 .pp-badge { background: var(--p-wine-soft); color: var(--p-wine); border-radius: 6px; padding: 7px 9px; white-space: nowrap; font-size: 11px; }
 .pp-panel { background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 9px; padding: 22px; min-width: 0; }
-.pp-page h3 { font-size: 17px; letter-spacing: -.02em; margin: 0 0 10px; line-height: 1.5; }
+.pp-page h3 { font-size: var(--r-type-section-size); font-weight: var(--r-type-heading-weight); letter-spacing: -.02em; margin: 0 0 10px; line-height: 1.5; }
 .pp-page h4 { margin: 8px 0 14px; font-size: 13px; line-height: 1.6; }
 .pp-page small,.pp-muted { color: var(--p-muted); font-size: 12px; line-height: 1.6; }
 .pp-page button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
@@ -35,7 +35,7 @@
 .pp-source-editor summary { cursor: pointer; font-size: 12px; }
 .pp-source-editor form { display: grid; gap: 14px; margin-top: 16px; }
 .pp-source-editor select { width: 100%; }
-.pp-extraction { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.7 inherit; padding: 12px; background: var(--p-canvas); border-radius: 6px; user-select: text; }
+.pp-extraction { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--body); font-size: var(--r-type-meta-size); line-height: 1.7; padding: 12px; background: var(--p-canvas); border-radius: 6px; user-select: text; }
 .pp-error,.pp-notice { padding: 14px 18px; border-radius: 7px; border: 1px solid var(--p-line); background: var(--p-wine-soft); color: var(--p-wine); font-size: 13px; line-height: 1.7; }
 .pp-error button { margin-left: 12px; background: transparent; color: inherit; border: 0; text-decoration: underline; }
 .pp-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 24px; color: var(--p-muted); font-size: 13px; }
@@ -44,7 +44,7 @@
 .pp-back { background: transparent; border: 0; color: var(--p-muted); padding: 4px 0; font-size: 12px; }
 .pp-progress { background: var(--p-line); height: 6px; border-radius: 5px; overflow: hidden; margin: 20px 0 30px; }
 .pp-progress span { display: block; height: 100%; background: var(--p-wine); border-radius: inherit; transition: width .25s ease; }
-.pp-question h3 { font-size: 23px; margin-top: 13px; line-height: 1.5; }
+.pp-question h3 { font-size: var(--r-type-section-size); font-weight: 600; margin-top: 13px; line-height: 1.5; }
 .pp-choices { display: grid; gap: 10px; padding: 0; border: 0; margin: 24px 0; }
 .pp-choices label { display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px solid var(--p-line); border-radius: 7px; cursor: pointer; font-size: 14px; line-height: 1.6; }
 .pp-choices label.selected { border-color: var(--p-wine); background: var(--p-wine-soft); }

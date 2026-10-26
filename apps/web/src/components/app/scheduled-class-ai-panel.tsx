@@ -3,7 +3,7 @@ import {scheduledAiRequest} from '@/lib/scheduled-class-ai-client';
 import type {ScheduledAcademicContext,ScheduledAiDraft,ScheduledAiProposal} from '@/lib/scheduled-class-ai';
 
 export function AcademicChoices({label,options,value,onChange}:{label:string;options:{id:string;title:string}[];value:string[];onChange:(ids:string[])=>void}){
- return <label>{label}<select multiple size={Math.min(4,Math.max(2,options.length))} value={value} onChange={e=>onChange(Array.from(e.target.selectedOptions,o=>o.value))}>{options.map(o=><option key={o.id} value={o.id}>{o.title}</option>)}</select><small>Ctrl / ⌘ untuk memilih beberapa.</small></label>;
+ return <label>{label}<select aria-label={label} multiple size={Math.min(4,Math.max(2,options.length))} value={value} onChange={e=>onChange(Array.from(e.target.selectedOptions,o=>o.value))}>{options.map(o=><option key={o.id} value={o.id}>{o.title}</option>)}</select><small>Ctrl / ⌘ untuk memilih beberapa.</small></label>;
 }
 export function ScheduledClassAiPanel({sessionId,onContext,onApply}:{sessionId:string;onContext:(c:ScheduledAcademicContext)=>void;onApply:(draft:ScheduledAiDraft)=>void}){
  const [context,setContext]=useState<ScheduledAcademicContext|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);

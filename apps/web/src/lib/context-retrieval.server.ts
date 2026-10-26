@@ -25,6 +25,7 @@ import PocketBase from 'pocketbase';
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { resolveContextPassage, type ContextPassage } from '@/lib/context-passages';
+import {linkIds} from '@/lib/learning';
 import type {
 	ContextSectionRecord,
 	FileContextRecord,
@@ -382,7 +383,9 @@ export async function retrieveContextBundle(input: {
 	if(input.fileIds && (input.fileIds.length===0 || input.fileIds.length>20))throw new Error('invalid context source selection');
 	const selectedFilter=input.fileIds ? ` && (${input.fileIds.map(id=>`id = "${idOrThrow('file',id)}"`).join(' || ')})` : '';
 	const filesResult = await pocketbaseAdmin.listRecords<FileLibraryRecord>('file_library', {
-		filter: `course = "${idOrThrow('course', scope.course)}" && ${fileAccessFilter(input.requester)}${selectedFilter}`,
+		// Match the multi-course field using the same operator as library navigation.
+		// Enforce exact membership below as well as validating the filter input.
+		filter: `course ~ "${idOrThrow('course', scope.course)}" && ${fileAccessFilter(input.requester)}${selectedFilter}`,
 		perPage: 200,
 		sort: '-updated',
 	});
@@ -390,7 +393,7 @@ export async function retrieveContextBundle(input: {
 		return exit('insufficient', 'Belum ada berkas yang ditautkan ke mata kuliah ini.', []);
 	}
 	const candidates = filesResult.items.filter(
-		(file) => file.file && config.allowedKinds.includes(sourceKindOf(file.file)),
+		(file) => linkIds(file.course).includes(scope.course) && (!input.fileIds || input.fileIds.includes(file.id)) && file.file && config.allowedKinds.includes(sourceKindOf(file.file)),
 	);
 	if (candidates.length === 0) {
 		return exit(

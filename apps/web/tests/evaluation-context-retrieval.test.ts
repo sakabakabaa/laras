@@ -83,4 +83,12 @@ describe('formal evaluation material retrieval', () => {
 		expect(bundle.result).toBe('sufficient');
 		expect(bundle.sources[0].text).toContain('Unrelated introduction.');
 	});
+
+	it('selects explicitly chosen multi-course materials before retrieval caps',async()=>{
+		await retrieveContextBundle({...input,fileIds:['file123']});
+		expect(db.filters[0]).toContain('course ~ "course123"');
+		expect(db.filters[0]).toContain('id = "file123"');
+		db.files[0].course=['course123-other'];
+		expect((await retrieveContextBundle({...input,fileIds:['file123']})).result).toBe('insufficient');
+	});
 });

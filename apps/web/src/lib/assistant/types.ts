@@ -183,10 +183,12 @@ export type ToolPermission = 'read' | 'draft' | 'write' | 'destructive';
  * natural-language parsing.
  */
 export interface ToolFieldSchema {
-	type: 'string' | 'number' | 'boolean';
+	type: 'string' | 'number' | 'boolean' | 'array';
 	description?: string;
 	required?: boolean;
 	enum?: string[];
+	/** Element schema for `type: 'array'`. */
+	items?: ToolFieldSchema;
 }
 
 /** The structured input schema for a registered tool. */

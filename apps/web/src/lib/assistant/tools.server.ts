@@ -30,6 +30,7 @@ import { studentProgress } from '@/lib/student-progress.server';
 import { courseLabel, courseMissMessage, resolveCourseRef } from './context.server';
 import { retrieveOlderHistory } from './history-retrieval.server';
 import { authorizeCourseId, verifyOwnedCourse } from './authorization.server';
+import { readGradebook, readGradeChangeStatus, prepareGradeChangeProposal, type PrepareGradeChangeInput } from './grading-tools.server';
 import logger from '@/lib/logger.server';
 import { normalizeSkill, rowId, SHAPE_LABEL, str, weekFromText } from './parsing';
 import type { ActiveShape, AssistantTool, AssistantToolDefinition, AssistantToolResult, PreparedAssignment, PreparedLinkPlan, PreparedRosterTransfer, ToolExecutionContext, TypedToolResult } from './types';
@@ -51,6 +52,9 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
 	{ name: 'student_profile', kind: 'read', description: 'Ringkasan akademik satu mahasiswa pada mata kuliah dosen.' },
 	{ name: 'calendar_events', kind: 'read', description: 'Jadwal pertemuan dan kalender akademik.' },
 	{ name: 'course_materials', kind: 'read', description: 'Materi mata kuliah yang telah disetujui untuk konteks AI.' },
+	{ name: 'get_gradebook', kind: 'read', description: 'Baca komponen dan nilai buku nilai satu mata kuliah.' },
+	{ name: 'prepare_grade_changes', kind: 'write', description: 'Siapkan usulan perubahan nilai (draf, perlu persetujuan dosen di panel nilai).' },
+	{ name: 'get_grade_change_status', kind: 'read', description: 'Baca status dan hasil terverifikasi usulan perubahan nilai.' },
 ];
 
 const runListCourses = async (pb: PocketBase, userId: string): Promise<string> => {
@@ -670,6 +674,100 @@ export const TOOL_REGISTRY: ReadonlyMap<string, AssistantToolDefinition> = new M
 			},
 		},
 	],
+	[
+		'get_gradebook',
+		{
+			name: 'get_gradebook',
+			description: 'Baca komponen dan nilai buku nilai satu mata kuliah (per halaman, berdasarkan NIM).',
+			permission: 'read',
+			requiresConfirmation: false,
+			inputSchema: {
+				type: 'object',
+				properties: {
+					courseId: { type: 'string', description: 'ID mata kuliah (wajib)', required: true },
+					componentId: { type: 'string', description: 'Batasi ke satu komponen nilai (opsional)' },
+					offset: { type: 'number', description: 'Mulai dari baris ke-N untuk halaman berikutnya (opsional)' },
+				},
+				required: ['courseId'],
+			},
+			execute: async (ctx, args) => {
+				const courseId = str(args.courseId, 40);
+				if (!courseId) return { ok: false, error: { code: 'invalid', message: 'ID mata kuliah wajib diisi.' } };
+				const result = await readGradebook(ctx.pb, ctx.userId, {
+					courseId,
+					componentId: args.componentId ? str(args.componentId, 40) : undefined,
+					offset: typeof args.offset === 'number' ? args.offset : 0,
+				});
+				return result.ok
+					? { ok: true, data: result.data, source: { type: 'gradebook', id: courseId } }
+					: { ok: false, error: result.error };
+			},
+		},
+	],
+	[
+		'prepare_grade_changes',
+		{
+			name: 'prepare_grade_changes',
+			description: 'Siapkan usulan perubahan nilai manual (draf tersimpan, belum mengubah nilai). Dosen meninjau dan menyetujui di panel nilai.',
+			// Preparing a proposal changes no grade: it writes a private draft that
+			// only a lecturer can approve, so it is a draft tool, not a confirming
+			// write. The approve/apply step is a separate human action in the
+			// review panel and is deliberately unreachable from any tool.
+			permission: 'draft',
+			requiresConfirmation: false,
+			inputSchema: {
+				type: 'object',
+				properties: {
+					courseId: { type: 'string', description: 'ID mata kuliah (wajib)', required: true },
+					operationKey: { type: 'string', description: 'Kunci idempoten unik untuk usulan ini (wajib)', required: true },
+					items: {
+						type: 'array',
+						description: 'Daftar perubahan: komponen, mahasiswa, dan operasi (set_score/clear_score/set_note).',
+						required: true,
+						items: {
+							type: 'string',
+							description: 'Satu perubahan: {"componentId","studentId","operation"}.',
+						},
+					},
+				},
+				required: ['courseId', 'operationKey', 'items'],
+			},
+			execute: async (ctx, args) => {
+				const courseId = str(args.courseId, 40);
+				const operationKey = str(args.operationKey, 80);
+				if (!courseId || !operationKey) {
+					return { ok: false, error: { code: 'invalid', message: 'ID mata kuliah dan kunci operasi wajib diisi.' } };
+				}
+				const items = Array.isArray(args.items) ? (args.items as PrepareGradeChangeInput['items']) : [];
+				const result = await prepareGradeChangeProposal(ctx.pb, ctx.userId, { courseId, operationKey, items });
+				return result.ok
+					? { ok: true, data: result.data, source: { type: 'grade_change', id: result.data.id } }
+					: { ok: false, error: result.error };
+			},
+		},
+	],
+	[
+		'get_grade_change_status',
+		{
+			name: 'get_grade_change_status',
+			description: 'Baca status validasi, konflik, dan hasil terverifikasi dari usulan perubahan nilai.',
+			permission: 'read',
+			requiresConfirmation: false,
+			inputSchema: {
+				type: 'object',
+				properties: { proposalId: { type: 'string', description: 'ID usulan (wajib)', required: true } },
+				required: ['proposalId'],
+			},
+			execute: async (ctx, args) => {
+				const proposalId = str(args.proposalId, 40);
+				if (!proposalId) return { ok: false, error: { code: 'invalid', message: 'ID usulan wajib diisi.' } };
+				const result = await readGradeChangeStatus(ctx.pb, ctx.userId, proposalId);
+				return result.ok
+					? { ok: true, data: result.data, source: { type: 'grade_change', id: proposalId } }
+					: { ok: false, error: result.error };
+			},
+		},
+	],
 ]);
 
 /** Returns the registered tool definition, or undefined for an unknown tool. */
@@ -717,6 +815,24 @@ export const validateToolArgs = (
 			cleaned[key] = num;
 		} else if (spec.type === 'boolean') {
 			cleaned[key] = typeof value === 'boolean' ? value : String(value).toLowerCase() === 'true';
+		} else if (spec.type === 'array') {
+			// Arrays (e.g. a batch of grade changes) are passed through as arrays;
+			// a JSON-encoded string from the model is parsed rather than coerced
+			// into a one-element string array, which would silently drop items.
+			let list: unknown = value;
+			if (typeof value === 'string') {
+				try {
+					list = JSON.parse(value);
+				} catch {
+					errors.push(`Argumen "${key}" harus berupa daftar (array).`);
+					continue;
+				}
+			}
+			if (!Array.isArray(list)) {
+				errors.push(`Argumen "${key}" harus berupa daftar (array).`);
+				continue;
+			}
+			cleaned[key] = list;
 		} else {
 			cleaned[key] = typeof value === 'string' ? value : String(value);
 		}

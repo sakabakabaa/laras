@@ -36,7 +36,6 @@ import { activityTypeOf, type Assignment, type AssignmentSubmission } from '@/li
 import {
 	calculateFinalGrade,
 	chapterCounts,
-	chapterValue,
 	componentScore,
 	isChapterComponent,
 	LETTER_GRADES,
@@ -56,6 +55,9 @@ import {
 import type { Course } from '@/lib/learning';
 import { angkatanOf } from '@/lib/learning';
 import { AppModal } from '@/components/app/app-modal';
+import { GradeChangeReview, gradeCommandRequest, type ReviewProposal } from '@/components/app/grade-change-review';
+import type { GradeChangeInput } from '@/lib/gradebook/commands.server';
+import { languageOf } from '@/lib/i18n';
 
 type Tab = 'nilai' | 'komponen' | 'analitik';
 
@@ -336,32 +338,80 @@ export function LecturerGradebook({ course }: { course: Course }) {
 		overridesQuery.error ||
 		publicationQuery.error;
 
+	const [gradeProposal, setGradeProposal] = useState<ReviewProposal | null>(null);
+	const proposalPending = useRef(false);
+	const gradeCompletion = useRef<{ resolve: () => void; reject: (reason: Error) => void } | null>(null);
+	const operationStorageKey = `grade-review:${me}:${courseId}`;
+	const updateGradeProposal = useCallback((proposal: ReviewProposal) => {
+		setGradeProposal(proposal);
+		try { localStorage.setItem(operationStorageKey, proposal.id); } catch { /* Persisted server state remains authoritative. */ }
+		if (proposal.status === 'verified') {
+			invalidate(`grade_entries:components=${courseId}`);
+			entriesQuery.reload();
+			gradeCompletion.current?.resolve(); gradeCompletion.current = null;
+		}
+	}, [operationStorageKey, courseId, entriesQuery.reload]);
+	useEffect(() => {
+		let alive = true;
+		try {
+			const proposalId = localStorage.getItem(operationStorageKey);
+			if (proposalId) void gradeCommandRequest(pb.authStore.token, { action: 'status', proposalId })
+				.then(proposal => { if (alive && proposal.course === courseId) updateGradeProposal(proposal); })
+				.catch(() => { /* Keep the operation id for a later authenticated recovery. */ });
+		} catch { /* Storage is optional. */ }
+		return () => { alive = false; };
+	}, [operationStorageKey]);
+	const prepareManualChanges = useCallback(async (items: GradeChangeInput[]) => {
+		if (proposalPending.current || gradeCompletion.current) throw new Error('Finish reviewing the pending grade change first.');
+		proposalPending.current = true;
+		try {
+			let previousId: string | null = null;
+			try { previousId = localStorage.getItem(operationStorageKey); } catch { /* Storage is optional. */ }
+			if (previousId) {
+				const previous = await gradeCommandRequest(pb.authStore.token, { action: 'status', proposalId: previousId });
+				if (!['verified', 'rejected', 'cancelled', 'expired', 'conflicted'].includes(previous.status)) {
+					updateGradeProposal(previous);
+					throw new Error('Review or reconcile the previous grade operation before preparing another.');
+				}
+			}
+			const proposal = await gradeCommandRequest(pb.authStore.token, { action: 'prepare', courseId, operationKey: crypto.randomUUID(), items });
+			updateGradeProposal(proposal);
+			await new Promise<void>((resolve, reject) => { gradeCompletion.current = { resolve, reject }; });
+		} finally { proposalPending.current = false; }
+	}, [courseId, operationStorageKey, updateGradeProposal]);
+	const approveManualChanges = async () => {
+		if (!gradeProposal) return;
+		const ref = { proposalId: gradeProposal.id, revision: gradeProposal.revision, payloadHash: gradeProposal.payloadHash };
+		const approved = gradeProposal.status === 'approved' ? gradeProposal : await gradeCommandRequest(pb.authStore.token, { action: 'approve', explicitAction: 'approve', ...ref });
+		updateGradeProposal(approved);
+		if (approved.status === 'approved') {
+			const applied = await gradeCommandRequest(pb.authStore.token, { action: 'apply', ...ref });
+			updateGradeProposal(applied);
+			if (applied.status !== 'verified') updateGradeProposal(await gradeCommandRequest(pb.authStore.token, { action: 'reconcile', proposalId: applied.id }));
+		}
+	};
+	const closeGradeReview = () => {
+		gradeCompletion.current?.reject(new Error('Grade review closed; no additional changes were submitted.'));
+		gradeCompletion.current = null;
+		setGradeProposal(null);
+		if (gradeProposal && ['verified', 'rejected', 'cancelled', 'expired', 'conflicted'].includes(gradeProposal.status)) {
+			try { localStorage.removeItem(operationStorageKey); } catch { /* No grade state is stored locally. */ }
+		}
+	};
+
 	// ── Grade mutation (manual components) ────────────────────────────────
 	const saveManualGrade = useCallback(
 		async (component: GradeComponent, studentId: string, value: number | null, note?: string) => {
 			const existing = entriesByComponent.get(component.id)?.get(studentId);
-			const payload = {
-				owner: me,
-				component: component.id,
-				student: studentId,
-				value: value,
-				source: 'manual' as const, note: note ?? existing?.note ?? '',
-			};
-			try {
-				if (existing) {
-					await pb.collection('grade_entries').update(existing.id, payload);
-				} else {
-					await pb.collection('grade_entries').create(payload, {
-						requestKey: `ge-${component.id}-${studentId}`,
-					});
-				}
-				invalidate(`grade_entries:components=${courseId}`);
-			} catch (err) {
-				console.error('Gagal menyimpan nilai', err);
-				throw err;
-			}
+			const items: GradeChangeInput[] = [];
+			const target = { componentId: component.id, studentId };
+			if (component.sourceType === 'bonus') items.push({ ...target, operation: { op: 'adjust_bonus', delta: (value ?? 0) - (existing?.value ?? 0) } });
+			else if (value === null) items.push({ ...target, operation: { op: 'clear_score' } });
+			else items.push({ ...target, operation: { op: 'set_score', score: value } });
+			if (note !== undefined) items.push({ ...target, operation: { op: 'set_note', note } });
+			await prepareManualChanges(items);
 		},
-		[entriesByComponent, me, courseId],
+		[entriesByComponent, prepareManualChanges],
 	);
 
 	// Chapter-tracked offline tasks: persist the per-chapter status map and the
@@ -372,32 +422,11 @@ export function LecturerGradebook({ course }: { course: Course }) {
 			studentId: string,
 			chapters: Record<string, ChapterStatus>,
 		) => {
-			const existing = entriesByComponent.get(component.id)?.get(studentId);
-			const value = chapterValue(component, chapters);
-			const payload = {
-				owner: me,
-				component: component.id,
-				student: studentId,
-				value,
-				source: 'manual' as const,
-				chapters,
-				note: existing?.note ?? '',
-			};
-			try {
-				if (existing) {
-					await pb.collection('grade_entries').update(existing.id, payload);
-				} else {
-					await pb.collection('grade_entries').create(payload, {
-						requestKey: `ge-${component.id}-${studentId}`,
-					});
-				}
-				invalidate(`grade_entries:components=${courseId}`);
-			} catch (err) {
-				console.error('Gagal menyimpan progres bab', err);
-				throw err;
-			}
+			await prepareManualChanges(Object.entries(chapters).map(([chapterId, status]) => ({
+				componentId: component.id, studentId, operation: { op: 'set_chapter' as const, chapterId, status },
+			})));
 		},
-		[entriesByComponent, me, courseId],
+		[entriesByComponent, prepareManualChanges],
 	);
 
 	const setOverride = useCallback(
@@ -575,6 +604,16 @@ export function LecturerGradebook({ course }: { course: Course }) {
 
 	return (
 		<div className="gb-wrap">
+			{gradeProposal && <AppModal open title="Review grade changes" onClose={closeGradeReview} className="gb-review-modal">
+				<GradeChangeReview proposal={gradeProposal} students={students} components={allComponents}
+					courseLabel={`${course.code || ''} ${course.title} / ${sections.find(section => section.id === classFilter)?.name || 'All sections'}`}
+					language={languageOf(pb.authStore.record)} onClose={closeGradeReview} onApprove={approveManualChanges}
+					onReject={async () => {
+						updateGradeProposal(await gradeCommandRequest(pb.authStore.token, { action: 'reject', explicitAction: 'reject', proposalId: gradeProposal.id, revision: gradeProposal.revision, payloadHash: gradeProposal.payloadHash }));
+						closeGradeReview();
+					}}
+					onRefresh={async () => updateGradeProposal(await gradeCommandRequest(pb.authStore.token, { action: 'status', proposalId: gradeProposal.id }))} />
+			</AppModal>}
 			{loadError && (
 				<div className="ld-alert" role="alert">
 					{loadError}{' '}

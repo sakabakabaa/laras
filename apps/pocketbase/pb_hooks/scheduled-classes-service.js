@@ -1,0 +1,181 @@
+// Database operations run inside a single PocketBase transaction, including
+// deadline checks, revision comparisons, grading and finalization.
+const rules = require(__hooks + '/scheduled-classes-domain.js');
+function bad(message) { throw new BadRequestError(message); }
+function rows(app, name, filter, params, sort = '') { return app.findRecordsByFilter(name, filter, sort, 0, 0, params); }
+function data(record) {
+  const value = JSON.parse(JSON.stringify(record.publicExport()));
+  // JSVM publicExport exposes JSON fields as raw byte slices. Serializing
+  // through JSON.stringify otherwise turns saved answers into numeric arrays.
+  for (const field of ['snapshot', 'answers', 'detail']) {
+    if (Object.prototype.hasOwnProperty.call(value, field)) value[field] = JSON.parse(record.getString(field) || '{}');
+  }
+  return value;
+}
+function json(record, field) { return JSON.parse(record.getString(field) || '{}'); }
+function create(app, name, fields) { const r = new Record(app.findCollectionByNameOrId(name)); r.load(fields); app.save(r); return r; }
+function event(app, c, actor, action, detail = {}) { create(app, 'scheduled_class_events', {class: c.id, actor, action, detail}); }
+function activities(app, c) {
+  return rules.windows(data(c), rows(app, 'scheduled_class_activities', 'class={:c}', {c: c.id}, 'position').map(r => ({...data(r), snapshot: json(r, 'snapshot')})));
+}
+function finalize(app, record, activity, now, status) {
+  const outcome = rules.result(activity, json(record, 'answers'));
+  record.load({...outcome, status, finalizedAt: new Date(now).toISOString()});
+  app.save(record);
+}
+function reconcile(app, c, now) {
+  if (!['scheduled', 'closed', 'reviewed'].includes(c.getString('status'))) return;
+  const plan = activities(app, c), drafts = rows(app, 'scheduled_activity_attempts', 'class={:c} && status="draft"', {c: c.id});
+  for (const attempt of drafts) {
+    const activity = plan.find(a => a.id === attempt.getString('activity'));
+    if (activity && now >= Date.parse(activity.endsAt)) finalize(app, attempt, activity, now, 'expired');
+  }
+  if (c.getString('status') === 'scheduled' && now >= Date.parse(c.getString('endsAt'))) {
+    c.set('status', 'closed'); app.save(c); event(app, c, '', 'closed');
+  }
+}
+function context(app, sessionId, user) {
+  if (typeof sessionId !== 'string' || !/^[a-zA-Z0-9]{15}$/.test(sessionId)) bad('Pilih pertemuan yang valid.');
+  const session = app.findRecordById('class_sessions', sessionId), course = app.findRecordById('courses', session.getString('course'));
+  const owner = course.getString('owner') === user.id && user.getString('role') === 'faculty';
+  let enrollment, roster;
+  if (!owner) {
+    if (user.getString('role') !== 'student') throw new ForbiddenError('Kelas tidak tersedia.');
+    enrollment = rows(app, 'enrollments', 'course={:c} && owner={:u}', {c: course.id, u: user.id})[0];
+    if (!enrollment) throw new ForbiddenError('Anda belum terdaftar pada mata kuliah ini.');
+    const nim = require(__hooks + '/section-membership.js').studentNim(user);
+    const matches = nim ? rows(app, 'course_roster', 'course={:c} && nim={:n}', {c: course.id, n: nim}) : [];
+    if (matches.length > 1) throw new ForbiddenError('Identitas mahasiswa ambigu. Hubungi dosen.');
+    roster = matches[0];
+    const section = session.getString('section');
+    if (section && (!roster || roster.getString('section') !== section)) throw new ForbiddenError('Pertemuan untuk kelas lain.');
+  }
+  return {session, course, owner, enrollment, roster};
+}
+function assertClassAccess(c, ctx) {
+  if (ctx.owner) return;
+  if (c.getString('status') === 'draft') throw new ForbiddenError('Kelas belum dijadwalkan.');
+  if (c.getString('section') && (!ctx.roster || ctx.roster.getString('section') !== c.getString('section'))) throw new ForbiddenError('Kelas terjadwal untuk rombel lain.');
+}
+function rosterReport(app, c, plan, participants, attempts) {
+  const course = c.getString('course'), section = c.getString('section');
+  const roster = rows(app, 'course_roster', 'course={:c}' + (section ? ' && section={:s}' : ''), {c: course, s: section}, 'name');
+  const marks = rows(app, 'attendance', 'session={:s}', {s: c.getString('session')});
+  const report = roster.map(r => {
+    const p = participants.find(p => p.roster === r.id), work = p ? attempts.filter(a => a.student === p.student) : [];
+    const summary = rules.attendance(data(c), p, plan, work);
+    return {roster: r.id, student: p?.student || '', name: r.getString('name'), nim: r.getString('nim'), checkedInAt: p?.checkedInAt || '', lastSeenAt: p?.lastSeenAt || '', ...summary, attendance: marks.find(m => m.getString('roster') === r.id)?.getString('status') || '', attempts: work};
+  });
+  for (const p of participants.filter(p => !p.roster || !roster.some(r => r.id === p.roster))) {
+    const user = app.findRecordById('users', p.student), work = attempts.filter(a => a.student === p.student);
+    report.push({roster: '', student: p.student, name: user.getString('name') || user.getString('email'), nim: user.getString('nim'), checkedInAt: p.checkedInAt, lastSeenAt: p.lastSeenAt, ...rules.attendance(data(c), p, plan, work), attendance: '', attempts: work});
+  }
+  return report;
+}
+function view(app, c, ctx, user, now) {
+  const owner = ctx.owner, info = data(c), currentPhase = rules.phase(info, now);
+  const plan = activities(app, c);
+  const participants = rows(app, 'scheduled_class_participants', 'class={:c}' + (owner ? '' : ' && student={:u}'), {c: c.id, u: user.id}).map(data);
+  const attempts = rows(app, 'scheduled_activity_attempts', 'class={:c}' + (owner ? '' : ' && student={:u}'), {c: c.id, u: user.id}).map(data);
+  const participant = participants.find(p => p.student === user.id);
+  const released = info.releaseResults && ['closed', 'reviewed'].includes(currentPhase);
+  const safeAttempts = attempts.map(a => { if (!owner && !released) delete a.score; return a; });
+  return {
+    serverNow: new Date(now).toISOString(), owner, session: {id: ctx.session.id, title: ctx.session.getString('title'), course: ctx.course.id, section: ctx.session.getString('section')},
+    class: {...info, phase: currentPhase}, participant: participant || null,
+    activities: plan.map(a => {
+      const {snapshot, ...meta} = a;
+      if (owner) return {...meta, ...snapshot};
+      if (!participant || now < Date.parse(a.startsAt) || currentPhase === 'cancelled') return meta;
+      return {...meta, content: snapshot.content, url: snapshot.url, questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
+    }),
+    attempts: safeAttempts,
+    report: owner ? rosterReport(app, c, plan, participants, attempts) : [],
+    events: owner ? rows(app, 'scheduled_class_events', 'class={:c}', {c: c.id}, '-created').map(data).slice(0, 100) : [],
+  };
+}
+function handle(app, body, user, now) {
+  const ctx = context(app, body.sessionId, user);
+  let c = rows(app, 'scheduled_classes', 'session={:s}', {s: ctx.session.id})[0];
+  const action = body.action;
+  if (!['state', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'markAttendance', 'review'].includes(action)) bad('Aksi tidak dikenal.');
+  if (['savePlan', 'schedule', 'cancel', 'release', 'markAttendance', 'review'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
+  if (action === 'savePlan' || action === 'schedule') {
+    if (c && c.getString('status') !== 'draft') bad('Kelas yang sudah dijadwalkan tidak dapat diedit. Batalkan jika diperlukan.');
+    if (!Number.isInteger(body.baseRevision) || body.baseRevision !== (c?.getInt('revision') || 0)) bad('Draf berubah. Muat ulang sebelum menyimpan.');
+    let plan;
+    try { plan = rules.validatePlan(body, now, action === 'schedule'); } catch (e) { bad(e.message); }
+    const section = ctx.session.getString('section') || (typeof body.section === 'string' ? body.section : '');
+    if (section && app.findRecordById('course_sections', section).getString('course') !== ctx.course.id) bad('Rombel bukan dari mata kuliah ini.');
+    const fields = {session: ctx.session.id, course: ctx.course.id, owner: user.id, section, title: plan.title, instructions: plan.instructions, startsAt: plan.startsAt, endsAt: plan.endsAt, joinUntil: plan.joinUntil, lateAfterMin: plan.lateAfterMin, status: action === 'schedule' ? 'scheduled' : 'draft', revision: (c?.getInt('revision') || 0) + 1};
+    if (!c) c = create(app, 'scheduled_classes', fields); else {c.load(fields); app.save(c);}
+    for (const old of rows(app, 'scheduled_class_activities', 'class={:c}', {c: c.id})) app.delete(old);
+    for (const a of plan.activities) create(app, 'scheduled_class_activities', {...a, class: c.id});
+    event(app, c, user.id, action);
+  }
+  if (!c) {
+    if (!ctx.owner) return {serverNow: new Date(now).toISOString(), owner: false, session: {id: ctx.session.id, title: ctx.session.getString('title'), course: ctx.course.id}, class: null, activities: [], attempts: [], report: [], events: []};
+    return {serverNow: new Date(now).toISOString(), owner: true, session: {id: ctx.session.id, title: ctx.session.getString('title'), course: ctx.course.id, section: ctx.session.getString('section')}, class: null, activities: [], attempts: [], report: [], events: []};
+  }
+  assertClassAccess(c, ctx);
+  reconcile(app, c, now);
+  const phase = rules.phase(data(c), now);
+  if (action === 'cancel') {
+    if (['closed', 'reviewed', 'cancelled'].includes(phase)) bad('Kelas sudah selesai atau dibatalkan.');
+    c.set('status', 'cancelled'); app.save(c); event(app, c, user.id, 'cancel');
+  }
+  if (action === 'release' || action === 'review') {
+    if (!['closed', 'reviewed'].includes(phase)) bad('Tunggu hingga kelas selesai.');
+    if (action === 'release') c.set('releaseResults', true); else c.set('status', 'reviewed');
+    app.save(c); event(app, c, user.id, action);
+  }
+  if (['join', 'heartbeat', 'saveAnswer', 'submit'].includes(action)) {
+    if (ctx.owner) bad('Gunakan akun mahasiswa untuk mengikuti kelas.');
+    // A response may be lost just before the deadline. Acknowledge an already
+    // accepted request even after the activity/class closes, without editing it.
+    if (['saveAnswer', 'submit'].includes(action)) {
+      const previous = rows(app, 'scheduled_activity_attempts', 'class={:c} && activity={:a} && student={:u}', {c: c.id, a: String(body.activityId || ''), u: user.id})[0];
+      if (phase !== 'cancelled' && previous && (previous.getString('lastRequest') === body.requestId || (action === 'submit' && previous.getString('status') !== 'draft'))) return view(app, c, ctx, user, now);
+    }
+    if (phase !== 'open') bad('Kelas belum dibuka atau sudah ditutup.');
+    let participant = rows(app, 'scheduled_class_participants', 'class={:c} && student={:u}', {c: c.id, u: user.id})[0];
+    if (!participant) {
+      if (action !== 'join') bad('Lakukan check-in terlebih dahulu.');
+      if (now >= Date.parse(c.getString('joinUntil'))) bad('Batas masuk kelas sudah lewat. Hubungi dosen.');
+      participant = create(app, 'scheduled_class_participants', {class: c.id, student: user.id, roster: ctx.roster?.id || '', checkedInAt: new Date(now).toISOString(), lastSeenAt: new Date(now).toISOString()});
+      event(app, c, user.id, 'join');
+    } else { participant.set('lastSeenAt', new Date(now).toISOString()); app.save(participant); }
+    if (action === 'saveAnswer' || action === 'submit') {
+      const activity = activities(app, c).find(a => a.id === body.activityId);
+      if (!activity) bad('Kegiatan tidak ditemukan pada kelas ini.');
+      let attempt = rows(app, 'scheduled_activity_attempts', 'activity={:a} && student={:u}', {a: activity.id, u: user.id})[0];
+      if (typeof body.requestId !== 'string' || !/^[\w-]{8,100}$/.test(body.requestId)) bad('Identitas permintaan tidak valid.');
+      // A retry is an acknowledgement, never a second submission or overwrite.
+      if (!(attempt && (attempt.getString('lastRequest') === body.requestId || (action === 'submit' && attempt.getString('status') !== 'draft')))) {
+        if (now < Date.parse(activity.startsAt) || now >= Date.parse(activity.endsAt)) bad('Waktu pengerjaan kegiatan sudah ditutup atau belum dibuka.');
+        if (attempt && attempt.getString('status') !== 'draft') bad('Jawaban sudah dikumpulkan.');
+        if (!Number.isInteger(body.baseRevision) || body.baseRevision !== (attempt?.getInt('revision') || 0)) bad('Jawaban berubah di tab lain. Muat ulang sebelum melanjutkan.');
+        let answers;
+        try {answers = rules.cleanAnswers(activity, body.answers);} catch (e) {bad(e.message);}
+        if (!attempt) attempt = new Record(app.findCollectionByNameOrId('scheduled_activity_attempts'));
+        attempt.load({class: c.id, activity: activity.id, student: user.id, answers, status: 'draft', revision: attempt.getInt('revision') + 1, savedAt: new Date(now).toISOString(), lastRequest: body.requestId});
+        app.save(attempt);
+        if (action === 'submit') {finalize(app, attempt, activity, now, 'submitted'); event(app, c, user.id, 'submit', {activity: activity.id});}
+      }
+    }
+  }
+  if (action === 'markAttendance') {
+    if (!['closed', 'reviewed'].includes(phase)) bad('Tinjau kehadiran setelah kelas selesai.');
+    if (ctx.session.getBool('attendanceClosed')) bad('Buka kembali pencatatan absensi sebelum mengoreksi.');
+    if (!['present', 'late', 'absent', 'excused', 'sick'].includes(body.attendanceStatus)) bad('Status kehadiran tidak valid.');
+    const roster = app.findRecordById('course_roster', body.rosterId);
+    if (roster.getString('course') !== ctx.course.id || (c.getString('section') && roster.getString('section') !== c.getString('section'))) throw new ForbiddenError('Mahasiswa bukan dari kelas ini.');
+    let mark = rows(app, 'attendance', 'session={:s} && roster={:r}', {s: ctx.session.id, r: roster.id})[0];
+    const previous = mark?.getString('status') || '';
+    if (!mark) mark = new Record(app.findCollectionByNameOrId('attendance'));
+    mark.load({session: ctx.session.id, roster: roster.id, owner: user.id, section: roster.getString('section'), status: body.attendanceStatus}); app.save(mark);
+    event(app, c, user.id, 'attendance', {roster: roster.id, previous, status: body.attendanceStatus});
+  }
+  return view(app, c, ctx, user, now);
+}
+module.exports = {handle, reconcile};

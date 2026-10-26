@@ -22,9 +22,11 @@ export type QuizBuilderValue = Omit<QuizConfig, 'questions'> & {
 export function QuizBuilder({
 	value,
 	onChange,
+	questionsOnly = false,
 }: {
 	value: QuizBuilderValue;
 	onChange: (next: QuizBuilderValue) => void;
+	questionsOnly?: boolean;
 }) {
 	const setQuestion = (i: number, patch: Partial<QuizQuestionEditable>) => {
 		onChange({ ...value, questions: value.questions.map((q, idx) => (idx === i ? { ...q, ...patch } : q)) });
@@ -57,11 +59,11 @@ export function QuizBuilder({
 				<ListChecks size={16} />
 				<div>
 					<h3>Konfigurasi kuis</h3>
-					<p>Soal, kunci jawaban, poin, pengaturan pengerjaan, dan pelepasan hasil.</p>
+					<p>{questionsOnly ? 'Atur soal dan kunci. Waktu mengikuti rundown; hasil diterbitkan dosen setelah kelas.' : 'Soal, kunci jawaban, poin, pengaturan pengerjaan, dan pelepasan hasil.'}</p>
 				</div>
 			</div>
 
-			<div className="tkb-grid">
+			{!questionsOnly && <div className="tkb-grid">
 				<NumberField
 					label="Kesempatan pengerjaan"
 					value={value.attempts}
@@ -104,7 +106,7 @@ export function QuizBuilder({
 						onChange={(shuffleOptions) => onChange({ ...value, shuffleOptions })}
 					/>
 				</div>
-			</div>
+			</div>}
 
 			<div className="tkb-list-head">
 				<h4>
@@ -117,8 +119,7 @@ export function QuizBuilder({
 
 			{value.questions.length === 0 && (
 				<p className="tkb-empty">
-					Belum ada soal. Tambahkan soal secara manual, atau gunakan <strong>Impor tugas</strong> di
-					atas dengan format “Soal 1: …” berikut pilihan A–E dan baris “Jawaban: B”.
+					{questionsOnly ? 'Belum ada soal. Pilih Tambah soal, isi pilihan, lalu tetapkan kunci jawaban.' : <>Belum ada soal. Tambahkan soal secara manual, atau gunakan <strong>Impor tugas</strong> di atas dengan format “Soal 1: …” berikut pilihan A–E dan baris “Jawaban: B”.</>}
 				</p>
 			)}
 

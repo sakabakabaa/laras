@@ -17,6 +17,7 @@ Each row gives the fastest route into an implementation. Use [routes](routes.md)
 | Conversation | conversation-practice component | conversation-practice route, TTS and transcription services | `student_conversation_reflections` |
 | Student profile/progress | `app.student.tsx`, `course.student-profile.tsx` | student-profile, student-progress helpers | submissions, practice, learning profiles, reflections |
 | Attendance/participation | Course sections, attendance manager | PocketBase rules/hooks | `attendance`, `participation_awards`, roster |
+| Scheduled unattended class | Pertemuan → Kelas terjadwal; `course.scheduled-class.tsx` | Authenticated PocketBase `/api/laras/scheduled-classes`; transaction service and recovery job | `scheduled_classes`, activity snapshots, participants, attempts, events; see [scheduled classes](scheduled-classes.md) |
 | Gradebook | `app.penilaian.tsx`, student-grades, grouped-gradebook | course-grade-summary, gradebook helpers | grade components/entries/publications/overrides |
 | Course analytics | Course section analytics | course-analytics helpers | assignments, submissions, academic outcomes |
 | Research | `app.riset.tsx`, research analytics/export | research routes, rater authorization, feedback uptake | feedback items, rater assignments, revision/uptake records |

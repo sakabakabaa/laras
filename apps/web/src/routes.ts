@@ -27,6 +27,7 @@ export default [
 	route('app/courses/:courseId', 'routes/course.tsx', [
 		index('routes/course.index.tsx'),
 		route('pertemuan/:sessionId/rencana', 'routes/course.lesson-plan.tsx'),
+		route('pertemuan/:sessionId/terjadwal', 'routes/course.scheduled-class.tsx'),
 		route('mahasiswa/:rosterId', 'routes/course.student-profile.tsx'),
 		route(':section', 'routes/course.section.tsx'),
 	]),

@@ -43,7 +43,7 @@ export default function CourseLayout() {
 				/>
 			}
 		>
-			{!isStudentProfile && !/\/pertemuan\/[^/]+\/rencana\/?$/.test(location.pathname) && <CourseDetail routeId={courseId} />}
+			{!isStudentProfile && !/\/pertemuan\/[^/]+\/(rencana|terjadwal)\/?$/.test(location.pathname) && <CourseDetail routeId={courseId} />}
 			<Outlet />
 		</AppShell>
 	);

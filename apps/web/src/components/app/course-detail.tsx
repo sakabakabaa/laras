@@ -665,6 +665,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
                                                 {session.notes && (isStudent ? <details className="student-session-details"><summary>{label("Rincian pertemuan")}</summary><p className="ld-session-notes">{session.notes}</p></details> : <p className="ld-session-notes">{session.notes}</p>)}
 												<SessionLinks session={session} records={records} />
  {isFacultyOwner && <button className="ld-text-btn" onClick={() => navigate(`/app/courses/${course.id}/pertemuan/${session.id}/rencana`)}>Rencana pembelajaran →</button>}
+ <button className="ld-text-btn" onClick={() => navigate(`/app/courses/${course.id}/pertemuan/${session.id}/terjadwal`)}>Kelas terjadwal →</button>
 											</div>
 											{isFacultyOwner && (
 												<div className="ld-session-actions">

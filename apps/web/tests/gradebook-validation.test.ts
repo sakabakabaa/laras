@@ -7,7 +7,6 @@ import {
 	needsScaleConversion,
 	parseScoreInput,
 	validateScoreOperation,
-	type TargetKind,
 } from '@/lib/gradebook/validation';
 
 describe('gradebook target kinds', () => {
@@ -146,6 +145,26 @@ describe('score input parsing', () => {
 	it('rejects text that is not a number', () => {
 		expect(parseScoreInput('sembilan', '.').state).toBe('invalid');
 		expect(parseScoreInput('8o', '.').state).toBe('invalid');
+	});
+});
+
+describe('adversarial numeric input', () => {
+	it('does not erase a mismatched decimal separator', () => {
+		expect(parseScoreInput('87,5', '.').state).toBe('ambiguous');
+		expect(parseScoreInput('87.5', ',').state).toBe('ambiguous');
+		expect(parseScoreInput('1,23,4', '.').state).toBe('ambiguous');
+		expect(parseScoreInput('1.2.3', '.').state).toBe('invalid');
+	});
+	it('rejects exponent-form sub-cent scores', () => {
+		expect(validateScoreOperation({ kind: 'manual', maxScore: 100,
+			operation: { op: 'set_score', score: 1e-7 } }).ok).toBe(false);
+	});
+	it('rejects invalid target scales and out-of-scale values', () => {
+		for (const target of [0, -1, Infinity, NaN]) {
+			expect(() => convertScale(50, 100, target)).toThrow();
+		}
+		expect(() => convertScale(Infinity, 100, 30)).toThrow();
+		expect(() => convertScale(101, 100, 30)).toThrow();
 	});
 });
 

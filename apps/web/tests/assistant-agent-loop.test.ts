@@ -84,14 +84,18 @@ describe('Phase 14 — structured tool-call parsing', () => {
 describe('Phase 14 — tool registry permissions', () => {
 	it('registers all available tools (including search_history)', () => {
 		expect([...TOOL_REGISTRY.keys()].sort()).toEqual(
-			['add_roster_students', 'calendar_events', 'course_detail', 'course_materials', 'create_assignment', 'create_course', 'import_rps_pdf', 'link_session_outcomes', 'list_assignments', 'list_courses', 'search_history', 'student_profile', 'summarize_insights'],
+			['add_roster_students', 'agent_task_status', 'calendar_events', 'course_detail', 'course_materials', 'create_assignment', 'create_course', 'get_grade_change_status', 'get_gradebook', 'import_rps_pdf', 'link_session_outcomes', 'list_assignments', 'list_courses', 'prepare_grade_changes', 'prepare_lesson', 'search_history', 'student_profile', 'summarize_insights'],
 		);
 	});
 
 	it('read tools do not require confirmation; write tools do', () => {
 		for (const name of READ_TOOL_NAMES) {
 			expect(TOOL_REGISTRY.get(name)?.requiresConfirmation).toBe(false);
-			expect(TOOL_REGISTRY.get(name)?.permission).toBe('read');
+			// READ_TOOL_NAMES is derived from permission read OR draft: a draft tool
+			// (e.g. prepare_lesson) runs inline but only produces a draft, so both
+			// permissions are legitimate here. The invariant under test is that
+			// neither of them is a confirming write.
+			expect(['read', 'draft']).toContain(TOOL_REGISTRY.get(name)?.permission);
 		}
 		for (const name of WRITE_TOOL_NAMES) {
 			expect(TOOL_REGISTRY.get(name)?.requiresConfirmation).toBe(true);

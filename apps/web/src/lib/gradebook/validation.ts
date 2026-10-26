@@ -69,12 +69,12 @@ export type ValidationResult =
 export const SCORE_PRECISION = 2;
 /** A bonus may not move a component by more than this many points. */
 export const MAX_BONUS_DELTA = 100;
-export const MAX_NOTE_LENGTH = 2000;
+export const MAX_NOTE_LENGTH = 500;
 
 const DECIMAL_PLACES = (value: number): number => {
-	const text = String(value);
-	const dot = text.indexOf('.');
-	return dot === -1 ? 0 : text.length - dot - 1;
+	const [mantissa, exponent = '0'] = String(value).toLowerCase().split('e');
+	const fractional = mantissa.split('.')[1]?.length ?? 0;
+	return Math.max(0, fractional - Number(exponent));
 };
 
 /** Which operations a target kind permits. */
@@ -206,8 +206,12 @@ export function parseScoreInput(
 	if (text === '-' || text.toLowerCase() === 'clear') return { state: 'clear' };
 
 	const other = decimalSeparator === '.' ? ',' : '.';
-	// A value containing both separators is a thousands grouping; only the
-	// declared decimal separator may be the last one.
+	// Never erase an undeclared decimal separator and multiply a grade by ten.
+	// Grouped numbers are accepted only with the declared decimal separator
+	// and exact three-digit grouping (e.g. 1,234.50), not by guessing.
+	if (text.includes(other) && !text.includes(decimalSeparator)) {
+		return { state: 'ambiguous', reason: 'Pemisah angka berbeda dari format impor.' };
+	}
 	if (text.includes(decimalSeparator) && text.includes(other)) {
 		const lastDecimal = text.lastIndexOf(decimalSeparator);
 		const lastOther = text.lastIndexOf(other);
@@ -219,6 +223,16 @@ export function parseScoreInput(
 		}
 	}
 
+	if (text.includes(other)) {
+		const integer = text.split(decimalSeparator)[0].replace(/^-/, '');
+		const groups = integer.split(other);
+		if (!/^\d{1,3}$/.test(groups[0]) || groups.slice(1).some((group) => !/^\d{3}$/.test(group))) {
+			return { state: 'ambiguous', reason: 'Pengelompokan ribuan tidak valid.' };
+		}
+	}
+	if (text.split(decimalSeparator).length > 2) {
+		return { state: 'invalid', reason: 'Pemisah desimal berulang.' };
+	}
 	const normalized = text.split(other).join('').split(decimalSeparator).join('.');
 	if (!/^-?\d+(\.\d+)?$/.test(normalized)) {
 		return { state: 'invalid', reason: 'Nilai harus berupa angka.' };
@@ -242,6 +256,12 @@ export function convertScale(
 ): { value: number; factor: number } {
 	if (!Number.isFinite(fromScale) || fromScale <= 0) {
 		throw new Error('Skala asal harus lebih besar dari nol.');
+	}
+	if (!Number.isFinite(toScale) || toScale <= 0) {
+		throw new Error('Skala tujuan harus lebih besar dari nol.');
+	}
+	if (!Number.isFinite(value) || value < 0 || value > fromScale) {
+		throw new Error('Nilai berada di luar skala asal.');
 	}
 	const factor = toScale / fromScale;
 	const converted = Math.round(value * factor * 10 ** SCORE_PRECISION) / 10 ** SCORE_PRECISION;

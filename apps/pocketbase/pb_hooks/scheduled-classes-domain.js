@@ -154,7 +154,29 @@ function worksheet(value, materials, kind) {
   const itemsById = {};
   for (const item of items) itemsById[item.id] = item;
   const blocks = worksheetBlocks(value.blocks, itemsById);
-  return {items, ...(sourceMaterialId ? {sourceMaterialId, sourcePage: value.sourcePage, sourceLabel: text(value.sourceLabel, 160)} : {}), ...(blocks ? {blocks} : {})};
+  let answerKey;
+  if (value.answerKey !== undefined && value.answerKey !== null) {
+    const raw = value.answerKey;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !raw.items || typeof raw.items !== 'object' || Array.isArray(raw.items)) fail('Kunci jawaban lembar kerja tidak valid.');
+    const keyed = {};
+    for (const [itemId, entry] of Object.entries(raw.items)) {
+      const item = itemsById[itemId];
+      if (!item || !entry || typeof entry !== 'object' || Array.isArray(entry)) fail('Kunci jawaban merujuk butir yang tidak tersedia.');
+      if (entry.mode === 'exact') {
+        const accepted = Array.isArray(entry.accepted) ? entry.accepted.map(value => text(value, 2000)).filter(Boolean) : [];
+        if (!accepted.length || (item.type === 'select' && accepted.some(value => !item.options.includes(value)))) fail('Jawaban yang diterima tidak valid.');
+        const points = entry.points === undefined ? 1 : Number(entry.points);
+        if (!Number.isFinite(points) || points <= 0 || points > 100) fail('Poin kunci jawaban harus lebih dari 0 hingga 100.');
+        keyed[itemId] = {mode: 'exact', accepted: [...new Set(accepted)], points};
+      } else if (entry.mode === 'reference' && item.type === 'text') {
+        const modelAnswer = text(entry.modelAnswer, 4000), rubric = text(entry.rubric, 2000);
+        if (!modelAnswer && !rubric) fail('Isi contoh jawaban atau panduan penilaian.');
+        keyed[itemId] = {mode: 'reference', ...(modelAnswer ? {modelAnswer} : {}), ...(rubric ? {rubric} : {})};
+      } else fail('Jenis kunci jawaban tidak sesuai dengan butir.');
+    }
+    answerKey = {version: 1, items: keyed};
+  }
+  return {items, ...(sourceMaterialId ? {sourceMaterialId, sourcePage: value.sourcePage, sourceLabel: text(value.sourceLabel, 160)} : {}), ...(blocks ? {blocks} : {}), ...(answerKey ? {answerKey} : {})};
 }
 function validatePlan(body, now, publish) {
   const title = text(body.title, 200), instructions = text(body.instructions, 10000);
@@ -225,13 +247,29 @@ function cleanAnswers(activity, input) {
   return {text: text(input.text, 20000), acknowledged: input.acknowledged === true};
 }
 function result(activity, answers) {
-  if (activity.snapshot.worksheet) return {score: 0, complete: activity.snapshot.worksheet.items.every(item => Boolean(answers.responses && text(answers.responses[item.id], 2000)))};
+  if (activity.snapshot.worksheet) {
+    const sheet = activity.snapshot.worksheet, key = sheet.answerKey?.items || {};
+    const graded = Object.entries(key).filter(([, entry]) => entry.mode === 'exact');
+    const total = graded.reduce((sum, [, entry]) => sum + entry.points, 0);
+    const earned = graded.reduce((sum, [itemId, entry]) => {
+      const response = text(answers.responses && answers.responses[itemId], 2000);
+      const normalized = normalizeAnswer(response);
+      return sum + (entry.accepted.some(value => normalizeAnswer(value) === normalized) ? entry.points : 0);
+    }, 0);
+    return {
+      score: total ? Math.round(earned / total * 10000) / 100 : 0,
+      complete: sheet.items.every(item => Boolean(answers.responses && text(answers.responses[item.id], 2000)))
+    };
+  }
   if (activity.kind === 'quiz') {
     const qs = activity.snapshot.questions, total = qs.reduce((s, q) => s + q.points, 0);
     const earned = qs.reduce((s, q) => s + (answers[q.id] === q.correctIndex ? q.points : 0), 0);
     return {score: total ? Math.round(earned / total * 10000) / 100 : 0, complete: qs.every(q => Number.isInteger(answers[q.id]))};
   }
   return {score: 0, complete: activity.kind === 'material' ? answers.acknowledged === true : Boolean(text(answers.text, 20000))};
+}
+function normalizeAnswer(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').replace(/[.!?]+$/g, '').toLowerCase();
 }
 function attendance(c, participant, activities, attempts) {
   const required = activities.filter(a => a.required);

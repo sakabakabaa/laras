@@ -14,6 +14,13 @@ exports.validate=function(value,materials){
   if(s.kind==='dialogue'&&!scene.turns||s.kind==='sentence'&&!scene.sentence)fail();
   return scene;
  })};
+ if(value.videos!==undefined){
+  if(!Array.isArray(value.videos)||value.videos.length<1||value.videos.length>5)fail();
+  const ids=[];
+  const asset=(v,extension)=>{const path=str(v,300);if(!/^\/media\/lessons\/[a-z0-9/-]+\.(mp4|jpg)$/.test(path)||!path.endsWith('.'+extension))fail();return path;};
+  out.videos=value.videos.map(v=>{const id=str(v.id,60);if(ids.includes(id))fail();ids.push(id);return{id,title:pair(v.title,200),src:asset(v.src,'mp4'),poster:asset(v.poster,'jpg'),duration:str(v.duration,10)};});
+ }
+ if(value.videoNote)out.videoNote=pair(value.videoNote,1000);
  if(value.note)out.note=pair(value.note,1000);
  if(value.source){const v=value.source;if(!materials.includes(v.sourceMaterialId)||!Number.isInteger(v.sourcePage)||v.sourcePage<1||v.sourcePage>10000)fail();out.source={sourceMaterialId:v.sourceMaterialId,sourcePage:v.sourcePage,sourceLabel:str(v.sourceLabel,160)};}
  return out;

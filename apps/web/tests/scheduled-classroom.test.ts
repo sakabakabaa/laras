@@ -53,4 +53,19 @@ describe('student scheduled classroom', () => {
     expect(html).not.toContain('Public chapter excerpt');
     expect(html).not.toContain('Mark as complete');
   });
+  it('explains which activities count toward required progress', () => {
+    const state = fixture(); state.activities[0].required = false;
+    const html = render(state);
+    expect(html).toContain('Required activities completed');
+    expect(html).toContain('2 class activities · 1 required activities count toward progress.');
+    expect(html).toContain('Optional');
+    expect(html).toContain('sc-plan-heading');
+  });
+  it('offers finishing the last activity instead of waiting for a nonexistent next step', () => {
+    const state = fixture(); state.activities[1].content = 'Final question';
+    const html = render(state, now + 10 * 60000);
+    expect(html).toContain('Finish activity');
+    expect(html).toContain('Final question');
+  });
+
 });

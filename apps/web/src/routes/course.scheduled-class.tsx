@@ -6,6 +6,7 @@ import { ScheduledClassEditor } from '@/components/app/scheduled-class-editor';
 import { ScheduledClassroom } from '@/components/app/scheduled-classroom';
 import { ScheduledClassReport } from '@/components/app/scheduled-class-report';
 import '@/styles/scheduled-classes.css';
+import '@/styles/scheduled-student-workspace.css';
 import {ScheduledStudentPreview} from '@/components/app/scheduled-student-preview';
 import {useCourseSections} from '@/hooks/use-course-sections';
 import { useT } from '@/lib/i18n';

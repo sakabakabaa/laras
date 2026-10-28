@@ -10,17 +10,20 @@ import {ScheduledCardMatching} from './scheduled-card-matching';
 import {PDFPreview} from './task-builders/quiz-source-builder';
 
 export function WorksheetAnswers({sheet,responses,onChange,activity}:{sheet:ScheduledWorksheet;activity?:ScheduledActivity;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
-  const group=useId(),targets=activity?cardMatchingTargets(activity):[];
-  if(targets.length)return <><p className="sl-translation">{activity?.lesson?.source?.sourceLabel||sheet.sourceLabel}</p><ScheduledCardMatching key={activity!.id} sheet={sheet} targets={targets} responses={responses} onChange={onChange}/></>;
+  const t=useT(),group=useId(),targets=activity?cardMatchingTargets(activity):[];
+  const answered=sheet.items.filter(item=>{const value=responses[item.id]||'';return item.type==='select'?item.options?.includes(value):Boolean(value.trim());}).length;
+  const progress=<header className="sc-answer-sheet-heading"><h3>{t('worksheet.answerSheet')}</h3><span role="status">{t('worksheet.responseProgress',{answered:String(answered),total:String(sheet.items.length)})}</span></header>;
+  const paired=sheet.items.length>1&&sheet.items.every((item,i)=>item.type==='text'&&item.prompt.match(/^([0-9]+)([ab])\./)?.[0]===`${Math.floor(i/2)+1}${i%2?'b':'a'}.`);
+  if(targets.length)return <>{progress}<p className="sl-translation">{activity?.lesson?.source?.sourceLabel||sheet.sourceLabel}</p><ScheduledCardMatching key={activity!.id} sheet={sheet} targets={targets} responses={responses} onChange={onChange}/></>;
   const prompt=(item:ScheduledWorksheet['items'][number])=><><span lang="de">{item.prompt}</span>{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}</>;
   const gapInput=(item:ScheduledWorksheet['items'][number],number?:string)=><input className="sc-gap-input" type="text" aria-label={number?`Lücke ${number}: ${item.prompt}`:item.prompt} autoComplete="off" maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>;
-  return <div className="sc-worksheet"><ol>{worksheetBlocks(sheet.items).map(block=>{
+  return <div className={`sc-worksheet ${paired?'sc-worksheet-paired':''}`}>{progress}<ol>{worksheetBlocks(sheet.items).map(block=>{
     const item=block.items[0];
     if(block.context&&block.gaps)return <li key={item.id} className="sc-gap-paragraph"><strong className="sc-gap-section">{block.section}</strong><p lang="de">{block.context.split(/(\(\d+\)\s*_{3,})/g).map((part,i)=>{
       const number=part.match(/^\((\d+)\)\s*_{3,}$/)?.[1],gap=block.gaps!.find(g=>g.number===number);
       return gap?<span key={i} className="sc-inline-gap"><span>({number}) </span>{gapInput(gap.item,number)}</span>:part;
     })}</p></li>;
-    return <li key={item.id}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:singleGap(item)?<p className="sc-gap-sentence" lang="de">{item.prompt.split(/_{3,}/).map((part,i)=><span key={i}>{i>0&&gapInput(item)}{part}</span>)}</p>:<label>{prompt(item)}<textarea rows={writingRows(item)} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/></label>}</li>;
+    return <li key={item.id} className={writingRows(item)>3?'sc-writing-long':undefined}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:singleGap(item)?<p className="sc-gap-sentence" lang="de">{item.prompt.split(/_{3,}/).map((part,i)=><span key={i}>{i>0&&gapInput(item)}{part}</span>)}</p>:<label><span className="sc-question-number">{t('worksheet.item',{number:String(sheet.items.indexOf(item)+1)})}</span>{prompt(item)}<textarea rows={writingRows(item)} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/><span className="sc-character-count">{t('worksheet.characters',{count:String((responses[item.id]||'').length)})}</span></label>}</li>;
   })}</ol></div>;
 }
 
@@ -37,6 +40,10 @@ export function WorksheetSource({activity}:{activity:ScheduledActivity}){
     return()=>{cancelled=true;void task?.destroy();};
   },[source?.url,page]);
   if(cardMatchingTargets(activity).length)return null;
+  // Reference material only exists to answer something: with no answer sheet on the
+  // activity there is nothing to reference, so neither the picture gallery nor the
+  // PDF page belongs on the page (e.g. the check-in/orientation activity).
+  if(!activity.worksheet)return null;
   const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp)$/i.test(s.url));
   if(reference?.sourceMaterialId&&images.some(image=>image.id===reference.sourceMaterialId)){
     return <section className="sc-picture-reference" aria-label="Bilder · Gambar"><h3>Bilder · Gambar</h3>{reference.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className="sc-patient-figures" style={images.length===2?{gridTemplateColumns:'repeat(2,minmax(0,1fr))'}:undefined}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>;

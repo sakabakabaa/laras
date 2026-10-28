@@ -88,7 +88,12 @@ function view(app, c, ctx, user, now) {
       const {snapshot,materials,cpmks,subCpmks, ...meta} = a;
       if (owner) return {...meta, ...snapshot, materialIds:materials||[],cpmkIds:cpmks||[],subCpmkIds:subCpmks||[]};
       if (!participant || now < Date.parse(a.startsAt) || currentPhase === 'cancelled') return meta;
-      return {...meta, content: snapshot.content, url: snapshot.url, ...(snapshot.lesson?{lesson:snapshot.lesson}:{}), ...(snapshot.worksheet ? {worksheet:snapshot.worksheet}:{}), sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
+      let worksheet;
+      if (snapshot.worksheet) {
+        const {answerKey, ...studentWorksheet} = snapshot.worksheet;
+        worksheet = {...studentWorksheet, ...(released && answerKey ? {answerKey} : {})};
+      }
+      return {...meta, content: snapshot.content, url: snapshot.url, ...(snapshot.lesson?{lesson:snapshot.lesson}:{}), ...(worksheet ? {worksheet}:{}), sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
     }),
     attempts: safeAttempts,
     report: owner ? rosterReport(app, c, plan, participants, attempts) : [],

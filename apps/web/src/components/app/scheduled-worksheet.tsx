@@ -37,6 +37,10 @@ export function WorksheetSource({activity}:{activity:ScheduledActivity}){
     return()=>{cancelled=true;void task?.destroy();};
   },[source?.url,page]);
   if(cardMatchingTargets(activity).length)return null;
+  // Reference material only exists to answer something: with no answer sheet on the
+  // activity there is nothing to reference, so neither the picture gallery nor the
+  // PDF page belongs on the page (e.g. the check-in/orientation activity).
+  if(!activity.worksheet)return null;
   const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp)$/i.test(s.url));
   if(reference?.sourceMaterialId&&images.some(image=>image.id===reference.sourceMaterialId)){
     return <section className="sc-picture-reference" aria-label="Bilder · Gambar"><h3>Bilder · Gambar</h3>{reference.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className="sc-patient-figures" style={images.length===2?{gridTemplateColumns:'repeat(2,minmax(0,1fr))'}:undefined}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>;

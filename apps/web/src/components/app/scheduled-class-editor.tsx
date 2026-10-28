@@ -9,7 +9,7 @@ import type {ScheduledAcademicContext} from '@/lib/scheduled-class-ai';
 type DraftActivity = {key: string; kind: ActivityKind; title: string; minutes: number; required: boolean; content: string; url: string; questions: QuizQuestionEditable[];materialIds:string[];cpmkIds:string[];subCpmkIds:string[]};
 function blankActivity(kind: ActivityKind): DraftActivity {return {key: crypto.randomUUID(), kind, title: ACTIVITY_LABELS[kind], minutes: kind === 'exit_ticket' ? 5 : 15, required: true, content: '', url: '', questions: [],materialIds:[],cpmkIds:[],subCpmkIds:[]};}
 
-export function ScheduledClassEditor({state, onSaved}: {state: ScheduledClassState; onSaved: (s: ScheduledClassState) => void}) {
+export function ScheduledClassEditor({state, onSaved, focusAi = false}: {state: ScheduledClassState; onSaved: (s: ScheduledClassState) => void; focusAi?: boolean}) {
   const c = state.class;
   const [academic,setAcademic]=useState<ScheduledAcademicContext|null>(null);
   const [title, setTitle] = useState(c?.title || state.session.title);
@@ -43,7 +43,7 @@ export function ScheduledClassEditor({state, onSaved}: {state: ScheduledClassSta
     {remoteChanged && <p role="alert" className="sc-alert">Draf berubah di tempat lain. Salin perubahan Anda dan muat ulang halaman sebelum menyimpan.</p>}
     {error && <p role="alert" className="sc-alert">{error}</p>}{notice && <p role="status">{notice}</p>}
     <fieldset disabled={busy || remoteChanged} className="sc-fields">
-      <ScheduledClassAiPanel sessionId={state.session.id} onContext={setAcademic} onApply={draft=>{if(!window.confirm('Ganti judul, instruksi, dan seluruh kegiatan editor dengan usulan AI? Perubahan yang belum tersimpan akan diganti.'))return;setTitle(draft.title);setInstructions(draft.instructions);setActivities(draft.activities.map(a=>({...a,key:crypto.randomUUID()})));setDirty(true);setNotice('Usulan AI diterapkan. Tinjau lalu simpan draf atau jadwalkan kelas.');}}/>
+      <ScheduledClassAiPanel sessionId={state.session.id} focusOnLoad={focusAi} onContext={setAcademic} onApply={draft=>{if(!window.confirm('Ganti judul, instruksi, dan seluruh kegiatan editor dengan usulan AI? Perubahan yang belum tersimpan akan diganti.'))return;setTitle(draft.title);setInstructions(draft.instructions);setActivities(draft.activities.map(a=>({...a,key:crypto.randomUUID()})));setDirty(true);setNotice('Usulan AI diterapkan. Tinjau lalu simpan draf atau jadwalkan kelas.');}}/>
       <section className="sc-card"><h2>Jadwal kelas</h2><p>Waktu menggunakan WIB. Kelas berjalan otomatis meskipun dosen sedang offline.</p>
         <label>Judul kelas<input value={title} maxLength={200} onChange={e => {setTitle(e.target.value); setDirty(true);}}/></label>
         <label>Instruksi umum<textarea rows={4} maxLength={10000} value={instructions} onChange={e => {setInstructions(e.target.value); setDirty(true);}}/></label>

@@ -163,7 +163,7 @@ export function QuizBuilder({
 							/>
 							<div className="tkb-options">
 								{question.options.map((option, oi) => (
-									<label key={oi} className={`tkb-option${question.correctIndex === oi ? ' correct' : ''}`}>
+									<div key={oi} className={`tkb-option${question.correctIndex === oi ? ' correct' : ''}`}>
 										<input
 											type="radio"
 											name={`correct-${question.id}`}
@@ -173,6 +173,7 @@ export function QuizBuilder({
 										/>
 										<span className="tkb-option-letter">{LETTERS[oi] || '?'}</span>
 										<input
+											type="text"
 											maxLength={500}
 											value={option}
 											onChange={(e) =>
@@ -197,7 +198,7 @@ export function QuizBuilder({
 										>
 											<Trash2 size={12} />
 										</button>
-									</label>
+									</div>
 								))}
 								{question.options.length < LETTERS.length && (
 									<button

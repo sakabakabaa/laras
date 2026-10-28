@@ -760,9 +760,10 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 					courseId={id}
 					session={editingSession === 'new' ? undefined : editingSession}
 					onClose={() => setEditingSession(null)}
-					onSaved={() => {
+					onSaved={(saved, openAi) => {
 						setEditingSession(null);
 						void load();
+						if (openAi) navigate(`/app/courses/${id}/pertemuan/${saved.id}/terjadwal?create=ai`);
 					}}
 				/>
 			)}

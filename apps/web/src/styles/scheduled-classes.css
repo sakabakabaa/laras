@@ -10,6 +10,18 @@
 
 .sc-page button.sc-primary:hover:not(:disabled){background:var(--r-red-700);border-color:var(--r-red-700)}
 
+/* Quiz options contain separate, independently labelled radio/text controls. */
+.sc-builder .tkb-option{display:grid;grid-template-columns:20px 28px minmax(0,1fr) 44px;gap:8px;align-items:center;margin:8px 0}
+.sc-builder .tkb-option input[type=radio]{margin:0;width:18px;height:18px}
+.sc-builder .tkb-option input[type=text]{min-width:0;width:100%;height:44px;padding:8px 10px;font:inherit;box-sizing:border-box}
+.sc-builder .tkb-option-letter{width:28px;height:36px;box-sizing:border-box}
+.sc-builder .tkb-option>button,.sc-builder .tkb-row-actions>button{display:grid;place-items:center;width:44px;height:44px;padding:0}
+.sc-builder .tkb-question-tools .tkb-num{margin:0;width:76px;gap:4px}
+.sc-builder .tkb-question-tools{align-items:flex-end;gap:8px}.sc-builder .tkb-question-top{align-items:center}
+.sc-builder .tkb-question{background:var(--r-surface-2);border-color:var(--r-border)}.sc-builder .tkb-question>textarea{font:inherit;background:var(--r-surface);color:var(--r-ink);box-sizing:border-box}
+.sc-builder .tkb-options{min-width:0}.sc-builder .tkb-option.correct input[type=text]{background:var(--r-red-tint-soft);border-color:var(--r-red-600)}
+.sc-ai-creator{border-color:var(--r-border-strong)}.sc-ai-creator h2{display:flex;align-items:center;gap:10px;scroll-margin-top:100px}.sc-ai-creator h2>svg{color:var(--r-red-600);flex-shrink:0}.sc-ai-creator h2:focus{outline:none}.sc-ai-intro{color:var(--r-ink-2)}.sc-ai-steps{font-size:var(--r-type-label-size);background:var(--r-surface-2);padding:12px 14px;border-radius:8px}.sc-page .sc-ai-generate{display:inline-flex;align-items:center;gap:8px;min-height:44px}
+
 /* Student workspace: the current activity leads; the plan remains secondary. */
 .sc-student-page>.sc-heading>div>p{display:none}.sc-student-page>.sc-heading{margin:16px 0 20px}.sc-student-page>.sc-heading h1{margin:8px 0 0}.sc-student-page>.sc-heading small{font-size:var(--r-type-meta-size);color:var(--r-ink-2);letter-spacing:.06em}
 .sc-student{--sc-space:24px}.sc-student .sc-card{box-shadow:none}.sc-student .sc-card h2{line-height:1.35}.sc-student button,.sc-student a{min-height:44px}.sc-student button.sc-primary{display:inline-flex;align-items:center;justify-content:center;gap:10px}.sc-student-overview{padding:20px var(--sc-space)}

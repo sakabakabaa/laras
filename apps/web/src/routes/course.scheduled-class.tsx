@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { scheduledRequest, wibLabel, type ScheduledClassState } from '@/lib/scheduled-classes';
 import { ScheduledClassEditor } from '@/components/app/scheduled-class-editor';
 import { ScheduledClassroom } from '@/components/app/scheduled-classroom';
@@ -12,6 +12,7 @@ export function meta() { return [{title: 'Kelas terjadwal | LARAS'}]; }
 export default function ScheduledClassPage() {
   const t = useT();
   const {courseId = '', sessionId = ''} = useParams();
+  const [searchParams] = useSearchParams();
   const [state, setState] = useState<ScheduledClassState | null>(null);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [connected, setConnected] = useState(true);
   const [clock, setClock] = useState({server: 0, local: 0}), [elapsed, setElapsed] = useState(0);
@@ -57,7 +58,7 @@ export default function ScheduledClassPage() {
     {error && <div className="sc-alert" role="alert">{error} <button onClick={() => void refresh()}>{t('studentClass.reload')}</button></div>}
     {!connected && <p role="status">{t('studentClass.offline')}</p>}
     {!state ? <p role="status">{t('studentClass.loading')}</p> : state.owner ? <>
-      {(!state.class || state.class.status === 'draft') ? <ScheduledClassEditor state={state} onSaved={accept}/> : <>
+      {(!state.class || state.class.status === 'draft') ? <ScheduledClassEditor state={state} onSaved={accept} focusAi={searchParams.get('create') === 'ai'}/> : <>
         <section className="sc-card"><h2>Pelaksanaan otomatis</h2><p>{wibLabel(state.class.startsAt)} — {wibLabel(state.class.endsAt)}</p><p className="sc-prose">{state.class.instructions}</p><p>Jadwal dan jawaban tersimpan di server. Dosen tidak perlu membuka halaman ini selama kelas berlangsung.</p>
           <div className="sc-actions">{['scheduled', 'open'].includes(state.class.phase) && <button disabled={busy} onClick={() => {if (window.confirm('Batalkan kelas ini? Mahasiswa tidak dapat melanjutkan kegiatan.')) void act('cancel');}}>Batalkan kelas</button>}
           {['closed', 'reviewed'].includes(state.class.phase) && !state.class.releaseResults && <button disabled={busy} onClick={() => {if (window.confirm('Terbitkan nilai kuis, kunci, dan pembahasan kepada peserta?')) void act('release');}}>Terbitkan hasil kuis</button>}

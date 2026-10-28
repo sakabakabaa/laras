@@ -91,4 +91,23 @@ describe('formal evaluation material retrieval', () => {
 		db.files[0].course=['course123-other'];
 		expect((await retrieveContextBundle({...input,fileIds:['file123']})).result).toBe('insufficient');
 	});
+
+	it('lets the owning lecturer reuse an explicitly selected approved chapter in a new meeting', async () => {
+		db.sections[0].session = 'previous123';
+		const bundle = await retrieveContextBundle({...input, fileIds: ['file123']});
+		expect(bundle.result).toBe('sufficient');
+		expect(bundle.sources[0].text).toBe(quote);
+		expect(bundle.sources[0].sections[0].links.session).toBe('previous123');
+		expect(db.audits[0].sources).toEqual(bundle.citations);
+	});
+
+	it.each(['stale', 'unapproved', 'invented', 'different-owner'])('keeps %s evidence excluded when a source is explicitly selected', async failure => {
+		db.sections[0].session = 'previous123';
+		if (failure === 'stale') db.extractions[0].version = 1;
+		if (failure === 'unapproved') db.sections[0].status = 'unsuitable';
+		if (failure === 'invented') db.sections[0].excerpt = 'Not in the actual chapter';
+		if (failure === 'different-owner') db.files[0].owner = 'another123';
+		const bundle = await retrieveContextBundle({...input, fileIds: ['file123']});
+		expect(bundle.sources).toEqual([]);
+	});
 });

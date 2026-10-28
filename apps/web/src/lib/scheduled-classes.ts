@@ -1,14 +1,15 @@
+import type {ScheduledLesson} from './scheduled-lesson';
 import pb from '@/lib/pocketbase-client';
 import type { QuizQuestionEditable } from '@/lib/task-types';
 
 export type ActivityKind = 'material' | 'quiz' | 'assignment' | 'exit_ticket';
 export const ACTIVITY_LABELS: Record<ActivityKind, string> = {material: 'Materi', quiz: 'Kuis', assignment: 'Tugas', exit_ticket: 'Refleksi akhir'};
-export type ScheduledWorksheet = {sourceMaterialId?:string;sourcePage?:number;sourceLabel?:string;items:{id:string;prompt:string;type:'select'|'text';options?:string[]}[]};
+export type ScheduledWorksheet = {sourceMaterialId?:string;sourcePage?:number;sourceLabel?:string;items:{id:string;prompt:string;translation?:string;type:'select'|'text';options?:string[]}[]};
 export type ScheduledActivity = {
   id: string; kind: ActivityKind; title: string; minutes: number; required: boolean;
   startsAt: string; endsAt: string; content?: string; url?: string; questions?: QuizQuestionEditable[];
   materialIds?: string[]; cpmkIds?: string[]; subCpmkIds?: string[];
-  worksheet?:ScheduledWorksheet;
+  worksheet?:ScheduledWorksheet;lesson?:ScheduledLesson;
   sources?: {id?:string;title:string;version:number;available:boolean;url?:string;filename?:string;access?:string}[];
   academic?: {cpmks:{id:string;code:string;description:string}[];subCpmks:{id:string;code:string;description:string}[]};
 };

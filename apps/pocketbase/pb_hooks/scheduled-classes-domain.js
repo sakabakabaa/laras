@@ -23,7 +23,7 @@ function worksheet(value, materials, kind) {
     if (!prompt || !['select', 'text'].includes(item.type)) fail('Lengkapi pertanyaan lembar kerja.');
     const options = item.type === 'select' && Array.isArray(item.options) ? item.options.map(o => text(o, 200)) : [];
     if (item.type === 'select' && (options.length < 2 || options.length > 6 || options.some(o => !o) || new Set(options).size !== options.length)) fail('Pilihan lembar kerja tidak valid.');
-    return {id: item.id, prompt, type: item.type, ...(item.type === 'select' ? {options} : {})};
+    return {id: item.id, prompt, ...(item.translation ? {translation: text(item.translation,1000)} : {}), type: item.type, ...(item.type === 'select' ? {options} : {})};
   });
   const sourceMaterialId = text(value.sourceMaterialId, 15);
   if (sourceMaterialId && (!materials.includes(sourceMaterialId) || !Number.isInteger(value.sourcePage) || value.sourcePage < 1 || value.sourcePage > 10000)) fail('Pilih materi terlampir dan nomor halaman PDF yang valid.');

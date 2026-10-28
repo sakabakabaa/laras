@@ -155,9 +155,20 @@ try {
   const sheetCall = (user,action,body={}) => ok(endpoint,{sessionId:worksheetMeeting.id,action,...body},user.token);
   let sheetState=await sheetCall(teacher,'schedule',{baseRevision:0,title:'Beim Arzt worksheet',startsAt:new Date(Date.now()+60000).toISOString(),joinUntil:new Date(Date.now()+90000).toISOString(),lateAfterMin:10,activities:[{kind:'assignment',title:'Matching and writing',minutes:2,required:true,content:'Answer each item.',worksheet:{items:[{id:'match',type:'select',prompt:'Choose A, B or C.',options:['A','B','C']},{id:'write',type:'text',prompt:'Write a sentence with müssen.'}]}}]});
   const worksheetClass=sheetState.class.id, worksheetActivity=sheetState.activities[0].id;
-  assert.equal((await sheetCall(student,'state')).activities[0].worksheet,undefined);assertions++;
+  const bilingual={goal:{de:'Schreiben Sie einen Satz.',id:'Tulis satu kalimat.'},steps:[{de:'Wählen Sie A.',id:'Pilih A.'}],scenes:[]};
+  const initialStart=sheetState.class.startsAt;
+  sheetState=await sheetCall(teacher,'amendContent',{baseRevision:1,activities:[{id:worksheetActivity,lesson:bilingual,translations:[{id:'match',deText:'Wählen Sie A, B oder C.',idText:'Pilih A, B atau C.'},{id:'write',deText:'Schreiben Sie einen Satz mit müssen.',idText:'Tulis kalimat dengan müssen.'}]}]});
+  assert.equal(sheetState.class.revision,2);assert.equal(sheetState.class.startsAt,initialStart);assert.equal(sheetState.activities[0].id,worksheetActivity);assert.equal(sheetState.activities[0].lesson.goal.id,bilingual.goal.id);assert.equal(sheetState.activities[0].worksheet.items[0].translation,'Pilih A, B atau C.');assertions+=5;
+  for(const actor of[student,otherTeacher]){const response=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:2,activities:[{id:worksheetActivity,lesson:bilingual}]},actor.token);assert.equal(response.status,403);assertions++;}
+  const staleAmend=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:1,activities:[{id:worksheetActivity,lesson:bilingual}]},teacher.token);assert.equal(staleAmend.status,400);assertions++;
+  const badSource=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:2,activities:[{id:worksheetActivity,lesson:{...bilingual,source:{sourceMaterialId:shared.id,sourcePage:1,sourceLabel:'Foreign'}}}]},teacher.token);assert.equal(badSource.status,400);assertions++;
+  const rollback=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:2,activities:[{id:worksheetActivity,lesson:{...bilingual,goal:{de:'Rollback',id:'Rollback'}}},{id:state.activities[0].id,lesson:bilingual}]},teacher.token);assert.equal(rollback.status,403);assert.equal((await sheetCall(teacher,'state')).activities[0].lesson.goal.id,bilingual.goal.id);assertions+=2;
+
+  assert.equal((await sheetCall(student,'state')).activities[0].worksheet,undefined);assert.equal((await sheetCall(student,'state')).activities[0].lesson,undefined);assertions+=2;
   await ok(records('scheduled_classes')+'/'+worksheetClass,{startsAt:new Date(Date.now()-1000).toISOString(),endsAt:new Date(Date.now()+119000).toISOString(),joinUntil:new Date(Date.now()+60000).toISOString()},admin,'PATCH');
-  sheetState=await sheetCall(student,'join');assert.equal(sheetState.activities[0].worksheet.items.length,2);assertions++;
+  sheetState=await sheetCall(student,'join');assert.equal(sheetState.activities[0].worksheet.items.length,2);assert.equal(sheetState.activities[0].lesson.goal.de,bilingual.goal.de);assertions+=2;
+  const startedAmend=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:2,activities:[{id:worksheetActivity,lesson:bilingual}]},teacher.token);assert.equal(startedAmend.status,400);assertions++;
+
   sheetState=await sheetCall(student,'saveAnswer',{activityId:worksheetActivity,baseRevision:0,requestId:randomUUID(),answers:{responses:{match:'A'},text:'Spoofed completion'}});
   assert.equal(sheetState.attempts[0].complete,false);assert.equal(sheetState.attempts[0].answers.responses.match,'A');assertions+=2;
   const invalidSelection=await api(endpoint,{sessionId:worksheetMeeting.id,action:'saveAnswer',activityId:worksheetActivity,baseRevision:1,requestId:randomUUID(),answers:{responses:{match:'D'}}},student.token);assert.equal(invalidSelection.status,400);assertions++;

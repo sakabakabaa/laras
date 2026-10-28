@@ -8,7 +8,7 @@ export function studentPreview(state:ScheduledClassState,index:number):{state:Sc
   const activities:ScheduledActivity[]=state.activities.map(a=>{
     const meta={id:a.id,kind:a.kind,title:a.title,minutes:a.minutes,required:a.required,startsAt:a.startsAt,endsAt:a.endsAt};
     if(Date.parse(a.startsAt)>now)return meta;
-    return {...meta,content:a.content||'',url:a.url,worksheet:a.worksheet,academic:a.academic,
+    return {...meta,content:a.content||'',url:a.url,worksheet:a.worksheet,lesson:a.lesson,academic:a.academic,
       questions:a.questions?.map(q=>({id:q.id,text:q.text,options:q.options,points:q.points,correctIndex:-1,explanation:''})),
       sources:a.sources?.filter(s=>s.access==='student').map(s=>({id:s.id,title:s.title,version:s.version,available:Boolean(s.filename||s.available),url:s.filename&&s.id?'/hcgi/platform/api/files/file_library/'+s.id+'/'+encodeURIComponent(s.filename):s.url}))};
   });

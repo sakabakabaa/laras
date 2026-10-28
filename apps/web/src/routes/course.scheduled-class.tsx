@@ -1,3 +1,4 @@
+import {ScheduledLessonEditor} from '@/components/app/scheduled-lesson-editor';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { scheduledRequest, wibLabel, type ScheduledClassState } from '@/lib/scheduled-classes';
@@ -70,7 +71,7 @@ export default function ScheduledClassPage() {
           {state.class.phase === 'closed' && <button disabled={busy} onClick={() => void act('review')}>Tandai sudah ditinjau</button>}</div>
         </section>
         <details className="sc-card"><summary>Pratinjau rundown · {state.activities.length} kegiatan</summary>{state.activities.map(a => <article className="sc-preview" key={a.id}><h3>{a.title}</h3><small>{wibLabel(a.startsAt)} — {wibLabel(a.endsAt)}</small><p className="sc-prose">{a.content}</p>{a.url && <a href={a.url} target="_blank" rel="noreferrer">Buka materi ↗</a>}{a.worksheet&&<section><p>{a.worksheet.sourceLabel} · PDF {a.worksheet.sourcePage}</p><ol>{a.worksheet.items.map(item=><li key={item.id}><p>{item.prompt}</p>{item.options&&<small>{item.options.join(' / ')}</small>}</li>)}</ol></section>}{a.questions?.map(q => <div key={q.id}><p>{q.text}</p><ol type="A">{q.options.map((o, i) => <li key={i}>{o}{i === q.correctIndex ? ' ✓' : ''}</li>)}</ol></div>)}</article>)}</details>
-        <ScheduledClassReport state={state} busy={busy} onAction={act}/>
+        <ScheduledLessonEditor state={state} onSaved={accept}/><ScheduledClassReport state={state} busy={busy} onAction={act}/>
       </>}
     </> : !state.class ? <section className="sc-card"><h2>Belum ada kelas terjadwal</h2><p>Dosen belum menjadwalkan kegiatan untuk pertemuan ini.</p></section> : <ScheduledClassroom state={state} now={now} onState={accept} connected={connected}/>}
   </div>;

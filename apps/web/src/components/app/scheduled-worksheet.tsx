@@ -8,11 +8,12 @@ import {PDFPreview} from './task-builders/quiz-source-builder';
 
 export function WorksheetAnswers({sheet,responses,onChange}:{sheet:ScheduledWorksheet;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
   const t=useT();
-  return <div className="sc-worksheet"><p>{t('worksheet.count',{answered:String(sheet.items.filter(i=>responses[i.id]?.trim()).length),total:String(sheet.items.length)})}</p><ol>{sheet.items.map(item=><li key={item.id}><label>{item.prompt}{item.type==='select'?<select value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}><option value="">{t('worksheet.choose')}</option>{item.options?.map(option=><option key={option}>{option}</option>)}</select>:<textarea rows={3} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>}</label></li>)}</ol><p>{t('worksheet.reviewHint')}</p></div>;
+  return <div className="sc-worksheet"><p>{t('worksheet.count',{answered:String(sheet.items.filter(i=>responses[i.id]?.trim()).length),total:String(sheet.items.length)})}</p><ol>{sheet.items.map(item=><li key={item.id}><label>{item.prompt}{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}{item.type==='select'?<select value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}><option value="">{t('worksheet.choose')}</option>{item.options?.map(option=><option key={option}>{option}</option>)}</select>:<textarea rows={3} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>}</label></li>)}</ol><p>{t('worksheet.reviewHint')}</p></div>;
 }
 
 export function WorksheetSource({activity}:{activity:ScheduledActivity}){
-  const t=useT(),source=activity.sources?.find(s=>s.id===activity.worksheet?.sourceMaterialId&&s.available&&s.url),page=activity.worksheet?.sourcePage;
+  const reference=activity.worksheet?.sourceMaterialId?activity.worksheet:activity.lesson?.source;
+  const t=useT(),source=activity.sources?.find(s=>s.id===reference?.sourceMaterialId&&s.available&&s.url),page=reference?.sourcePage;
   const [document,setDocument]=useState<PDFDocumentProxy|null>(null),[error,setError]=useState(false);
   useEffect(()=>{
     if(!source?.url||!page||!source.url.toLowerCase().endsWith('.pdf'))return;
@@ -22,7 +23,7 @@ export function WorksheetSource({activity}:{activity:ScheduledActivity}){
     return()=>{cancelled=true;void task?.destroy();};
   },[source?.url,page]);
   if(!source?.url||!page)return null;
-  return <details className="sc-worksheet-source" open><summary>{t('worksheet.page',{page:String(page)})}{activity.worksheet?.sourceLabel&&` · ${activity.worksheet.sourceLabel}`}</summary>{document?<PDFPreview document={document} page={page}/>:<p role={error?'alert':'status'}>{t(error?'quizSource.previewFailed':'worksheet.loading')}</p>}<a href={`${source.url}#page=${page}`} target="_blank" rel="noreferrer">{source.title} · {t('studentClass.openMaterial')}</a></details>;
+  return <details className="sc-worksheet-source" open={Boolean(activity.worksheet?.sourceMaterialId)}><summary>{t('worksheet.page',{page:String(page)})}{reference?.sourceLabel&&` · ${reference.sourceLabel}`}</summary>{document?<PDFPreview document={document} page={page}/>:<p role={error?'alert':'status'}>{t(error?'quizSource.previewFailed':'worksheet.loading')}</p>}<a href={`${source.url}#page=${page}`} target="_blank" rel="noreferrer">{source.title} · {t('studentClass.openMaterial')}</a></details>;
 }
 
 export function WorksheetEditor({value,onChange,materials}:{value?:ScheduledWorksheet;onChange:(sheet:ScheduledWorksheet|undefined)=>void;materials:{id:string;title:string}[]}){

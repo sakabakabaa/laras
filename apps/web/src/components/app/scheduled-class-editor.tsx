@@ -1,3 +1,4 @@
+import type {ScheduledLesson} from '@/lib/scheduled-lesson';
 import { useEffect, useState } from 'react';
 import { ACTIVITY_LABELS, fromWibInput, scheduledRequest, toWibInput, wibLabel, type ScheduledWorksheet, type ActivityKind, type ScheduledClassState } from '@/lib/scheduled-classes';
 import { DEFAULT_QUIZ_CONFIG, type QuizQuestionEditable } from '@/lib/task-types';
@@ -8,7 +9,7 @@ import type {ScheduledAcademicContext} from '@/lib/scheduled-class-ai';
 import {WorksheetEditor} from './scheduled-worksheet';
 import {ScheduledMaterialPicker} from './scheduled-material-picker';
 
-type DraftActivity = {key: string; kind: ActivityKind; title: string; minutes: number; required: boolean; content: string; url: string; questions: QuizQuestionEditable[];worksheet?:ScheduledWorksheet;materialIds:string[];cpmkIds:string[];subCpmkIds:string[]};
+type DraftActivity = {key: string; kind: ActivityKind; title: string; minutes: number; required: boolean; content: string; url: string; questions: QuizQuestionEditable[];worksheet?:ScheduledWorksheet;lesson?:ScheduledLesson;materialIds:string[];cpmkIds:string[];subCpmkIds:string[]};
 function blankActivity(kind: ActivityKind): DraftActivity {return {key: crypto.randomUUID(), kind, title: ACTIVITY_LABELS[kind], minutes: kind === 'exit_ticket' ? 5 : 15, required: true, content: '', url: '', questions: [],materialIds:[],cpmkIds:[],subCpmkIds:[]};}
 
 export function ScheduledClassEditor({state, onSaved, focusAi = false}: {state: ScheduledClassState; onSaved: (s: ScheduledClassState) => void; focusAi?: boolean}) {
@@ -21,7 +22,7 @@ export function ScheduledClassEditor({state, onSaved, focusAi = false}: {state: 
   const [lateAfterMin, setLateAfterMin] = useState(c?.lateAfterMin ?? 10);
   const [section, setSection] = useState(c?.section || state.session.section || '');
   const [revision, setRevision] = useState(c?.revision || 0);
-  const [activities, setActivities] = useState<DraftActivity[]>(() => state.activities.length ? state.activities.map(a => ({key: a.id, kind: a.kind, title: a.title, minutes: a.minutes, required: a.required, content: a.content || '', url: a.url || '', questions: a.questions || [],worksheet:a.worksheet,materialIds:a.materialIds||[],cpmkIds:a.cpmkIds||[],subCpmkIds:a.subCpmkIds||[]})) : [blankActivity('material'), blankActivity('quiz'), blankActivity('exit_ticket')]);
+  const [activities, setActivities] = useState<DraftActivity[]>(() => state.activities.length ? state.activities.map(a => ({key: a.id, kind: a.kind, title: a.title, minutes: a.minutes, required: a.required, content: a.content || '', url: a.url || '', questions: a.questions || [],worksheet:a.worksheet,lesson:a.lesson,materialIds:a.materialIds||[],cpmkIds:a.cpmkIds||[],subCpmkIds:a.subCpmkIds||[]})) : [blankActivity('material'), blankActivity('quiz'), blankActivity('exit_ticket')]);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState(''), [dirty, setDirty] = useState(false), [preview, setPreview] = useState(false);
   const {sections} = useCourseSections(state.session.course);
   const minutes = activities.reduce((sum, a) => sum + (Number(a.minutes) || 0), 0);

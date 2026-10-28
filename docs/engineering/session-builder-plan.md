@@ -15,7 +15,7 @@ Proposed scope, 28 October 2026. Extend the existing scheduled-class editor, wor
 | Block | Lecturer controls | Student output |
 | --- | --- | --- |
 | Instructions | Main instruction, optional note, optional translation | Concise directions with expandable supporting text |
-| Picture matching | Upload/paste images, labels A/B/C or A/P, statements | Labelled gallery with radio choices |
+| Card matching | Upload/paste destination images, labels A/B/C or A/P, statement cards | Drag cards from a stack into image destinations; tap/keyboard selection as alternatives |
 | Multiple choice | Prompt, choices, optional private key | Radio options |
 | Gap sentence / passage | Select words and replace with numbered blanks; optional private accepted answers | Compact inline fields; passage appears once |
 | Short writing | Prompt, translation toggle, expected response length | Sentence-sized writing area |
@@ -24,6 +24,12 @@ Proposed scope, 28 October 2026. Extend the existing scheduled-class editor, wor
 | Reflection | Editable questions and response lengths | Simple response fields |
 
 Include duplicate activity, duplicate session, save as template, template library, and apply to another section/date. Copy content and permitted asset references only; never copy attendance, attempts, results or publication state. Begin with this existing class as the acceptance fixture and first reusable template.
+
+### Card matching requirements
+
+The current session introduces card matching for 10a, 10b and Arzt/Patient using their existing image labels and response IDs. Each destination accepts multiple cards; students can reassign cards or return them to the stack. Placed cards stay visible. Mobile tap-to-select/tap-to-place and keyboard controls are required alongside desktop drag and drop. Use the same autosave, completeness, Save and Next flow, and preserve loaded responses. No correctness feedback before submission unless a later lecturer setting explicitly enables it.
+
+The future builder must expose this as an explicit block type, with editable statement cards, labelled destinations and image previews. Do not require the lecturer to encode image-label conventions into filenames or question text. Reuse the current matching renderer, adding explicit destination references to the versioned block schema. Keep ordinary multiple choice as a separate radio-options block.
 
 ## Data and rendering
 

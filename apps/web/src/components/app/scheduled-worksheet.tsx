@@ -5,10 +5,13 @@ import pb from '@/lib/pocketbase-client';
 import {useT} from '@/lib/i18n';
 import type {ScheduledActivity,ScheduledWorksheet} from '@/lib/scheduled-classes';
 import {singleGap,worksheetBlocks,writingRows} from '@/lib/worksheet-layout';
+import {cardMatchingTargets} from '@/lib/card-matching';
+import {ScheduledCardMatching} from './scheduled-card-matching';
 import {PDFPreview} from './task-builders/quiz-source-builder';
 
-export function WorksheetAnswers({sheet,responses,onChange}:{sheet:ScheduledWorksheet;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
-  const group=useId();
+export function WorksheetAnswers({sheet,responses,onChange,activity}:{sheet:ScheduledWorksheet;activity?:ScheduledActivity;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
+  const group=useId(),targets=activity?cardMatchingTargets(activity):[];
+  if(targets.length)return <><p className="sl-translation">{activity?.lesson?.source?.sourceLabel||sheet.sourceLabel}</p><ScheduledCardMatching key={activity!.id} sheet={sheet} targets={targets} responses={responses} onChange={onChange}/></>;
   const prompt=(item:ScheduledWorksheet['items'][number])=><><span lang="de">{item.prompt}</span>{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}</>;
   const gapInput=(item:ScheduledWorksheet['items'][number],number?:string)=><input className="sc-gap-input" type="text" aria-label={number?`Lücke ${number}: ${item.prompt}`:item.prompt} autoComplete="off" maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>;
   return <div className="sc-worksheet"><ol>{worksheetBlocks(sheet.items).map(block=>{
@@ -33,6 +36,7 @@ export function WorksheetSource({activity}:{activity:ScheduledActivity}){
     void import('pdfjs-dist').then(pdf=>{if(cancelled)return;pdf.GlobalWorkerOptions.workerSrc=workerUrl;task=pdf.getDocument({url:source.url!,httpHeaders:{Authorization:pb.authStore.token}});return task.promise;}).then(doc=>{if(!cancelled&&doc){if(page>doc.numPages){setError(true);return;}setDocument(doc);}}).catch(()=>{if(!cancelled)setError(true);});
     return()=>{cancelled=true;void task?.destroy();};
   },[source?.url,page]);
+  if(cardMatchingTargets(activity).length)return null;
   const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp)$/i.test(s.url));
   if(reference?.sourceMaterialId&&images.some(image=>image.id===reference.sourceMaterialId)){
     return <section className="sc-picture-reference" aria-label="Bilder · Gambar"><h3>Bilder · Gambar</h3>{reference.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className="sc-patient-figures" style={images.length===2?{gridTemplateColumns:'repeat(2,minmax(0,1fr))'}:undefined}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>;

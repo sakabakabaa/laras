@@ -1,7 +1,7 @@
 import {scheduledAnswerComplete} from '@/lib/scheduled-answer-complete';
 import {ScheduledLessonView} from './scheduled-lesson';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronDown, Clock3, ExternalLink, FileText, ListChecks, LockKeyhole, MessageSquare, ShieldCheck } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, BookOpen, Check, CheckCircle2, Clock3, ExternalLink, FileText, ListChecks, LockKeyhole, MessageSquare, ShieldCheck } from 'lucide-react';
 import { localeOf, useLanguage, useT } from '@/lib/i18n';
 import pb from '@/lib/pocketbase-client';
 import { scheduledRequest, type ScheduledActivity, type ScheduledAttempt, type ScheduledClassState } from '@/lib/scheduled-classes';
@@ -125,17 +125,12 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
   const c = state.class!;
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [selected, setSelected] = useState('');
   const heading = useRef<HTMLHeadingElement>(null);
-  const plan = useRef<HTMLDetailsElement>(null);
-  const agendaList = useRef<HTMLOListElement>(null);
-  const revealSelected = useCallback(() => {const row=agendaList.current?.querySelector<HTMLElement>('.is-selected');if(agendaList.current&&row)agendaList.current.scrollTop=Math.max(0,row.offsetTop-8);}, []);
-  useEffect(() => {if (plan.current && window.matchMedia('(max-width: 1100px)').matches) plan.current.open = false;}, []);
   const current = c.phase === 'open' ? state.activities.find(a => now >= Date.parse(a.startsAt) && now < Date.parse(a.endsAt)) : undefined;
   const next = state.activities.find(a => now < Date.parse(a.startsAt));
   const checkedInAt = state.participant?.checkedInAt;
   const ended = ['closed', 'reviewed'].includes(c.phase);
   const cancelled = c.phase === 'cancelled';
   const activity = state.activities.find(a => a.id === selected) || (!ended ? current : undefined);
-  useEffect(() => {revealSelected();}, [activity?.id,revealSelected]);
   const required = state.activities.filter(a=>a.required);
   const completed = required.filter(a => state.attempts.some(attempt => attempt.activity === a.id && attempt.status !== 'draft' && attempt.complete)).length;
   const percent = required.length ? Math.round(completed / required.length * 100) : 0;
@@ -149,7 +144,7 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
     setBusy(true); setError('');
     try {onState(await scheduledRequest(state.session.id, 'join'));} catch (e) {setError((e as Error).message);} finally {setBusy(false);}
   };
-  const choose = (id: string) => {setSelected(id); if(plan.current&&window.matchMedia('(max-width: 1100px)').matches)plan.current.open=false; requestAnimationFrame(() => {heading.current?.focus({preventScroll: true}); heading.current?.scrollIntoView({block: 'start', behavior: 'instant'});});};
+  const choose = (id: string) => {setSelected(id); requestAnimationFrame(() => {heading.current?.focus({preventScroll: true}); heading.current?.scrollIntoView({block: 'start', behavior: 'instant'});});};
   const seconds = activity ? Math.max(0, Math.ceil((Date.parse(activity.endsAt) - now) / 1000)) : 0;
   const active = activity?.id === current?.id && Boolean(current);
   const warning = active && seconds > 0 && seconds <= 60;
@@ -171,7 +166,7 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
           <div className="sc-activity-heading"><h2 ref={heading} tabIndex={-1}>{activity.title}</h2><div className={`sc-student-clock ${warning ? 'is-urgent' : ''}`}><span>{t(active ? 'studentClass.remaining' : 'studentClass.timeClosed')}</span><strong>{active ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—'}</strong></div></div>
           {warning && <p className="sc-deadline-warning" role="status">{t('studentClass.timeWarning')}</p>}
           {!active && <p className="sc-review-note">{t('studentClass.reviewMode')}</p>}
-          <div className="sc-activity-content">{activity.lesson?<ScheduledLessonView key={activity.id} lesson={activity.lesson} compact={!activity.worksheet&&!activity.lesson.scenes?.length}/>:activity.content?.trim()?<section className="sc-activity-brief"><h3>{t('lesson.now')}</h3><div className="sc-prose">{activity.content}</div></section>:null}</div>
+          <div className="sc-activity-content">{activity.lesson?<ScheduledLessonView key={activity.id} lesson={activity.lesson} compact={!activity.worksheet&&!activity.lesson.scenes?.length} showScenes={!activity.lesson.videos?.length}/>:activity.content?.trim()?<section className="sc-activity-brief"><h3>{t('lesson.now')}</h3><div className="sc-prose">{activity.content}</div></section>:null}</div>
           <WorksheetSource activity={activity}/>
           {(activity.url || Boolean(activity.sources?.some(s=>!s.url||!/\.(jpe?g|png|webp)$/i.test(s.url)))) && <section className="sc-resources"><h3>{t('studentClass.resources')}</h3>{activity.url && <a href={activity.url} target="_blank" rel="noreferrer"><BookOpen size={18} aria-hidden="true"/><span>{t('studentClass.openMaterial')}</span><ExternalLink size={16} aria-hidden="true"/></a>}{activity.sources?.filter(s=>!s.url||!/\.(jpe?g|png|webp)$/i.test(s.url)).map((source, i) => source.available && source.url && /\.(mp3|wav|ogg|m4a)$/i.test(source.url) ? <div className="sc-audio-source" key={i}><label>{source.title.replace(/.*Audio_(\d+)-0*(\d+)$/i,(_,disc,track)=>`Audio ${disc}.${Number(track)}`)}<audio aria-label={source.title} controls preload="none" src={source.url}/></label></div> : source.available && source.url ? <a key={i} href={source.url} target="_blank" rel="noreferrer"><FileText size={18} aria-hidden="true"/><span>{source.title}<small>{t('studentClass.version', {version: String(source.version)})}</small></span><ExternalLink size={16} aria-hidden="true"/></a> : <p key={i}>{source.title} — {t('studentClass.unavailable')}</p>)}</section>}
           {preview?<PreviewAnswer key={activity.id} activity={activity} onNext={()=>onPreviewNext?.(activity.id)} canNext={state.activities.findIndex(a=>a.id===activity.id)<state.activities.length-1}/>:<ActivityAnswer key={activity.id} activity={activity} attempt={state.attempts.find(t => t.activity === activity.id)} state={state} now={now} onState={onState} onNext={nextState=>{const i=nextState.activities.findIndex(a=>a.id===activity.id);choose(nextState.activities[i+1]?.id||activity.id);}}/>}
@@ -185,26 +180,6 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
           {!cancelled && !ended && state.participant && next && <p className="sc-next-wait">{t('studentClass.nextAt', {title: next.title, time: time(next.startsAt)})}</p>}
         </div>}
       </section>
-      <aside className="sc-card sc-activity-plan" aria-label={t('studentClass.plan')}>
-        <details ref={plan} open onToggle={e=>{if(e.currentTarget.open)revealSelected();}}>
-          <summary className="sc-plan-heading"><h2>{t('studentClass.plan')}</h2><span>{state.activities.length}</span><ChevronDown size={18} aria-hidden="true"/></summary>
-          <ol ref={agendaList} className="sc-student-timeline">{state.activities.map((a, index) => {
-            const released = Boolean(state.participant) && now >= Date.parse(a.startsAt) && !cancelled;
-            const attempt = state.attempts.find(t => t.activity === a.id);
-            const done = attempt && attempt.status !== 'draft';
-            const status = done ? attempt.complete ? 'complete' : 'incomplete' : !released ? 'locked' : a.id === current?.id ? 'active' : 'ended';
-            return <li key={a.id} className={`${a.id === activity?.id ? 'is-selected' : ''} is-${status}`}>
-              <button disabled={!released} onClick={() => choose(a.id)} aria-current={a.id === activity?.id ? 'step' : undefined}>
-                <span className="sc-step-number">{status === 'complete' ? <Check size={16} aria-hidden="true"/> : index + 1}</span>
-                <span className="sc-step-copy"><strong>{a.title}</strong>
-                  <span className="sc-step-meta">{t(`studentClass.${a.kind}`)} · {t('studentClass.minutes', {count: String(a.minutes)})} · {time(a.startsAt)}</span>
-                  <span className="sc-step-tags"><span className={`sc-requirement ${a.required ? 'is-required' : ''}`}>{t(a.required ? 'studentClass.required' : 'studentClass.optional')}</span><span className={`sc-step-status ${status}`}>{!released && <LockKeyhole size={12} aria-hidden="true"/>}{t(`studentClass.${status}`)}</span></span>
-                </span>
-              </button>
-            </li>;
-          })}</ol>
-        </details>
-      </aside>
     </div>
   </div>;
 }

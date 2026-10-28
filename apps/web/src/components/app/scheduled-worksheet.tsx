@@ -12,7 +12,7 @@ export function WorksheetAnswers({sheet,responses,onChange}:{sheet:ScheduledWork
 }
 
 export function WorksheetSource({activity}:{activity:ScheduledActivity}){
-  const reference=activity.worksheet?.sourceMaterialId?activity.worksheet:activity.lesson?.source;
+  const reference=activity.lesson?.source||(activity.worksheet?.sourceMaterialId?activity.worksheet:undefined);
   const sources=(activity.sources||[]).map(source=>({...source,url:source.url||(source.filename&&source.id?`/hcgi/platform/api/files/file_library/${source.id}/${encodeURIComponent(source.filename)}`:undefined)}));
   const t=useT(),source=sources.find(s=>s.id===reference?.sourceMaterialId&&s.available&&s.url),page=reference?.sourcePage;
   const [document,setDocument]=useState<PDFDocumentProxy|null>(null),[error,setError]=useState(false);

@@ -78,8 +78,8 @@ export async function collectModelWithProvenance(
 	const startedAt = Date.now();
 	const result = await collectHostingerText({
 		prompt,
-		resolved,
 		images: images.slice(0, MAX_IMAGES),
+		resolved,
 		systemPrompt:
 			systemPrompt ||
 			'Anda asisten penilaian dosen dalam Bahasa Indonesia. Bekerja HANYA dari materi yang benar-benar dikirim: teks dan gambar kiriman mahasiswa serta rubrik dosen. Jangan mengarang nilai, kriteria, fakta, atau isi yang tidak ada. Jangan mengarang angka nilai. Balas teks ringkas dan siap tinjau dosen.',

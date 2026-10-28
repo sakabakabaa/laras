@@ -76,6 +76,8 @@ export default [
     route('api/conversation-practice', 'routes/api.conversation-practice.ts'),
 	route('api/personal-practice', 'routes/api.personal-practice.ts'),
     route('api/course-grade-summary', 'routes/api.course-grade-summary.ts'),
+	route('api/gradebook-commands', 'routes/api.gradebook-commands.ts'),
+	route('api/gradebook-release', 'routes/api.gradebook-release.ts'),
 	route('api/student-profile', 'routes/api.student-profile.ts'),
 	route('api/practice-speaking', 'routes/api.practice-speaking.ts'),
 	route('api/berkas-parse', 'routes/api.berkas-parse.ts'),

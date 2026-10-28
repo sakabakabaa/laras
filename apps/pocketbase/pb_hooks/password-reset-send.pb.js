@@ -15,18 +15,19 @@ onRecordAfterCreateSuccess((e) => {
         return;
     }
 
-    let appUrl = "";
-    try {
-        appUrl = $app.settings().meta.appUrl || "";
-    } catch (_) {
-        appUrl = "";
+    const helper = require(`${__hooks}/mail-links.js`);
+    const link = helper.link(e.app, "/reset-password", token);
+    if (!link) {
+        e.next();
+        return;
     }
-    if (appUrl.endsWith("/")) appUrl = appUrl.slice(0, -1);
 
-    const link = appUrl + "/reset-password?token=" + token;
+    const from = { name: "LARAS" };
+    const sender = helper.senderAddress(e.app);
+    if (sender) from.address = sender;
 
     const message = new MailerMessage({
-        from: { name: "LARAS" },
+        from: from,
         to: [{ address: email }],
         subject: "Reset kata sandi LARAS",
         html: "" +
@@ -38,6 +39,7 @@ onRecordAfterCreateSuccess((e) => {
             "<a href=\"" + link + "\" style=\"display:inline-block;background:#7d180f;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700\">Reset kata sandi</a>" +
             "</p>" +
             "<p style=\"font-size:12px;color:#6b7280\">Jika Anda tidak merasa meminta perubahan ini, abaikan email ini. Kata sandi Anda tidak akan berubah sampai Anda membuat yang baru melalui tautan di atas.</p>" +
+            "<p style=\"font-size:12px;color:#6b7280\">Tautan langsung: " + link + "</p>" +
             "</div>",
     });
 

@@ -1,11 +1,24 @@
-
 /// <reference path="../pb_data/types.d.ts" />
 onMailerSend((e) => {
     if (e.app.settings().smtp.enabled) {
         return e.next()
     }
 
-    const senderAddress = $os.getenv("BUILDER_MAILER_SENDER_ADDRESS");
+    const apiUrl = ($os.getenv("BUILDER_MAILER_API_URL") || "").replace(/\/+$/, "")
+    const apiKey = $os.getenv("BUILDER_MAILER_API_KEY") || ""
+    const senderAddress = $os.getenv("BUILDER_MAILER_SENDER_ADDRESS") || ""
+
+    // Without SMTP and without the builder transport there is no way to send.
+    // Fail with a clear log line instead of a DNS error against "/api/v2/email".
+    if (!apiUrl || !apiKey) {
+        e.app.logger().error(
+            "no mail transport configured: enable SMTP settings or set BUILDER_MAILER_API_URL and BUILDER_MAILER_API_KEY",
+            "subject", e.message.subject,
+            "to", e.message.to && e.message.to.length ? e.message.to[0].address : ""
+        )
+        throw new ApiError(500, "Mail transport is not configured.")
+    }
+
     const cc = (e.message.cc || []).map((recipient) => recipient.address).filter(Boolean);
     const bcc = (e.message.bcc || []).map((recipient) => recipient.address).filter(Boolean);
 
@@ -28,10 +41,10 @@ onMailerSend((e) => {
     }
 
     const response = $http.send({
-        url: `${$os.getenv("BUILDER_MAILER_API_URL")}/api/v2/email`,
+        url: `${apiUrl}/api/v2/email`,
         method: "POST",
         headers: {
-            "Authorization": `Bearer ${$os.getenv("BUILDER_MAILER_API_KEY")}`,
+            "Authorization": `Bearer ${apiKey}`,
             "Content-Type": "application/json"
         },
         body: JSON.stringify(payload)

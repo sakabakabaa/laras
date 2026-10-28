@@ -26,21 +26,17 @@ onRecordAfterCreateSuccess((e) => {
     const sender = helper.senderAddress(e.app);
     if (sender) from.address = sender;
 
+    const template = require(`${__hooks}/account-email.js`).render({
+        kind: "verify",
+        baseUrl: helper.appBaseUrl(e.app),
+        url: link,
+    });
     const message = new MailerMessage({
         from: from,
         to: [{ address: email }],
-        subject: "Verifikasi email pemulihan LARAS",
-        html: "" +
-            "<div style=\"font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#1f2733\">" +
-            "<h2 style=\"color:#7d180f\">Verifikasi email Anda</h2>" +
-            "<p>Kami menerima permintaan untuk menambahkan email ini sebagai email pemulihan akun LARAS Anda.</p>" +
-            "<p>Klik tautan di bawah untuk mengonfirmasi. Tautan ini kedaluwarsa dalam 24 jam:</p>" +
-            "<p style=\"margin:24px 0\">" +
-            "<a href=\"" + link + "\" style=\"display:inline-block;background:#7d180f;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700\">Verifikasi email</a>" +
-            "</p>" +
-            "<p style=\"font-size:12px;color:#6b7280\">Jika Anda tidak merasa meminta perubahan ini, abaikan email ini.</p>" +
-            "<p style=\"font-size:12px;color:#6b7280\">Tautan langsung: " + link + "</p>" +
-            "</div>",
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
     });
 
     try {

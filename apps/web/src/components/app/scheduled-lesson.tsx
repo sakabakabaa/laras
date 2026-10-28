@@ -44,7 +44,7 @@ const actionOnly=(t:string)=>t.split(/(?<=[.!?])\s+/).filter(s=>s&&!SCOPE_SENTEN
 const citationOnly=(t:string)=>{const s=t.replace(/^Bezug:\s*/i,'').replace(/^Rujukan:\s*/i,'').trim();return s.split(/\.\s/)[0].replace(/\.$/,'').trim();};
 export function ScheduledLessonView({lesson,compact=false,showScenes=true}:{lesson:ScheduledLesson;compact?:boolean;showScenes?:boolean}){
  const t=useT(),[index,setIndex]=useState(()=>lesson.videos?.length?Math.max(0,lesson.scenes.findIndex(s=>s.kind==='sentence')):0),[step,setStep]=useState(0),[playing,setPlaying]=useState(false),[complete,setComplete]=useState(true),[reduced,setReduced]=useState(false),heading=useRef<HTMLHeadingElement>(null);
- const references=lesson.steps.filter(s=>/^Bezug:/i.test(s.de)),instructions=lesson.steps.filter(s=>!/^Bezug:/i.test(s.de)&&!(compact&&/Bilder|Gambar|Foto/i.test(s.de)));
+ const references=lesson.steps.filter(s=>/^Bezug:/i.test(s.de)),instructions=lesson.steps.filter(s=>!/^Bezug:/i.test(s.de)&&!(compact&&/Bilder|Gambar|Foto/i.test(s.de))&&(showScenes||!/übersicht|überblick|ringkasan|letzten abschnitt|bagian terakhir/i.test(`${s.de} ${s.id}`)));
  const scene=lesson.scenes[index],length=scene?.turns?.length||scene?.sentence?.words.length||scene?.cards?.length||1;
  useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)'),update=()=>{setReduced(media.matches);if(media.matches){setPlaying(false);setComplete(true);}};update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
  useEffect(()=>{if(!playing||reduced)return;const timer=setTimeout(()=>{if(step>=length-1){setPlaying(false);setComplete(true);}else setStep(s=>s+1);},3500);return()=>clearTimeout(timer);},[playing,step,length,reduced]);

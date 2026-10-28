@@ -37,7 +37,8 @@ function reconcile(app, c, now) {
 function context(app, sessionId, user) {
   if (typeof sessionId !== 'string' || !/^[a-zA-Z0-9]{15}$/.test(sessionId)) bad('Pilih pertemuan yang valid.');
   const session = app.findRecordById('class_sessions', sessionId), course = app.findRecordById('courses', session.getString('course'));
-  const owner = course.getString('owner') === user.id && user.getString('role') === 'faculty';
+  const assignedClass = rows(app, 'scheduled_classes', 'session={:s}', {s: session.id})[0];
+  const owner = user.getString('role') === 'faculty' && (course.getString('owner') === user.id || assignedClass?.getString('owner') === user.id);
   let enrollment, roster;
   if (!owner) {
     if (user.getString('role') !== 'student') throw new ForbiddenError('Kelas tidak tersedia.');
@@ -79,11 +80,14 @@ function view(app, c, ctx, user, now) {
   const attempts = rows(app, 'scheduled_activity_attempts', 'class={:c}' + (owner ? '' : ' && student={:u}'), {c: c.id, u: user.id}).map(data);
   const participant = participants.find(p => p.student === user.id);
   if(!owner)delete info.academicSnapshot;
-  const released = info.releaseResults && ['closed', 'reviewed'].includes(currentPhase);
+  const required = plan.filter(a => a.required);
+  const completedRequired = required.filter(a => attempts.some(t => t.activity === a.id && t.status !== 'draft' && t.complete)).length;
+  const resultsReady = !owner && required.length > 0 && completedRequired === required.length;
+  const released = resultsReady || (info.releaseResults && ['closed', 'reviewed'].includes(currentPhase));
   const safeAttempts = attempts.map(a => { if (!owner && !released) delete a.score; return a; });
   return {
     serverNow: new Date(now).toISOString(), owner, session: {id: ctx.session.id, title: ctx.session.getString('title'), course: ctx.course.id, section: ctx.session.getString('section')},
-    class: {...info, phase: currentPhase}, participant: participant || null,
+    class: {...info, phase: currentPhase, resultsReady}, participant: participant || null,
     activities: plan.map(a => {
       const {snapshot,materials,cpmks,subCpmks, ...meta} = a;
       if (owner) return {...meta, ...snapshot, materialIds:materials||[],cpmkIds:cpmks||[],subCpmkIds:subCpmks||[]};
@@ -91,7 +95,10 @@ function view(app, c, ctx, user, now) {
       let worksheet;
       if (snapshot.worksheet) {
         const {answerKey, ...studentWorksheet} = snapshot.worksheet;
-        worksheet = {...studentWorksheet, ...(released && answerKey ? {answerKey} : {})};
+        if (released && answerKey) {
+          const exactItems = Object.fromEntries(Object.entries(answerKey.items || {}).filter(([, entry]) => entry.mode === 'exact'));
+          worksheet = {...studentWorksheet, ...(Object.keys(exactItems).length ? {answerKey: {...answerKey, items: exactItems}} : {})};
+        } else worksheet = studentWorksheet;
       }
       return {...meta, content: snapshot.content, url: snapshot.url, ...(snapshot.lesson?{lesson:snapshot.lesson}:{}), ...(worksheet ? {worksheet}:{}), sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
     }),

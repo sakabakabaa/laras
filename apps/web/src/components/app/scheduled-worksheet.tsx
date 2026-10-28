@@ -23,11 +23,11 @@ export function WorksheetAnswers({sheet,responses,onChange,activity}:{sheet:Sche
       const number=part.match(/^\((\d+)\)\s*_{3,}$/)?.[1],gap=block.gaps!.find(g=>g.number===number);
       return gap?<span key={i} className="sc-inline-gap"><span>({number}) </span>{gapInput(gap.item,number)}</span>:part;
     })}</p></li>;
-    return <li key={item.id} className={writingRows(item)>3?'sc-writing-long':undefined}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:singleGap(item)?<p className="sc-gap-sentence" lang="de">{item.prompt.split(/_{3,}/).map((part,i)=><span key={i}>{i>0&&gapInput(item)}{part}</span>)}</p>:<label><span className="sc-question-number">{t('worksheet.item',{number:String(sheet.items.indexOf(item)+1)})}</span>{prompt(item)}<textarea rows={writingRows(item)} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/><span className="sc-character-count">{t('worksheet.characters',{count:String((responses[item.id]||'').length)})}</span></label>}</li>;
+    return <li key={item.id} className={writingRows(item)>3?'sc-writing-long':undefined}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:singleGap(item)?<p className="sc-gap-sentence" lang="de">{item.prompt.split(/_{3,}/).map((part,i)=><span key={i}>{i>0&&gapInput(item)}{part}</span>)}</p>:<label><span className="sc-question-number">{sheet.items.indexOf(item)+1}</span>{prompt(item)}<textarea rows={writingRows(item)} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/><span className="sc-character-count">{t('worksheet.characters',{count:String((responses[item.id]||'').length)})}</span></label>}</li>;
   })}</ol></div>;
 }
 
-export function WorksheetSource({activity}:{activity:ScheduledActivity}){
+export function WorksheetSource({activity,showPictures=true}:{activity:ScheduledActivity;showPictures?:boolean}){
   const reference=activity.lesson?.source||(activity.worksheet?.sourceMaterialId?activity.worksheet:undefined);
   const sources=(activity.sources||[]).map(source=>({...source,url:source.url||(source.filename&&source.id?`/hcgi/platform/api/files/file_library/${source.id}/${encodeURIComponent(source.filename)}`:undefined)}));
   const t=useT(),source=sources.find(s=>s.id===reference?.sourceMaterialId&&s.available&&s.url),page=reference?.sourcePage;
@@ -45,7 +45,7 @@ export function WorksheetSource({activity}:{activity:ScheduledActivity}){
   // PDF page belongs on the page (e.g. the check-in/orientation activity).
   if(!activity.worksheet)return null;
   const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp)$/i.test(s.url));
-  if(reference?.sourceMaterialId&&images.some(image=>image.id===reference.sourceMaterialId)){
+  if(showPictures&&reference?.sourceMaterialId&&images.some(image=>image.id===reference.sourceMaterialId)){
     return <section className="sc-picture-reference" aria-label="Bilder · Gambar"><h3>Bilder · Gambar</h3>{reference.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className="sc-patient-figures" style={images.length===2?{gridTemplateColumns:'repeat(2,minmax(0,1fr))'}:undefined}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>;
   }
   if(!source?.url||!page)return null;

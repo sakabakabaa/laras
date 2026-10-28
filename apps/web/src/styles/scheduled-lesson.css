@@ -20,10 +20,6 @@
 
 /* --- textbook treatment (lesson header) --- */
 .sl-lesson{--sl-amber:#B54708;--sl-amber-bg:#FEF3E7;--sl-amber-line:#F3D3AE;--sl-blue:#1D4ED8;--sl-blue-bg:#EEF2FF;--sl-blue-line:#C7D2FE}
-.sl-hide-id .sl-translation{display:none}
-.sl-langtoggle{display:inline-flex;gap:2px;padding:3px;margin:0 0 14px;background:#F5F0EA;border:1px solid #D3C9BE;border-radius:999px}
-.sl-langtoggle button{border:0;background:transparent;font:inherit;font-size:12px;font-weight:700;color:#57504A;padding:5px 12px;border-radius:999px;cursor:pointer}
-.sl-langtoggle button[aria-pressed=true]{background:#7F1D16;color:#fff}
 .sl-steps{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .sl-step{display:grid;grid-template-columns:auto auto 1fr;gap:12px;align-items:start;background:#fff;border:1px solid #E7E0D7;border-radius:14px;padding:13px 15px}
 .sl-step-n{width:26px;height:26px;border-radius:50%;background:#7F1D16;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
@@ -32,3 +28,9 @@
 .sl-step-time .sl-step-n{background:var(--sl-amber)}
 .sl-refchip{display:inline-flex;align-items:center;gap:9px;margin:14px 0 0;padding:8px 13px;background:var(--sl-blue-bg);border:1px solid var(--sl-blue-line);border-radius:999px;font-size:12.5px;font-weight:600;color:var(--sl-blue)}
 .sl-instruction-details summary{display:flex;align-items:center;gap:9px}
+
+/* German primary; Indonesian reads as a subtitle, not a second column */
+.sl-pair{display:block}
+.sl-pair>.sl-translation{display:block;margin-top:3px;font-size:12.5px;line-height:1.5;color:#8A817A;font-weight:400}
+.sl-step .sl-pair>.sl-translation{font-size:12.5px}
+.sl-goal .sl-pair>.sl-translation{margin-top:4px}

@@ -266,7 +266,7 @@ function result(activity, answers) {
     const earned = qs.reduce((s, q) => s + (answers[q.id] === q.correctIndex ? q.points : 0), 0);
     return {score: total ? Math.round(earned / total * 10000) / 100 : 0, complete: qs.every(q => Number.isInteger(answers[q.id]))};
   }
-  return {score: 0, complete: activity.kind === 'material' ? answers.acknowledged === true : Boolean(text(answers.text, 20000))};
+  return {complete: activity.kind === 'material' ? answers.acknowledged === true : Boolean(text(answers.text, 20000))};
 }
 function normalizeAnswer(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').replace(/[.!?]+$/g, '').toLowerCase();

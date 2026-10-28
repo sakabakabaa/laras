@@ -5,6 +5,8 @@ import { ScheduledClassEditor } from '@/components/app/scheduled-class-editor';
 import { ScheduledClassroom } from '@/components/app/scheduled-classroom';
 import { ScheduledClassReport } from '@/components/app/scheduled-class-report';
 import '@/styles/scheduled-classes.css';
+import {ScheduledStudentPreview} from '@/components/app/scheduled-student-preview';
+import {useCourseSections} from '@/hooks/use-course-sections';
 import { useT } from '@/lib/i18n';
 
 export function meta() { return [{title: 'Kelas terjadwal | LARAS'}]; }
@@ -13,6 +15,8 @@ export default function ScheduledClassPage() {
   const t = useT();
   const {courseId = '', sessionId = ''} = useParams();
   const [searchParams] = useSearchParams();
+  const {sections}=useCourseSections(courseId);
+  const preview=searchParams.get('preview')==='student';
   const [state, setState] = useState<ScheduledClassState | null>(null);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [connected, setConnected] = useState(true);
   const [clock, setClock] = useState({server: 0, local: 0}), [elapsed, setElapsed] = useState(0);
@@ -55,9 +59,10 @@ export default function ScheduledClassPage() {
   return <div className={`sc-page${state && !state.owner ? ' sc-student-page' : ''}`}>
     <Link className="ld-text-btn" to={`/app/courses/${courseId}/mata-kuliah`}>← {t('studentClass.back')}</Link>
     <header className="sc-heading"><div><small>{t('studentClass.eyebrow')}</small><h1>{state?.class?.title || state?.session.title || t('studentClass.title')}</h1><p>{t('studentClass.subtitle')}</p></div>{state?.class && <span className={`sc-badge sc-${state.class.phase}`}>{t(`studentClass.${state.class.phase}`)}</span>}</header>
+    {state?.owner && state.class && state.class.status!=='draft' && <section className="sc-card"><p>{t('scheduledPreview.audience', {section:sections.find(s=>s.id===state.class?.section)?.name || (state.class.section ? '…' : t('scheduledPreview.allSections'))})}</p><Link className="ld-text-btn" to={preview?'?':'?preview=student'}>{t(preview?'scheduledPreview.back':'scheduledPreview.open')}</Link></section>}
     {error && <div className="sc-alert" role="alert">{error} <button onClick={() => void refresh()}>{t('studentClass.reload')}</button></div>}
     {!connected && <p role="status">{t('studentClass.offline')}</p>}
-    {!state ? <p role="status">{t('studentClass.loading')}</p> : state.owner ? <>
+    {!state ? <p role="status">{t('studentClass.loading')}</p> : state.owner && preview && state.class && state.class.status!=='draft' ? <ScheduledStudentPreview state={state}/> : state.owner ? <>
       {(!state.class || state.class.status === 'draft') ? <ScheduledClassEditor state={state} onSaved={accept} focusAi={searchParams.get('create') === 'ai'}/> : <>
         <section className="sc-card"><h2>Pelaksanaan otomatis</h2><p>{wibLabel(state.class.startsAt)} — {wibLabel(state.class.endsAt)}</p><p className="sc-prose">{state.class.instructions}</p><p>Jadwal dan jawaban tersimpan di server. Dosen tidak perlu membuka halaman ini selama kelas berlangsung.</p>
           <div className="sc-actions">{['scheduled', 'open'].includes(state.class.phase) && <button disabled={busy} onClick={() => {if (window.confirm('Batalkan kelas ini? Mahasiswa tidak dapat melanjutkan kegiatan.')) void act('cancel');}}>Batalkan kelas</button>}

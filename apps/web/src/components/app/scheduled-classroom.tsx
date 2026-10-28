@@ -109,7 +109,12 @@ function ActivityAnswer({activity, attempt, state, now, onState}: {activity: Sch
 
 const activityIcons = {material: BookOpen, quiz: ListChecks, assignment: FileText, exit_ticket: MessageSquare};
 
-export function ScheduledClassroom({state, now, onState, connected}: {state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void; connected: boolean}) {
+function PreviewAnswer({activity}:{activity:ScheduledActivity}){
+  const t=useT(),[answers,setAnswers]=useState<Answers>({});
+  return <div className="sc-answer"><fieldset className="sc-fields">{activity.worksheet?<WorksheetAnswers sheet={activity.worksheet} responses={(answers.responses||{}) as Record<string,string>} onChange={responses=>setAnswers({responses})}/>:activity.kind==='quiz'?<ol className="sc-questions">{activity.questions?.map(q=><li key={q.id}><fieldset><legend>{q.text}</legend>{q.options.map((option,i)=><label className="sc-option" key={i}><input type="radio" name={'preview-'+q.id} checked={answers[q.id]===i} onChange={()=>setAnswers(a=>({...a,[q.id]:i}))}/><span>{option}</span></label>)}</fieldset></li>)}</ol>:activity.kind==='material'?<label className="sc-check"><input type="checkbox" checked={answers.acknowledged===true} onChange={e=>setAnswers({acknowledged:e.target.checked})}/>{t('studentClass.acknowledge')}</label>:<label>{t('studentClass.answer')}<textarea rows={8} maxLength={20000} value={String(answers.text||'')} onChange={e=>setAnswers({text:e.target.value})}/></label>}</fieldset><p role="status">{t('scheduledPreview.localOnly')}</p><div className="sc-actions"><button disabled>{t('studentClass.save')}</button><button disabled className="sc-primary">{t('studentClass.submit')}</button></div></div>;
+}
+
+export function ScheduledClassroom({state, now, onState, connected,preview=false}: {state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void; connected: boolean;preview?:boolean}) {
   const t = useT(), language = useLanguage();
   const date = (value: string) => new Date(value).toLocaleString(localeOf(language), {timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short'}) + ' WIB';
   const time = (value: string) => new Date(value).toLocaleTimeString(localeOf(language), {timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit'}) + ' WIB';
@@ -127,10 +132,10 @@ export function ScheduledClassroom({state, now, onState, connected}: {state: Sch
   const percent = required.length ? Math.round(completed / required.length * 100) : 0;
   useEffect(() => {setSelected('');}, [current?.id]);
   useEffect(() => {
-    if (!checkedInAt || c.phase !== 'open') return;
+    if (preview || !checkedInAt || c.phase !== 'open') return;
     const timer = setInterval(() => {if (document.visibilityState === 'visible') void scheduledRequest(state.session.id, 'heartbeat').then(onState).catch(() => {});}, 60000);
     return () => clearInterval(timer);
-  }, [checkedInAt, c.phase, state.session.id, onState]);
+  }, [checkedInAt, c.phase, state.session.id, onState,preview]);
   const join = async () => {
     setBusy(true); setError('');
     try {onState(await scheduledRequest(state.session.id, 'join'));} catch (e) {setError((e as Error).message);} finally {setBusy(false);}
@@ -160,7 +165,7 @@ export function ScheduledClassroom({state, now, onState, connected}: {state: Sch
           <WorksheetSource activity={activity}/>
           {(activity.url || Boolean(activity.sources?.length)) && <section className="sc-resources"><h3>{t('studentClass.resources')}</h3>{activity.url && <a href={activity.url} target="_blank" rel="noreferrer"><BookOpen size={18} aria-hidden="true"/><span>{t('studentClass.openMaterial')}</span><ExternalLink size={16} aria-hidden="true"/></a>}{activity.sources?.map((source, i) => source.available && source.url && /\.(mp3|wav|ogg|m4a)$/i.test(source.url) ? <div className="sc-audio-source" key={i}><label>{source.title}<audio aria-label={source.title} controls preload="none" src={source.url}/></label></div> : source.available && source.url ? <a key={i} href={source.url} target="_blank" rel="noreferrer"><FileText size={18} aria-hidden="true"/><span>{source.title}<small>{t('studentClass.version', {version: String(source.version)})}</small></span><ExternalLink size={16} aria-hidden="true"/></a> : <p key={i}>{source.title} — {t('studentClass.unavailable')}</p>)}</section>}
           {activity.academic && Boolean(activity.academic.cpmks.length + activity.academic.subCpmks.length) && <details className="sc-learning-outcomes"><summary>{t('studentClass.outcomes')}</summary><ul>{[...activity.academic.cpmks, ...activity.academic.subCpmks].map(outcome => <li key={outcome.id}>{outcome.code}: {outcome.description}</li>)}</ul></details>}
-          <ActivityAnswer key={activity.id} activity={activity} attempt={state.attempts.find(t => t.activity === activity.id)} state={state} now={now} onState={onState}/>
+          {preview?<PreviewAnswer key={activity.id} activity={activity}/>:<ActivityAnswer key={activity.id} activity={activity} attempt={state.attempts.find(t => t.activity === activity.id)} state={state} now={now} onState={onState}/>}
           {!ended && next && <div className="sc-up-next"><span>{t('studentClass.next')}</span><strong>{t('studentClass.nextAt', {title: next.title, time: time(next.startsAt)})}</strong></div>}
         </> : <div className="sc-session-empty">
           <div className={`sc-empty-icon ${ended ? 'is-finished' : ''}`}>{cancelled ? <LockKeyhole size={30} aria-hidden="true"/> : ended ? <CheckCircle2 size={30} aria-hidden="true"/> : <Clock3 size={30} aria-hidden="true"/>}</div>

@@ -9,7 +9,7 @@ export type ScheduledActivity = {
   startsAt: string; endsAt: string; content?: string; url?: string; questions?: QuizQuestionEditable[];
   materialIds?: string[]; cpmkIds?: string[]; subCpmkIds?: string[];
   worksheet?:ScheduledWorksheet;
-  sources?: {id?:string;title:string;version:number;available:boolean;url?:string}[];
+  sources?: {id?:string;title:string;version:number;available:boolean;url?:string;filename?:string;access?:string}[];
   academic?: {cpmks:{id:string;code:string;description:string}[];subCpmks:{id:string;code:string;description:string}[]};
 };
 export type ScheduledAttempt = {

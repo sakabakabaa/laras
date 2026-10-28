@@ -24,6 +24,8 @@ export default function CourseLayout() {
 	const { user } = useAuth();
 	const role = (user as { role?: string } | null)?.role || 'faculty';
 	const isStudent = role === 'student';
+	const isLiveSession = /\/pertemuan\/[^/]+\/terjadwal\/?$/.test(location.pathname);
+	const focusSession = isLiveSession && (isStudent || new URLSearchParams(location.search).get('preview') === 'student');
 	const courseQuery = useCourseByRoute(courseId);
 	const course = courseQuery.data ?? null;
 	const isOwner = !isStudent && course?.owner === pb.authStore.record?.id;
@@ -34,8 +36,9 @@ export default function CourseLayout() {
 			eyebrow="MATA KULIAH"
 			variant="saas"
 			hideHeading
+			hideSidebar={focusSession}
 			rail={
-				<CourseRail
+				!focusSession && <CourseRail
 					course={course}
 					routeId={courseId}
 					isStudent={isStudent}

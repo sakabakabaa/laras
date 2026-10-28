@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LoaderCircle, X } from 'lucide-react';
+import { LoaderCircle, Sparkles, X } from 'lucide-react';
+import { useT } from '@/lib/i18n';
 import pb from '@/lib/pocketbase-client';
 import { invalidate } from '@/lib/local-cache';
 import type { ClassSession } from '@/lib/learning';
@@ -18,8 +19,9 @@ export function SessionForm({
 	courseId: string;
 	session?: ClassSession;
 	onClose: () => void;
-	onSaved: () => void;
+	onSaved: (session: ClassSession, openAi: boolean) => void;
 }) {
+	const t = useT();
 	const { cpl, cpmk, subCpmk, topics, assessments, loading } = useCourseRecords(courseId);
 	const [title, setTitle] = useState(session?.title || '');
 	const [week, setWeek] = useState(String(session?.week || ''));
@@ -125,6 +127,7 @@ export function SessionForm({
 
 	const save = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		const openAi = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('value') === 'ai';
 		setBusy(true);
 		setError('');
 		try {
@@ -160,15 +163,14 @@ export function SessionForm({
 				? `${accessDateTime.replace('T', ' ')}:00.000Z`
 				: null,
 			};
-			if (session) await pb.collection('class_sessions').update(session.id, data);
-			else
-				await pb.collection('class_sessions').create({
+			const saved = session ? await pb.collection('class_sessions').update<ClassSession>(session.id, data) :
+				await pb.collection('class_sessions').create<ClassSession>({
 					...data,
 					course: courseId,
 					owner: pb.authStore.record?.id,
 				});
 			invalidate('class_sessions');
-			onSaved();
+			onSaved(saved, openAi);
 		} catch (err) {
 			setError(errorMessage(err));
 		} finally {
@@ -205,6 +207,14 @@ export function SessionForm({
 							placeholder="mis. Dasar-dasar pembelajaran"
 						/>
 					</label>
+					{!session && <section className="session-ai-entry" aria-label={t('sessionAi.title')}>
+						<div><h3><Sparkles size={18} aria-hidden="true"/>{t('sessionAi.title')}</h3><p>{t('sessionAi.entryBody')}</p></div>
+						<button type="button" className="ld-btn-primary" disabled={busy || !title.trim()} onClick={event => {
+							const form = event.currentTarget.form;
+							const submitter = form?.querySelector<HTMLButtonElement>('button[data-ai-submit]');
+							if (form && submitter) form.requestSubmit(submitter);
+						}}><Sparkles size={16} aria-hidden="true"/>{t('sessionAi.continue')}</button>
+					</section>}
 					<div className="form-two">
 						<label>
 							NOMOR MINGGU
@@ -429,6 +439,7 @@ export function SessionForm({
 							)}
 						</button>
 					</div>
+					{!session && <button type="submit" data-ai-submit name="next" value="ai" hidden style={{display: 'none'}} tabIndex={-1} aria-hidden="true"/>}
 				</form>
 		</AppModal>
 	);

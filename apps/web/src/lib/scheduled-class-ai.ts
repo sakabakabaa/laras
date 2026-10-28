@@ -1,7 +1,7 @@
 import type { QuizQuestionEditable } from './task-types';
 import type { ActivityKind } from './scheduled-classes';
 
-export type ScheduledSource = {id:string;title:string;version:number;access:string;aiReady:boolean;sessionIds:string[]};
+export type ScheduledSource = {id:string;title:string;version:number;access:string;aiReady:boolean;sessionIds:string[];url?:string};
 export type ScheduledOutcome = {id:string;code:string;description:string};
 export type ScheduledAcademicContext = {
   course:{id:string;title:string};

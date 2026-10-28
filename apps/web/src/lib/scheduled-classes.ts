@@ -1,13 +1,31 @@
+import type {ScheduledLesson} from './scheduled-lesson';
 import pb from '@/lib/pocketbase-client';
 import type { QuizQuestionEditable } from '@/lib/task-types';
 
 export type ActivityKind = 'material' | 'quiz' | 'assignment' | 'exit_ticket';
 export const ACTIVITY_LABELS: Record<ActivityKind, string> = {material: 'Materi', quiz: 'Kuis', assignment: 'Tugas', exit_ticket: 'Refleksi akhir'};
+export type Bilingual = {de?:string;id?:string};
+export type WorksheetSegment = {type:'text';text:Bilingual}|{type:'gap';itemId:string};
+export type WorksheetDestination = {id:string;label:string;title:Bilingual;image?:string};
+/** Presentation only. Never owns a response id - it references worksheet items. */
+export type WorksheetBlock =
+  | {id:string;type:'acknowledgement';prompt?:Bilingual;storage:'answers.acknowledged'}
+  | {id:string;type:'lesson';source:'activity.lesson';editable:false}
+  | {id:string;type:'instructions';body:Bilingual;title?:Bilingual;note?:Bilingual}
+  | {id:string;type:'image';body:Bilingual;asset?:string;caption?:Bilingual}
+  | {id:string;type:'audio';asset:string;label?:string;relatedItemIds?:string[]}
+  | {id:string;type:'match';prompt:Bilingual;layout:'destinations-above';destinations:WorksheetDestination[];cardItemIds:string[]}
+  | {id:string;type:'gap';segments:WorksheetSegment[];segmentsId?:WorksheetSegment[]}
+  | {id:string;type:'passage';sections:{id:string;heading?:Bilingual;segments:WorksheetSegment[]}[];prompt?:Bilingual}
+  | {id:string;type:'writing';itemId:string;prompt:Bilingual;responseLength:'short'|'extended';rows?:number}
+  | {id:string;type:'reflection';itemIds:string[];prompt:Bilingual};
+export type ScheduledWorksheet = {sourceMaterialId?:string;sourcePage?:number;sourceLabel?:string;items:{id:string;prompt:string;translation?:string;type:'select'|'text';options?:string[]}[];blocks?:WorksheetBlock[]};
 export type ScheduledActivity = {
   id: string; kind: ActivityKind; title: string; minutes: number; required: boolean;
   startsAt: string; endsAt: string; content?: string; url?: string; questions?: QuizQuestionEditable[];
   materialIds?: string[]; cpmkIds?: string[]; subCpmkIds?: string[];
-  sources?: {title:string;version:number;available:boolean;url?:string}[];
+  worksheet?:ScheduledWorksheet;lesson?:ScheduledLesson;
+  sources?: {id?:string;title:string;version:number;available:boolean;url?:string;filename?:string;access?:string}[];
   academic?: {cpmks:{id:string;code:string;description:string}[];subCpmks:{id:string;code:string;description:string}[]};
 };
 export type ScheduledAttempt = {

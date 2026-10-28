@@ -444,11 +444,16 @@ export async function retrieveContextBundle(input: {
 		const all = sectionsByFile.get(file.id) || [];
 		totalSuitable += all.length;
 		const activeVersion = file.version || 1;
+		// An owning lecturer may deliberately reuse a selected course source in a
+		// new meeting. Keep scope ranking, but do not discard its approved passages
+		// merely because they were mapped to a different meeting or outcome.
+		const explicitlySelected = Boolean(input.fileIds?.includes(file.id) &&
+			input.requester.role === 'faculty' && input.requester.id === input.ownerLecturerId && file.owner === input.ownerLecturerId);
 		// Stale markings (made against a prior version) are never trusted.
 		const matched = all
 			.filter((section) => (section.version ?? 1) === activeVersion)
 			.map((section) => ({ section, score: scoreSection(section, scope) }))
-			.filter(({ score }) => !input.requirePassages || score > 0)
+			.filter(({ score }) => !input.requirePassages || score > 0 || explicitlySelected)
 			.sort(
 				(a, b) =>
 					b.score - a.score ||

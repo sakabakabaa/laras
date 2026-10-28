@@ -11,3 +11,7 @@ apps/pocketbase/pb_snapshots
 vault
 app.tar.gz
 tmp-nw-test.pdf
+
+work/
+remotion/
+.dsh/

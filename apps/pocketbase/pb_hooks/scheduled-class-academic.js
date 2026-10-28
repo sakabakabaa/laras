@@ -22,9 +22,9 @@ exports.attach = function(app,ctx,plan) {
 };
 exports.studentSources = function(app,sources,course) {
   return (sources||[]).filter(s=>s.access==='student').flatMap(source=>{
-    let file;try{file=app.findRecordById('file_library',source.id);}catch(_){return [{title:source.title,version:source.version,available:false}];}
+    let file;try{file=app.findRecordById('file_library',source.id);}catch(_){return [{id:source.id,title:source.title,version:source.version,available:false}];}
     if(file.getString('access')!=='student'||!linked(file,'course').includes(course))return [];
     const available=(file.getInt('version')||1)===source.version&&file.getString('file')===source.filename&&Boolean(source.filename);
-    return [{title:source.title,version:source.version,available,...(available?{url:'/hcgi/platform/api/files/file_library/'+source.id+'/'+encodeURIComponent(source.filename)}:{})}];
+    return [{id:source.id,title:source.title,version:source.version,available,...(available?{url:'/hcgi/platform/api/files/file_library/'+source.id+'/'+encodeURIComponent(source.filename)}:{})}];
   });
 };

@@ -7,6 +7,7 @@ import {
 } from '@/lib/task-types';
 import { NumberField, RowActions, ToggleField, newRowId } from '@/components/app/task-builders/builder-shared';
 import { MappingSelect } from '@/components/app/form-status';
+import {QuizSourceBuilder} from './quiz-source-builder';
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -23,10 +24,14 @@ export function QuizBuilder({
 	value,
 	onChange,
 	questionsOnly = false,
+	courseId,
+	onSourceApplied,
 }: {
 	value: QuizBuilderValue;
 	onChange: (next: QuizBuilderValue) => void;
 	questionsOnly?: boolean;
+	courseId?: string;
+	onSourceApplied?: () => void;
 }) {
 	const setQuestion = (i: number, patch: Partial<QuizQuestionEditable>) => {
 		onChange({ ...value, questions: value.questions.map((q, idx) => (idx === i ? { ...q, ...patch } : q)) });
@@ -62,6 +67,7 @@ export function QuizBuilder({
 					<p>{questionsOnly ? 'Atur soal dan kunci. Waktu mengikuti rundown; hasil diterbitkan dosen setelah kelas.' : 'Soal, kunci jawaban, poin, pengaturan pengerjaan, dan pelepasan hasil.'}</p>
 				</div>
 			</div>
+			{courseId !== undefined && <QuizSourceBuilder key={courseId} courseId={courseId} existingCount={value.questions.length} onApply={(questions, mode) => {onChange({...value,questions:mode==='append'?[...value.questions,...questions]:questions});onSourceApplied?.();}}/>}
 
 			{!questionsOnly && <div className="tkb-grid">
 				<NumberField
@@ -163,7 +169,7 @@ export function QuizBuilder({
 							/>
 							<div className="tkb-options">
 								{question.options.map((option, oi) => (
-									<label key={oi} className={`tkb-option${question.correctIndex === oi ? ' correct' : ''}`}>
+									<div key={oi} className={`tkb-option${question.correctIndex === oi ? ' correct' : ''}`}>
 										<input
 											type="radio"
 											name={`correct-${question.id}`}
@@ -173,6 +179,7 @@ export function QuizBuilder({
 										/>
 										<span className="tkb-option-letter">{LETTERS[oi] || '?'}</span>
 										<input
+											type="text"
 											maxLength={500}
 											value={option}
 											onChange={(e) =>
@@ -197,7 +204,7 @@ export function QuizBuilder({
 										>
 											<Trash2 size={12} />
 										</button>
-									</label>
+									</div>
 								))}
 								{question.options.length < LETTERS.length && (
 									<button

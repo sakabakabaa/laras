@@ -1,0 +1,24 @@
+import{beforeEach,describe,it,expect,vi}from'vitest';
+const m=vi.hoisted(()=>({auth:vi.fn(),chat:vi.fn(),resolve:vi.fn(),access:vi.fn(),commit:vi.fn(),release:vi.fn(),getCourse:vi.fn()}));
+vi.mock('@/lib/api.server',()=>({withApi:(fn:unknown)=>fn,apiError:(status:number,error:string)=>Response.json({error},{status}),json:Response.json,readFormData:(r:Request)=>r.formData(),readJsonBody:(r:Request)=>r.json()}));
+vi.mock('@/lib/context-retrieval.server',()=>({authenticateUser:m.auth}));
+vi.mock('@/lib/ai/openai-compatible.server',()=>({collectChatCompletion:m.chat}));
+vi.mock('@/lib/ai/providers.server',()=>({resolveModel:m.resolve}));
+vi.mock('@/lib/ai-usage.server',()=>({enforceAiAccess:m.access,commitUsage:m.commit}));
+vi.mock('@/lib/feedback.server',()=>({parseModelJson:JSON.parse}));
+import{action}from'@/routes/api.quiz-source';
+const courseId='course123456789',text='Berlin ist die Hauptstadt von Deutschland.';
+const question={text:'Was ist die Hauptstadt von Deutschland?',options:['Berlin','Bonn'],correctIndex:0,explanation:text,sourcePage:3,sourceQuote:text};
+function body(extra:Record<string,unknown>={}){return{action:'generate',courseId,reviewed:true,count:2,pages:[{page:3,text,method:'text'}],...extra};}
+async function post(value:Record<string,unknown>|FormData){const form=value instanceof FormData;return action({request:new Request('http://localhost/api/quiz-source',{method:'POST',headers:form?{}:{'Content-Type':'application/json'},body:form?value:JSON.stringify(value)}),params:{}})as Promise<Response>;}
+beforeEach(()=>{vi.clearAllMocks();m.auth.mockResolvedValue({user:{id:'teacher',role:'faculty'},pb:{authStore:{record:{verified:true}},collection:()=>({getOne:m.getCourse})}});m.getCourse.mockResolvedValue({id:courseId,owner:'teacher',title:'German'});m.access.mockResolvedValue({ok:true,release:m.release});m.resolve.mockResolvedValue({model:'test'});m.chat.mockResolvedValue({content:JSON.stringify({questions:[question]}),model:'test'});});
+describe('lecturer source quiz API',()=>{
+ it('rejects unauthenticated requests before parsing a file',async()=>{m.auth.mockResolvedValue({error:{status:401}});expect((await post(body())).status).toBe(401);expect(m.chat).not.toHaveBeenCalled();});
+ it('does not expose suggested keys to students',async()=>{m.auth.mockResolvedValue({user:{id:'student',role:'student'}});expect((await post(body())).status).toBe(403);expect(m.getCourse).not.toHaveBeenCalled();});
+ it('enforces ownership and explicit text review',async()=>{m.getCourse.mockResolvedValueOnce({owner:'other'});expect((await post(body())).status).toBe(403);expect((await post(body({reviewed:false}))).status).toBe(422);expect(m.chat).not.toHaveBeenCalled();});
+ it('returns a reviewable quiz with only selected-page evidence and releases quota',async()=>{const r=await post(body());expect(r.status).toBe(200);const d=await r.json();expect(d.questions[0]).toMatchObject({sourcePage:3,correctIndex:0,sourceQuote:text});expect(m.chat.mock.calls[0][1].prompt).toContain('"page":3');expect(m.commit).toHaveBeenCalledOnce();expect(m.release).toHaveBeenCalledOnce();});
+ it('refuses invented citations without charging a successful generation',async()=>{m.chat.mockResolvedValue({content:JSON.stringify({questions:[{...question,sourcePage:2}]}),model:'test'});expect((await post(body())).status).toBe(502);expect(m.release).toHaveBeenCalledOnce();expect(m.commit).not.toHaveBeenCalled();});
+ it('parses only selected native PDF text without calling OCR',async()=>{const form=new FormData();form.set('courseId',courseId);form.set('pages',JSON.stringify([{page:3,text}]));const r=await post(form);expect(r.status).toBe(200);expect((await r.json()).pages).toEqual([{page:3,text,method:'text',truncated:false}]);expect(m.chat).not.toHaveBeenCalled();});
+ it('recognizes image bytes, runs bounded OCR, and returns text for review',async()=>{const form=new FormData();form.set('courseId',courseId);form.set('pages',JSON.stringify([{page:5,ocr:true}]));form.set('page-5',new File([new Uint8Array([137,80,78,71,13,10,26,10,0])],'source.png',{type:'image/png'}));m.chat.mockResolvedValue({content:text,model:'test'});const r=await post(form);expect(r.status).toBe(200);expect((await r.json()).pages[0]).toMatchObject({page:5,text,method:'ocr'});expect(m.chat.mock.calls[0][1].images[0]).toMatch(/^data:image\/png;base64,/);expect(m.resolve).toHaveBeenCalledWith('teacher','evaluation');expect(m.release).toHaveBeenCalledOnce();});
+ it('rejects disguised non-image uploads before sending them to a model',async()=>{const form=new FormData();form.set('courseId',courseId);form.set('pages',JSON.stringify([{page:1,ocr:true}]));form.set('page-1',new File(['<svg>bad</svg>'],'fake.png',{type:'image/png'}));expect((await post(form)).status).toBe(422);expect(m.chat).not.toHaveBeenCalled();});
+});

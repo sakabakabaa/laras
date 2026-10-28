@@ -1,15 +1,18 @@
+import type {ScheduledLesson} from '@/lib/scheduled-lesson';
 import { useEffect, useState } from 'react';
-import { ACTIVITY_LABELS, fromWibInput, scheduledRequest, toWibInput, wibLabel, type ActivityKind, type ScheduledClassState } from '@/lib/scheduled-classes';
+import { ACTIVITY_LABELS, fromWibInput, scheduledRequest, toWibInput, wibLabel, type ScheduledWorksheet, type ActivityKind, type ScheduledClassState } from '@/lib/scheduled-classes';
 import { DEFAULT_QUIZ_CONFIG, type QuizQuestionEditable } from '@/lib/task-types';
 import { QuizBuilder } from '@/components/app/task-builders/quiz-builder';
 import { useCourseSections } from '@/hooks/use-course-sections';
 import {AcademicChoices,ScheduledClassAiPanel} from './scheduled-class-ai-panel';
 import type {ScheduledAcademicContext} from '@/lib/scheduled-class-ai';
+import {WorksheetEditor} from './scheduled-worksheet';
+import {ScheduledMaterialPicker} from './scheduled-material-picker';
 
-type DraftActivity = {key: string; kind: ActivityKind; title: string; minutes: number; required: boolean; content: string; url: string; questions: QuizQuestionEditable[];materialIds:string[];cpmkIds:string[];subCpmkIds:string[]};
+type DraftActivity = {key: string; kind: ActivityKind; title: string; minutes: number; required: boolean; content: string; url: string; questions: QuizQuestionEditable[];worksheet?:ScheduledWorksheet;lesson?:ScheduledLesson;materialIds:string[];cpmkIds:string[];subCpmkIds:string[]};
 function blankActivity(kind: ActivityKind): DraftActivity {return {key: crypto.randomUUID(), kind, title: ACTIVITY_LABELS[kind], minutes: kind === 'exit_ticket' ? 5 : 15, required: true, content: '', url: '', questions: [],materialIds:[],cpmkIds:[],subCpmkIds:[]};}
 
-export function ScheduledClassEditor({state, onSaved}: {state: ScheduledClassState; onSaved: (s: ScheduledClassState) => void}) {
+export function ScheduledClassEditor({state, onSaved, focusAi = false}: {state: ScheduledClassState; onSaved: (s: ScheduledClassState) => void; focusAi?: boolean}) {
   const c = state.class;
   const [academic,setAcademic]=useState<ScheduledAcademicContext|null>(null);
   const [title, setTitle] = useState(c?.title || state.session.title);
@@ -19,7 +22,7 @@ export function ScheduledClassEditor({state, onSaved}: {state: ScheduledClassSta
   const [lateAfterMin, setLateAfterMin] = useState(c?.lateAfterMin ?? 10);
   const [section, setSection] = useState(c?.section || state.session.section || '');
   const [revision, setRevision] = useState(c?.revision || 0);
-  const [activities, setActivities] = useState<DraftActivity[]>(() => state.activities.length ? state.activities.map(a => ({key: a.id, kind: a.kind, title: a.title, minutes: a.minutes, required: a.required, content: a.content || '', url: a.url || '', questions: a.questions || [],materialIds:a.materialIds||[],cpmkIds:a.cpmkIds||[],subCpmkIds:a.subCpmkIds||[]})) : [blankActivity('material'), blankActivity('quiz'), blankActivity('exit_ticket')]);
+  const [activities, setActivities] = useState<DraftActivity[]>(() => state.activities.length ? state.activities.map(a => ({key: a.id, kind: a.kind, title: a.title, minutes: a.minutes, required: a.required, content: a.content || '', url: a.url || '', questions: a.questions || [],worksheet:a.worksheet,lesson:a.lesson,materialIds:a.materialIds||[],cpmkIds:a.cpmkIds||[],subCpmkIds:a.subCpmkIds||[]})) : [blankActivity('material'), blankActivity('quiz'), blankActivity('exit_ticket')]);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState(''), [dirty, setDirty] = useState(false), [preview, setPreview] = useState(false);
   const {sections} = useCourseSections(state.session.course);
   const minutes = activities.reduce((sum, a) => sum + (Number(a.minutes) || 0), 0);
@@ -43,7 +46,7 @@ export function ScheduledClassEditor({state, onSaved}: {state: ScheduledClassSta
     {remoteChanged && <p role="alert" className="sc-alert">Draf berubah di tempat lain. Salin perubahan Anda dan muat ulang halaman sebelum menyimpan.</p>}
     {error && <p role="alert" className="sc-alert">{error}</p>}{notice && <p role="status">{notice}</p>}
     <fieldset disabled={busy || remoteChanged} className="sc-fields">
-      <ScheduledClassAiPanel sessionId={state.session.id} onContext={setAcademic} onApply={draft=>{if(!window.confirm('Ganti judul, instruksi, dan seluruh kegiatan editor dengan usulan AI? Perubahan yang belum tersimpan akan diganti.'))return;setTitle(draft.title);setInstructions(draft.instructions);setActivities(draft.activities.map(a=>({...a,key:crypto.randomUUID()})));setDirty(true);setNotice('Usulan AI diterapkan. Tinjau lalu simpan draf atau jadwalkan kelas.');}}/>
+      <ScheduledClassAiPanel sessionId={state.session.id} focusOnLoad={focusAi} onContext={setAcademic} onApply={draft=>{if(!window.confirm('Ganti judul, instruksi, dan seluruh kegiatan editor dengan usulan AI? Perubahan yang belum tersimpan akan diganti.'))return;setTitle(draft.title);setInstructions(draft.instructions);setActivities(draft.activities.map(a=>({...a,key:crypto.randomUUID()})));setDirty(true);setNotice('Usulan AI diterapkan. Tinjau lalu simpan draf atau jadwalkan kelas.');}}/>
       <section className="sc-card"><h2>Jadwal kelas</h2><p>Waktu menggunakan WIB. Kelas berjalan otomatis meskipun dosen sedang offline.</p>
         <label>Judul kelas<input value={title} maxLength={200} onChange={e => {setTitle(e.target.value); setDirty(true);}}/></label>
         <label>Instruksi umum<textarea rows={4} maxLength={10000} value={instructions} onChange={e => {setInstructions(e.target.value); setDirty(true);}}/></label>
@@ -57,16 +60,17 @@ export function ScheduledClassEditor({state, onSaved}: {state: ScheduledClassSta
           <div className="sc-grid"><label>Nama kegiatan<input maxLength={200} value={a.title} onChange={e => changeActivity(i, {title: e.target.value})}/></label><label>Durasi (menit)<input type="number" min={1} max={600} value={a.minutes} onChange={e => changeActivity(i, {minutes: Number(e.target.value)})}/></label></div>
           <label>Materi / instruksi<textarea rows={4} maxLength={20000} value={a.content} onChange={e => changeActivity(i, {content: e.target.value})}/></label>
           <label>Tautan materi (HTTPS, opsional)<input type="url" value={a.url} maxLength={2000} placeholder="https://…" onChange={e => changeActivity(i, {url: e.target.value})}/></label>
-          {academic&&<div className="sc-grid"><AcademicChoices label="Berkas terkait (maksimal 8)" options={academic.materials.map(m=>({id:m.id,title:`${m.title} · v${m.version}${m.access==='student'?'':' · hanya dosen, tidak dibagikan'}`}))} value={a.materialIds} onChange={ids=>changeActivity(i,{materialIds:ids})}/><AcademicChoices label="CPMK" options={academic.cpmks.map(c=>({id:c.id,title:`${c.code} — ${c.description}`}))} value={a.cpmkIds} onChange={ids=>changeActivity(i,{cpmkIds:ids})}/><AcademicChoices label="Sub-CPMK" options={academic.subCpmks.map(c=>({id:c.id,title:`${c.code} — ${c.description}`}))} value={a.subCpmkIds} onChange={ids=>changeActivity(i,{subCpmkIds:ids})}/></div>}
+          {academic&&<div className="sc-grid"><ScheduledMaterialPicker materials={academic.materials} sessionId={state.session.id} value={a.materialIds} onChange={ids=>changeActivity(i,{materialIds:ids})}/><AcademicChoices label="CPMK" options={academic.cpmks.map(c=>({id:c.id,title:`${c.code} — ${c.description}`}))} value={a.cpmkIds} onChange={ids=>changeActivity(i,{cpmkIds:ids})}/><AcademicChoices label="Sub-CPMK" options={academic.subCpmks.map(c=>({id:c.id,title:`${c.code} — ${c.description}`}))} value={a.subCpmkIds} onChange={ids=>changeActivity(i,{subCpmkIds:ids})}/></div>}
           <label className="sc-check"><input type="checkbox" checked={a.required} onChange={e => changeActivity(i, {required: e.target.checked})}/>Wajib untuk saran kehadiran</label>
-          {a.kind === 'quiz' && <QuizBuilder questionsOnly value={{...DEFAULT_QUIZ_CONFIG, questions: a.questions}} onChange={q => changeActivity(i, {questions: q.questions})}/>}
+          {a.kind === 'quiz' && <QuizBuilder courseId={state.session.course} questionsOnly value={{...DEFAULT_QUIZ_CONFIG, questions: a.questions}} onChange={q => changeActivity(i, {questions: q.questions})}/>}
+          {(a.kind === 'assignment' || a.kind === 'exit_ticket') && <WorksheetEditor value={a.worksheet} onChange={worksheet=>changeActivity(i,{worksheet})} materials={(academic?.materials||[]).filter(m=>a.materialIds.includes(m.id)&&/\.pdf$/i.test(m.url||''))}/>}
           {a.kind === 'material' && <small>Peserta menandai sudah membaca. Gunakan kuis berikutnya untuk memeriksa pemahaman.</small>}
           {(a.kind === 'assignment' || a.kind === 'exit_ticket') && <small>Peserta mengirim jawaban teks. Tugas sesi tersimpan terpisah dari nilai resmi.</small>}
         </article>)}
         <div className="sc-actions">{(Object.keys(ACTIVITY_LABELS) as ActivityKind[]).map(kind => <button key={kind} disabled={activities.length >= 30} onClick={() => {setActivities(rows => [...rows, blankActivity(kind)]); setDirty(true);}}>+ {ACTIVITY_LABELS[kind]}</button>)}</div>
       </section>
       <section className="sc-card"><div className="sc-actions"><button onClick={() => setPreview(p => !p)}>{preview ? 'Tutup pratinjau' : 'Pratinjau jadwal'}</button><button onClick={() => void save(false)}>Simpan draf</button><button className="sc-primary" onClick={() => void save(true)}>Jadwalkan kelas</button></div><p role="status">{busy ? 'Menyimpan…' : dirty ? 'Ada perubahan belum tersimpan.' : `Revisi ${revision} · Hasil kuis diterbitkan dosen setelah kelas.`}</p>
-        {preview && <ol className="sc-timeline">{activities.map((a, i) => {const offset = activities.slice(0, i).reduce((sum, row) => sum + row.minutes, 0); return <li key={a.key}><strong>{a.title}</strong><span>Menit {offset}–{offset + a.minutes} · {a.required ? 'Wajib' : 'Opsional'}</span><p className="sc-prose">{a.content}</p><small>{a.questions.length ? `${a.questions.length} soal · kunci disimpan privat` : ACTIVITY_LABELS[a.kind]}</small></li>;})}</ol>}
+        {preview && <ol className="sc-timeline">{activities.map((a, i) => {const offset = activities.slice(0, i).reduce((sum, row) => sum + row.minutes, 0); return <li key={a.key}><strong>{a.title}</strong><span>Menit {offset}–{offset + a.minutes} · {a.required ? 'Wajib' : 'Opsional'}</span><p className="sc-prose">{a.content}</p><small>{a.worksheet && `${a.worksheet.items.length} butir lembar kerja · `}{a.questions.length ? `${a.questions.length} soal · kunci disimpan privat` : ACTIVITY_LABELS[a.kind]}</small></li>;})}</ol>}
       </section>
     </fieldset>
   </div>;

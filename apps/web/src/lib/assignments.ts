@@ -368,6 +368,13 @@ export type ShapeOption = {
 
 export const SHAPE_OPTIONS: ShapeOption[] = [
 	{
+		value: 'quiz',
+		label: 'Kuis',
+		description: 'Soal pilihan ganda, termasuk dari gambar atau halaman PDF yang ditinjau.',
+		group: 'language',
+		stages: ['Mempelajari materi', 'Menjawab soal', 'Meninjau jawaban', 'Pengumpulan'],
+	},
+	{
 		value: 'writing',
 		label: 'Menulis',
 		description: 'Tugas menulis dengan rubrik dan format pengumpulan.',
@@ -388,7 +395,6 @@ export const SHAPE_OPTIONS: ShapeOption[] = [
 export const LEGACY_SHAPE_LABEL: Partial<Record<AssignmentShape, string>> = {
 	listening: 'Menyimak (format lama)',
 	reading: 'Membaca (format lama)',
-	quiz: 'Kuis Bahasa (format lama)',
 	conversation: 'Percakapan / Role-play (format lama)',
 	vocabulary: 'Kosakata & Tata Bahasa (format lama)',
 	language_project: 'Proyek Bahasa / Portofolio (format lama)',

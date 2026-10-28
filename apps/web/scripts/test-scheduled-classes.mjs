@@ -87,7 +87,7 @@ try {
   await retime(15000);
   s = await call(student, 'join'); const joined = s.participant.checkedInAt;
   assert.equal(s.activities[0].content, 'Private scheduled material'); assert(!s.activities[1].questions); assertions += 2;
-  assert.equal(s.activities[0].sources.length,1);assert.equal(s.activities[0].sources[0].title,'Student handout');assert.equal(s.activities[0].academic.cpmks[0].id,outcome.id);assert(!JSON.stringify(s).includes('PRIVATE FACULTY REFERENCE'));assertions+=4;
+  assert.equal(s.activities[0].sources.length,1);assert.equal(s.activities[0].sources[0].title,'Student handout');assert.equal(s.activities[0].academic,undefined);assert(!JSON.stringify(s).includes('PRIVATE FACULTY REFERENCE'));assertions+=4;
   await call(second, 'join');
   await ok(records('scheduled_classes') + '/' + classId, {joinUntil: new Date(Date.now() - 1000).toISOString()}, admin, 'PATCH');
   await denied(noShow, 'join');
@@ -151,5 +151,41 @@ try {
   const blocked = await api(endpoint, {sessionId: replacement.id, action: 'join'}, student.token);
   assert.equal(blocked.status, 400); assertions++;
   assert(cancelled.class.id); assertions++;
+  const worksheetMeeting = await create('class_sessions', {owner:teacher.id,course:course.id,title:'Structured worksheet',week:3,section:a.id});
+  const sheetCall = (user,action,body={}) => ok(endpoint,{sessionId:worksheetMeeting.id,action,...body},user.token);
+  let sheetState=await sheetCall(teacher,'schedule',{baseRevision:0,title:'Beim Arzt worksheet',startsAt:new Date(Date.now()+60000).toISOString(),joinUntil:new Date(Date.now()+90000).toISOString(),lateAfterMin:10,activities:[{kind:'assignment',title:'Matching and writing',minutes:2,required:true,content:'Answer each item.',worksheet:{items:[{id:'match',type:'select',prompt:'Choose A, B or C.',options:['A','B','C']},{id:'write',type:'text',prompt:'Write a sentence with müssen.'}]}}]});
+  const worksheetClass=sheetState.class.id, worksheetActivity=sheetState.activities[0].id;
+  const bilingual={goal:{de:'Schreiben Sie einen Satz.',id:'Tulis satu kalimat.'},steps:[{de:'Wählen Sie A.',id:'Pilih A.'}],scenes:[]};
+  const initialStart=sheetState.class.startsAt;
+  sheetState=await sheetCall(teacher,'amendContent',{baseRevision:1,activities:[{id:worksheetActivity,lesson:bilingual,translations:[{id:'match',deText:'Wählen Sie A, B oder C.',idText:'Pilih A, B atau C.'},{id:'write',deText:'Schreiben Sie einen Satz mit müssen.',idText:'Tulis kalimat dengan müssen.'}]}]});
+  assert.equal(sheetState.class.revision,2);assert.equal(sheetState.class.startsAt,initialStart);assert.equal(sheetState.activities[0].id,worksheetActivity);assert.equal(sheetState.activities[0].lesson.goal.id,bilingual.goal.id);assert.equal(sheetState.activities[0].worksheet.items[0].translation,'Pilih A, B atau C.');assertions+=5;
+  for(const actor of[student,otherTeacher]){const response=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:2,activities:[{id:worksheetActivity,lesson:bilingual}]},actor.token);assert.equal(response.status,403);assertions++;}
+  const staleAmend=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:1,activities:[{id:worksheetActivity,lesson:bilingual}]},teacher.token);assert.equal(staleAmend.status,400);assertions++;
+  const badSource=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:2,activities:[{id:worksheetActivity,lesson:{...bilingual,source:{sourceMaterialId:shared.id,sourcePage:1,sourceLabel:'Foreign'}}}]},teacher.token);assert.equal(badSource.status,400);assertions++;
+  const rollback=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:2,activities:[{id:worksheetActivity,lesson:{...bilingual,goal:{de:'Rollback',id:'Rollback'}}},{id:state.activities[0].id,lesson:bilingual}]},teacher.token);assert.equal(rollback.status,403);assert.equal((await sheetCall(teacher,'state')).activities[0].lesson.goal.id,bilingual.goal.id);assertions+=2;
+
+  assert.equal((await sheetCall(student,'state')).activities[0].worksheet,undefined);assert.equal((await sheetCall(student,'state')).activities[0].lesson,undefined);assertions+=2;
+  await ok(records('scheduled_classes')+'/'+worksheetClass,{startsAt:new Date(Date.now()-1000).toISOString(),endsAt:new Date(Date.now()+119000).toISOString(),joinUntil:new Date(Date.now()+60000).toISOString()},admin,'PATCH');
+  sheetState=await sheetCall(student,'join');assert.equal(sheetState.activities[0].worksheet.items.length,2);assert.equal(sheetState.activities[0].lesson.goal.de,bilingual.goal.de);assertions+=2;
+  const startedAmend=await api(endpoint,{sessionId:worksheetMeeting.id,action:'amendContent',baseRevision:2,activities:[{id:worksheetActivity,lesson:bilingual}]},teacher.token);assert.equal(startedAmend.status,400);assertions++;
+
+  sheetState=await sheetCall(student,'saveAnswer',{activityId:worksheetActivity,baseRevision:0,requestId:randomUUID(),answers:{responses:{match:'A'},text:'Spoofed completion'}});
+  assert.equal(sheetState.attempts[0].complete,false);assert.equal(sheetState.attempts[0].answers.responses.match,'A');assertions+=2;
+  const invalidSelection=await api(endpoint,{sessionId:worksheetMeeting.id,action:'saveAnswer',activityId:worksheetActivity,baseRevision:1,requestId:randomUUID(),answers:{responses:{match:'D'}}},student.token);assert.equal(invalidSelection.status,400);assertions++;
+  if(binary){await stop();await launch();}
+  sheetState=await sheetCall(student,'state');assert.equal(sheetState.attempts[0].answers.responses.match,'A');assertions++;
+  sheetState=await sheetCall(student,'submit',{activityId:worksheetActivity,baseRevision:1,requestId:randomUUID(),answers:{responses:{match:'A',write:'Du musst Tee trinken.',unknown:'Injected'},text:'Ignore this'}});
+  assert.equal(sheetState.attempts[0].complete,true);assert.equal(sheetState.attempts[0].answers.responses.unknown,undefined);assert(sheetState.attempts[0].answers.text.includes('Du musst Tee trinken.'));assertions+=3;
+  const teacherSheet=await sheetCall(teacher,'state');assert.equal(teacherSheet.report.find(r=>r.student===student.id).suggestion,'present');assertions++;
+
+  const pixel=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2f8AAAAASUVORK5CYII=','base64');
+  const privateForm=new FormData();privateForm.set('owner',teacher.id);privateForm.set('course',JSON.stringify([course.id]));privateForm.set('title','Private source retained in storage');privateForm.set('access','faculty');privateForm.set('status','ready');privateForm.set('restrictDownload','true');privateForm.set('file',new File([pixel],'private-source.png',{type:'image/png'}));
+  const uploaded=await fetch(url+records('file_library'),{method:'POST',headers:{Authorization:admin},body:privateForm});assert.equal(uploaded.status,200,uploaded.status===200?'':await uploaded.text());const retained=await uploaded.json(),privateUrl=url+'/api/files/file_library/'+retained.id+'/'+retained.file;assertions++;
+  for(const token of['',student.token,otherTeacher.token]){assert.equal((await fetch(privateUrl,{headers:token?{Authorization:token}:{}})).status,403);assertions++;}
+  const ownerDownload=await fetch(privateUrl,{headers:{Authorization:teacher.token}});assert.equal(ownerDownload.status,200);assert.deepEqual(Buffer.from(await ownerDownload.arrayBuffer()),pixel);assertions+=3;
+  const ownerCookie=encodeURIComponent(JSON.stringify({token:teacher.token,record:{id:teacher.id}}));assert.equal((await fetch(privateUrl,{headers:{Cookie:'pb_auth='+ownerCookie}})).status,200);assertions++;
+  const forged=encodeURIComponent(JSON.stringify({token:student.token,record:{id:teacher.id,role:'faculty'}}));assert.equal((await fetch(privateUrl,{headers:{Cookie:'pb_auth='+forged}})).status,403);assertions++;
+  assert.equal((await fetch(privateUrl,{headers:{Authorization:admin}})).status,200);assertions++;
+  await ok(records('file_library')+'/'+retained.id,{restrictDownload:false,access:'student'},admin,'PATCH');assert.equal((await fetch(privateUrl)).status,200);assertions++;
   console.log(`Scheduled classroom integration passed (${assertions} checks, ${binary ? 'including backend restart recovery' : 'external local backend'}).`);
 } catch (error) {console.error(logs.slice(-6000)); throw error;} finally {if (binary) await stop();}

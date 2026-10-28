@@ -1016,3 +1016,8 @@
 @media (prefers-reduced-motion: reduce) {
  .ld-layout .ld-sidebar { transition: none; }
 }
+/* Entry to scheduled-class drafting from the new-session form. */
+.session-ai-entry{display:grid;gap:12px;padding:16px;border:1px solid var(--r-border);border-radius:12px;background:var(--r-surface-2)}
+.session-ai-entry h3{display:flex;align-items:center;gap:8px;margin:0;font-size:var(--r-type-card-size);font-weight:var(--r-type-heading-weight);color:var(--r-ink)}
+.session-ai-entry h3 svg{color:var(--r-red-600);flex-shrink:0}.session-ai-entry p{margin:8px 0 0;font-size:var(--r-type-label-size);line-height:1.6;color:var(--r-ink-2)}
+.session-ai-entry button{display:inline-flex;align-items:center;justify-content:center;gap:8px;justify-self:start;min-height:44px;white-space:normal}.session-ai-entry button:disabled{opacity:.5;cursor:not-allowed}

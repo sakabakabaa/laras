@@ -88,7 +88,7 @@ function view(app, c, ctx, user, now) {
       const {snapshot,materials,cpmks,subCpmks, ...meta} = a;
       if (owner) return {...meta, ...snapshot, materialIds:materials||[],cpmkIds:cpmks||[],subCpmkIds:subCpmks||[]};
       if (!participant || now < Date.parse(a.startsAt) || currentPhase === 'cancelled') return meta;
-      return {...meta, content: snapshot.content, url: snapshot.url, academic:snapshot.academic,sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
+      return {...meta, content: snapshot.content, url: snapshot.url, ...(snapshot.lesson?{lesson:snapshot.lesson}:{}), ...(snapshot.worksheet ? {worksheet:snapshot.worksheet}:{}), sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
     }),
     attempts: safeAttempts,
     report: owner ? rosterReport(app, c, plan, participants, attempts) : [],
@@ -99,13 +99,37 @@ function handle(app, body, user, now) {
   const ctx = context(app, body.sessionId, user);
   let c = rows(app, 'scheduled_classes', 'session={:s}', {s: ctx.session.id})[0];
   const action = body.action;
-  if (!['state', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'markAttendance', 'review'].includes(action)) bad('Aksi tidak dikenal.');
-  if (['savePlan', 'schedule', 'cancel', 'release', 'markAttendance', 'review'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
+  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'markAttendance', 'review'].includes(action)) bad('Aksi tidak dikenal.');
+  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'markAttendance', 'review'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
+  if(action==='amendContent'){
+    if(!c||c.getString('status')!=='scheduled'||now>=Date.parse(c.getString('startsAt')))bad('Materi hanya dapat direvisi sebelum kelas terjadwal dimulai.');
+    if(body.baseRevision!==c.getInt('revision'))bad('Draf berubah. Muat ulang sebelum menyimpan.');
+    if(rows(app,'scheduled_class_participants','class={:c}',{c:c.id}).length||rows(app,'scheduled_activity_attempts','class={:c}',{c:c.id}).length)bad('Kelas sudah memiliki partisipasi; materi dikunci.');
+    if(!Array.isArray(body.activities)||!body.activities.length||body.activities.length>30)bad('Pilih kegiatan yang akan direvisi.');
+    const seen={};
+    for(const patch of body.activities){
+      if(!patch||typeof patch.id!=='string'||seen[patch.id])bad('Kegiatan revisi tidak valid.');seen[patch.id]=true;
+      const record=app.findRecordById('scheduled_class_activities',patch.id);
+      if(record.getString('class')!==c.id)throw new ForbiddenError('Kegiatan bukan dari kelas ini.');
+      const snapshot=json(record,'snapshot'),materials=Array.from(record.getStringSlice('materials')||[]);
+      try{snapshot.lesson=require(__hooks+'/scheduled-lesson-domain.js').validate(patch.lesson,materials);}catch(e){bad(e.message);}
+      if(!snapshot.lesson)bad('Lengkapi materi dwibahasa.');
+      if(patch.translations!==undefined){
+        const items=snapshot.worksheet?.items||[];
+        if(!Array.isArray(patch.translations)||patch.translations.length!==items.length)bad('Lengkapi terjemahan setiap butir.');
+        for(const item of items){const translated=patch.translations.find(t=>t.id===item.id);if(!translated||typeof translated.idText!=='string'||!translated.idText.trim()||translated.idText.length>1000)bad('Terjemahan butir tidak valid.');if(translated.deText!==undefined){if(typeof translated.deText!=='string'||!translated.deText.trim()||translated.deText.length>1000)bad('Instruksi Jerman tidak valid.');item.prompt=translated.deText.trim();}item.translation=translated.idText.trim();}
+      }
+      record.set('snapshot',snapshot);app.save(record);
+    }
+    if(body.instructions){try{const pair=require(__hooks+'/scheduled-lesson-domain.js').validate({goal:body.instructions,steps:[body.instructions],scenes:[]},[]).goal;c.set('instructions',pair.de+'\n\n'+pair.id);}catch(e){bad(e.message);}}
+    c.set('revision',c.getInt('revision')+1);app.save(c);event(app,c,user.id,'content_amended',{activities:body.activities.map(a=>a.id),revision:c.getInt('revision')});
+  }
   if (action === 'savePlan' || action === 'schedule') {
     if (c && c.getString('status') !== 'draft') bad('Kelas yang sudah dijadwalkan tidak dapat diedit. Batalkan jika diperlukan.');
     if (!Number.isInteger(body.baseRevision) || body.baseRevision !== (c?.getInt('revision') || 0)) bad('Draf berubah. Muat ulang sebelum menyimpan.');
     let plan;
     try { plan = rules.validatePlan(body, now, action === 'schedule'); } catch (e) { bad(e.message); }
+    for(let i=0;i<plan.activities.length;i++){try{const lesson=require(__hooks+'/scheduled-lesson-domain.js').validate(body.activities[i].lesson,plan.activities[i].materialIds);if(lesson)plan.activities[i].snapshot.lesson=lesson;}catch(e){bad(e.message);}}
     const academicSnapshot=require(__hooks+'/scheduled-class-academic.js').attach(app,ctx,plan);
     const section = ctx.session.getString('section') || (typeof body.section === 'string' ? body.section : '');
     if (section && app.findRecordById('course_sections', section).getString('course') !== ctx.course.id) bad('Rombel bukan dari mata kuliah ini.');

@@ -1,0 +1,35 @@
+import {useEffect,useState} from 'react';
+import type {PDFDocumentProxy} from 'pdfjs-dist';
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import pb from '@/lib/pocketbase-client';
+import {useT} from '@/lib/i18n';
+import type {ScheduledActivity,ScheduledWorksheet} from '@/lib/scheduled-classes';
+import {PDFPreview} from './task-builders/quiz-source-builder';
+
+export function WorksheetAnswers({sheet,responses,onChange}:{sheet:ScheduledWorksheet;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
+  const t=useT();
+  return <div className="sc-worksheet"><p>{t('worksheet.count',{answered:String(sheet.items.filter(i=>responses[i.id]?.trim()).length),total:String(sheet.items.length)})}</p><ol>{sheet.items.map(item=><li key={item.id}><label>{item.prompt}{item.type==='select'?<select value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}><option value="">{t('worksheet.choose')}</option>{item.options?.map(option=><option key={option}>{option}</option>)}</select>:<textarea rows={3} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>}</label></li>)}</ol><p>{t('worksheet.reviewHint')}</p></div>;
+}
+
+export function WorksheetSource({activity}:{activity:ScheduledActivity}){
+  const t=useT(),source=activity.sources?.find(s=>s.id===activity.worksheet?.sourceMaterialId&&s.available&&s.url),page=activity.worksheet?.sourcePage;
+  const [document,setDocument]=useState<PDFDocumentProxy|null>(null),[error,setError]=useState(false);
+  useEffect(()=>{
+    if(!source?.url||!page||!source.url.toLowerCase().endsWith('.pdf'))return;
+    let cancelled=false,task:ReturnType<typeof import('pdfjs-dist')['getDocument']>|undefined;
+    setError(false);setDocument(null);
+    void import('pdfjs-dist').then(pdf=>{if(cancelled)return;pdf.GlobalWorkerOptions.workerSrc=workerUrl;task=pdf.getDocument({url:source.url!,httpHeaders:{Authorization:pb.authStore.token}});return task.promise;}).then(doc=>{if(!cancelled&&doc){if(page>doc.numPages){setError(true);return;}setDocument(doc);}}).catch(()=>{if(!cancelled)setError(true);});
+    return()=>{cancelled=true;void task?.destroy();};
+  },[source?.url,page]);
+  if(!source?.url||!page)return null;
+  return <details className="sc-worksheet-source" open><summary>{t('worksheet.page',{page:String(page)})}{activity.worksheet?.sourceLabel&&` · ${activity.worksheet.sourceLabel}`}</summary>{document?<PDFPreview document={document} page={page}/>:<p role={error?'alert':'status'}>{t(error?'quizSource.previewFailed':'worksheet.loading')}</p>}<a href={`${source.url}#page=${page}`} target="_blank" rel="noreferrer">{source.title} · {t('studentClass.openMaterial')}</a></details>;
+}
+
+export function WorksheetEditor({value,onChange,materials}:{value?:ScheduledWorksheet;onChange:(sheet:ScheduledWorksheet|undefined)=>void;materials:{id:string;title:string}[]}){
+  const t=useT(),sheet=value;
+  return <section className="sc-worksheet-editor"><label className="sc-check"><input type="checkbox" checked={Boolean(sheet)} onChange={e=>onChange(e.target.checked?{items:[{id:crypto.randomUUID(),prompt:'',type:'text'}]}:undefined)}/>{t('worksheet.enable')}</label>{sheet&&<>
+    <p>{t('worksheet.reviewHint')}</p><div className="sc-grid"><label>{t('worksheet.source')}<select value={sheet.sourceMaterialId||''} onChange={e=>onChange({...sheet,sourceMaterialId:e.target.value||undefined,sourcePage:e.target.value?(sheet.sourcePage||1):undefined})}><option value="">—</option>{materials.map(m=><option key={m.id} value={m.id}>{m.title}</option>)}</select></label>{sheet.sourceMaterialId&&<><label>{t('worksheet.pageNumber')}<input type="number" min={1} max={10000} value={sheet.sourcePage||1} onChange={e=>onChange({...sheet,sourcePage:Number(e.target.value)})}/></label><label>{t('worksheet.sourceLabel')}<input maxLength={160} value={sheet.sourceLabel||''} onChange={e=>onChange({...sheet,sourceLabel:e.target.value})}/></label></>}</div>
+    {sheet.items.map((item,i)=><fieldset key={item.id}><legend>{t('worksheet.item',{number:String(i+1)})}</legend><label>{t('worksheet.prompt')}<textarea rows={2} maxLength={1000} value={item.prompt} onChange={e=>onChange({...sheet,items:sheet.items.map((s,n)=>n===i?{...s,prompt:e.target.value}:s)})}/></label><label>{t('worksheet.type')}<select value={item.type} onChange={e=>onChange({...sheet,items:sheet.items.map((s,n)=>n===i?{...s,type:e.target.value as 'select'|'text',options:e.target.value==='select'?['A','B','C']:undefined}:s)})}><option value="text">{t('worksheet.text')}</option><option value="select">{t('worksheet.select')}</option></select></label>{item.type==='select'&&<label>{t('worksheet.options')}<textarea rows={3} value={item.options?.join('\n')||''} onChange={e=>onChange({...sheet,items:sheet.items.map((s,n)=>n===i?{...s,options:e.target.value.split('\n')}:s)})}/></label>}<button type="button" disabled={sheet.items.length===1} onClick={()=>onChange({...sheet,items:sheet.items.filter((_,n)=>n!==i)})}>{t('worksheet.remove')}</button></fieldset>)}
+    <button type="button" disabled={sheet.items.length>=30} onClick={()=>onChange({...sheet,items:[...sheet.items,{id:crypto.randomUUID(),prompt:'',type:'text'}]})}>{t('worksheet.add')}</button>
+  </>}</section>;
+}

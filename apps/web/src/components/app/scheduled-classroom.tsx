@@ -4,6 +4,8 @@ import { localeOf, useLanguage, useT } from '@/lib/i18n';
 import pb from '@/lib/pocketbase-client';
 import { scheduledRequest, type ScheduledActivity, type ScheduledAttempt, type ScheduledClassState } from '@/lib/scheduled-classes';
 
+import {WorksheetAnswers,WorksheetSource} from './scheduled-worksheet';
+
 type Answers = Record<string, unknown>;
 type PendingSave = {requestId: string; baseRevision: number; answers: Answers; submit: boolean};
 function storageKey(classId: string, activityId: string) {return `laras:scheduled:${pb.authStore.record?.id}:${classId}:${activityId}`;}
@@ -97,7 +99,7 @@ function ActivityAnswer({activity, attempt, state, now, onState}: {activity: Sch
     {!open && dirty && <p className="sc-alert">{t('studentClass.deadline')}</p>}
     {activity.kind === 'quiz' && <p className="sc-answer-count">{t('studentClass.questions', {answered: String(activity.questions?.filter(q => Number.isInteger(answers[q.id])).length || 0), total: String(activity.questions?.length || 0)})}</p>}
     <fieldset className="sc-fields" disabled={!open || final || conflict || busy}>
-      {activity.kind === 'quiz' ? <ol className="sc-questions">{activity.questions?.map((q, questionIndex) => <li key={q.id}><fieldset><legend><span className="sc-question-number">{t('studentClass.question', {number: String(questionIndex + 1)})}</span>{q.text}</legend>{q.options.map((option, index) => <label className="sc-option" key={index}><input type="radio" name={`${activity.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => edit({[q.id]: index})}/><span>{option}</span></label>)}</fieldset></li>)}</ol> : activity.kind === 'material' ? <label className="sc-check"><input type="checkbox" checked={answers.acknowledged === true} onChange={e => edit({acknowledged: e.target.checked})}/>{t('studentClass.acknowledge')}</label> : <label>{t('studentClass.answer')}<textarea placeholder={t('studentClass.answerHint')} rows={8} maxLength={20000} value={String(answers.text || '')} onChange={e => edit({text: e.target.value})}/><span className="sc-character-count">{t('studentClass.characters', {count: String(String(answers.text || '').length)})}</span></label>}
+      {activity.kind === 'quiz' ? <ol className="sc-questions">{activity.questions?.map((q, questionIndex) => <li key={q.id}><fieldset><legend><span className="sc-question-number">{t('studentClass.question', {number: String(questionIndex + 1)})}</span>{q.text}</legend>{q.options.map((option, index) => <label className="sc-option" key={index}><input type="radio" name={`${activity.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => edit({[q.id]: index})}/><span>{option}</span></label>)}</fieldset></li>)}</ol> : activity.kind === 'material' ? <label className="sc-check"><input type="checkbox" checked={answers.acknowledged === true} onChange={e => edit({acknowledged: e.target.checked})}/>{t('studentClass.acknowledge')}</label> : activity.worksheet ? <WorksheetAnswers sheet={activity.worksheet} responses={(answers.responses||{}) as Record<string,string>} onChange={responses=>edit({responses})}/> : <label>{t('studentClass.answer')}<textarea placeholder={t('studentClass.answerHint')} rows={8} maxLength={20000} value={String(answers.text || '')} onChange={e => edit({text: e.target.value})}/><span className="sc-character-count">{t('studentClass.characters', {count: String(String(answers.text || '').length)})}</span></label>}
     </fieldset>
     <div className={`sc-save-status ${dirty ? 'is-pending' : final || attempt ? 'is-saved' : ''}`} role="status"><ShieldCheck size={17} aria-hidden="true"/><span>{busy ? t('studentClass.saving') : final ? attempt?.status === 'expired' ? t('studentClass.expired') : t('studentClass.submitted') : message || t('studentClass.initial')}</span></div>
     {!final && <div className="sc-answer-footer"><p>{t('studentClass.saveHint')}</p><div className="sc-actions"><button disabled={busy || conflict || (!open && !pending.current)} onClick={() => void save(false)}>{t('studentClass.save')}</button><button className="sc-primary" disabled={busy || conflict || !open} onClick={() => {if (window.confirm(t('studentClass.confirmSubmit'))) void save(true);}}>{t(activity.kind === 'material' ? 'studentClass.readSubmit' : 'studentClass.submit')}<ArrowRight size={16} aria-hidden="true"/></button></div></div>}
@@ -120,8 +122,9 @@ export function ScheduledClassroom({state, now, onState, connected}: {state: Sch
   const ended = ['closed', 'reviewed'].includes(c.phase);
   const cancelled = c.phase === 'cancelled';
   const activity = state.activities.find(a => a.id === selected) || (!ended ? current : undefined);
-  const completed = state.activities.filter(a => state.attempts.some(attempt => attempt.activity === a.id && attempt.status !== 'draft' && attempt.complete)).length;
-  const percent = state.activities.length ? Math.round(completed / state.activities.length * 100) : 0;
+  const required = state.activities.filter(a=>a.required);
+  const completed = required.filter(a => state.attempts.some(attempt => attempt.activity === a.id && attempt.status !== 'draft' && attempt.complete)).length;
+  const percent = required.length ? Math.round(completed / required.length * 100) : 0;
   useEffect(() => {setSelected('');}, [current?.id]);
   useEffect(() => {
     if (!checkedInAt || c.phase !== 'open') return;
@@ -141,8 +144,8 @@ export function ScheduledClassroom({state, now, onState, connected}: {state: Sch
   return <div className="sc-classroom sc-student">
     <section className="sc-student-overview sc-card" aria-label={t('studentClass.progress')}>
       <div className="sc-overview-top"><div className="sc-session-time"><Clock3 size={18} aria-hidden="true"/><div><span>{t('studentClass.schedule')}</span><strong>{date(c.startsAt)} — {time(c.endsAt)}</strong></div></div><span className={`sc-checkin-badge ${checkedInAt ? 'is-checked' : ''}`}><CheckCircle2 size={16} aria-hidden="true"/>{t(checkedInAt ? 'studentClass.checkedIn' : 'studentClass.notCheckedIn')}{checkedInAt && <small>{time(checkedInAt)}</small>}</span></div>
-      <div className="sc-progress-heading"><span>{t('studentClass.progress')}</span><strong>{completed}<span> / {state.activities.length}</span></strong></div>
-      <progress className="sc-progress" value={completed} max={state.activities.length || 1} aria-label={t('studentClass.progress')}>{percent}%</progress>
+      <div className="sc-progress-heading"><span>{t('studentClass.progress')}</span><strong>{completed}<span> / {required.length}</span></strong></div>
+      <progress className="sc-progress" value={completed} max={required.length || 1} aria-label={t('studentClass.progress')}>{percent}%</progress>
       {c.instructions && <details className="sc-student-instructions"><summary>{t('studentClass.instructions')}</summary><p className="sc-prose">{c.instructions}</p></details>}
     </section>
     {error && <p role="alert" className="sc-alert">{error}</p>}
@@ -154,7 +157,8 @@ export function ScheduledClassroom({state, now, onState, connected}: {state: Sch
           {warning && <p className="sc-deadline-warning" role="status">{t('studentClass.timeWarning')}</p>}
           {!active && <p className="sc-review-note">{t('studentClass.reviewMode')}</p>}
           <div className="sc-activity-content sc-prose">{activity.content}</div>
-          {(activity.url || Boolean(activity.sources?.length)) && <section className="sc-resources"><h3>{t('studentClass.resources')}</h3>{activity.url && <a href={activity.url} target="_blank" rel="noreferrer"><BookOpen size={18} aria-hidden="true"/><span>{t('studentClass.openMaterial')}</span><ExternalLink size={16} aria-hidden="true"/></a>}{activity.sources?.map((source, i) => source.available && source.url ? <a key={i} href={source.url} target="_blank" rel="noreferrer"><FileText size={18} aria-hidden="true"/><span>{source.title}<small>{t('studentClass.version', {version: String(source.version)})}</small></span><ExternalLink size={16} aria-hidden="true"/></a> : <p key={i}>{source.title} — {t('studentClass.unavailable')}</p>)}</section>}
+          <WorksheetSource activity={activity}/>
+          {(activity.url || Boolean(activity.sources?.length)) && <section className="sc-resources"><h3>{t('studentClass.resources')}</h3>{activity.url && <a href={activity.url} target="_blank" rel="noreferrer"><BookOpen size={18} aria-hidden="true"/><span>{t('studentClass.openMaterial')}</span><ExternalLink size={16} aria-hidden="true"/></a>}{activity.sources?.map((source, i) => source.available && source.url && /\.(mp3|wav|ogg|m4a)$/i.test(source.url) ? <div className="sc-audio-source" key={i}><label>{source.title}<audio aria-label={source.title} controls preload="none" src={source.url}/></label></div> : source.available && source.url ? <a key={i} href={source.url} target="_blank" rel="noreferrer"><FileText size={18} aria-hidden="true"/><span>{source.title}<small>{t('studentClass.version', {version: String(source.version)})}</small></span><ExternalLink size={16} aria-hidden="true"/></a> : <p key={i}>{source.title} — {t('studentClass.unavailable')}</p>)}</section>}
           {activity.academic && Boolean(activity.academic.cpmks.length + activity.academic.subCpmks.length) && <details className="sc-learning-outcomes"><summary>{t('studentClass.outcomes')}</summary><ul>{[...activity.academic.cpmks, ...activity.academic.subCpmks].map(outcome => <li key={outcome.id}>{outcome.code}: {outcome.description}</li>)}</ul></details>}
           <ActivityAnswer key={activity.id} activity={activity} attempt={state.attempts.find(t => t.activity === activity.id)} state={state} now={now} onState={onState}/>
           {!ended && next && <div className="sc-up-next"><span>{t('studentClass.next')}</span><strong>{t('studentClass.nextAt', {title: next.title, time: time(next.startsAt)})}</strong></div>}
@@ -162,7 +166,7 @@ export function ScheduledClassroom({state, now, onState, connected}: {state: Sch
           <div className={`sc-empty-icon ${ended ? 'is-finished' : ''}`}>{cancelled ? <LockKeyhole size={30} aria-hidden="true"/> : ended ? <CheckCircle2 size={30} aria-hidden="true"/> : <Clock3 size={30} aria-hidden="true"/>}</div>
           <h2 ref={heading} tabIndex={-1}>{t(cancelled ? 'studentClass.cancelled' : ended ? 'studentClass.finishedTitle' : c.phase === 'scheduled' ? 'studentClass.waitTitle' : state.participant ? 'studentClass.betweenTitle' : 'studentClass.startTitle')}</h2>
           <p>{t(cancelled ? 'studentClass.cancelBody' : ended ? state.participant ? 'studentClass.finishedBody' : 'studentClass.notJoinedEnd' : c.phase === 'scheduled' ? 'studentClass.waitBody' : state.participant ? 'studentClass.betweenBody' : 'studentClass.startBody')}</p>
-          {ended && state.participant && <><div className="sc-completion-count"><strong>{completed}<span> / {state.activities.length}</span></strong><span>{t('studentClass.progress')}</span></div><p className="sc-results-note">{t(c.releaseResults ? 'studentClass.resultsReady' : 'studentClass.resultsPending')}</p></>}
+          {ended && state.participant && <><div className="sc-completion-count"><strong>{completed}<span> / {required.length}</span></strong><span>{t('studentClass.progress')}</span></div><p className="sc-results-note">{t(c.releaseResults ? 'studentClass.resultsReady' : 'studentClass.resultsPending')}</p></>}
           {!cancelled && !ended && !state.participant && <><button className="sc-primary" disabled={busy || !connected || c.phase !== 'open' || joinClosed} onClick={() => void join()}>{t(busy ? 'studentClass.joining' : 'studentClass.checkIn')}<ArrowRight size={17} aria-hidden="true"/></button><small>{joinClosed ? t('studentClass.checkInLate') : t('studentClass.checkInBy', {time: time(c.joinUntil)})}</small></>}
           {!cancelled && !ended && state.participant && next && <p className="sc-next-wait">{t('studentClass.nextAt', {title: next.title, time: time(next.startsAt)})}</p>}
         </div>}

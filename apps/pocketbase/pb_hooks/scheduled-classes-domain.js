@@ -11,6 +11,24 @@ function safeUrl(value) {
   if (url && (!/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/i.test(url) || /[<>"\\]/.test(url))) fail('Tautan materi harus menggunakan HTTPS.');
   return url;
 }
+function worksheet(value, materials, kind) {
+  if (value === undefined || value === null) return undefined;
+  if (kind !== 'assignment' && kind !== 'exit_ticket') fail('Lembar kerja hanya untuk tugas atau refleksi.');
+  if (!value || !Array.isArray(value.items) || !value.items.length || value.items.length > 30) fail('Lembar kerja memerlukan 1–30 butir.');
+  const seen = {};
+  const items = value.items.map(item => {
+    if (!item || !/^[a-zA-Z0-9_-]{1,80}$/.test(item.id) || seen[item.id]) fail('ID butir lembar kerja tidak valid.');
+    seen[item.id] = true;
+    const prompt = text(item.prompt, 1000);
+    if (!prompt || !['select', 'text'].includes(item.type)) fail('Lengkapi pertanyaan lembar kerja.');
+    const options = item.type === 'select' && Array.isArray(item.options) ? item.options.map(o => text(o, 200)) : [];
+    if (item.type === 'select' && (options.length < 2 || options.length > 6 || options.some(o => !o) || new Set(options).size !== options.length)) fail('Pilihan lembar kerja tidak valid.');
+    return {id: item.id, prompt, type: item.type, ...(item.type === 'select' ? {options} : {})};
+  });
+  const sourceMaterialId = text(value.sourceMaterialId, 15);
+  if (sourceMaterialId && (!materials.includes(sourceMaterialId) || !Number.isInteger(value.sourcePage) || value.sourcePage < 1 || value.sourcePage > 10000)) fail('Pilih materi terlampir dan nomor halaman PDF yang valid.');
+  return {items, ...(sourceMaterialId ? {sourceMaterialId, sourcePage: value.sourcePage, sourceLabel: text(value.sourceLabel, 160)} : {})};
+}
 function validatePlan(body, now, publish) {
   const title = text(body.title, 200), instructions = text(body.instructions, 10000);
   if (!title) fail('Isi judul kelas.');
@@ -36,7 +54,8 @@ function validatePlan(body, now, publish) {
         return {id: 'q' + index, text: text(q.text, 2000), options, correctIndex: q.correctIndex, points, explanation: text(q.explanation, 2000),...evidence};
       });
     } else if (publish && !content && !url && !(a.kind==='material'&&(a.materialIds||[]).length)) fail('Isi materi atau instruksi kegiatan.');
-    return {position, kind: a.kind, title: name, minutes, required: a.required !== false, materialIds:ids(a.materialIds,8),cpmkIds:ids(a.cpmkIds,20),subCpmkIds:ids(a.subCpmkIds,20), snapshot: {content, url, questions}};
+    const materialIds = ids(a.materialIds,8), sheet = worksheet(a.worksheet, materialIds, a.kind);
+    return {position, kind: a.kind, title: name, minutes, required: a.required !== false, materialIds,cpmkIds:ids(a.cpmkIds,20),subCpmkIds:ids(a.subCpmkIds,20), snapshot: {content, url, questions, ...(sheet ? {worksheet: sheet} : {})}};
   });
   const endsAt = startsAt + activities.reduce((sum, a) => sum + a.minutes * 60000, 0);
   if (endsAt - startsAt > 24 * 3600000 || (publish && (joinUntil < startsAt || joinUntil >= endsAt))) fail('Batas masuk harus berada dalam jadwal kelas (maksimal 24 jam).');
@@ -64,9 +83,22 @@ function cleanAnswers(activity, input) {
     }
     return result;
   }
+  if (activity.snapshot.worksheet) {
+    const raw = input.responses;
+    if (raw !== undefined && (!raw || typeof raw !== 'object' || Array.isArray(raw))) fail('Jawaban lembar kerja tidak valid.');
+    const responses = {}, lines = [];
+    for (const item of activity.snapshot.worksheet.items) {
+      const value = raw && raw[item.id];
+      if (value === undefined || value === '') continue;
+      if (typeof value !== 'string' || value.length > 2000 || (item.type === 'select' && !item.options.includes(value))) fail('Jawaban butir lembar kerja tidak valid.');
+      responses[item.id] = value.trim(); lines.push(item.prompt + '\n' + value.trim());
+    }
+    return {responses, text: lines.join('\n\n')};
+  }
   return {text: text(input.text, 20000), acknowledged: input.acknowledged === true};
 }
 function result(activity, answers) {
+  if (activity.snapshot.worksheet) return {score: 0, complete: activity.snapshot.worksheet.items.every(item => Boolean(answers.responses && text(answers.responses[item.id], 2000)))};
   if (activity.kind === 'quiz') {
     const qs = activity.snapshot.questions, total = qs.reduce((s, q) => s + q.points, 0);
     const earned = qs.reduce((s, q) => s + (answers[q.id] === q.correctIndex ? q.points : 0), 0);

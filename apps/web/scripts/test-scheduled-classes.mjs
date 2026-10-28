@@ -151,5 +151,20 @@ try {
   const blocked = await api(endpoint, {sessionId: replacement.id, action: 'join'}, student.token);
   assert.equal(blocked.status, 400); assertions++;
   assert(cancelled.class.id); assertions++;
+  const worksheetMeeting = await create('class_sessions', {owner:teacher.id,course:course.id,title:'Structured worksheet',week:3,section:a.id});
+  const sheetCall = (user,action,body={}) => ok(endpoint,{sessionId:worksheetMeeting.id,action,...body},user.token);
+  let sheetState=await sheetCall(teacher,'schedule',{baseRevision:0,title:'Beim Arzt worksheet',startsAt:new Date(Date.now()+60000).toISOString(),joinUntil:new Date(Date.now()+90000).toISOString(),lateAfterMin:10,activities:[{kind:'assignment',title:'Matching and writing',minutes:2,required:true,content:'Answer each item.',worksheet:{items:[{id:'match',type:'select',prompt:'Choose A, B or C.',options:['A','B','C']},{id:'write',type:'text',prompt:'Write a sentence with müssen.'}]}}]});
+  const worksheetClass=sheetState.class.id, worksheetActivity=sheetState.activities[0].id;
+  assert.equal((await sheetCall(student,'state')).activities[0].worksheet,undefined);assertions++;
+  await ok(records('scheduled_classes')+'/'+worksheetClass,{startsAt:new Date(Date.now()-1000).toISOString(),endsAt:new Date(Date.now()+119000).toISOString(),joinUntil:new Date(Date.now()+60000).toISOString()},admin,'PATCH');
+  sheetState=await sheetCall(student,'join');assert.equal(sheetState.activities[0].worksheet.items.length,2);assertions++;
+  sheetState=await sheetCall(student,'saveAnswer',{activityId:worksheetActivity,baseRevision:0,requestId:randomUUID(),answers:{responses:{match:'A'},text:'Spoofed completion'}});
+  assert.equal(sheetState.attempts[0].complete,false);assert.equal(sheetState.attempts[0].answers.responses.match,'A');assertions+=2;
+  const invalidSelection=await api(endpoint,{sessionId:worksheetMeeting.id,action:'saveAnswer',activityId:worksheetActivity,baseRevision:1,requestId:randomUUID(),answers:{responses:{match:'D'}}},student.token);assert.equal(invalidSelection.status,400);assertions++;
+  if(binary){await stop();await launch();}
+  sheetState=await sheetCall(student,'state');assert.equal(sheetState.attempts[0].answers.responses.match,'A');assertions++;
+  sheetState=await sheetCall(student,'submit',{activityId:worksheetActivity,baseRevision:1,requestId:randomUUID(),answers:{responses:{match:'A',write:'Du musst Tee trinken.',unknown:'Injected'},text:'Ignore this'}});
+  assert.equal(sheetState.attempts[0].complete,true);assert.equal(sheetState.attempts[0].answers.responses.unknown,undefined);assert(sheetState.attempts[0].answers.text.includes('Du musst Tee trinken.'));assertions+=3;
+  const teacherSheet=await sheetCall(teacher,'state');assert.equal(teacherSheet.report.find(r=>r.student===student.id).suggestion,'present');assertions++;
   console.log(`Scheduled classroom integration passed (${assertions} checks, ${binary ? 'including backend restart recovery' : 'external local backend'}).`);
 } catch (error) {console.error(logs.slice(-6000)); throw error;} finally {if (binary) await stop();}

@@ -88,7 +88,7 @@ function view(app, c, ctx, user, now) {
       const {snapshot,materials,cpmks,subCpmks, ...meta} = a;
       if (owner) return {...meta, ...snapshot, materialIds:materials||[],cpmkIds:cpmks||[],subCpmkIds:subCpmks||[]};
       if (!participant || now < Date.parse(a.startsAt) || currentPhase === 'cancelled') return meta;
-      return {...meta, content: snapshot.content, url: snapshot.url, academic:snapshot.academic,sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
+      return {...meta, content: snapshot.content, url: snapshot.url, ...(snapshot.worksheet ? {worksheet:snapshot.worksheet}:{}), academic:snapshot.academic,sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
     }),
     attempts: safeAttempts,
     report: owner ? rosterReport(app, c, plan, participants, attempts) : [],

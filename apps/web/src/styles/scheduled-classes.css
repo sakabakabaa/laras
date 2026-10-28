@@ -38,3 +38,14 @@
 @media(max-width:1000px){.sc-student-grid{grid-template-columns:minmax(0,1fr) 250px}.sc-activity-plan{padding:18px}.sc-student .sc-activity-heading{flex-direction:column}.sc-student-clock{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;box-sizing:border-box}.sc-student-clock>strong{font-size:22px}}
 @media(max-width:760px){.sc-student{--sc-space:18px}.sc-student-grid{grid-template-columns:minmax(0,1fr);gap:0}.sc-student .sc-card{margin-bottom:16px}.sc-overview-top{align-items:flex-start;gap:12px}.sc-session-time strong{font-size:var(--r-type-label-size)}.sc-checkin-badge{font-size:var(--r-type-meta-size)}.sc-student-overview{padding:16px}.sc-session-empty{padding:20px 0}.sc-answer-footer .sc-actions{display:grid;grid-template-columns:1fr;width:100%}.sc-answer-footer .sc-primary{grid-row:1}.sc-session-empty>button{width:100%}.sc-workspace-top{margin-bottom:16px}.sc-student .sc-activity-heading{gap:14px}.sc-student .sc-questions legend{font-size:var(--r-type-body-size)}.sc-student .sc-fields textarea{font-size:max(16px,var(--r-type-body-size))}.sc-activity-plan .sc-student-timeline button{padding:14px 10px}.sc-student h2{scroll-margin-top:90px}}
 @media(max-width:760px){.sc-student-page>.sc-heading{position:relative;display:block;padding-top:4px}.sc-student-page>.sc-heading>div>small{display:block;max-width:calc(100% - 116px);font-size:11px;line-height:1.4;min-height:30px}.sc-student-page>.sc-heading h1{margin-top:6px;font-size:24px}.sc-student-page>.sc-heading>.sc-badge{position:absolute;top:0;right:0;padding:6px 10px;font-size:11px}.sc-student-page{padding-top:12px}}
+.sc-worksheet ol {padding-inline-start:1.5rem;display:grid;gap:1rem;}
+.sc-worksheet label,.sc-worksheet-editor label {display:grid;gap:.5rem;}
+.sc-worksheet select,.sc-worksheet textarea,.sc-worksheet-editor select,.sc-worksheet-editor textarea,.sc-worksheet-editor input:not([type=checkbox]) {width:100%;min-height:44px;box-sizing:border-box;font:inherit;}
+.sc-worksheet-source {margin-block:1rem;padding:1rem;border:1px solid var(--r-border);border-radius:12px;}
+.sc-worksheet-source summary {cursor:pointer;font-weight:600;margin-bottom:.75rem;}
+.sc-worksheet-source .quiz-source-pdf-preview {max-height:650px;overflow:auto;}
+.sc-worksheet-editor {padding-block:1rem;}
+.sc-worksheet-editor fieldset {margin-block:1rem;padding:1rem;border:1px solid var(--r-border);border-radius:12px;}
+.sc-audio-source {width:100%;min-width:0;padding:.75rem;}
+.sc-audio-source label {display:grid;gap:.5rem;}
+.sc-audio-source audio {width:100%;min-width:0;max-width:100%;}

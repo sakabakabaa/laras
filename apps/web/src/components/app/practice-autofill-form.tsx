@@ -581,6 +581,7 @@ export function PracticeAutofillForm({
 									</div>
 									{taskCfg.kind === 'quiz' && (
 										<QuizBuilder
+											courseId={courseId}
 											value={taskCfg.quiz}
 											onChange={(quiz) => setTaskCfg({ kind: 'quiz', quiz })}
 										/>

@@ -1676,6 +1676,8 @@ export function AssignmentForm({
 										</div>
 										{taskCfg?.kind === 'quiz' && (
 											<QuizBuilder
+												courseId={courseSel}
+												onSourceApplied={() => setStatus('draft')}
 												value={taskCfg.quiz}
 												onChange={(quiz) => setTaskCfg({ kind: 'quiz', quiz })}
 											/>

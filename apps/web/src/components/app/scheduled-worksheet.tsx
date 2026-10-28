@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useId,useState} from 'react';
 import type {PDFDocumentProxy} from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import pb from '@/lib/pocketbase-client';
@@ -7,8 +7,9 @@ import type {ScheduledActivity,ScheduledWorksheet} from '@/lib/scheduled-classes
 import {PDFPreview} from './task-builders/quiz-source-builder';
 
 export function WorksheetAnswers({sheet,responses,onChange}:{sheet:ScheduledWorksheet;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
-  const t=useT();
-  return <div className="sc-worksheet"><p>{t('worksheet.count',{answered:String(sheet.items.filter(i=>responses[i.id]?.trim()).length),total:String(sheet.items.length)})}</p><ol>{sheet.items.map(item=><li key={item.id}><label>{item.prompt}{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}{item.type==='select'?<select value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}><option value="">{t('worksheet.choose')}</option>{item.options?.map(option=><option key={option}>{option}</option>)}</select>:<textarea rows={3} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>}</label></li>)}</ol><p>{t('worksheet.reviewHint')}</p></div>;
+  const t=useT(),group=useId();
+  const prompt=(item:ScheduledWorksheet['items'][number])=><><span lang="de">{item.prompt}</span>{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}</>;
+  return <div className="sc-worksheet"><p>{t('worksheet.count',{answered:String(sheet.items.filter(i=>responses[i.id]?.trim()).length),total:String(sheet.items.length)})}</p><ol>{sheet.items.map(item=><li key={item.id}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:<label>{prompt(item)}<textarea rows={3} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/></label>}</li>)}</ol><p>{t('worksheet.reviewHint')}</p></div>;
 }
 
 export function WorksheetSource({activity}:{activity:ScheduledActivity}){

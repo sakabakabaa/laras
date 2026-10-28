@@ -1,3 +1,4 @@
+import {scheduledAnswerComplete} from '@/lib/scheduled-answer-complete';
 import {ScheduledLessonView} from './scheduled-lesson';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, CheckCircle2, Clock3, ExternalLink, FileText, ListChecks, LockKeyhole, MessageSquare, ShieldCheck } from 'lucide-react';
@@ -11,7 +12,7 @@ type Answers = Record<string, unknown>;
 type PendingSave = {requestId: string; baseRevision: number; answers: Answers; submit: boolean};
 function storageKey(classId: string, activityId: string) {return `laras:scheduled:${pb.authStore.record?.id}:${classId}:${activityId}`;}
 
-function ActivityAnswer({activity, attempt, state, now, onState}: {activity: ScheduledActivity; attempt?: ScheduledAttempt; state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void}) {
+function ActivityAnswer({activity, attempt, state, now, onState,onNext}: {activity: ScheduledActivity; attempt?: ScheduledAttempt; state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void;onNext:(s:ScheduledClassState)=>void}) {
   const t = useT();
   const initial = attempt?.answers || {};
   const [answers, setAnswers] = useState<Answers>(initial), [dirty, setDirty] = useState(false), [busy, setBusy] = useState(false);
@@ -51,6 +52,7 @@ function ActivityAnswer({activity, attempt, state, now, onState}: {activity: Sch
   };
   const save = async (submit: boolean) => {
     if (saving.current || conflict || final || (!open && !pending.current)) return;
+    if(submit&&!scheduledAnswerComplete(activity,latest.current)){setError(t('studentClass.completeFirst'));return;}
     saving.current = true; setBusy(true); setError('');
     let request = pending.current || {requestId: crypto.randomUUID(), baseRevision: revision.current, answers: {...latest.current}, submit};
     pending.current = request; persist();
@@ -71,7 +73,7 @@ function ActivityAnswer({activity, attempt, state, now, onState}: {activity: Sch
         changed.current = false; setDirty(false);
         try {localStorage.removeItem(storage);} catch { /* Server copy is authoritative. */ }
       } else persist();
-      setMessage(saved?.status === 'draft' ? t('studentClass.saved') : t('studentClass.submitted')); onState(next);
+      setMessage(saved?.status === 'draft' ? t('studentClass.saved') : t('studentClass.submitted')); onState(next);if(submit&&saved&&saved.status!=='draft')onNext(next);
     } catch (e) {
       const msg = (e as Error).message; setError(msg); setMessage(t('studentClass.unconfirmed'));
       if (/tab lain|Jawaban berubah/.test(msg)) {
@@ -103,19 +105,19 @@ function ActivityAnswer({activity, attempt, state, now, onState}: {activity: Sch
       {activity.kind === 'quiz' ? <ol className="sc-questions">{activity.questions?.map((q, questionIndex) => <li key={q.id}><fieldset><legend><span className="sc-question-number">{t('studentClass.question', {number: String(questionIndex + 1)})}</span>{q.text}</legend>{q.options.map((option, index) => <label className="sc-option" key={index}><input type="radio" name={`${activity.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => edit({[q.id]: index})}/><span>{option}</span></label>)}</fieldset></li>)}</ol> : activity.kind === 'material' ? <label className="sc-check"><input type="checkbox" checked={answers.acknowledged === true} onChange={e => edit({acknowledged: e.target.checked})}/>{t('studentClass.acknowledge')}</label> : activity.worksheet ? <WorksheetAnswers sheet={activity.worksheet} responses={(answers.responses||{}) as Record<string,string>} onChange={responses=>edit({responses})}/> : <label>{t('studentClass.answer')}<textarea placeholder={t('studentClass.answerHint')} rows={8} maxLength={20000} value={String(answers.text || '')} onChange={e => edit({text: e.target.value})}/><span className="sc-character-count">{t('studentClass.characters', {count: String(String(answers.text || '').length)})}</span></label>}
     </fieldset>
     <div className={`sc-save-status ${dirty ? 'is-pending' : final || attempt ? 'is-saved' : ''}`} role="status"><ShieldCheck size={17} aria-hidden="true"/><span>{busy ? t('studentClass.saving') : final ? attempt?.status === 'expired' ? t('studentClass.expired') : t('studentClass.submitted') : message || t('studentClass.initial')}</span></div>
-    {!final && <div className="sc-answer-footer"><p>{t('studentClass.saveHint')}</p><div className="sc-actions"><button disabled={busy || conflict || (!open && !pending.current)} onClick={() => void save(false)}>{t('studentClass.save')}</button><button className="sc-primary" disabled={busy || conflict || !open} onClick={() => {if (window.confirm(t('studentClass.confirmSubmit'))) void save(true);}}>{t(activity.kind === 'material' ? 'studentClass.readSubmit' : 'studentClass.submit')}<ArrowRight size={16} aria-hidden="true"/></button></div></div>}
+    {!final && <div className="sc-answer-footer"><p>{t('studentClass.nextHint')}</p><div className="sc-actions"><button disabled={busy || conflict || (!open && !pending.current)} onClick={() => void save(false)}>{t('studentClass.saveShort')}</button><button className="sc-primary" disabled={busy || conflict || !open} onClick={() => void save(true)}>{t('studentClass.nextShort')}<ArrowRight size={16} aria-hidden="true"/></button></div></div>}
     {attempt?.score !== undefined && final && activity.kind === 'quiz' && <section className="sc-result"><h4>{t('studentClass.score')}: {attempt.score} / 100</h4>{activity.questions?.map(q => <div key={q.id}><p>{q.text}</p><p>{t('studentClass.correct')}: {q.options[q.correctIndex]}</p>{q.explanation && <p>{q.explanation}</p>}</div>)}</section>}
   </div>;
 }
 
 const activityIcons = {material: BookOpen, quiz: ListChecks, assignment: FileText, exit_ticket: MessageSquare};
 
-function PreviewAnswer({activity}:{activity:ScheduledActivity}){
-  const t=useT(),[answers,setAnswers]=useState<Answers>({});
-  return <div className="sc-answer"><fieldset className="sc-fields">{activity.worksheet?<WorksheetAnswers sheet={activity.worksheet} responses={(answers.responses||{}) as Record<string,string>} onChange={responses=>setAnswers({responses})}/>:activity.kind==='quiz'?<ol className="sc-questions">{activity.questions?.map(q=><li key={q.id}><fieldset><legend>{q.text}</legend>{q.options.map((option,i)=><label className="sc-option" key={i}><input type="radio" name={'preview-'+q.id} checked={answers[q.id]===i} onChange={()=>setAnswers(a=>({...a,[q.id]:i}))}/><span>{option}</span></label>)}</fieldset></li>)}</ol>:activity.kind==='material'?<label className="sc-check"><input type="checkbox" checked={answers.acknowledged===true} onChange={e=>setAnswers({acknowledged:e.target.checked})}/>{t('studentClass.acknowledge')}</label>:<label>{t('studentClass.answer')}<textarea rows={8} maxLength={20000} value={String(answers.text||'')} onChange={e=>setAnswers({text:e.target.value})}/></label>}</fieldset><p role="status">{t('scheduledPreview.localOnly')}</p><div className="sc-actions"><button disabled>{t('studentClass.save')}</button><button disabled className="sc-primary">{t('studentClass.submit')}</button></div></div>;
+function PreviewAnswer({activity,onNext,canNext}:{activity:ScheduledActivity;onNext?:()=>void;canNext:boolean}){
+  const t=useT(),[answers,setAnswers]=useState<Answers>({}),[saved,setSaved]=useState(false);
+  return <div className="sc-answer"><fieldset className="sc-fields">{activity.worksheet?<WorksheetAnswers sheet={activity.worksheet} responses={(answers.responses||{}) as Record<string,string>} onChange={responses=>setAnswers({responses})}/>:activity.kind==='quiz'?<ol className="sc-questions">{activity.questions?.map(q=><li key={q.id}><fieldset><legend>{q.text}</legend>{q.options.map((option,i)=><label className="sc-option" key={i}><input type="radio" name={'preview-'+q.id} checked={answers[q.id]===i} onChange={()=>setAnswers(a=>({...a,[q.id]:i}))}/><span>{option}</span></label>)}</fieldset></li>)}</ol>:activity.kind==='material'?<label className="sc-check"><input type="checkbox" checked={answers.acknowledged===true} onChange={e=>setAnswers({acknowledged:e.target.checked})}/>{t('studentClass.acknowledge')}</label>:<label>{t('studentClass.answer')}<textarea rows={8} maxLength={20000} value={String(answers.text||'')} onChange={e=>setAnswers({text:e.target.value})}/></label>}</fieldset><p role="status">{t('scheduledPreview.localOnly')}{saved&&` · ${t('studentClass.previewSaved')}`}</p><div className="sc-actions"><button onClick={()=>setSaved(true)}>{t('studentClass.saveShort')}</button><button disabled={!canNext} onClick={onNext} className="sc-primary">{t('studentClass.nextShort')}</button></div></div>;
 }
 
-export function ScheduledClassroom({state, now, onState, connected,preview=false}: {state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void; connected: boolean;preview?:boolean}) {
+export function ScheduledClassroom({state, now, onState, connected,preview=false,onPreviewNext}: {state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void; connected: boolean;preview?:boolean;onPreviewNext?:(activityId:string)=>void}) {
   const t = useT(), language = useLanguage();
   const date = (value: string) => new Date(value).toLocaleString(localeOf(language), {timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short'}) + ' WIB';
   const time = (value: string) => new Date(value).toLocaleTimeString(localeOf(language), {timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit'}) + ' WIB';
@@ -165,8 +167,7 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
           <div className="sc-activity-content">{activity.lesson?<ScheduledLessonView key={activity.id} lesson={activity.lesson}/>:<div className="sc-prose">{activity.content}</div>}</div>
           <WorksheetSource activity={activity}/>
           {(activity.url || Boolean(activity.sources?.some(s=>!s.url||!/\.(jpe?g|png|webp)$/i.test(s.url)))) && <section className="sc-resources"><h3>{t('studentClass.resources')}</h3>{activity.url && <a href={activity.url} target="_blank" rel="noreferrer"><BookOpen size={18} aria-hidden="true"/><span>{t('studentClass.openMaterial')}</span><ExternalLink size={16} aria-hidden="true"/></a>}{activity.sources?.filter(s=>!s.url||!/\.(jpe?g|png|webp)$/i.test(s.url)).map((source, i) => source.available && source.url && /\.(mp3|wav|ogg|m4a)$/i.test(source.url) ? <div className="sc-audio-source" key={i}><label>{source.title.replace(/.*Audio_(\d+)-0*(\d+)$/i,(_,disc,track)=>`Audio ${disc}.${Number(track)}`)}<audio aria-label={source.title} controls preload="none" src={source.url}/></label></div> : source.available && source.url ? <a key={i} href={source.url} target="_blank" rel="noreferrer"><FileText size={18} aria-hidden="true"/><span>{source.title}<small>{t('studentClass.version', {version: String(source.version)})}</small></span><ExternalLink size={16} aria-hidden="true"/></a> : <p key={i}>{source.title} — {t('studentClass.unavailable')}</p>)}</section>}
-          {activity.academic && Boolean(activity.academic.cpmks.length + activity.academic.subCpmks.length) && <details className="sc-learning-outcomes"><summary>{t('studentClass.outcomes')}</summary><ul>{[...activity.academic.cpmks, ...activity.academic.subCpmks].map(outcome => <li key={outcome.id}>{outcome.code}: {outcome.description}</li>)}</ul></details>}
-          {preview?<PreviewAnswer key={activity.id} activity={activity}/>:<ActivityAnswer key={activity.id} activity={activity} attempt={state.attempts.find(t => t.activity === activity.id)} state={state} now={now} onState={onState}/>}
+          {preview?<PreviewAnswer key={activity.id} activity={activity} onNext={()=>onPreviewNext?.(activity.id)} canNext={state.activities.findIndex(a=>a.id===activity.id)<state.activities.length-1}/>:<ActivityAnswer key={activity.id} activity={activity} attempt={state.attempts.find(t => t.activity === activity.id)} state={state} now={now} onState={onState} onNext={nextState=>{const i=nextState.activities.findIndex(a=>a.id===activity.id);choose(nextState.activities[i+1]?.id||activity.id);}}/>}
           {!ended && next && <div className="sc-up-next"><span>{t('studentClass.next')}</span><strong>{t('studentClass.nextAt', {title: next.title, time: time(next.startsAt)})}</strong></div>}
         </> : <div className="sc-session-empty">
           <div className={`sc-empty-icon ${ended ? 'is-finished' : ''}`}>{cancelled ? <LockKeyhole size={30} aria-hidden="true"/> : ended ? <CheckCircle2 size={30} aria-hidden="true"/> : <Clock3 size={30} aria-hidden="true"/>}</div>

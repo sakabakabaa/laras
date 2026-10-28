@@ -1,0 +1,6 @@
+import{describe,expect,it}from'vitest';import{scheduledAnswerComplete}from'../src/lib/scheduled-answer-complete';import type{ScheduledActivity}from'../src/lib/scheduled-classes';
+const base={id:'a',kind:'assignment',worksheet:{items:[{id:'match',type:'select',options:['A','B','C'],prompt:'Match'},{id:'write',type:'text',prompt:'Write'}]}} as ScheduledActivity;
+describe('finishing a timed activity',()=>{
+ it('allows partial drafts but requires every valid response before next',()=>{expect(scheduledAnswerComplete(base,{responses:{match:'A'}})).toBe(false);expect(scheduledAnswerComplete(base,{responses:{match:'D',write:'Complete'}})).toBe(false);expect(scheduledAnswerComplete(base,{responses:{match:'A',write:'  '}})).toBe(false);expect(scheduledAnswerComplete(base,{responses:{match:'A',write:'Du musst Tee trinken.'}})).toBe(true);});
+ it('requires acknowledgment for material and accepts quiz option zero',()=>{expect(scheduledAnswerComplete({...base,kind:'material'},{})).toBe(false);expect(scheduledAnswerComplete({...base,kind:'material'},{acknowledged:true})).toBe(true);const quiz={...base,kind:'quiz',questions:[{id:'q',options:['A','B']}]} as ScheduledActivity;expect(scheduledAnswerComplete(quiz,{q:0})).toBe(true);expect(scheduledAnswerComplete(quiz,{q:2})).toBe(false);});
+});

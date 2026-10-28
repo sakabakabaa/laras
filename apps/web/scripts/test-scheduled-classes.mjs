@@ -87,7 +87,7 @@ try {
   await retime(15000);
   s = await call(student, 'join'); const joined = s.participant.checkedInAt;
   assert.equal(s.activities[0].content, 'Private scheduled material'); assert(!s.activities[1].questions); assertions += 2;
-  assert.equal(s.activities[0].sources.length,1);assert.equal(s.activities[0].sources[0].title,'Student handout');assert.equal(s.activities[0].academic.cpmks[0].id,outcome.id);assert(!JSON.stringify(s).includes('PRIVATE FACULTY REFERENCE'));assertions+=4;
+  assert.equal(s.activities[0].sources.length,1);assert.equal(s.activities[0].sources[0].title,'Student handout');assert.equal(s.activities[0].academic,undefined);assert(!JSON.stringify(s).includes('PRIVATE FACULTY REFERENCE'));assertions+=4;
   await call(second, 'join');
   await ok(records('scheduled_classes') + '/' + classId, {joinUntil: new Date(Date.now() - 1000).toISOString()}, admin, 'PATCH');
   await denied(noShow, 'join');

@@ -1,0 +1,20 @@
+/* Only the sentence bank becomes a deck. Placed cards retain their compact layout. */
+.sc-match-bank .sc-match-stack.sc-match-deck{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;max-height:none;overflow:visible;padding:12px 12px 26px;isolation:isolate}
+.sc-match-deck-front{position:relative;width:100%;max-width:640px;min-width:0;z-index:0}
+.sc-match-deck-front::before,.sc-match-deck-front::after{content:"";position:absolute;inset:0;border:1px solid var(--r-border);border-radius:22px;background:var(--r-surface);pointer-events:none;z-index:-1;box-shadow:0 6px 18px rgb(0 0 0 / 4%)}
+.sc-match-deck-front::before{transform:translateY(14px) rotate(-1.5deg) scale(.97)}
+.sc-match-deck-front::after{transform:translateY(7px) rotate(1deg) scale(.985)}
+.sc-page .sc-card-matching .sc-match-card.sc-match-deck-card{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:28px;width:100%;min-height:240px;padding:clamp(24px,4vw,36px);border:1px solid var(--r-border);border-radius:22px;background:var(--r-surface);box-shadow:0 12px 30px rgb(0 0 0 / 7%);font-weight:500;line-height:1.4;text-align:left;white-space:normal;overflow:visible;touch-action:none}
+.sc-match-deck-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--r-ink-2)}
+.sc-match-deck-meta>svg{flex-shrink:0;opacity:.6}
+.sc-match-deck-number{padding:5px 14px;border:1px solid var(--r-border);border-radius:999px;background:var(--r-surface-2);font-size:14px;line-height:1.4;font-weight:700;font-variant-numeric:tabular-nums;color:var(--r-ink)}
+.sc-match-deck-copy{display:block;min-width:0;width:100%}
+.sc-match-deck-copy>[lang=de]{display:block;font-size:clamp(23px,2.5vw,34px);font-weight:700;line-height:1.3;letter-spacing:-.02em;overflow-wrap:anywhere}
+.sc-page .sc-card-matching .sc-match-deck-copy>.sl-translation{display:block;margin-top:18px;font-size:clamp(15px,1.5vw,19px);font-weight:400;line-height:1.6;color:var(--r-ink-2);overflow-wrap:anywhere}
+.sc-page .sc-card-matching .sc-match-card.sc-match-deck-card.is-picked{background:var(--r-surface);border-color:var(--r-red-600);box-shadow:0 0 0 2px var(--r-red-tint-soft),0 12px 30px rgb(0 0 0 / 7%)}
+.sc-card-matching .sc-match-card{touch-action:none}
+.sc-card-matching .sc-match-card.is-touch-dragging{z-index:10;cursor:grabbing;box-shadow:0 18px 40px rgb(0 0 0 / 15%)}
+.sc-match-target h3[role=button]{cursor:pointer;border-radius:5px}
+.sc-match-target h3[role=button]:focus-visible{outline:2px solid var(--r-red-600);outline-offset:5px}
+.sc-match-target h3[aria-disabled=true]{cursor:default}
+@media(max-width:600px){.sc-match-bank .sc-match-stack.sc-match-deck{padding:10px 5px 22px}.sc-page .sc-card-matching .sc-match-card.sc-match-deck-card{min-height:230px;padding:24px;gap:24px;border-radius:18px}.sc-match-deck-front::before,.sc-match-deck-front::after{border-radius:18px}.sc-match-deck-copy>[lang=de]{font-size:24px}.sc-page .sc-card-matching .sc-match-deck-copy>.sl-translation{font-size:16px;margin-top:16px}}

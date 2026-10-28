@@ -4,12 +4,21 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import pb from '@/lib/pocketbase-client';
 import {useT} from '@/lib/i18n';
 import type {ScheduledActivity,ScheduledWorksheet} from '@/lib/scheduled-classes';
+import {singleGap,worksheetBlocks,writingRows} from '@/lib/worksheet-layout';
 import {PDFPreview} from './task-builders/quiz-source-builder';
 
 export function WorksheetAnswers({sheet,responses,onChange}:{sheet:ScheduledWorksheet;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
   const group=useId();
   const prompt=(item:ScheduledWorksheet['items'][number])=><><span lang="de">{item.prompt}</span>{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}</>;
-  return <div className="sc-worksheet"><ol>{sheet.items.map(item=><li key={item.id}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:<label>{prompt(item)}<textarea rows={3} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/></label>}</li>)}</ol></div>;
+  const gapInput=(item:ScheduledWorksheet['items'][number],number?:string)=><input className="sc-gap-input" type="text" aria-label={number?`Lücke ${number}: ${item.prompt}`:item.prompt} autoComplete="off" maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>;
+  return <div className="sc-worksheet"><ol>{worksheetBlocks(sheet.items).map(block=>{
+    const item=block.items[0];
+    if(block.context&&block.gaps)return <li key={item.id} className="sc-gap-paragraph"><strong className="sc-gap-section">{block.section}</strong><p lang="de">{block.context.split(/(\(\d+\)\s*_{3,})/g).map((part,i)=>{
+      const number=part.match(/^\((\d+)\)\s*_{3,}$/)?.[1],gap=block.gaps!.find(g=>g.number===number);
+      return gap?<span key={i} className="sc-inline-gap"><span>({number}) </span>{gapInput(gap.item,number)}</span>:part;
+    })}</p></li>;
+    return <li key={item.id}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:singleGap(item)?<p className="sc-gap-sentence" lang="de">{item.prompt.split(/_{3,}/).map((part,i)=><span key={i}>{i>0&&gapInput(item)}{part}</span>)}</p>:<label>{prompt(item)}<textarea rows={writingRows(item)} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/></label>}</li>;
+  })}</ol></div>;
 }
 
 export function WorksheetSource({activity}:{activity:ScheduledActivity}){

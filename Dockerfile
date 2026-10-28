@@ -23,6 +23,10 @@ EXPOSE 3000
 CMD ["npm", "run", "start", "--prefix", "apps/web"]
 
 FROM debian:bookworm-slim AS pocketbase
+# PocketBase needs trusted root certificates for SMTP TLS and HTTPS requests.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY apps/pocketbase/pocketbase ./pocketbase
 COPY apps/pocketbase/pb_migrations ./pb_migrations

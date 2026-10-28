@@ -13,7 +13,8 @@ export function WorksheetAnswers({sheet,responses,onChange}:{sheet:ScheduledWork
 
 export function WorksheetSource({activity}:{activity:ScheduledActivity}){
   const reference=activity.worksheet?.sourceMaterialId?activity.worksheet:activity.lesson?.source;
-  const t=useT(),source=activity.sources?.find(s=>s.id===reference?.sourceMaterialId&&s.available&&s.url),page=reference?.sourcePage;
+  const sources=(activity.sources||[]).map(source=>({...source,url:source.url||(source.filename&&source.id?`/hcgi/platform/api/files/file_library/${source.id}/${encodeURIComponent(source.filename)}`:undefined)}));
+  const t=useT(),source=sources.find(s=>s.id===reference?.sourceMaterialId&&s.available&&s.url),page=reference?.sourcePage;
   const [document,setDocument]=useState<PDFDocumentProxy|null>(null),[error,setError]=useState(false);
   useEffect(()=>{
     if(!source?.url||!page||!source.url.toLowerCase().endsWith('.pdf'))return;
@@ -22,7 +23,7 @@ export function WorksheetSource({activity}:{activity:ScheduledActivity}){
     void import('pdfjs-dist').then(pdf=>{if(cancelled)return;pdf.GlobalWorkerOptions.workerSrc=workerUrl;task=pdf.getDocument({url:source.url!,httpHeaders:{Authorization:pb.authStore.token}});return task.promise;}).then(doc=>{if(!cancelled&&doc){if(page>doc.numPages){setError(true);return;}setDocument(doc);}}).catch(()=>{if(!cancelled)setError(true);});
     return()=>{cancelled=true;void task?.destroy();};
   },[source?.url,page]);
-  const images=activity.sources?.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp)$/i.test(s.url))||[];
+  const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp)$/i.test(s.url));
   if(reference?.sourceMaterialId&&images.some(image=>image.id===reference.sourceMaterialId)){
     return <section className="sc-picture-reference" aria-label="Bilder · Gambar"><h3>Bilder · Gambar</h3>{reference.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className="sc-patient-figures">{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>;
   }

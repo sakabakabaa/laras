@@ -104,8 +104,8 @@ migrate(
 				name: 'grade_release_items',
 				// Owner-scoped view only: students read released values through
 				// the summary endpoint, which returns their own item exclusively.
-				listRule: "@request.auth.id != '' && owner = @request.auth.id",
-				viewRule: "@request.auth.id != '' && owner = @request.auth.id",
+				listRule: "@request.auth.id != '' && student = @request.auth.id",
+				viewRule: "@request.auth.id != '' && student = @request.auth.id",
 				createRule: null,
 				updateRule: null,
 				deleteRule: null,

@@ -4,3 +4,5 @@
 .sl-target{font-weight:700;text-decoration:underline;text-decoration-color:var(--r-red-600);text-decoration-thickness:2px;text-underline-offset:4px}
 
 .sl-scene-select{display:none}@media(max-width:600px){.sl-tabs{display:none}.sl-scene-select{display:grid;gap:8px;margin-block:20px}.sl-scene-select select{width:100%;min-width:0;min-height:44px;box-sizing:border-box;border:1px solid var(--r-border);border-radius:8px;padding:10px;font:inherit;color:var(--r-ink);background:var(--r-surface)}}
+
+.sc-picture-reference{margin-block:24px;padding:20px;background:var(--r-surface-2);border:1px solid var(--r-border);border-radius:14px}.sc-patient-figures{display:grid;grid-template-columns:1fr 1fr 2fr;align-items:end;gap:12px}.sc-patient-figures figure{margin:0;min-width:0;text-align:center}.sc-patient-figures a{display:flex;align-items:end;justify-content:center}.sc-patient-figures img{max-width:100%;max-height:270px;object-fit:contain;border-radius:8px}.sc-patient-figures figcaption{font-size:var(--r-type-card-size);font-weight:700;margin-top:12px}@media(max-width:600px){.sc-picture-reference{padding:12px}.sc-patient-figures{gap:8px}}

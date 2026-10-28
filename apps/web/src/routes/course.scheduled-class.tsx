@@ -5,11 +5,12 @@ import { ScheduledClassEditor } from '@/components/app/scheduled-class-editor';
 import { ScheduledClassroom } from '@/components/app/scheduled-classroom';
 import { ScheduledClassReport } from '@/components/app/scheduled-class-report';
 import '@/styles/scheduled-classes.css';
+import { useT } from '@/lib/i18n';
 
 export function meta() { return [{title: 'Kelas terjadwal | LARAS'}]; }
-const PHASE_LABELS: Record<string, string> = {draft: 'Draf', scheduled: 'Terjadwal', open: 'Sedang berlangsung', closed: 'Selesai', reviewed: 'Sudah ditinjau', cancelled: 'Dibatalkan'};
 
 export default function ScheduledClassPage() {
+  const t = useT();
   const {courseId = '', sessionId = ''} = useParams();
   const [state, setState] = useState<ScheduledClassState | null>(null);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [connected, setConnected] = useState(true);
@@ -20,7 +21,7 @@ export default function ScheduledClassPage() {
     if (next.session.id !== scope.current) return;
     if (Date.parse(next.serverNow) < lastResponse.current) return;
     lastResponse.current = Date.parse(next.serverNow);
-    setState(next); setConnected(true); setClock({server: Date.parse(next.serverNow), local: performance.now()}); setElapsed(0);
+    setState(next); setConnected(true); setError(''); setClock({server: Date.parse(next.serverNow), local: performance.now()}); setElapsed(0);
   }, []);
   const refresh = useCallback(async () => {
     try { accept(await scheduledRequest(sessionId, 'state')); }
@@ -50,12 +51,12 @@ export default function ScheduledClassPage() {
     catch (e) {setError((e as Error).message);}
     finally {setBusy(false);}
   };
-  return <div className="sc-page">
-    <Link className="ld-text-btn" to={`/app/courses/${courseId}/mata-kuliah`}>← Pertemuan</Link>
-    <header className="sc-heading"><div><small>KELAS TERJADWAL</small><h1>{state?.class?.title || state?.session.title || 'Kelas terjadwal'}</h1><p>Pembelajaran mandiri pada waktu kelas, dengan kegiatan dan kehadiran tercatat.</p></div>{state?.class && <span className={`sc-badge sc-${state.class.phase}`}>{PHASE_LABELS[state.class.phase]}</span>}</header>
-    {error && <div className="sc-alert" role="alert">{error} <button onClick={() => void refresh()}>Muat ulang</button></div>}
-    {!connected && <p role="status">Koneksi terputus. Periksa status penyimpanan sebelum meninggalkan halaman.</p>}
-    {!state ? <p role="status">Memuat kelas…</p> : state.owner ? <>
+  return <div className={`sc-page${state && !state.owner ? ' sc-student-page' : ''}`}>
+    <Link className="ld-text-btn" to={`/app/courses/${courseId}/mata-kuliah`}>← {t('studentClass.back')}</Link>
+    <header className="sc-heading"><div><small>{t('studentClass.eyebrow')}</small><h1>{state?.class?.title || state?.session.title || t('studentClass.title')}</h1><p>{t('studentClass.subtitle')}</p></div>{state?.class && <span className={`sc-badge sc-${state.class.phase}`}>{t(`studentClass.${state.class.phase}`)}</span>}</header>
+    {error && <div className="sc-alert" role="alert">{error} <button onClick={() => void refresh()}>{t('studentClass.reload')}</button></div>}
+    {!connected && <p role="status">{t('studentClass.offline')}</p>}
+    {!state ? <p role="status">{t('studentClass.loading')}</p> : state.owner ? <>
       {(!state.class || state.class.status === 'draft') ? <ScheduledClassEditor state={state} onSaved={accept}/> : <>
         <section className="sc-card"><h2>Pelaksanaan otomatis</h2><p>{wibLabel(state.class.startsAt)} — {wibLabel(state.class.endsAt)}</p><p className="sc-prose">{state.class.instructions}</p><p>Jadwal dan jawaban tersimpan di server. Dosen tidak perlu membuka halaman ini selama kelas berlangsung.</p>
           <div className="sc-actions">{['scheduled', 'open'].includes(state.class.phase) && <button disabled={busy} onClick={() => {if (window.confirm('Batalkan kelas ini? Mahasiswa tidak dapat melanjutkan kegiatan.')) void act('cancel');}}>Batalkan kelas</button>}

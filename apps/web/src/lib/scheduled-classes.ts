@@ -38,6 +38,7 @@ export type ScheduledClass = {
   lateAfterMin: number; revision: number; releaseResults: boolean;
   status: 'draft' | 'scheduled' | 'closed' | 'reviewed' | 'cancelled';
   phase: 'draft' | 'scheduled' | 'open' | 'closed' | 'reviewed' | 'cancelled';
+  resultsReady?: boolean;
 };
 export type ClassReportRow = {
   roster: string; student: string; name: string; nim: string; checkedInAt: string; lastSeenAt: string;

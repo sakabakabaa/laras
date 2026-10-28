@@ -3,6 +3,7 @@ import {Sparkles} from 'lucide-react';
 import {useT} from '@/lib/i18n';
 import {scheduledAiRequest} from '@/lib/scheduled-class-ai-client';
 import type {ScheduledAcademicContext,ScheduledAiDraft,ScheduledAiProposal} from '@/lib/scheduled-class-ai';
+import {ScheduledMaterialPicker} from './scheduled-material-picker';
 
 export function AcademicChoices({label,options,value,onChange}:{label:string;options:{id:string;title:string}[];value:string[];onChange:(ids:string[])=>void}){
  return <label>{label}<select aria-label={label} multiple size={Math.min(4,Math.max(2,options.length))} value={value} onChange={e=>onChange(Array.from(e.target.selectedOptions,o=>o.value))}>{options.map(o=><option key={o.id} value={o.id}>{o.title}</option>)}</select><small>Ctrl / ⌘ untuk memilih beberapa.</small></label>;
@@ -16,8 +17,7 @@ export function ScheduledClassAiPanel({sessionId,onContext,onApply,focusOnLoad=f
  const generate=async()=>{setBusy(true);setError('');setProposal(null);try{const {proposal:p}=await scheduledAiRequest<{proposal:ScheduledAiProposal}>(sessionId,'generate',{materialIds,cpmkIds,subCpmkIds,minutes,instruction,includeQuiz:quiz});setProposal(p);}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
  return <section className="sc-card sc-ai-creator" id="sc-ai-creator"><h2 ref={heading} tabIndex={-1}><Sparkles size={22} aria-hidden="true"/>{t('sessionAi.title')}</h2><p className="sc-ai-intro">{t('sessionAi.editorBody')}</p><p className="sc-ai-steps">{t('sessionAi.steps')}</p>{loading&&<p>Memuat konteks pertemuan…</p>}{error&&<p role="alert" className="sc-alert">{error}</p>}{context&&<>
  <p><strong>{context.session.topic||context.session.title}</strong></p><p className="sc-prose">{context.session.learningIndicator}</p><p className="sc-prose">{context.session.learningMaterial}</p>{context.lessonPlan&&<p>Rencana pembelajaran tersimpan: {context.lessonPlan.title}. AI juga mempertimbangkan tujuan dan kegiatannya.</p>}
- <fieldset disabled={busy} className="sc-fields"><div className="sc-grid">
- <AcademicChoices label="Materi untuk AI (maksimal 4)" options={context.materials.filter(m=>m.aiReady).map(m=>({id:m.id,title:`${m.title} · v${m.version}${m.access==='student'?'':' · hanya dosen'}`}))} value={materialIds} onChange={setMaterials}/>
+ <fieldset disabled={busy} className="sc-fields"><ScheduledMaterialPicker materials={context.materials} sessionId={sessionId} value={materialIds} onChange={setMaterials} ai/><div className="sc-grid">
  <AcademicChoices label="CPMK sasaran" options={context.cpmks.map(c=>({id:c.id,title:`${c.code} — ${c.description}`}))} value={cpmkIds} onChange={setCpmks}/>
  <AcademicChoices label="Sub-CPMK sasaran" options={context.subCpmks.map(c=>({id:c.id,title:`${c.code} — ${c.description}`}))} value={subCpmkIds} onChange={setSubs}/>
  <label>Total durasi (menit)<input type="number" min={10} max={240} value={minutes} onChange={e=>setMinutes(Number(e.target.value))}/></label></div>

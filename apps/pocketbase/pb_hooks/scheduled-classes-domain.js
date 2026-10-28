@@ -257,7 +257,7 @@ function result(activity, answers) {
       return sum + (entry.accepted.some(value => normalizeAnswer(value) === normalized) ? entry.points : 0);
     }, 0);
     return {
-      score: total ? Math.round(earned / total * 10000) / 100 : 0,
+      ...(total ? {score: Math.round(earned / total * 10000) / 100} : {}),
       complete: sheet.items.every(item => Boolean(answers.responses && text(answers.responses[item.id], 2000)))
     };
   }

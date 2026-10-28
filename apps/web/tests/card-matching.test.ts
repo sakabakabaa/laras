@@ -25,7 +25,7 @@ describe('image matching with existing response IDs',()=>{
   });
   it('renders saved answers under their destinations once, with unanswered cards in the stack',()=>{
     const a=activity(),markup=renderToStaticMarkup(createElement(ScheduledCardMatching,{sheet:a.worksheet!,targets:cardMatchingTargets(a),responses:{one:'A'},onChange:()=>{}}));
-    const bank=markup.split('data-match-target="A"')[0],targetA=markup.split('data-match-target="A"')[1].split('data-match-target="B"')[0];
+    const bank=markup.split('class="sc-match-bank ')[1].split('</section>')[0],targetA=markup.split('data-match-target="A"')[1].split('data-match-target="B"')[0];
     expect(bank).toContain('data-card-id="two"');expect(bank).not.toContain('data-card-id="one"');expect(targetA).toContain('data-card-id="one"');expect(markup.match(/data-card-id="one"/g)).toHaveLength(1);
   });
 });

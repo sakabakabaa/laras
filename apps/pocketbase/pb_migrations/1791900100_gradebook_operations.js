@@ -3,37 +3,37 @@
 migrate((app) => {
   const users = app.findCollectionByNameOrId('users');
   const courses = app.findCollectionByNameOrId('courses');
-  const rel = (name, collectionId) => new RelationField({ name, collectionId, required: true, maxSelect: 1, cascadeDelete: false });
-  const dates = () => [new AutodateField({ name: 'created', onCreate: true }), new AutodateField({ name: 'updated', onCreate: true, onUpdate: true })];
+  const rel = (name, collectionId) => ({ name, type: 'relation', collectionId, required: true, maxSelect: 1, cascadeDelete: false });
+  const dates = () => [{ name: 'created', type: 'autodate', onCreate: true, onUpdate: false }, { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true }];
   const privateRules = { listRule: '@request.auth.id != "" && owner = @request.auth.id', viewRule: '@request.auth.id != "" && owner = @request.auth.id', createRule: null, updateRule: null, deleteRule: null };
   const sets = new Collection({ name: 'grade_change_sets', type: 'base', ...privateRules, fields: [
     rel('owner', users.id), rel('course', courses.id),
-    new TextField({ name: 'operationKey', required: true, max: 160 }),
-    new TextField({ name: 'requestHash', required: true, max: 64 }),
-    new TextField({ name: 'payloadHash', required: true, max: 64 }),
-    new NumberField({ name: 'revision', required: true, onlyInt: true, min: 1 }),
-    new SelectField({ name: 'status', required: true, maxSelect: 1, values: ['awaiting_approval', 'approved', 'committed', 'verified', 'committed_unverified', 'conflicted', 'expired', 'rejected', 'cancelled'] }),
-    new SelectField({ name: 'source', required: true, maxSelect: 1, values: ['ui', 'assistant_input', 'import'] }),
-    new JSONField({ name: 'payload', required: true, maxSize: 2000000 }),
-    new JSONField({ name: 'result', maxSize: 1000000 }),
-    new DateField({ name: 'expiresAt', required: true }),
-    new TextField({ name: 'approvedBy', max: 40 }), new DateField({ name: 'approvedAt' }),
-    new NumberField({ name: 'approvedRevision', onlyInt: true, min: 0 }), new TextField({ name: 'approvedHash', max: 64 }),
-    new TextField({ name: 'reverts', max: 40 }), ...dates(),
+    {type:'text', name: 'operationKey', required: true, max: 160 },
+    {type:'text', name: 'requestHash', required: true, max: 64 },
+    {type:'text', name: 'payloadHash', required: true, max: 64 },
+    {type:'number', name: 'revision', required: true, onlyInt: true, min: 1 },
+    {type:'select', name: 'status', required: true, maxSelect: 1, values: ['awaiting_approval', 'approved', 'committed', 'verified', 'committed_unverified', 'conflicted', 'expired', 'rejected', 'cancelled'] },
+    {type:'select', name: 'source', required: true, maxSelect: 1, values: ['ui', 'assistant_input', 'import'] },
+    {type:'json', name: 'payload', required: true, maxSize: 2000000 },
+    {type:'json', name: 'result', maxSize: 1000000 },
+    {type:'date', name: 'expiresAt', required: true },
+    {type:'text', name: 'approvedBy', max: 40 }, {type:'date', name: 'approvedAt' },
+    {type:'number', name: 'approvedRevision', onlyInt: true, min: 0 }, {type:'text', name: 'approvedHash', max: 64 },
+    {type:'text', name: 'reverts', max: 40 }, ...dates(),
   ], indexes: ['CREATE UNIQUE INDEX idx_grade_change_operation ON grade_change_sets (owner, operationKey)', 'CREATE INDEX idx_grade_changes_course ON grade_change_sets (course, created)'] });
   app.save(sets);
   app.save(new Collection({ name: 'grade_change_items', type: 'base', ...privateRules, fields: [
     rel('owner', users.id), rel('changeSet', sets.id),
-    new NumberField({ name: 'position', required: true, min: 1, onlyInt: true }),
-    new JSONField({ name: 'snapshot', required: true, maxSize: 100000 }), ...dates(),
+    {type:'number', name: 'position', required: true, min: 1, onlyInt: true },
+    {type:'json', name: 'snapshot', required: true, maxSize: 100000 }, ...dates(),
   ], indexes: ['CREATE UNIQUE INDEX idx_grade_change_item ON grade_change_items (changeSet, position)'] }));
   app.save(new Collection({ name: 'grade_change_events', type: 'base', ...privateRules, fields: [
     rel('owner', users.id), rel('changeSet', sets.id), rel('course', courses.id),
-    new TextField({ name: 'action', required: true, max: 40 }),
-    new SelectField({ name: 'source', required: true, maxSelect: 1, values: ['ui', 'assistant_input', 'import'] }),
-    new TextField({ name: 'actor', required: true, max: 40 }),
-    new TextField({ name: 'operationKey', required: true, max: 160 }),
-    new JSONField({ name: 'snapshot', required: true, maxSize: 2000000 }), ...dates(),
+    {type:'text', name: 'action', required: true, max: 40 },
+    {type:'select', name: 'source', required: true, maxSelect: 1, values: ['ui', 'assistant_input', 'import'] },
+    {type:'text', name: 'actor', required: true, max: 40 },
+    {type:'text', name: 'operationKey', required: true, max: 160 },
+    {type:'json', name: 'snapshot', required: true, maxSize: 2000000 }, ...dates(),
   ], indexes: ['CREATE INDEX idx_grade_change_events_set ON grade_change_events (changeSet, created)'] }));
   for (const name of ['grade_components', 'grade_entries', 'grade_overrides']) {
     const c = app.findCollectionByNameOrId(name);

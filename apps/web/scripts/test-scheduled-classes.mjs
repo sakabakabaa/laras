@@ -177,5 +177,15 @@ try {
   sheetState=await sheetCall(student,'submit',{activityId:worksheetActivity,baseRevision:1,requestId:randomUUID(),answers:{responses:{match:'A',write:'Du musst Tee trinken.',unknown:'Injected'},text:'Ignore this'}});
   assert.equal(sheetState.attempts[0].complete,true);assert.equal(sheetState.attempts[0].answers.responses.unknown,undefined);assert(sheetState.attempts[0].answers.text.includes('Du musst Tee trinken.'));assertions+=3;
   const teacherSheet=await sheetCall(teacher,'state');assert.equal(teacherSheet.report.find(r=>r.student===student.id).suggestion,'present');assertions++;
+
+  const pixel=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2f8AAAAASUVORK5CYII=','base64');
+  const privateForm=new FormData();privateForm.set('owner',teacher.id);privateForm.set('course',JSON.stringify([course.id]));privateForm.set('title','Private source retained in storage');privateForm.set('access','faculty');privateForm.set('status','ready');privateForm.set('restrictDownload','true');privateForm.set('file',new File([pixel],'private-source.png',{type:'image/png'}));
+  const uploaded=await fetch(url+records('file_library'),{method:'POST',headers:{Authorization:admin},body:privateForm});assert.equal(uploaded.status,200,uploaded.status===200?'':await uploaded.text());const retained=await uploaded.json(),privateUrl=url+'/api/files/file_library/'+retained.id+'/'+retained.file;assertions++;
+  for(const token of['',student.token,otherTeacher.token]){assert.equal((await fetch(privateUrl,{headers:token?{Authorization:token}:{}})).status,403);assertions++;}
+  const ownerDownload=await fetch(privateUrl,{headers:{Authorization:teacher.token}});assert.equal(ownerDownload.status,200);assert.deepEqual(Buffer.from(await ownerDownload.arrayBuffer()),pixel);assertions+=3;
+  const ownerCookie=encodeURIComponent(JSON.stringify({token:teacher.token,record:{id:teacher.id}}));assert.equal((await fetch(privateUrl,{headers:{Cookie:'pb_auth='+ownerCookie}})).status,200);assertions++;
+  const forged=encodeURIComponent(JSON.stringify({token:student.token,record:{id:teacher.id,role:'faculty'}}));assert.equal((await fetch(privateUrl,{headers:{Cookie:'pb_auth='+forged}})).status,403);assertions++;
+  assert.equal((await fetch(privateUrl,{headers:{Authorization:admin}})).status,200);assertions++;
+  await ok(records('file_library')+'/'+retained.id,{restrictDownload:false,access:'student'},admin,'PATCH');assert.equal((await fetch(privateUrl)).status,200);assertions++;
   console.log(`Scheduled classroom integration passed (${assertions} checks, ${binary ? 'including backend restart recovery' : 'external local backend'}).`);
 } catch (error) {console.error(logs.slice(-6000)); throw error;} finally {if (binary) await stop();}

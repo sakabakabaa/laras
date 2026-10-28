@@ -7,9 +7,9 @@ import type {ScheduledActivity,ScheduledWorksheet} from '@/lib/scheduled-classes
 import {PDFPreview} from './task-builders/quiz-source-builder';
 
 export function WorksheetAnswers({sheet,responses,onChange}:{sheet:ScheduledWorksheet;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
-  const t=useT(),group=useId();
+  const group=useId();
   const prompt=(item:ScheduledWorksheet['items'][number])=><><span lang="de">{item.prompt}</span>{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}</>;
-  return <div className="sc-worksheet"><p>{t('worksheet.count',{answered:String(sheet.items.filter(i=>responses[i.id]?.trim()).length),total:String(sheet.items.length)})}</p><ol>{sheet.items.map(item=><li key={item.id}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:<label>{prompt(item)}<textarea rows={3} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/></label>}</li>)}</ol><p>{t('worksheet.reviewHint')}</p></div>;
+  return <div className="sc-worksheet"><ol>{sheet.items.map(item=><li key={item.id}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:<label>{prompt(item)}<textarea rows={3} maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/></label>}</li>)}</ol></div>;
 }
 
 export function WorksheetSource({activity}:{activity:ScheduledActivity}){
@@ -26,7 +26,7 @@ export function WorksheetSource({activity}:{activity:ScheduledActivity}){
   },[source?.url,page]);
   const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp)$/i.test(s.url));
   if(reference?.sourceMaterialId&&images.some(image=>image.id===reference.sourceMaterialId)){
-    return <section className="sc-picture-reference" aria-label="Bilder · Gambar"><h3>Bilder · Gambar</h3>{reference.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className="sc-patient-figures">{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>;
+    return <section className="sc-picture-reference" aria-label="Bilder · Gambar"><h3>Bilder · Gambar</h3>{reference.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className="sc-patient-figures" style={images.length===2?{gridTemplateColumns:'repeat(2,minmax(0,1fr))'}:undefined}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>;
   }
   if(!source?.url||!page)return null;
   return <details className="sc-worksheet-source" open={Boolean(activity.worksheet?.sourceMaterialId)}><summary>{t('worksheet.page',{page:String(page)})}{reference?.sourceLabel&&` · ${reference.sourceLabel}`}</summary>{document?<PDFPreview document={document} page={page}/>:<p role={error?'alert':'status'}>{t(error?'quizSource.previewFailed':'worksheet.loading')}</p>}<a href={`${source.url}#page=${page}`} target="_blank" rel="noreferrer">{source.title} · {t('studentClass.openMaterial')}</a></details>;

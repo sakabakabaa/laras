@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {Link,useNavigate} from 'react-router';
 import {ArrowRight,CalendarDays,Clock3,Plus,Search,Users,BookOpen,RefreshCw} from 'lucide-react';
 import {useCachedQuery} from '@/hooks/use-cached-query';
@@ -14,6 +14,7 @@ export function ScheduledSessionsIndex(){
   const [filter,setFilter]=useState('all'),[search,setSearch]=useState(''),[courseFilter,setCourseFilter]=useState('');
   const [creating,setCreating]=useState(false),[course,setCourse]=useState(''),[meeting,setMeeting]=useState('');
   const query=useCachedQuery<{items:ScheduledSessionListItem[]}>('scheduled-class-list',()=>pb.send('/api/laras/scheduled-class-list',{method:'GET',requestKey:null}));
+  useEffect(()=>{const refresh=()=>{if(document.visibilityState==='visible')query.reload();};const timer=window.setInterval(refresh,30000);document.addEventListener('visibilitychange',refresh);return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',refresh);};},[query.reload]);
   const courses=useCachedQuery<CourseOption[]>('scheduled-class-course-options',()=>pb.collection('courses').getFullList<CourseOption>({filter:pb.filter('owner={:u}',{u:pb.authStore.record?.id}),fields:'id,title,code',sort:'title'}));
   const meetings=useCachedQuery<MeetingOption[]>(course?`scheduled-class-meetings:${course}`:null,()=>pb.collection('class_sessions').getFullList<MeetingOption>({filter:pb.filter('course={:c}',{c:course}),fields:'id,title,week',sort:'week,created'}));
   const items=query.data?.items||[];

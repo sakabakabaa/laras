@@ -62,8 +62,9 @@ export default function ScheduledClassPage() {
     {!connected && <p role="status">Koneksi terputus. Menghubungkan kembali...</p>}
     <ScheduledLecturerSession state={state} courseId={courseId} busy={busy} onAction={actOrThrow} onState={accept}/>
   </>;
+  const returnParams=new URLSearchParams(searchParams);returnParams.delete('preview');
   return <div className="sc-page sc-student-page">
-    <Link className="ld-text-btn" to={state?.owner?'?':`/app/courses/${courseId}/mata-kuliah`}>← {state?.owner?'Kembali ke ruang dosen':t('studentClass.back')}</Link>
+    <Link className="ld-text-btn" to={state?.owner?'?'+returnParams.toString():`/app/courses/${courseId}/mata-kuliah`}>← {state?.owner?'Kembali ke ruang dosen':t('studentClass.back')}</Link>
     <header className="sc-heading"><div><small>{t('studentClass.eyebrow')}</small><h1>{state?.class?.title || state?.session.title || t('studentClass.title')}</h1></div></header>
     {state?.owner && state.class && <p>{t('scheduledPreview.audience', {section:sections.find(s=>s.id===state.class?.section)?.name || t('scheduledPreview.allSections')})}</p>}
     {error && <div className="sc-alert" role="alert">{error} <button onClick={() => void refresh()}>{t('studentClass.reload')}</button></div>}

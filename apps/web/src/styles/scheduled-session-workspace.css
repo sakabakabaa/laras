@@ -190,6 +190,12 @@
 .sr-configure>svg{color:var(--ss-muted)}
 .sr-configure h4{font-size:13px}
 .sr-configure p{font-size:11px;color:var(--ss-muted);line-height:1.7}
+.sr-auto-grade{display:grid;gap:12px;padding:8px 0}
+.sr-auto-grade>svg{color:#43856b}
+.sr-auto-grade h4{font-size:13px}
+.sr-auto-grade>strong{font-size:36px;font-weight:600;letter-spacing:-.04em}
+.sr-auto-grade>strong small{font-size:17px;color:var(--ss-muted);font-weight:400}
+.sr-auto-grade p{font-size:11px;color:var(--ss-muted);line-height:1.7}
 .sr-points{display:grid;gap:8px;font-size:12px;font-weight:600;margin-bottom:20px}
 .sr-points>div{display:flex;align-items:center;gap:10px}
 .sr-points input{min-width:0;width:100%;border:1px solid var(--ss-border);border-radius:8px;min-height:58px;font-size:25px;font-weight:600;background:var(--ss-panel);color:var(--ss-text);padding:10px 13px}

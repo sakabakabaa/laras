@@ -13,6 +13,7 @@ export function assessmentStatus(assessment?:ScheduledAssessment):'unreviewed'|'
 }
 export const ASSESSMENT_LABELS = {unreviewed:'Belum ditinjau',draft:'Draf tersimpan',reviewed:'Siap diterbitkan',published:'Diterbitkan'};
 export function responseCards(activity:ScheduledActivity,attempt:ScheduledAttempt) {
+  if(activity.kind==='quiz') return (activity.questions||[]).map((question,index)=>{const selected=attempt.answers[question.id];return {id:question.id,number:index+1,prompt:question.text,translation:undefined,answer:typeof selected==='number'&&Number.isInteger(selected)?question.options[selected]||'':'',options:question.options};});
   const responses=(attempt.answers.responses || {}) as Record<string,unknown>;
   const cards=(activity.worksheet?.items||[]).map((item,index)=>({id:item.id,number:index+1,prompt:item.prompt,translation:item.translation,answer:typeof responses[item.id]==='string'?String(responses[item.id]):'',options:item.options}));
   if (!cards.length) cards.push({id:'text',number:1,prompt:activity.content||activity.title,translation:undefined,answer:typeof attempt.answers.text==='string'?attempt.answers.text:'',options:undefined});

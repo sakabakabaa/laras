@@ -84,7 +84,12 @@ function view(app, c, ctx, user, now) {
   const completedRequired = required.filter(a => attempts.some(t => t.activity === a.id && t.status !== 'draft' && t.complete)).length;
   const resultsReady = !owner && required.length > 0 && completedRequired === required.length;
   const released = resultsReady || (info.releaseResults && ['closed', 'reviewed'].includes(currentPhase));
-  const safeAttempts = attempts.map(a => { if (!owner && !released) delete a.score; return a; });
+  const safeAttempts = attempts.map(a => {
+    const activity = plan.find(item => item.id === a.activity);
+    const graded = activity && (activity.kind === 'quiz' || Object.values(activity.snapshot.worksheet?.answerKey?.items || {}).some(entry => entry.mode === 'exact' && entry.points > 0));
+    if (!graded || (!owner && !released)) delete a.score;
+    return a;
+  });
   return {
     serverNow: new Date(now).toISOString(), owner, session: {id: ctx.session.id, title: ctx.session.getString('title'), course: ctx.course.id, section: ctx.session.getString('section')},
     class: {...info, phase: currentPhase, resultsReady}, participant: participant || null,
@@ -217,3 +222,4 @@ function handle(app, body, user, now) {
   return view(app, c, ctx, user, now);
 }
 module.exports = {handle, reconcile};
+

@@ -8,7 +8,6 @@ type GradeDraft = {feedback: string; points: string; criterionScores: Record<str
 const emptyDraft: GradeDraft = emptyGradeDraft;
 
 export function ScheduledReviewWorkspace({state, onAction}: Props) {
-  const [tab, setTab] = useState('Student work');
   const [mode, setMode] = useState('By student');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('All');
@@ -24,7 +23,7 @@ export function ScheduledReviewWorkspace({state, onAction}: Props) {
   const attempts = state.attempts.filter(a => a.status !== 'draft');
   const entries = useMemo(() => attempts
     .map(attempt => ({attempt, activity: state.activities.find(a => a.id === attempt.activity), row: state.report.find(r => r.student === attempt.student)}))
-    .filter(x => x.activity)
+    .filter(x => x.activity && ['assignment', 'exit_ticket'].includes(x.activity.kind))
     .filter(x => mode !== 'By activity' || x.activity?.id === activityId)
     .filter(x => `${x.row?.name || x.attempt.student} ${x.activity?.title}`.toLowerCase().includes(query.toLowerCase()))
     .filter(x => filter === 'All'
@@ -114,11 +113,8 @@ export function ScheduledReviewWorkspace({state, onAction}: Props) {
   };
 
   return <section className="sc-card sr-workspace">
-    <h2>Lecturer review</h2>
-    <nav className="sr-tabs" aria-label="Class sections">{['Overview', 'Student work', 'Attendance'].map(t => <button type="button" key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => {if (guard()) setTab(t);}}>{t}</button>)}</nav>
-    {tab === 'Attendance' ? <div><h3>Attendance</h3><p>{state.report.length} students</p></div>
-      : tab === 'Overview' ? <div><h3>Overview</h3><p>{attempts.length} finalized submissions · {state.assessments?.filter(a => a.status === 'reviewed').length || 0} reviewed</p></div>
-      : <>
+    <h2>Tinjau jawaban tugas</h2>
+    <>
         <div className="sr-controls">
           <label>View <select value={mode} onChange={e => {if (guard()) setMode(e.target.value);}}><option>By student</option><option>By activity</option></select></label>
           {mode === 'By activity' && <label>Activity <select value={activityId} onChange={e => {if (guard()) setActivityId(e.target.value);}}>{state.activities.filter(a => a.kind === 'assignment' || a.kind === 'exit_ticket').map(a => <option key={a.id} value={a.id}>{a.title}</option>)}</select></label>}
@@ -150,7 +146,7 @@ export function ScheduledReviewWorkspace({state, onAction}: Props) {
           </> : <p>No finalized submissions match these filters.</p>}</main>
         </div>
         {message && <p role="status">{message}</p>}
-      </>}
+    </>
   </section>;
 }
 export default ScheduledReviewWorkspace;

@@ -199,6 +199,9 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
   const joinClosed = now >= Date.parse(c.joinUntil);
   const ActivityIcon = activity ? activityIcons[activity.kind] : BookOpen;
   return <div className="sc-classroom sc-student">
+    <section className="sc-student-schedule sc-card" aria-label={t('studentClass.schedule')}>
+      <div className="sc-overview-top"><div className="sc-session-time"><Clock3 size={18} aria-hidden="true"/><div><span>{t('studentClass.schedule')}</span><strong>{date(c.startsAt)} — {time(c.endsAt)}</strong></div></div><span className={`sc-checkin-badge ${checkedInAt ? 'is-checked' : ''}`}><CheckCircle2 size={16} aria-hidden="true"/>{t(checkedInAt ? 'studentClass.checkedIn' : 'studentClass.notCheckedIn')}{checkedInAt && <small>{time(checkedInAt)}</small>}</span></div>
+    </section>
     {error && <p role="alert" className="sc-alert">{error}</p>}
     <div className="sc-student-grid">
       <section className="sc-card sc-workspace">

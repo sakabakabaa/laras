@@ -48,7 +48,7 @@ export function WorksheetSource({activity,showPictures=true}:{activity:Scheduled
   if(showPictures&&reference?.sourceMaterialId&&images.some(image=>image.id===reference.sourceMaterialId)){
     return <section className="sc-picture-reference" aria-label="Bilder · Gambar"><h3>Bilder · Gambar</h3>{reference.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className="sc-patient-figures" style={images.length===2?{gridTemplateColumns:'repeat(2,minmax(0,1fr))'}:undefined}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>;
   }
-  if(!source?.url||!page)return null;
+  if(!source?.url||!page||!source.url.toLowerCase().endsWith('.pdf'))return null;
   return <details className="sc-worksheet-source" open={Boolean(activity.worksheet?.sourceMaterialId)}><summary>{t('worksheet.page',{page:String(page)})}{reference?.sourceLabel&&` · ${reference.sourceLabel}`}</summary>{document?<PDFPreview document={document} page={page}/>:<p role={error?'alert':'status'}>{t(error?'quizSource.previewFailed':'worksheet.loading')}</p>}<a href={`${source.url}#page=${page}`} target="_blank" rel="noreferrer">{source.title} · {t('studentClass.openMaterial')}</a></details>;
 }
 
@@ -60,3 +60,4 @@ export function WorksheetEditor({value,onChange,materials}:{value?:ScheduledWork
     <button type="button" disabled={sheet.items.length>=30} onClick={()=>onChange({...sheet,items:[...sheet.items,{id:crypto.randomUUID(),prompt:'',type:'text'}]})}>{t('worksheet.add')}</button>
   </>}</section>;
 }
+

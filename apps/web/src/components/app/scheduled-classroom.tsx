@@ -106,7 +106,7 @@ function ActivityAnswer({activity, attempt, state, now, onState,onNext}: {activi
     </fieldset>
     <div className={`sc-save-status ${dirty ? 'is-pending' : final || attempt ? 'is-saved' : ''}`} role="status"><ShieldCheck size={17} aria-hidden="true"/><span>{busy ? t('studentClass.saving') : final ? attempt?.status === 'expired' ? t('studentClass.expired') : t('studentClass.submitted') : message || t('studentClass.initial')}</span></div>
     {!final && <div className="sc-answer-footer"><p>{t(state.activities.at(-1)?.id === activity.id ? 'studentClass.finishHint' : 'studentClass.nextHint')}</p><div className="sc-actions"><button disabled={busy || conflict || (!open && !pending.current)} onClick={() => void save(false)}>{t('studentClass.saveShort')}</button><button className="sc-primary" disabled={busy || conflict || !open} onClick={() => void save(true)}>{t(state.activities.at(-1)?.id === activity.id ? 'studentClass.finishShort' : 'studentClass.nextShort')}<ArrowRight size={16} aria-hidden="true"/></button></div></div>}
-    {attempt?.score !== undefined && final && (activity.kind === 'quiz' || activity.worksheet?.answerKey) && <section className="sc-result">{(activity.kind==='quiz'||Object.values(activity.worksheet?.answerKey?.items||{}).some(entry=>entry.mode==='exact'))&&<h4>{t('studentClass.score')}: {attempt.score} / 100</h4>}{activity.kind === 'quiz' ? activity.questions?.map(q => <div key={q.id}><p>{q.text}</p><p>{t('studentClass.correct')}: {q.options[q.correctIndex]}</p>{q.explanation && <p>{q.explanation}</p>}</div>) : Object.entries(activity.worksheet?.answerKey?.items || {}).map(([itemId, entry]) => {const item=activity.worksheet?.items.find(candidate=>candidate.id===itemId);if(!item)return null;const response=(attempt.answers.responses as Record<string,string>|undefined)?.[itemId]||'';return <div key={itemId}><p>{item.prompt}</p>{response&&<p>{t('studentClass.answer')}: {response}</p>}{entry.mode==='exact'?<p>{t('studentClass.correct')}: {entry.accepted.join(' / ')}</p>:<>{entry.modelAnswer&&<p>{t('studentClass.correct')}: {entry.modelAnswer}</p>}{entry.rubric&&<p>{entry.rubric}</p>}</>}</div>;})}</section>}
+
   </div>;
 }
 
@@ -119,15 +119,38 @@ function PreviewAnswer({activity,onNext,canNext}:{activity:ScheduledActivity;onN
 }
 
 function StudentResults({activities,attempts}:{activities:ScheduledActivity[];attempts:ScheduledAttempt[]}){
-  const t=useT();
-  return <section className="sc-results-review"><h3>{t('studentClass.resultsReady')}</h3>{activities.map(activity=>{
-    const attempt=attempts.find(row=>row.activity===activity.id&&row.status!=='draft');
-    if(!attempt)return null;
-    const responses=(attempt.answers.responses||{}) as Record<string,string>;
-    return <details key={activity.id}><summary>{activity.title}{attempt.score!==undefined?` · ${t('studentClass.score')}: ${attempt.score} / 100`:''}</summary>
-      {activity.kind==='quiz'?activity.questions?.map(question=><div key={question.id}><p>{question.text}</p><p>{t('studentClass.answer')}: {question.options[Number(attempt.answers[question.id])]||'—'}</p><p>{t('studentClass.correct')}: {question.options[question.correctIndex]}</p></div>):activity.worksheet?activity.worksheet.items.map(item=>{const response=responses[item.id]||'';const key=activity.worksheet?.answerKey?.items[item.id];return <div key={item.id}><p>{item.prompt}</p>{response&&<p>{t('studentClass.answer')}: {response}</p>}{key?.mode==='exact'&&<p>{t('studentClass.correct')}: {key.accepted.join(' / ')}</p>}</div>;}):attempt.answers.text?<p>{String(attempt.answers.text)}</p>:null}
-    </details>;
-  })}</section>;
+  const language=useLanguage();
+  const labels=language==='id'?{title:'Hasil kegiatan',activity:'Kegiatan',score:'Nilai',pending:'Menunggu penilaian dosen',submitted:'Terkumpul',complete:'Selesai',missing:'Belum dikumpulkan',answer:'Jawaban Anda',correct:'Jawaban benar',none:'Tidak ada jawaban',essay:'Jawaban tertulis sudah dikumpulkan dan belum dinilai.',legend:'Skala warna nilai'}:language==='de'?{title:'Ergebnisse der Aktivitäten',activity:'Aktivität',score:'Punkte',pending:'Bewertung durch die Lehrkraft ausstehend',submitted:'Abgegeben',complete:'Abgeschlossen',missing:'Nicht abgegeben',answer:'Deine Antwort',correct:'Richtige Antwort',none:'Keine Antwort',essay:'Der Text wurde unverändert abgegeben und noch nicht bewertet.',legend:'Farbskala der Ergebnisse'}:{title:'Activity results',activity:'Activity',score:'Score',pending:'Awaiting lecturer review',submitted:'Submitted',complete:'Complete',missing:'Not submitted',answer:'Your answer',correct:'Correct answer',none:'No answer',essay:'Writing submitted as entered; not yet graded.',legend:'Score color scale'};
+  return <section className="sc-results-review" aria-label={labels.title}>
+    <header className="sc-results-heading"><h3>{labels.title}</h3><p className="sc-score-legend" aria-label={labels.legend}><span className="is-green">≥ 80</span><span className="is-yellow">60–&lt;80</span><span className="is-red">&lt; 60</span></p></header>
+    <ol className="sc-score-summary">{activities.map((activity,index)=>{
+      const attempt=attempts.find(row=>row.activity===activity.id&&row.status!=='draft');
+      const graded=activity.kind==='quiz'||Object.values(activity.worksheet?.answerKey?.items||{}).some(entry=>entry.mode==='exact'&&entry.points>0);
+      const score=graded&&typeof attempt?.score==='number'?attempt.score:undefined;
+      const tone=score===undefined?'is-neutral':score>=80?'is-green':score>=60?'is-yellow':'is-red';
+      const status=!attempt?labels.missing:activity.kind==='material'?(attempt.complete?labels.complete:labels.missing):graded?labels.submitted:labels.pending;
+      return <li key={activity.id}><div><span>{labels.activity} {index+1}</span><strong>{activity.title}</strong></div>{score!==undefined?<span className={`sc-summary-score ${tone}`}><span>{labels.score}</span> <strong>{score} / 100</strong></span>:<span className="sc-summary-status">{status}</span>}</li>;
+    })}</ol>
+    <div className="sc-result-activities">{activities.map((activity,index)=>{
+      const attempt=attempts.find(row=>row.activity===activity.id&&row.status!=='draft');
+      const graded=activity.kind==='quiz'||Object.values(activity.worksheet?.answerKey?.items||{}).some(entry=>entry.mode==='exact'&&entry.points>0);
+      const score=graded&&typeof attempt?.score==='number'?attempt.score:undefined;
+      const tone=score===undefined?'is-neutral':score>=80?'is-green':score>=60?'is-yellow':'is-red';
+      const responses=(attempt?.answers.responses||{}) as Record<string,string>;
+      const writing=activity.kind!=='material'&&!graded;
+      const status=!attempt?labels.missing:activity.kind==='material'?(attempt.complete?labels.complete:labels.missing):writing?labels.pending:labels.submitted;
+      return <article className={`sc-result-activity ${tone}`} key={activity.id}>
+        <header className="sc-result-activity-heading"><div><span className="sc-result-step">{labels.activity} {index+1}</span><h4>{activity.title}</h4></div>{score!==undefined?<div className={`sc-score-badge ${tone}`} aria-label={`${labels.score}: ${score} / 100`}><span>{labels.score}</span><strong>{score}<small> / 100</small></strong></div>:<span className={`sc-result-status ${writing&&attempt?'is-pending':''}`}><CheckCircle2 size={16} aria-hidden="true"/>{status}</span>}</header>
+        {writing&&attempt&&<p className="sc-result-writing-note">{labels.essay}</p>}
+        {attempt&&activity.kind!=='material'&&<ol className="sc-result-answers">{activity.kind==='quiz'?activity.questions?.map(question=><li key={question.id}><p>{question.text}</p><p><strong>{labels.answer}:</strong> {question.options[Number(attempt.answers[question.id])]||labels.none}</p><p className="sc-correct-answer"><strong>{labels.correct}:</strong> {question.options[question.correctIndex]}</p></li>):activity.worksheet?activity.worksheet.items.map(item=>{const key=activity.worksheet?.answerKey?.items[item.id];return <li key={item.id}><p lang="de">{item.prompt}</p><p><strong>{labels.answer}:</strong> <span className="sc-submitted-text">{responses[item.id]||labels.none}</span></p>{key?.mode==='exact'&&<p className="sc-correct-answer"><strong>{labels.correct}:</strong> {key.accepted.join(' / ')}</p>}</li>;}):<li className="sc-submitted-text">{String(attempt.answers.text||labels.none)}</li>}</ol>}
+      </article>;
+    })}</div>
+  </section>;
+}
+
+function ActivityBrief({content}:{content:string}){
+  const t=useT(),parts=content.split(/\n\s*\n/).map(part=>part.trim()).filter(Boolean);
+  return <section className="sc-activity-brief"><h3>{t('lesson.now')}</h3><ul className="sc-brief-steps">{parts.map((part,index)=><li key={index}><Check size={18} aria-hidden="true"/><span>{part}</span></li>)}</ul></section>;
 }
 
 export function ScheduledClassroom({state, now, onState, connected,preview=false,onPreviewNext}: {state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void; connected: boolean;preview?:boolean;onPreviewNext?:(activityId:string)=>void}) {
@@ -168,7 +191,6 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
       <div className="sc-progress-heading"><span>{t('studentClass.progressRequired')}</span><strong>{completed}<span> / {required.length}</span></strong></div>
       <progress className="sc-progress" value={completed} max={required.length || 1} aria-label={t('studentClass.progressRequired')}>{percent}%</progress>
       <p className="sc-progress-hint">{t('studentClass.progressHint', {total: String(state.activities.length), required: String(required.length)})}</p>
-      {c.instructions && <details className="sc-student-instructions"><summary>{t('studentClass.instructions')}</summary><p className="sc-prose">{c.instructions}</p></details>}
     </section>
     {error && <p role="alert" className="sc-alert">{error}</p>}
     <div className="sc-student-grid">
@@ -178,17 +200,16 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
           <div className="sc-activity-heading"><h2 ref={heading} tabIndex={-1}>{activity.title}</h2><div className={`sc-student-clock ${warning ? 'is-urgent' : ''}`}><span>{t(active ? 'studentClass.remaining' : 'studentClass.timeClosed')}</span><strong>{active ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—'}</strong></div></div>
           {warning && <p className="sc-deadline-warning" role="status">{t('studentClass.timeWarning')}</p>}
           {!active && <p className="sc-review-note">{t('studentClass.reviewMode')}</p>}
-          <div className="sc-activity-content">{activity.lesson?<ScheduledLessonView key={activity.id} lesson={activity.lesson} compact={!activity.worksheet&&!activity.lesson.scenes?.length} showScenes={!activity.lesson.videos?.length}/>:activity.content?.trim()?<section className="sc-activity-brief"><h3>{t('lesson.now')}</h3><div className="sc-prose">{activity.content}</div></section>:null}</div>
+          <div className="sc-activity-content">{activity.lesson?<ScheduledLessonView key={activity.id} lesson={activity.lesson} compact={!activity.worksheet&&!activity.lesson.scenes?.length} showScenes={!activity.lesson.videos?.length}/>:activity.content?.trim()?<ActivityBrief content={activity.content}/>:null}</div>
           <WorksheetSource activity={activity} showPictures={false}/>
           {(activity.url || Boolean(activity.sources?.some(s=>!s.url||!/\.(jpe?g|png|webp)$/i.test(s.url)))) && <section className="sc-resources"><h3>{t('studentClass.resources')}</h3>{activity.url && <a href={activity.url} target="_blank" rel="noreferrer"><BookOpen size={18} aria-hidden="true"/><span>{t('studentClass.openMaterial')}</span><ExternalLink size={16} aria-hidden="true"/></a>}{activity.sources?.filter(s=>!s.url||!/\.(jpe?g|png|webp)$/i.test(s.url)).map((source, i) => source.available && source.url && /\.(mp3|wav|ogg|m4a)$/i.test(source.url) ? <div className="sc-audio-source" key={i}><label>{source.title.replace(/.*Audio_(\d+)-0*(\d+)$/i,(_,disc,track)=>`Audio ${disc}.${Number(track)}`)}<audio aria-label={source.title} controls preload="none" src={source.url}/></label></div> : source.available && source.url ? <a key={i} href={source.url} target="_blank" rel="noreferrer"><FileText size={18} aria-hidden="true"/><span>{source.title}<small>{t('studentClass.version', {version: String(source.version)})}</small></span><ExternalLink size={16} aria-hidden="true"/></a> : <p key={i}>{source.title} — {t('studentClass.unavailable')}</p>)}</section>}
           {preview?<PreviewAnswer key={activity.id} activity={activity} onNext={()=>onPreviewNext?.(activity.id)} canNext={state.activities.findIndex(a=>a.id===activity.id)<state.activities.length-1}/>:<ActivityAnswer key={activity.id} activity={activity} attempt={state.attempts.find(t => t.activity === activity.id)} state={state} now={now} onState={onState} onNext={nextState=>{const i=nextState.activities.findIndex(a=>a.id===activity.id);choose(nextState.activities[i+1]?.id||activity.id);}}/>}
           {!preview&&state.class?.resultsReady&&<StudentResults activities={state.activities} attempts={state.attempts}/>}
-          {!ended && next && <div className="sc-up-next"><span>{t('studentClass.next')}</span><strong>{t('studentClass.nextAt', {title: next.title, time: time(next.startsAt)})}</strong></div>}
-        </> : <div className="sc-session-empty">
+        </> : <div className={`sc-session-empty ${ended&&state.participant&&(c.resultsReady||c.releaseResults)?'sc-session-results':''}`}>
           <div className={`sc-empty-icon ${ended ? 'is-finished' : ''}`}>{cancelled ? <LockKeyhole size={30} aria-hidden="true"/> : ended ? <CheckCircle2 size={30} aria-hidden="true"/> : <Clock3 size={30} aria-hidden="true"/>}</div>
           <h2 ref={heading} tabIndex={-1}>{t(cancelled ? 'studentClass.cancelled' : ended ? 'studentClass.finishedTitle' : c.phase === 'scheduled' ? 'studentClass.waitTitle' : state.participant ? 'studentClass.betweenTitle' : 'studentClass.startTitle')}</h2>
           <p>{t(cancelled ? 'studentClass.cancelBody' : ended ? state.participant ? 'studentClass.finishedBody' : 'studentClass.notJoinedEnd' : c.phase === 'scheduled' ? 'studentClass.waitBody' : state.participant ? 'studentClass.betweenBody' : 'studentClass.startBody')}</p>
-          {ended && state.participant && <><div className="sc-completion-count"><strong>{completed}<span> / {required.length}</span></strong><span>{t('studentClass.progress')}</span></div><p className="sc-results-note">{t(state.class?.resultsReady || c.releaseResults ? 'studentClass.resultsReady' : 'studentClass.resultsPending')}</p>{state.class?.resultsReady&&<StudentResults activities={state.activities} attempts={state.attempts}/>}</>}
+          {ended && state.participant && <><div className="sc-completion-count"><strong>{completed}<span> / {required.length}</span></strong><span>{t('studentClass.progress')}</span></div><p className="sc-results-note">{t(state.class?.resultsReady || c.releaseResults ? 'studentClass.resultsReady' : 'studentClass.resultsPending')}</p>{(state.class?.resultsReady||c.releaseResults)&&<StudentResults activities={state.activities} attempts={state.attempts}/>}</>}
           {!cancelled && !ended && !state.participant && <><button className="sc-primary" disabled={busy || !connected || c.phase !== 'open' || joinClosed} onClick={() => void join()}>{t(busy ? 'studentClass.joining' : 'studentClass.checkIn')}<ArrowRight size={17} aria-hidden="true"/></button><small>{joinClosed ? t('studentClass.checkInLate') : t('studentClass.checkInBy', {time: time(c.joinUntil)})}</small></>}
           {!cancelled && !ended && state.participant && next && <p className="sc-next-wait">{t('studentClass.nextAt', {title: next.title, time: time(next.startsAt)})}</p>}
         </div>}
@@ -196,3 +217,4 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
     </div>
   </div>;
 }
+

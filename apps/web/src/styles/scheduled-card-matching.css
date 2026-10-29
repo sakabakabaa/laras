@@ -48,3 +48,21 @@
 
 /* Entering and exiting cards share one slot, including a cancelled drag. */
 .sc-match-deck-front{grid-area:1 / 1;align-self:start}
+
+/* The deck stands on its own, without another panel around the card. */
+.sc-card-matching .sc-match-bank{position:relative;margin-top:24px;padding:0;border:0;border-radius:0;background:transparent}
+.sc-card-matching .sc-match-bank.is-over{border:0;background:transparent}
+.sc-match-bank>.sc-match-bank-actions{position:absolute;right:0;top:0;z-index:30;margin:0}
+.sc-match-bank-actions button[hidden]{display:none}
+.sc-card-matching .sc-match-targets{max-width:960px;margin-inline:auto;width:100%}
+.sc-card-matching .sc-match-target{padding:12px}
+.sc-card-matching .sc-match-target img{height:230px}
+.sc-card-matching.sc-match-two-targets .sc-match-targets{max-width:720px}
+.sc-card-matching.sc-match-two-targets .sc-match-target img{height:230px}
+.sc-card-matching .sc-match-drop-area{margin-top:10px;padding:8px}
+.sc-card-matching .sc-match-placed{height:50px;margin-top:2px}
+@media(max-width:600px){
+ .sc-card-matching .sc-match-target img,.sc-card-matching.sc-match-two-targets .sc-match-target img{height:130px}
+ .sc-card-matching .sc-match-target>header{grid-template-columns:110px minmax(0,1fr)}
+ .sc-card-matching .sc-match-bank{margin-top:20px}
+}

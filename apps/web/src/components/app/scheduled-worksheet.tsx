@@ -14,7 +14,7 @@ export function WorksheetAnswers({sheet,responses,onChange,activity}:{sheet:Sche
   const answered=sheet.items.filter(item=>{const value=responses[item.id]||'';return item.type==='select'?item.options?.includes(value):Boolean(value.trim());}).length;
   const progress=<header className="sc-answer-sheet-heading"><h3>{t('worksheet.answerSheet')}</h3><span role="status">{t('worksheet.responseProgress',{answered:String(answered),total:String(sheet.items.length)})}</span></header>;
   const paired=sheet.items.length>1&&sheet.items.every((item,i)=>item.type==='text'&&item.prompt.match(/^([0-9]+)([ab])\./)?.[0]===`${Math.floor(i/2)+1}${i%2?'b':'a'}.`);
-  if(targets.length)return <>{progress}<p className="sl-translation">{activity?.lesson?.source?.sourceLabel||sheet.sourceLabel}</p><ScheduledCardMatching key={activity!.id} sheet={sheet} targets={targets} responses={responses} onChange={onChange}/></>;
+  if(targets.length)return <>{progress}<ScheduledCardMatching key={activity!.id} sheet={sheet} targets={targets} responses={responses} onChange={onChange}/></>;
   const prompt=(item:ScheduledWorksheet['items'][number])=><><span lang="de">{item.prompt}</span>{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}</>;
   const gapInput=(item:ScheduledWorksheet['items'][number],number?:string)=><input className="sc-gap-input" type="text" aria-label={number?`Lücke ${number}: ${item.prompt}`:item.prompt} autoComplete="off" maxLength={2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>;
   return <div className={`sc-worksheet ${paired?'sc-worksheet-paired':''}`}>{progress}<ol>{worksheetBlocks(sheet.items).map(block=>{

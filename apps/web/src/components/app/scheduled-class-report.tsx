@@ -1,7 +1,7 @@
 import { ACTIVITY_LABELS, wibLabel, type ScheduledClassState } from '@/lib/scheduled-classes';
 
 const LABELS: Record<string, string> = {present: 'Hadir', late: 'Terlambat', absent: 'Absen', excused: 'Izin', sick: 'Sakit'};
-export function ScheduledClassReport({state, busy, onAction}: {state: ScheduledClassState; busy: boolean; onAction: (action: string, body?: Record<string, unknown>) => Promise<void>}) {
+export function ScheduledClassReport({state}: {state: ScheduledClassState}) {
   const canReview = ['closed', 'reviewed'].includes(state.class!.phase);
   return <section className="sc-card">
     <h2>Pemantauan dan laporan</h2><p>{state.report.filter(r => r.checkedInAt).length} check-in · {state.report.length} peserta / entri roster. Diperbarui setiap 30 detik saat halaman terbuka.</p><p>Kehadiran dicatat otomatis dari check-in. Mahasiswa yang check-in tercatat hadir; yang belum check-in baru ditandai tidak hadir setelah kelas selesai.</p>

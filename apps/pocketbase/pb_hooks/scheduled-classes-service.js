@@ -23,8 +23,23 @@ function finalize(app, record, activity, now, status) {
   record.load({...outcome, status, finalizedAt: new Date(now).toISOString()});
   app.save(record);
 }
+function syncCheckInAttendance(app, c) {
+  const participants = rows(app, 'scheduled_class_participants', 'class={:c} && checkedInAt!="" && roster!=""', {c: c.id});
+  for (const participant of participants) {
+    const roster = app.findRecordById('course_roster', participant.getString('roster'));
+    if (roster.getString('course') !== c.getString('course') || (c.getString('section') && roster.getString('section') !== c.getString('section'))) continue;
+    let mark = rows(app, 'attendance', 'session={:s} && roster={:r}', {s: c.getString('session'), r: roster.id})[0];
+    if (mark?.getString('status') === 'present') continue;
+    const previous = mark?.getString('status') || '';
+    if (!mark) mark = new Record(app.findCollectionByNameOrId('attendance'));
+    mark.load({session: c.getString('session'), roster: roster.id, owner: c.getString('owner'), section: roster.getString('section'), student: participant.getString('student'), status: 'present'});
+    app.save(mark);
+    event(app, c, participant.getString('student'), 'attendance', {roster: roster.id, previous, status: 'present', source: 'check_in'});
+  }
+}
 function reconcile(app, c, now) {
   if (!['scheduled', 'closed', 'reviewed'].includes(c.getString('status'))) return;
+  syncCheckInAttendance(app, c);
   const plan = activities(app, c), drafts = rows(app, 'scheduled_activity_attempts', 'class={:c} && status="draft"', {c: c.id});
   for (const attempt of drafts) {
     const activity = plan.find(a => a.id === attempt.getString('activity'));
@@ -256,6 +271,7 @@ function handle(app, body, user, now) {
       participant = create(app, 'scheduled_class_participants', {class: c.id, student: user.id, roster: ctx.roster?.id || '', checkedInAt: new Date(now).toISOString(), lastSeenAt: new Date(now).toISOString()});
       event(app, c, user.id, 'join');
     } else { participant.set('lastSeenAt', new Date(now).toISOString()); app.save(participant); }
+    if (action === 'join') syncCheckInAttendance(app, c);
     if (action === 'saveAnswer' || action === 'submit') {
       const activity = activities(app, c).find(a => a.id === body.activityId);
       if (!activity) bad('Kegiatan tidak ditemukan pada kelas ini.');
@@ -278,4 +294,3 @@ function handle(app, body, user, now) {
   return view(app, c, ctx, user, now);
 }
 module.exports = {handle, reconcile};
-

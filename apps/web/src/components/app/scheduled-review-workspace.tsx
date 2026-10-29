@@ -12,7 +12,7 @@ export function ScheduledReviewWorkspace({state, onAction}: Props) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('Semua');
   const [index, setIndex] = useState(0);
-  const [activityId, setActivityId] = useState(state.activities[0]?.id || '');
+  const [activityId, setActivityId] = useState(state.activities.find(a => a.kind === 'assignment' || a.kind === 'exit_ticket')?.id || '');
   const [settingsMode, setSettingsMode] = useState<'ungraded'|'points'|'rubric'>('ungraded');
   const [maxPoints, setMaxPoints] = useState('10');
   const [criteria, setCriteria] = useState<CriterionDraft[]>([{id: 'clarity', label: 'Clarity', maxPoints: '10'}]);
@@ -119,14 +119,14 @@ export function ScheduledReviewWorkspace({state, onAction}: Props) {
           <label>Tampilan <select value={mode} onChange={e => {if (guard()) setMode(e.target.value);}}><option>Per mahasiswa</option><option>Per kegiatan</option></select></label>
           {mode === 'Per kegiatan' && <label>Kegiatan <select value={activityId} onChange={e => {if (guard()) setActivityId(e.target.value);}}>{state.activities.filter(a => a.kind === 'assignment' || a.kind === 'exit_ticket').map(a => <option key={a.id} value={a.id}>{a.title}</option>)}</select></label>}
           <label>Cari <input value={query} onChange={e => {if (guard()) setQuery(e.target.value);}} /></label>
-          <label>Status <select value={filter} onChange={e => {if (guard()) setFilter(e.target.value);}}><option>Semua</option><option>Belum ditinjau</option><option>Missing</option><option>Sudah ditinjau</option></select></label>
+          <label>Status <select value={filter} onChange={e => {if (guard()) setFilter(e.target.value);}}><option>Semua</option><option>Belum ditinjau</option><option>Belum lengkap</option><option>Sudah ditinjau</option></select></label>
         </div>
         <div className="sr-review-grid">
           <aside><h3>{mode}</h3><ul>{entries.map((entry, i) => <li key={entry.attempt.id}><button type="button" aria-current={i === index ? 'true' : undefined} onClick={() => selectEntry(i, entry.activity!.id)}>{entry.row?.name || entry.attempt.student} · {entry.activity?.title}</button></li>)}</ul></aside>
           <main>{current ? <>
             <div className="sr-nav"><button disabled={index === 0} onClick={() => selectEntry(index - 1)}>Sebelumnya</button><span>{index + 1} / {entries.length}</span><button disabled={index >= entries.length - 1} onClick={() => selectEntry(index + 1)}>Berikutnya</button></div>
             <h3>{current.row?.name || current.attempt.student} · {current.activity!.title}</h3>
-            <p>{current.attempt.status === 'expired' ? 'Diselesaikan saat waktu habis' : 'Dikumpulkan'} · {current.attempt.complete ? 'Complete' : 'Belum lengkap'} · correctness separate from completeness</p>
+            <p>{current.attempt.status === 'expired' ? 'Diselesaikan saat waktu habis' : 'Dikumpulkan'} · {current.attempt.complete ? 'Lengkap' : 'Belum lengkap'}</p>
             <pre className="sr-response">{formatScheduledResponse(current.activity, current.attempt)}</pre>
             <section className="sr-settings"><h4>Pengaturan penilaian</h4>
               <label>Mode penilaian <select value={settingsMode} disabled={Boolean(state.assessments?.some(a => a.activity === gradeActivityId))} onChange={e => setSettingsMode(e.target.value as typeof settingsMode)}><option value="ungraded">Tanpa nilai</option><option value="points">Poin</option><option value="rubric">Rubrik</option></select></label>

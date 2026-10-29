@@ -41,3 +41,7 @@
 .sc-match-deck-front.is-lifted::before,.sc-match-deck-front.is-lifted::after{display:none}
 .sc-match-deck-front.is-native-dragging{opacity:0!important;pointer-events:none}
 @media(max-width:600px){.sc-card-matching .sc-match-help{padding:12px;gap:10px}.sc-match-help>svg{display:none}.sc-match-two-targets .sc-match-target img{height:130px}.sc-match-two-targets .sc-match-targets{max-width:none}.sc-match-deck-front.is-lifted{inset-inline:5px;width:calc(100% - 10px)}}
+
+/* The captured pointer owns the drag; let hit testing reach the drop targets. */
+.sc-match-deck-front.is-lifted{pointer-events:none}
+.sc-match-deck-front.is-lifted .sc-match-card{pointer-events:none}

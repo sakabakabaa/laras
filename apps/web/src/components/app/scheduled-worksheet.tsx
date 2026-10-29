@@ -1,3 +1,5 @@
+import {activityBookReference} from '@/lib/scheduled-book-reference';
+import {BookOpen} from 'lucide-react';
 import {useEffect,useId,useState} from 'react';
 import type {PDFDocumentProxy} from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -12,7 +14,8 @@ import {PDFPreview} from './task-builders/quiz-source-builder';
 export function WorksheetAnswers({sheet,responses,onChange,activity}:{sheet:ScheduledWorksheet;activity?:ScheduledActivity;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
   const t=useT(),group=useId(),targets=activity?cardMatchingTargets(activity):[];
   const answered=sheet.items.filter(item=>{const value=responses[item.id]||'';return item.type==='select'?item.options?.includes(value):Boolean(value.trim());}).length;
-  const progress=<header className="sc-answer-sheet-heading"><h3>{t('worksheet.answerSheet')}</h3><span role="status">{t('worksheet.responseProgress',{answered:String(answered),total:String(sheet.items.length)})}</span></header>;
+  const bookReference=activity?activityBookReference(activity):'';
+  const progress=<><header className="sc-answer-sheet-heading"><h3>{t('worksheet.answerSheet')}</h3><span role="status">{t('worksheet.responseProgress',{answered:String(answered),total:String(sheet.items.length)})}</span></header>{bookReference&&<p className="sc-book-reference"><BookOpen size={18} aria-hidden="true"/>{bookReference}</p>}</>;
   const paired=sheet.items.length>1&&sheet.items.every((item,i)=>item.type==='text'&&item.prompt.match(/^([0-9]+)([ab])\./)?.[0]===`${Math.floor(i/2)+1}${i%2?'b':'a'}.`);
   if(targets.length)return <>{progress}<ScheduledCardMatching key={activity!.id} sheet={sheet} targets={targets} responses={responses} onChange={onChange}/></>;
   const prompt=(item:ScheduledWorksheet['items'][number])=><><span lang="de">{item.prompt}</span>{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}</>;

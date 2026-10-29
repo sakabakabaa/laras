@@ -58,18 +58,17 @@ function assertClassAccess(c, ctx) {
   if (c.getString('status') === 'draft') throw new ForbiddenError('Kelas belum dijadwalkan.');
   if (c.getString('section') && (!ctx.roster || ctx.roster.getString('section') !== c.getString('section'))) throw new ForbiddenError('Kelas terjadwal untuk rombel lain.');
 }
-function rosterReport(app, c, plan, participants, attempts) {
+function rosterReport(app, c, plan, participants, attempts, phase) {
   const course = c.getString('course'), section = c.getString('section');
   const roster = rows(app, 'course_roster', 'course={:c}' + (section ? ' && section={:s}' : ''), {c: course, s: section}, 'name');
-  const marks = rows(app, 'attendance', 'session={:s}', {s: c.getString('session')});
   const report = roster.map(r => {
     const p = participants.find(p => p.roster === r.id), work = p ? attempts.filter(a => a.student === p.student) : [];
     const summary = rules.attendance(data(c), p, plan, work);
-    return {roster: r.id, student: p?.student || '', name: r.getString('name'), nim: r.getString('nim'), checkedInAt: p?.checkedInAt || '', lastSeenAt: p?.lastSeenAt || '', ...summary, attendance: marks.find(m => m.getString('roster') === r.id)?.getString('status') || '', attempts: work};
+    return {roster: r.id, student: p?.student || '', name: r.getString('name'), nim: r.getString('nim'), checkedInAt: p?.checkedInAt || '', lastSeenAt: p?.lastSeenAt || '', ...summary, attendance: p?.checkedInAt ? 'present' : (['closed', 'reviewed'].includes(phase) ? 'absent' : ''), attempts: work};
   });
   for (const p of participants.filter(p => !p.roster || !roster.some(r => r.id === p.roster))) {
     const user = app.findRecordById('users', p.student), work = attempts.filter(a => a.student === p.student);
-    report.push({roster: '', student: p.student, name: user.getString('name') || user.getString('email'), nim: user.getString('nim'), checkedInAt: p.checkedInAt, lastSeenAt: p.lastSeenAt, ...rules.attendance(data(c), p, plan, work), attendance: '', attempts: work});
+    report.push({roster: '', student: p.student, name: user.getString('name') || user.getString('email'), nim: user.getString('nim'), checkedInAt: p.checkedInAt, lastSeenAt: p.lastSeenAt, ...rules.attendance(data(c), p, plan, work), attendance: p.checkedInAt ? 'present' : (['closed', 'reviewed'].includes(phase) ? 'absent' : ''), attempts: work});
   }
   return report;
 }
@@ -128,7 +127,7 @@ function view(app, c, ctx, user, now) {
     }),
     attempts: safeAttempts,
     ...(owner ? {gradingSettings:assess.gradingSettings,assessments:assess.assessments} : {assessments:assess.assessments}),
-    report: owner ? rosterReport(app, c, plan, participants, attempts) : [],
+    report: owner ? rosterReport(app, c, plan, participants, attempts, currentPhase) : [],
     events: owner ? rows(app, 'scheduled_class_events', 'class={:c}', {c: c.id}, '-created').map(data).slice(0, 100) : [],
   };
 }
@@ -136,8 +135,8 @@ function handle(app, body, user, now) {
   const ctx = context(app, body.sessionId, user);
   let c = rows(app, 'scheduled_classes', 'session={:s}', {s: ctx.session.id})[0];
   const action = body.action;
-  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'markAttendance', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment'].includes(action)) bad('Aksi tidak dikenal.');
-  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'markAttendance', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
+  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment'].includes(action)) bad('Aksi tidak dikenal.');
+  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
   if(action==='amendContent'){
     if(!c||c.getString('status')!=='scheduled'||now>=Date.parse(c.getString('startsAt')))bad('Materi hanya dapat direvisi sebelum kelas terjadwal dimulai.');
     if(body.baseRevision!==c.getInt('revision'))bad('Draf berubah. Muat ulang sebelum menyimpan.');
@@ -275,18 +274,6 @@ function handle(app, body, user, now) {
         if (action === 'submit') {finalize(app, attempt, activity, now, 'submitted'); event(app, c, user.id, 'submit', {activity: activity.id});}
       }
     }
-  }
-  if (action === 'markAttendance') {
-    if (!['closed', 'reviewed'].includes(phase)) bad('Tinjau kehadiran setelah kelas selesai.');
-    if (ctx.session.getBool('attendanceClosed')) bad('Buka kembali pencatatan absensi sebelum mengoreksi.');
-    if (!['present', 'late', 'absent', 'excused', 'sick'].includes(body.attendanceStatus)) bad('Status kehadiran tidak valid.');
-    const roster = app.findRecordById('course_roster', body.rosterId);
-    if (roster.getString('course') !== ctx.course.id || (c.getString('section') && roster.getString('section') !== c.getString('section'))) throw new ForbiddenError('Mahasiswa bukan dari kelas ini.');
-    let mark = rows(app, 'attendance', 'session={:s} && roster={:r}', {s: ctx.session.id, r: roster.id})[0];
-    const previous = mark?.getString('status') || '';
-    if (!mark) mark = new Record(app.findCollectionByNameOrId('attendance'));
-    mark.load({session: ctx.session.id, roster: roster.id, owner: user.id, section: roster.getString('section'), status: body.attendanceStatus}); app.save(mark);
-    event(app, c, user.id, 'attendance', {roster: roster.id, previous, status: body.attendanceStatus});
   }
   return view(app, c, ctx, user, now);
 }

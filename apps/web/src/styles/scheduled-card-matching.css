@@ -45,3 +45,6 @@
 /* The captured pointer owns the drag; let hit testing reach the drop targets. */
 .sc-match-deck-front.is-lifted{pointer-events:none}
 .sc-match-deck-front.is-lifted .sc-match-card{pointer-events:none}
+
+/* Entering and exiting cards share one slot, including a cancelled drag. */
+.sc-match-deck-front{grid-area:1 / 1;align-self:start}

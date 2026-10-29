@@ -35,6 +35,7 @@ services:
       - traefik.http.routers.laras-horizon-pb.entrypoints=websecure
       - traefik.http.routers.laras-horizon-pb.tls=true
       - traefik.http.routers.laras-horizon-pb.tls.certresolver=letsencrypt
+      - traefik.http.routers.laras-horizon-pb.tls.domains[0].main=laraslernen.com
       - traefik.http.routers.laras-horizon-pb.priority=100
       - traefik.http.routers.laras-horizon-pb.middlewares=laras-horizon-pb-strip
       - traefik.http.middlewares.laras-horizon-pb-strip.stripprefix.prefixes=/hcgi/platform
@@ -106,6 +107,8 @@ services:
       - traefik.http.routers.laras-legacy.entrypoints=websecure
       - traefik.http.routers.laras-legacy.tls=true
       - traefik.http.routers.laras-legacy.tls.certresolver=letsencrypt
+      - traefik.http.routers.laras-legacy.tls.domains[0].main=laras.zulficar.me
+      - traefik.http.routers.laras-legacy.tls.domains[0].sans=www.laraslernen.com
       - traefik.http.routers.laras-legacy.priority=1
       - traefik.http.routers.laras-legacy.service=laras-horizon-web
       - traefik.http.routers.laras-legacy.middlewares=laras-domain-redirect

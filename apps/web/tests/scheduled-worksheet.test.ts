@@ -21,7 +21,7 @@ describe('scheduled structured worksheets',()=>{
     const a=activity(),partial=rules.cleanAnswers(a,{responses:{match1:'A'},text:'Pretend everything is complete',correctIndex:0});
     expect(rules.result(a,partial).complete).toBe(false);expect(partial.text).not.toContain('Pretend');
     const complete=rules.cleanAnswers(a,{responses:{match1:'A',sentence1:'Du musst Tee trinken.',unknown:'injected'}});
-    expect(rules.result(a,complete)).toEqual({score:0,complete:true});expect(complete.text).toContain('Jonas: Tee trinken\nDu musst Tee trinken.');expect(complete.responses.unknown).toBeUndefined();
+    expect(rules.result(a,complete)).toEqual({complete:true});expect(complete.text).toContain('Jonas: Tee trinken\nDu musst Tee trinken.');expect(complete.responses.unknown).toBeUndefined();
   });
   it('counts completed required worksheets for attendance and excludes breaks',()=>{
     const a={...activity(),id:'worksheet01'},activities=[a,{id:'break01',required:false}];

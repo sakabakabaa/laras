@@ -22,7 +22,7 @@ export default function CourseLayout() {
 	const location = useLocation();
 	const isStudentProfile = /\/mahasiswa\/[^/]+\/?$/.test(location.pathname);
 	const { user } = useAuth();
-	const role = (user as { role?: string } | null)?.role || 'faculty';
+	const role = ((user || pb.authStore.record) as { role?: string } | null)?.role || 'faculty';
 	const isStudent = role === 'student';
 	const isLiveSession = /\/pertemuan\/[^/]+\/terjadwal\/?$/.test(location.pathname);
 	const focusSession = isLiveSession && (isStudent || new URLSearchParams(location.search).get('preview') === 'student');

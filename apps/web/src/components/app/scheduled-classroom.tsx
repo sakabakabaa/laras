@@ -160,7 +160,9 @@ function StudentResults({activities,attempts}:{activities:ScheduledActivity[];at
 
 function ActivityBrief({content}:{content:string}){
   const t=useT(),parts=content.split(/\n\s*\n/).map(part=>part.trim()).filter(Boolean);
-  return <section className="sc-activity-brief"><h3>{t('lesson.now')}</h3><ul className="sc-brief-steps">{parts.map((part,index)=><li key={index}><Check size={18} aria-hidden="true"/><span>{part}</span></li>)}</ul></section>;
+  const isEmailTask=parts[0]==='Sie können nicht zur Arbeit gehen.'&&parts[1]?.startsWith('Schreiben Sie eine E-Mail');
+  const directions=isEmailTask?parts.slice(0,2):[],details=isEmailTask?parts.slice(2):parts;
+  return <section className="sc-activity-brief"><h3>{t('lesson.now')}</h3>{directions.map((part,index)=><p key={index} lang="de">{part}</p>)}{isEmailTask&&details.length>0&&<p lang="de">Verwenden Sie alle Angaben:</p>}<ul className="sc-brief-steps">{details.map((part,index)=><li key={index}><Check size={18} aria-hidden="true"/><span>{part}</span></li>)}</ul></section>;
 }
 
 export function ScheduledClassroom({state, now, onState, connected,preview=false,onPreviewNext}: {state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void; connected: boolean;preview?:boolean;onPreviewNext?:(activityId:string)=>void}) {

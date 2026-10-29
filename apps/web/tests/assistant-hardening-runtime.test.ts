@@ -12,6 +12,8 @@
  * execution are used.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+const {claimAction} = vi.hoisted(() => ({claimAction:vi.fn(async()=>({}))}));
+vi.mock('@/lib/pocketbase-client.server',()=>({pocketbaseAdmin:{send:claimAction}}));
 
 // ── Mocks for the runtime's server-only dependencies ──────────────────────
 
@@ -180,7 +182,7 @@ describe('Task 6/7 — successful write records a confirmed audit grounded in th
 		const session = asSession();
 		// The pending create_course message row.
 		(session.pb as unknown as { collection: (n: string) => unknown }).collection = (name: string) => ({
-			getOne: async () => ({
+			getOne: async () => name === 'courses' ? ({id:'new_course',owner:'u1',title:'Deutsch N3'}) : ({
 				id: 'msg1',
 				owner: 'u1',
 				session: 'sess1',
@@ -195,6 +197,7 @@ describe('Task 6/7 — successful write records a confirmed audit grounded in th
 		});
 
 		const result = await handleConfirm(session, 'msg1', '');
+		expect(claimAction).toHaveBeenCalledWith('/api/assistant-actions/msg1/claim',{method:'POST',body:{owner:'u1'}});
 
 		// The confirmation text is grounded in the created record.
 		expect(result.text).toContain('Deutsch N3');

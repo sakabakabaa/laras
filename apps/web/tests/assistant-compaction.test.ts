@@ -27,7 +27,8 @@ import {
 	shouldCompact,
 	splitForCompaction,
 } from '@/lib/assistant/compaction';
-import { maybeCompact, mergeStructuredContexts, retrieveOlderHistory } from '@/lib/assistant/compaction.server';
+import { maybeCompact, mergeStructuredContexts } from '@/lib/assistant/compaction.server';
+import {retrieveOlderHistory} from '@/lib/assistant/history-retrieval.server';
 import {
 	createSession,
 	loadSessionMessages,

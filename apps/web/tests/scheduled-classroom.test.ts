@@ -26,9 +26,10 @@ describe('student scheduled classroom', () => {
     const html = render(fixture());
     expect(html).toContain('05:00');
     expect(html).toContain('Public chapter excerpt');
-    expect(html.indexOf('sc-workspace')).toBeLessThan(html.indexOf('sc-activity-plan'));
+    expect(html.indexOf('sc-student-schedule')).toBeLessThan(html.indexOf('sc-workspace'));
+		expect(html).not.toContain('sc-activity-plan');
     expect(html).toContain('Time remaining');
-    expect(html).toContain('Not open yet');
+    expect(html).not.toContain('Chapter quiz');
   });
   it('withholds the workspace until check-in and disables joining before class opens', () => {
     const state = fixture(); state.participant = null; state.class!.phase = 'scheduled';
@@ -53,13 +54,14 @@ describe('student scheduled classroom', () => {
     expect(html).not.toContain('Public chapter excerpt');
     expect(html).not.toContain('Mark as complete');
   });
-  it('explains which activities count toward required progress', () => {
+  it('labels optional activities without restoring the removed progress panel', () => {
     const state = fixture(); state.activities[0].required = false;
     const html = render(state);
-    expect(html).toContain('Required activities completed');
-    expect(html).toContain('2 class activities · 1 required activities count toward progress.');
+    expect(html).not.toContain('Required activities completed');
+    expect(html).toContain('Class schedule');
+		expect(html).toContain('Checked in');
     expect(html).toContain('Optional');
-    expect(html).toContain('sc-plan-heading');
+    expect(html).not.toContain('sc-plan-heading');
   });
   it('offers finishing the last activity instead of waiting for a nonexistent next step', () => {
     const state = fixture(); state.activities[1].content = 'Final question';

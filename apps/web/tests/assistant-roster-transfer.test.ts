@@ -12,6 +12,8 @@
  * same fakes plus mocked persistence and audit.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+const {claimAction} = vi.hoisted(() => ({claimAction:vi.fn(async()=>({}))}));
+vi.mock('@/lib/pocketbase-client.server',()=>({pocketbaseAdmin:{send:claimAction}}));
 
 // ── Mocks for the runtime's server-only dependencies ──────────────────────
 const { auditCreate } = vi.hoisted(() => ({ auditCreate: vi.fn(async (data: Record<string, unknown>) => ({ ...data, id: 'audit1' })) }));
@@ -427,6 +429,7 @@ describe('add_roster_students — runtime prepare/confirm/reject', () => {
 		});
 		vi.mocked(saveSessionMessage).mockResolvedValueOnce({ id: 'msg2', role: 'assistant', content: '' } as never);
 		const result = await handleConfirm(session, 'msg1');
+		expect(claimAction).toHaveBeenCalledWith('/api/assistant-actions/msg1/claim',{method:'POST',body:{owner:UID}});
 		expect(result.text).toContain('Berhasil menambah');
 		expect(store.course_roster.filter((r) => r.course === DEST_ID)).toHaveLength(2);
 		const auditCall = auditCreate.mock.calls.at(-1)?.[4] as Record<string, unknown>;

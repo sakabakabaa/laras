@@ -7,13 +7,14 @@ import { AI_SURFACES, assertCapabilities } from '@/lib/ai/providers.server';
  * and the error message shape.
  */
 describe('surface capability requirements', () => {
-	it('covers exactly the five chat surfaces', () => {
+	it('covers all lecturer and student chat surfaces', () => {
 		expect(AI_SURFACES.map((surface) => surface.id)).toEqual([
 			'assistant',
 			'evaluation',
 			'lesson_plan',
 			'practice',
 			'rps_import',
+			'student_help',
 		]);
 	});
 

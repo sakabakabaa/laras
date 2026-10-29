@@ -12,6 +12,8 @@
  * and audit, mirroring assistant-hardening-runtime.test.ts.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+const {claimAction} = vi.hoisted(() => ({claimAction:vi.fn(async()=>({}))}));
+vi.mock('@/lib/pocketbase-client.server',()=>({pocketbaseAdmin:{send:claimAction}}));
 
 // ── Mocks for the runtime's server-only dependencies ──────────────────────
 const { auditCreate } = vi.hoisted(() => ({ auditCreate: vi.fn(async (data: Record<string, unknown>) => ({ ...data, id: 'audit1' })) }));
@@ -384,6 +386,7 @@ describe('link_session_outcomes — runtime prepare/confirm/reject', () => {
 		});
 		vi.mocked(saveSessionMessage).mockResolvedValueOnce({ id: 'msg2', role: 'assistant', content: '' } as never);
 		const result = await handleConfirm(session, 'msg1');
+		expect(claimAction).toHaveBeenCalledWith('/api/assistant-actions/msg1/claim',{method:'POST',body:{owner:UID}});
 		expect(result.text).toContain('berhasil diterapkan');
 		expect(store.class_sessions[0].subCpmks).toEqual(['sub1', 'sub2']);
 		const auditCall = auditCreate.mock.calls.at(-1)?.[4] as Record<string, unknown>;

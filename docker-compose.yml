@@ -12,7 +12,7 @@ services:
       PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?Set PB_SUPERUSER_PASSWORD in the deployment .env}
       # Absolute links in recovery mail, and the SMTP transport that delivers it.
       # Migration 1793100000 applies these to the stored PocketBase settings.
-      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-https://laras.zulficar.me}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-https://laraslernen.com}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-465}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
@@ -31,7 +31,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=laras-app-net
-      - traefik.http.routers.laras-horizon-pb.rule=(Host(`laras.zulficar.me`) || Host(`laras.srv1957161.hstgr.cloud`)) && PathPrefix(`/hcgi/platform/api`)
+      - traefik.http.routers.laras-horizon-pb.rule=(Host(`laraslernen.com`) || Host(`laras.zulficar.me`) || Host(`laras.srv1957161.hstgr.cloud`)) && PathPrefix(`/hcgi/platform/api`)
       - traefik.http.routers.laras-horizon-pb.entrypoints=websecure
       - traefik.http.routers.laras-horizon-pb.tls=true
       - traefik.http.routers.laras-horizon-pb.tls.certresolver=letsencrypt
@@ -71,7 +71,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       POCKETBASE_URL: http://pocketbase:8090
-      WEBSITE_DOMAIN: laras.zulficar.me
+      WEBSITE_DOMAIN: ${WEBSITE_DOMAIN:-laraslernen.com}
       # Bynara remains configured only for course-thumbnail image generation.
       BYNARA_API_KEY: ${BYNARA_API_KEY:-}
       HROUTER_API_KEY: ${HROUTER_API_KEY:-}
@@ -94,7 +94,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=laras-app-net
-      - traefik.http.routers.laras-horizon-web.rule=Host(`laras.zulficar.me`)
+      - traefik.http.routers.laras-horizon-web.rule=Host(`laraslernen.com`)
       - traefik.http.routers.laras-horizon-web.entrypoints=websecure
       - traefik.http.routers.laras-horizon-web.tls=true
       - traefik.http.routers.laras-horizon-web.tls.certresolver=letsencrypt
@@ -102,15 +102,15 @@ services:
       - traefik.http.routers.laras-horizon-web.service=laras-horizon-web
       - traefik.http.services.laras-horizon-web.loadbalancer.server.port=3000
       # Keep old page links working; legacy API/file URLs remain served by PB.
-      - traefik.http.routers.laras-legacy.rule=Host(`laras.srv1957161.hstgr.cloud`)
+      - traefik.http.routers.laras-legacy.rule=Host(`laras.zulficar.me`) || Host(`laras.srv1957161.hstgr.cloud`) || Host(`www.laraslernen.com`)
       - traefik.http.routers.laras-legacy.entrypoints=websecure
       - traefik.http.routers.laras-legacy.tls=true
       - traefik.http.routers.laras-legacy.tls.certresolver=letsencrypt
       - traefik.http.routers.laras-legacy.priority=1
       - traefik.http.routers.laras-legacy.service=laras-horizon-web
       - traefik.http.routers.laras-legacy.middlewares=laras-domain-redirect
-      - traefik.http.middlewares.laras-domain-redirect.redirectregex.regex=^https?://laras[.]srv1957161[.]hstgr[.]cloud/(.*)
-      - traefik.http.middlewares.laras-domain-redirect.redirectregex.replacement=https://laras.zulficar.me/$${1}
+      - traefik.http.middlewares.laras-domain-redirect.redirectregex.regex=^https?://(?:laras[.]zulficar[.]me|laras[.]srv1957161[.]hstgr[.]cloud|www[.]laraslernen[.]com)/(.*)
+      - traefik.http.middlewares.laras-domain-redirect.redirectregex.replacement=https://laraslernen.com/$${1}
       - traefik.http.middlewares.laras-domain-redirect.redirectregex.permanent=true
 
 networks:

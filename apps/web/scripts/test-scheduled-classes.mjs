@@ -86,6 +86,8 @@ try {
   async function retime(offset) {const startsAt = Date.now() - offset; await ok(records('scheduled_classes') + '/' + classId, {startsAt: new Date(startsAt).toISOString(), endsAt: new Date(startsAt + 240000).toISOString(), joinUntil: new Date(startsAt + 239000).toISOString()}, admin, 'PATCH');}
   await retime(15000);
   s = await call(student, 'join'); const joined = s.participant.checkedInAt;
+  const checkedInMark = (await ok(records('attendance') + '?filter=' + encodeURIComponent(`session="${meeting.id}" && roster="${roster[student.id].id}"`), {}, admin, 'GET')).items[0];
+  assert.equal(checkedInMark.status, 'present'); assert.equal(checkedInMark.student, student.id); assertions += 2;
   assert.equal(s.activities[0].content, 'Private scheduled material'); assert(!s.activities[1].questions); assertions += 2;
   assert.equal(s.activities[0].sources.length,1);assert.equal(s.activities[0].sources[0].title,'Student handout');assert.equal(s.activities[0].academic,undefined);assert(!JSON.stringify(s).includes('PRIVATE FACULTY REFERENCE'));assertions+=4;
   await call(second, 'join');
@@ -127,15 +129,47 @@ try {
   const attempts = await ok(records('scheduled_activity_attempts') + '?filter=' + encodeURIComponent(`class="${classId}"`), {}, admin, 'GET');
   assert(attempts.items.every(t => t.status !== 'draft')); assertions++;
   s = await call(student, 'state'); assert.equal(s.class.phase, 'closed'); assert.equal(s.participant.checkedInAt, joined); assertions += 2;
-  assert(s.attempts.every(t => t.score === undefined)); assertions++;
+  // Current upstream automatically reveals objective results once required work is complete.
+  assert.equal(s.class.resultsReady, true); assert.equal(s.attempts.find(t => t.activity === quiz).score, 100); assertions += 2;
   state = await call(teacher, 'state'); assert.equal(state.report.find(r => r.student === student.id).suggestion, 'present'); assertions++;
-  // Nothing has silently written official attendance or official grades.
-  assert.equal((await ok(records('attendance') + '?filter=' + encodeURIComponent(`session="${meeting.id}"`), {}, admin, 'GET')).totalItems, 0); assertions++;
-  await call(teacher, 'markAttendance', {rosterId: roster[student.id].id, attendanceStatus: 'excused'});
+  // Manual scheduled assessment remains separate from completion, quiz scores, and official gradebook.
+  const writingAttempt = state.attempts.find(t => t.activity === writing && t.student === student.id);
+  const exitAttempt = state.attempts.find(t => t.activity === exit && t.student === student.id);
+  state = await call(teacher, 'saveGradingSettings', {activityId: writing, baseRevision: 0, mode: 'points', maxPoints: 10, criteria: []});
+  assert.equal(state.gradingSettings.find(x => x.activity === writing).revision, 1); assertions++;
+  state = await call(teacher, 'saveAssessment', {attemptId: writingAttempt.id, baseRevision: 0, attemptRevision: writingAttempt.revision, settingsRevision: 1, status: 'reviewed', points: 8, criterionScores: {}, feedback: 'Clear explanation.'});
+  assert.equal(state.assessments.find(x => x.attempt === writingAttempt.id).points, 8); assertions++;
+  let learner = await call(student, 'state'); assert.equal(learner.gradingSettings, undefined); assert.equal((learner.assessments || []).length, 0); assertions += 2;
+  state = await call(teacher, 'publishAssessment', {attemptId: writingAttempt.id, baseRevision: 1, attemptRevision: writingAttempt.revision, settingsRevision: 1});
+  assert.equal(state.assessments.find(x => x.attempt === writingAttempt.id).published.points, 8); assertions++;
+  state = await call(teacher, 'publishAssessment', {attemptId: writingAttempt.id, baseRevision: 1, attemptRevision: writingAttempt.revision, settingsRevision: 1});
+  assert.equal(state.assessments.find(x => x.attempt === writingAttempt.id).revision, 2); assertions++;
+  learner = await call(student, 'state'); assert.equal(learner.assessments[0].feedback, 'Clear explanation.'); assert.equal(learner.assessments[0].publishedRevision, undefined); assertions += 2;
+  await denied(student, 'saveAssessment', {attemptId: writingAttempt.id, baseRevision: 2, attemptRevision: writingAttempt.revision, settingsRevision: 1, status: 'reviewed', points: 0, criterionScores: {}, feedback: 'Unauthorized'});
+  await denied(otherTeacher, 'publishAssessment', {attemptId: writingAttempt.id, baseRevision: 2, attemptRevision: writingAttempt.revision, settingsRevision: 1});
+  const staleGrade = await api(endpoint, {sessionId: meeting.id, action: 'saveAssessment', attemptId: writingAttempt.id, baseRevision: 1, attemptRevision: writingAttempt.revision, settingsRevision: 1, status: 'draft', points: 2, criterionScores: {}, feedback: 'Stale'}, teacher.token);
+  assert.equal(staleGrade.status, 400); assertions++;
+  state = await call(teacher, 'saveAssessment', {attemptId: writingAttempt.id, baseRevision: 2, attemptRevision: writingAttempt.revision, settingsRevision: 1, status: 'draft', points: 6, criterionScores: {}, feedback: 'Private revision'});
+  learner = await call(student, 'state'); assert.equal(learner.assessments[0].feedback, 'Clear explanation.'); assert.equal(learner.assessments[0].points, 8); assertions += 2;
+  const draftPublish = await api(endpoint, {sessionId: meeting.id, action: 'publishAssessment', attemptId: writingAttempt.id, baseRevision: 3, attemptRevision: writingAttempt.revision, settingsRevision: 1}, teacher.token);
+  assert.equal(draftPublish.status, 400); assertions++;
+  state = await call(teacher, 'saveAssessment', {attemptId: writingAttempt.id, baseRevision: 3, attemptRevision: writingAttempt.revision, settingsRevision: 1, status: 'reviewed', points: 6, criterionScores: {}, feedback: 'Updated public feedback'});
+  const stalePublish = await api(endpoint, {sessionId: meeting.id, action: 'publishAssessment', attemptId: writingAttempt.id, baseRevision: 1, attemptRevision: writingAttempt.revision, settingsRevision: 1}, teacher.token);
+  assert.equal(stalePublish.status, 400); assertions++;
+  learner = await call(student, 'state'); assert.equal(learner.assessments[0].feedback, 'Clear explanation.'); assertions++;
+  state = await call(teacher, 'publishAssessment', {attemptId: writingAttempt.id, baseRevision: 4, attemptRevision: writingAttempt.revision, settingsRevision: 1});
+  learner = await call(student, 'state'); assert.equal(learner.assessments[0].feedback, 'Updated public feedback'); assert.equal(learner.assessments[0].points, 6); assertions += 2;
+  state = await call(teacher, 'saveGradingSettings', {activityId: exit, baseRevision: 0, mode: 'ungraded', maxPoints: 0, criteria: []});
+  state = await call(teacher, 'saveAssessment', {attemptId: exitAttempt.id, baseRevision: 0, attemptRevision: exitAttempt.revision, settingsRevision: 1, status: 'reviewed', points: null, criterionScores: {}, feedback: 'Useful reflection.'});
+  assert.equal(state.assessments.find(x => x.attempt === exitAttempt.id).points, null); assertions++;
+  // Check-in records official attendance, independently of submitted work.
+  assert.equal(state.report.find(r => r.student === student.id).attendance, 'present'); assertions++;
+  assert.equal(state.report.find(r => r.roster === roster[noShow.id].id).attendance, 'absent'); assertions++;
   state = await call(teacher, 'state');
-  assert.equal(state.events.find(e => e.action === 'attendance').detail.status, 'excused'); assertions++;
-  const official = (await ok(records('attendance') + '?filter=' + encodeURIComponent(`session="${meeting.id}"`), {}, admin, 'GET')).items[0];
-  assert.equal(official.status, 'excused'); assert.equal(official.student, student.id); assertions += 2;
+  const official = (await ok(records('attendance') + '?filter=' + encodeURIComponent(`session="${meeting.id}" && roster="${roster[student.id].id}"`), {}, admin, 'GET')).items[0];
+  assert.equal(official.status, 'present'); assert.equal(official.student, student.id); assertions += 2;
+  assert.equal(state.events.filter(e => e.action === 'attendance' && e.detail.roster === roster[student.id].id).length, 1); assertions++;
+  await denied(teacher, 'markAttendance', {rosterId: roster[student.id].id, attendanceStatus: 'excused'});
   await denied(student, 'markAttendance', {rosterId: roster[student.id].id, attendanceStatus: 'present'});
   await call(teacher, 'release');
   s = await call(student, 'state'); assert.equal(s.attempts.find(t => t.activity === quiz).score, 100); assert.equal(s.activities[1].questions[0].correctIndex, 0); assertions += 2;

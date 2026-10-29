@@ -1,17 +1,14 @@
-import {ScheduledLessonEditor} from '@/components/app/scheduled-lesson-editor';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { scheduledRequest, wibLabel, type ScheduledClassState } from '@/lib/scheduled-classes';
-import { ScheduledClassEditor } from '@/components/app/scheduled-class-editor';
+import { scheduledRequest, type ScheduledClassState } from '@/lib/scheduled-classes';
 import { ScheduledClassroom } from '@/components/app/scheduled-classroom';
-import { ScheduledClassReport } from '@/components/app/scheduled-class-report';
-import {ScheduledReviewWorkspace} from '@/components/app/scheduled-review-workspace';
-import '@/styles/scheduled-review.css';
+import '@/styles/scheduled-session-workspace.css';
 import '@/styles/scheduled-classes.css';
 import '@/styles/scheduled-student-workspace.css';
 import {ScheduledStudentPreview} from '@/components/app/scheduled-student-preview';
 import {useCourseSections} from '@/hooks/use-course-sections';
 import { useT } from '@/lib/i18n';
+import {ScheduledLecturerSession} from '@/components/app/scheduled-lecturer-session';
 
 export function meta() { return [{title: 'Kelas terjadwal | LARAS'}]; }
 
@@ -54,34 +51,24 @@ export default function ScheduledClassPage() {
     const timer = setTimeout(() => void refresh(), Math.min(delay + 100, 2147483647));
     return () => clearTimeout(timer);
   }, [boundary, clock, refresh]);
-  const act = async (action: string, body: Record<string, unknown> = {}) => {
-    setBusy(true); setError('');
-    try {accept(await scheduledRequest(sessionId, action, body));}
-    catch (e) {setError((e as Error).message);}
-    finally {setBusy(false);}
-  };
   const actOrThrow = async (action: string, body: Record<string, unknown> = {}) => {
     setBusy(true); setError('');
     try {accept(await scheduledRequest(sessionId, action, body));}
     catch (e) {setError((e as Error).message); throw e;}
     finally {setBusy(false);}
   };
-  return <div className={`sc-page${state && !state.owner ? ' sc-student-page' : ''}`}>
-    <Link className="ld-text-btn" to={`/app/courses/${courseId}/mata-kuliah`}>← {t('studentClass.back')}</Link>
-    <header className="sc-heading"><div><small>{t('studentClass.eyebrow')}</small><h1>{state?.class?.title || state?.session.title || t('studentClass.title')}</h1><p>{t('studentClass.subtitle')}</p></div>{state?.class && <span className={`sc-badge sc-${state.class.phase}`}>{t(`studentClass.${state.class.phase}`)}</span>}</header>
-    {state?.owner && state.class && state.class.status!=='draft' && <section className="sc-card"><p>{t('scheduledPreview.audience', {section:sections.find(s=>s.id===state.class?.section)?.name || (state.class.section ? '…' : t('scheduledPreview.allSections'))})}</p><Link className="ld-text-btn" to={preview?'?':'?preview=student'}>{t(preview?'scheduledPreview.back':'scheduledPreview.open')}</Link></section>}
+  if(state?.owner && !preview) return <>
+    {error && <div className="sc-alert" role="alert">{error}<button onClick={()=>void refresh()}>Muat ulang</button></div>}
+    {!connected && <p role="status">Koneksi terputus. Menghubungkan kembali...</p>}
+    <ScheduledLecturerSession state={state} courseId={courseId} busy={busy} onAction={actOrThrow} onState={accept}/>
+  </>;
+  const returnParams=new URLSearchParams(searchParams);returnParams.delete('preview');
+  return <div className="sc-page sc-student-page">
+    <Link className="ld-text-btn" to={state?.owner?'?'+returnParams.toString():`/app/courses/${courseId}/mata-kuliah`}>← {state?.owner?'Kembali ke ruang dosen':t('studentClass.back')}</Link>
+    <header className="sc-heading"><div><small>{t('studentClass.eyebrow')}</small><h1>{state?.class?.title || state?.session.title || t('studentClass.title')}</h1></div></header>
+    {state?.owner && state.class && <p>{t('scheduledPreview.audience', {section:sections.find(s=>s.id===state.class?.section)?.name || t('scheduledPreview.allSections')})}</p>}
     {error && <div className="sc-alert" role="alert">{error} <button onClick={() => void refresh()}>{t('studentClass.reload')}</button></div>}
     {!connected && <p role="status">{t('studentClass.offline')}</p>}
-    {!state ? <p role="status">{t('studentClass.loading')}</p> : state.owner && preview && state.class && state.class.status!=='draft' ? <ScheduledStudentPreview state={state}/> : state.owner ? <>
-      {(!state.class || state.class.status === 'draft') ? <ScheduledClassEditor state={state} onSaved={accept} focusAi={searchParams.get('create') === 'ai'}/> : <>
-        <section className="sc-card"><h2>Pelaksanaan otomatis</h2><p>{wibLabel(state.class.startsAt)} — {wibLabel(state.class.endsAt)}</p><p className="sc-prose">{state.class.instructions}</p><p>Jadwal dan jawaban tersimpan di server. Dosen tidak perlu membuka halaman ini selama kelas berlangsung.</p>
-          <div className="sc-actions">{['scheduled', 'open'].includes(state.class.phase) && <button disabled={busy} onClick={() => {if (window.confirm('Batalkan kelas ini? Mahasiswa tidak dapat melanjutkan kegiatan.')) void act('cancel');}}>Batalkan kelas</button>}
-          {['closed', 'reviewed'].includes(state.class.phase) && !state.class.releaseResults && <button disabled={busy} onClick={() => {if (window.confirm('Terbitkan nilai kuis, kunci, dan pembahasan kepada peserta?')) void act('release');}}>Terbitkan hasil kuis</button>}
-          {state.class.phase === 'closed' && <button disabled={busy} onClick={() => void act('review')}>Tandai sudah ditinjau</button>}</div>
-        </section>
-        <details className="sc-card"><summary>Pratinjau rundown · {state.activities.length} kegiatan</summary>{state.activities.map(a => <article className="sc-preview" key={a.id}><h3>{a.title}</h3><small>{wibLabel(a.startsAt)} — {wibLabel(a.endsAt)}</small><p className="sc-prose">{a.content}</p>{a.url && <a href={a.url} target="_blank" rel="noreferrer">Buka materi ↗</a>}{a.worksheet&&<section><p>{a.worksheet.sourceLabel} · PDF {a.worksheet.sourcePage}</p><ol>{a.worksheet.items.map(item=><li key={item.id}><p>{item.prompt}</p>{item.options&&<small>{item.options.join(' / ')}</small>}</li>)}</ol></section>}{a.questions?.map(q => <div key={q.id}><p>{q.text}</p><ol type="A">{q.options.map((o, i) => <li key={i}>{o}{i === q.correctIndex ? ' ✓' : ''}</li>)}</ol></div>)}</article>)}</details>
-        <ScheduledLessonEditor state={state} onSaved={accept}/><ScheduledReviewWorkspace state={state} onAction={actOrThrow}/><ScheduledClassReport state={state}/>
-      </>}
-    </> : !state.class ? <section className="sc-card"><h2>Belum ada kelas terjadwal</h2><p>Dosen belum menjadwalkan kegiatan untuk pertemuan ini.</p></section> : <ScheduledClassroom state={state} now={now} onState={accept} connected={connected}/>}
+    {!state ? <p role="status">{t('studentClass.loading')}</p> : state.owner && preview && state.class ? <ScheduledStudentPreview state={state}/> : !state.class ? <section className="sc-card"><h2>Belum ada kelas terjadwal</h2><p>Dosen belum menjadwalkan kegiatan untuk pertemuan ini.</p></section> : <ScheduledClassroom state={state} now={now} onState={accept} connected={connected}/>}
   </div>;
 }

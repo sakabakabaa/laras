@@ -76,6 +76,15 @@ try {
   assert.deepEqual(state.activities[0].materialIds,[shared.id,privateFile.id]); assert.deepEqual(state.activities[0].cpmkIds,[outcome.id]); assert.equal(state.class.academicSnapshot.session.id,meeting.id); assertions+=3;
   await denied(teacher,'savePlan',{...state.class,baseRevision:1,activities:state.activities.map((a,i)=>i===0?{...a,materialIds:[foreign.id]}:a)});
   const classId = state.class.id;
+  const listEndpoint = '/api/laras/scheduled-class-list';
+  const lecturerList = await ok(listEndpoint, {}, teacher.token, 'GET');
+  const listedClass = lecturerList.items.find(item => item.id === classId);
+  assert.equal(listedClass.session, meeting.id); assert.equal(listedClass.course.id, course.id); assert.equal(listedClass.activityCount, 4); assertions += 3;
+  assert.equal(listedClass.snapshot, undefined); assert.equal(listedClass.attempts, undefined); assertions += 2;
+  assert(!(await ok(listEndpoint, {}, otherTeacher.token, 'GET')).items.some(item => item.id === classId)); assertions++;
+  assert.equal((await api(listEndpoint, {}, student.token, 'GET')).status, 403); assertions++;
+  assert.equal((await api(listEndpoint, {}, '', 'GET')).status, 401); assertions++;
+
   await denied(student, 'schedule', {baseRevision: 1});
   state = await call(teacher, 'schedule', {...state.class, baseRevision: 1, activities: state.activities});
   let s = await call(student, 'state'); assert(!JSON.stringify(s).includes('Private')); assert(!JSON.stringify(s).includes(shared.id));assert(!s.class.academicSnapshot);assert(!s.activities[0].academic);assertions+=4;

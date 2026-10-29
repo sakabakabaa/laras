@@ -5,6 +5,8 @@ import { scheduledRequest, wibLabel, type ScheduledClassState } from '@/lib/sche
 import { ScheduledClassEditor } from '@/components/app/scheduled-class-editor';
 import { ScheduledClassroom } from '@/components/app/scheduled-classroom';
 import { ScheduledClassReport } from '@/components/app/scheduled-class-report';
+import {ScheduledReviewWorkspace} from '@/components/app/scheduled-review-workspace';
+import '@/styles/scheduled-review.css';
 import '@/styles/scheduled-classes.css';
 import '@/styles/scheduled-student-workspace.css';
 import {ScheduledStudentPreview} from '@/components/app/scheduled-student-preview';
@@ -58,6 +60,12 @@ export default function ScheduledClassPage() {
     catch (e) {setError((e as Error).message);}
     finally {setBusy(false);}
   };
+  const actOrThrow = async (action: string, body: Record<string, unknown> = {}) => {
+    setBusy(true); setError('');
+    try {accept(await scheduledRequest(sessionId, action, body));}
+    catch (e) {setError((e as Error).message); throw e;}
+    finally {setBusy(false);}
+  };
   return <div className={`sc-page${state && !state.owner ? ' sc-student-page' : ''}`}>
     <Link className="ld-text-btn" to={`/app/courses/${courseId}/mata-kuliah`}>← {t('studentClass.back')}</Link>
     <header className="sc-heading"><div><small>{t('studentClass.eyebrow')}</small><h1>{state?.class?.title || state?.session.title || t('studentClass.title')}</h1><p>{t('studentClass.subtitle')}</p></div>{state?.class && <span className={`sc-badge sc-${state.class.phase}`}>{t(`studentClass.${state.class.phase}`)}</span>}</header>
@@ -72,7 +80,7 @@ export default function ScheduledClassPage() {
           {state.class.phase === 'closed' && <button disabled={busy} onClick={() => void act('review')}>Tandai sudah ditinjau</button>}</div>
         </section>
         <details className="sc-card"><summary>Pratinjau rundown · {state.activities.length} kegiatan</summary>{state.activities.map(a => <article className="sc-preview" key={a.id}><h3>{a.title}</h3><small>{wibLabel(a.startsAt)} — {wibLabel(a.endsAt)}</small><p className="sc-prose">{a.content}</p>{a.url && <a href={a.url} target="_blank" rel="noreferrer">Buka materi ↗</a>}{a.worksheet&&<section><p>{a.worksheet.sourceLabel} · PDF {a.worksheet.sourcePage}</p><ol>{a.worksheet.items.map(item=><li key={item.id}><p>{item.prompt}</p>{item.options&&<small>{item.options.join(' / ')}</small>}</li>)}</ol></section>}{a.questions?.map(q => <div key={q.id}><p>{q.text}</p><ol type="A">{q.options.map((o, i) => <li key={i}>{o}{i === q.correctIndex ? ' ✓' : ''}</li>)}</ol></div>)}</article>)}</details>
-        <ScheduledLessonEditor state={state} onSaved={accept}/><ScheduledClassReport state={state} busy={busy} onAction={act}/>
+        <ScheduledLessonEditor state={state} onSaved={accept}/><ScheduledReviewWorkspace state={state} onAction={actOrThrow}/><ScheduledClassReport state={state} busy={busy} onAction={act}/>
       </>}
     </> : !state.class ? <section className="sc-card"><h2>Belum ada kelas terjadwal</h2><p>Dosen belum menjadwalkan kegiatan untuk pertemuan ini.</p></section> : <ScheduledClassroom state={state} now={now} onState={accept} connected={connected}/>}
   </div>;

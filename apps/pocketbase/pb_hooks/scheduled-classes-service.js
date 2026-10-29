@@ -73,8 +73,27 @@ function rosterReport(app, c, plan, participants, attempts) {
   }
   return report;
 }
+function gradingState(app, c, owner, user) {
+  const activities = rows(app, 'scheduled_class_activities', 'class={:c}', {c:c.id});
+  const settings = rows(app, 'scheduled_grading_settings', 'class={:c}', {c:c.id});
+  const assessments = rows(app, 'scheduled_assessments', 'class={:c}' + (owner ? '' : ' && student={:u}'), {c:c.id,u:user.id});
+  const assess = require(__hooks + '/scheduled-assessment.js');
+  const published = assessments.filter(r => json(r,'published') && Object.keys(json(r,'published')).length).map(r => {
+    const published = json(r, 'published');
+    published.publishedRevision = r.getInt('publishedRevision');
+    delete published.publishedRevision;
+    return assess.studentPublished({attempt:r.getString('attempt'),activity:r.getString('activity'),...published});
+  });
+  if (!owner) return {assessments:published};
+  const settingsByActivity = Object.fromEntries(settings.map(r => [r.getString('activity'), r.getString('mode')]));
+  return {
+    gradingSettings: settings.map(r => ({id:r.id,activity:r.getString('activity'),revision:r.getInt('revision'),mode:r.getString('mode'),maxPoints:r.getFloat('maxPoints'),criteria:json(r,'criteria')||[]})),
+    assessments: assessments.map(r => ({id:r.id,attempt:r.getString('attempt'),activity:r.getString('activity'),student:r.getString('student'),revision:r.getInt('revision'),attemptRevision:r.getInt('attemptRevision'),settingsRevision:r.getInt('settingsRevision'),status:r.getString('status'),points:settingsByActivity[r.getString('activity')] === 'ungraded' ? null : r.get('points'),criterionScores:json(r,'criterionScores')||{},feedback:r.getString('feedback'),...(json(r,'published')&&Object.keys(json(r,'published')).length?{published:json(r,'published')}:{})}))
+  };
+}
 function view(app, c, ctx, user, now) {
-  const owner = ctx.owner, info = data(c), currentPhase = rules.phase(info, now);
+  const assess = gradingState(app,c,ctx.owner,user);
+    const owner = ctx.owner, info = data(c), currentPhase = rules.phase(info, now);
   const plan = activities(app, c);
   const participants = rows(app, 'scheduled_class_participants', 'class={:c}' + (owner ? '' : ' && student={:u}'), {c: c.id, u: user.id}).map(data);
   const attempts = rows(app, 'scheduled_activity_attempts', 'class={:c}' + (owner ? '' : ' && student={:u}'), {c: c.id, u: user.id}).map(data);
@@ -108,6 +127,7 @@ function view(app, c, ctx, user, now) {
       return {...meta, content: snapshot.content, url: snapshot.url, ...(snapshot.lesson?{lesson:snapshot.lesson}:{}), ...(worksheet ? {worksheet}:{}), sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
     }),
     attempts: safeAttempts,
+    ...(owner ? {gradingSettings:assess.gradingSettings,assessments:assess.assessments} : {assessments:assess.assessments}),
     report: owner ? rosterReport(app, c, plan, participants, attempts) : [],
     events: owner ? rows(app, 'scheduled_class_events', 'class={:c}', {c: c.id}, '-created').map(data).slice(0, 100) : [],
   };
@@ -116,8 +136,8 @@ function handle(app, body, user, now) {
   const ctx = context(app, body.sessionId, user);
   let c = rows(app, 'scheduled_classes', 'session={:s}', {s: ctx.session.id})[0];
   const action = body.action;
-  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'markAttendance', 'review'].includes(action)) bad('Aksi tidak dikenal.');
-  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'markAttendance', 'review'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
+  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'markAttendance', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment'].includes(action)) bad('Aksi tidak dikenal.');
+  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'markAttendance', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
   if(action==='amendContent'){
     if(!c||c.getString('status')!=='scheduled'||now>=Date.parse(c.getString('startsAt')))bad('Materi hanya dapat direvisi sebelum kelas terjadwal dimulai.');
     if(body.baseRevision!==c.getInt('revision'))bad('Draf berubah. Muat ulang sebelum menyimpan.');
@@ -162,6 +182,55 @@ function handle(app, body, user, now) {
   }
   assertClassAccess(c, ctx);
   reconcile(app, c, now);
+  if (['saveGradingSettings','saveAssessment','publishAssessment'].includes(action)) {
+    const assess = require(__hooks + '/scheduled-assessment.js');
+    const phaseNow = rules.phase(data(c), now);
+    if (!['closed','reviewed'].includes(phaseNow)) bad('Penilaian tersedia setelah kelas selesai.');
+    if (action === 'saveGradingSettings') {
+      const activity = app.findRecordById('scheduled_class_activities', String(body.activityId||''));
+      if (activity.getString('class') !== c.id) throw new ForbiddenError('Kegiatan bukan dari kelas ini.');
+      assess.assertGradable(activity.getString('kind'));
+      const old = rows(app,'scheduled_grading_settings','class={:c} && activity={:a}',{c:c.id,a:activity.id})[0];
+      const base = old?.getInt('revision') || 0;
+      if (!Number.isInteger(body.baseRevision) || body.baseRevision !== base) bad('Pengaturan berubah. Muat ulang sebelum menyimpan.');
+      if (rows(app,'scheduled_assessments','activity={:a}',{a:activity.id}).length) bad('Pengaturan terkunci karena penilaian sudah dibuat.');
+      const settings = assess.validateSettings({mode:body.mode,maxPoints:body.maxPoints,criteria:body.criteria});
+      let record = old || new Record(app.findCollectionByNameOrId('scheduled_grading_settings'));
+      record.load({class:c.id,activity:activity.id,revision:base+1,mode:settings.mode,maxPoints:settings.maxPoints,criteria:settings.criteria}); app.save(record);
+      event(app,c,user.id,'grading_settings',{activity:activity.id,revision:base+1});
+    } else {
+      const attempt = app.findRecordById('scheduled_activity_attempts',String(body.attemptId||''));
+      if (attempt.getString('class') !== c.id) throw new ForbiddenError('Jawaban bukan dari kelas ini.');
+      const activity = app.findRecordById('scheduled_class_activities',attempt.getString('activity'));
+      if (attempt.getString('activity') !== activity.id) throw new ForbiddenError('Kegiatan bukan dari jawaban ini.');
+      if (activity.getString('class') !== c.id) throw new ForbiddenError('Kegiatan bukan dari kelas ini.');
+      assess.assertGradable(activity.getString('kind'));
+      if (attempt.getString('status') === 'draft') bad('Jawaban belum dikumpulkan.');
+      const setting = rows(app,'scheduled_grading_settings','class={:c} && activity={:a}',{c:c.id,a:activity.id})[0];
+      if (!setting) bad('Pengaturan penilaian tidak tersedia.');
+      let record = rows(app,'scheduled_assessments','attempt={:a}',{a:attempt.id})[0];
+      if (action === 'publishAssessment') {
+        if (!record || record.getString('status') !== 'reviewed') bad('Tinjau penilaian sebelum menerbitkan.');
+        const alreadyPublishedRevision = record.getInt('publishedRevision');
+        const isUnchangedPublishRetry = body.baseRevision === alreadyPublishedRevision && record.getInt('revision') === alreadyPublishedRevision + 1;
+        if (!Number.isInteger(body.baseRevision) || (body.baseRevision !== record.getInt('revision') && !isUnchangedPublishRetry)) bad('Penilaian berubah. Muat ulang sebelum menerbitkan.');
+        if (body.attemptRevision !== attempt.getInt('revision') || body.settingsRevision !== setting.getInt('revision') || record.getInt('attemptRevision') !== attempt.getInt('revision') || record.getInt('settingsRevision') !== setting.getInt('revision')) bad('Jawaban atau pengaturan berubah. Muat ulang sebelum menerbitkan.');
+        const grade = assess.validateGrade({mode:setting.getString('mode'),maxPoints:setting.getFloat('maxPoints'),criteria:json(setting,'criteria')||[]},json(record,'criterionScores'),record.get('points'));
+        if (record.getString('feedback').length > 10000) bad('Umpan balik tidak valid.');
+        const current = json(record,'published');
+        if (!current || current.publishedRevision !== record.getInt('revision') - 1) {const publishedRevision = record.getInt('revision'); const snapshot={points:grade.points,maxPoints:setting.getFloat('maxPoints'),feedback:record.getString('feedback'),publishedAt:new Date(now).toISOString(),publishedRevision};record.set('published',snapshot);record.set('publishedRevision',publishedRevision);record.set('revision',publishedRevision+1);app.save(record);event(app,c,user.id,'assessment_published',{attempt:attempt.id,status:record.getString('status')});}
+      } else {
+        if (!Number.isInteger(body.baseRevision)||body.baseRevision!==(record?.getInt('revision')||0)) bad('Penilaian berubah. Muat ulang sebelum menyimpan.');
+        if (body.attemptRevision!==attempt.getInt('revision')||body.settingsRevision!==setting.getInt('revision')) bad('Jawaban atau pengaturan berubah. Muat ulang sebelum menyimpan.');
+        if (!['draft','reviewed'].includes(body.status)) bad('Status penilaian tidak valid.');
+        const grade=assess.validateGrade({mode:setting.getString('mode'),maxPoints:setting.getFloat('maxPoints'),criteria:json(setting,'criteria')||[]},body.criterionScores,body.points);
+        if (typeof body.feedback!=='string'||body.feedback.length>10000) bad('Umpan balik tidak valid.');
+        if (!record) record=new Record(app.findCollectionByNameOrId('scheduled_assessments'));
+        record.load({class:c.id,activity:activity.id,attempt:attempt.id,student:attempt.getString('student'),revision:(record.getInt('revision')||0)+1,attemptRevision:attempt.getInt('revision'),settingsRevision:setting.getInt('revision'),status:body.status,points:grade.points,criterionScores:grade.criterionScores,feedback:body.feedback,published:record.get('published'),publishedRevision:record.getInt('publishedRevision')});app.save(record);
+        event(app,c,user.id,'assessment_saved',{attempt:attempt.id,status:body.status});
+      }
+    }
+  }
   const phase = rules.phase(data(c), now);
   if (action === 'cancel') {
     if (['closed', 'reviewed', 'cancelled'].includes(phase)) bad('Kelas sudah selesai atau dibatalkan.');

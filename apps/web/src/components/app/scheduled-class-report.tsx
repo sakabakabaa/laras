@@ -1,14 +1,16 @@
-import { ACTIVITY_LABELS, wibLabel, type ScheduledClassState } from '@/lib/scheduled-classes';
+import {useState} from 'react';
+import {CheckCheck,Search,Users} from 'lucide-react';
+import {wibLabel,type ScheduledClassState} from '@/lib/scheduled-classes';
 
-const LABELS: Record<string, string> = {present: 'Hadir', late: 'Terlambat', absent: 'Absen', excused: 'Izin', sick: 'Sakit'};
-export function ScheduledClassReport({state}: {state: ScheduledClassState}) {
-  return <section className="sc-card">
-    <h2>Pemantauan dan laporan</h2><p>{state.report.filter(r => r.checkedInAt).length} check-in · {state.report.length} peserta / entri roster. Diperbarui setiap 30 detik saat halaman terbuka.</p><p>Kehadiran dicatat otomatis dari check-in. Mahasiswa yang check-in tercatat hadir; yang belum check-in baru ditandai tidak hadir setelah kelas selesai.</p>
-    <div className="sc-table-wrap"><table><thead><tr><th>Mahasiswa</th><th>Kegiatan wajib</th><th>Check-in / terakhir terlihat</th><th>Kehadiran (check-in)</th></tr></thead><tbody>{state.report.map(row => <tr key={row.roster || row.student}>
-      <td><strong>{row.name}</strong><small>{row.nim || 'NIM belum tersedia'}</small><details><summary>Lihat pekerjaan</summary>{state.activities.map(a => {const attempt = row.attempts.find(t => t.activity === a.id); return <article key={a.id}><strong>{a.title} · {ACTIVITY_LABELS[a.kind]}</strong><p>{!attempt ? 'Belum ada jawaban tersimpan' : attempt.status === 'draft' ? 'Draf tersimpan' : attempt.status === 'expired' ? 'Difinalisasi saat waktu habis' : 'Dikumpulkan'}{attempt?.complete ? ' · Lengkap' : ''}</p>{a.kind === 'quiz' && attempt && <p>Skor: {attempt.score ?? 'Menunggu finalisasi'} / 100</p>}{attempt && <pre>{a.kind === 'quiz' ? (a.questions || []).map(q => `${q.text}\n${q.options[Number(attempt.answers[q.id])] ?? 'Belum dijawab'}`).join('\n\n') : String(attempt.answers.text || (attempt.answers.acknowledged ? 'Sudah membaca' : ''))}</pre>}</article>;})}</details></td>
-      <td>{row.completed}/{row.total}</td><td>{wibLabel(row.checkedInAt)}<small>{wibLabel(row.lastSeenAt)}</small></td>
-      <td>{row.attendance === 'present' ? 'Hadir' : row.attendance === 'absent' ? 'Tidak hadir' : 'Belum ada check-in'}</td>
-    </tr>)}</tbody></table>{!state.report.length && <p>Belum ada mahasiswa pada roster atau peserta check-in.</p>}</div>
-    <details className="sc-audit"><summary>Riwayat tindakan</summary><ul>{state.events.map(e => <li key={e.id}>{wibLabel(e.created)} · {e.action}{e.action === 'attendance' ? ` · ${LABELS[String(e.detail.previous)] || 'Belum dicatat'} → ${LABELS[String(e.detail.status)] || ''}` : ''}</li>)}</ul></details>
+export function ScheduledClassReport({state}:{state:ScheduledClassState}){
+  const [search,setSearch]=useState(''),[filter,setFilter]=useState('all');
+  const present=state.report.filter(r=>Boolean(r.checkedInAt)).length;
+  const closed=['closed','reviewed'].includes(state.class?.phase||'');
+  const rows=state.report.filter(r=>`${r.name} ${r.nim}`.toLowerCase().includes(search.toLowerCase())).filter(r=>filter==='all'||(filter==='present'?Boolean(r.checkedInAt):!r.checkedInAt));
+  return <section className="ss-panel ss-attendance"><div className="ss-panel-heading"><div><h2>Kehadiran</h2><p><CheckCheck size={15}/>Tercatat otomatis saat mahasiswa check-in.</p></div><span className="ss-attendance-total"><Users size={17}/><strong>{present}/{state.report.length}</strong> hadir</span></div>
+    <div className="ss-attendance-toolbar"><label className="ss-search"><Search size={17}/><input aria-label="Cari mahasiswa di kehadiran" placeholder="Cari nama atau NIM..." value={search} onChange={e=>setSearch(e.target.value)}/></label><div className="ss-filters" role="group" aria-label="Filter kehadiran">{[['all','Semua'],['present','Hadir'],['absent',closed?'Tidak hadir':'Belum check-in']].map(([id,label])=><button key={id} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label}</button>)}</div></div>
+    <div className="ss-table-scroll"><table><thead><tr><th>Mahasiswa</th><th>Check-in</th><th>Terakhir aktif</th><th>Status</th></tr></thead><tbody>{rows.map(row=><tr key={row.roster||row.student}><td><div className="ss-person"><span className="ss-avatar">{row.name.split(/\s+/).slice(0,2).map(n=>n[0]).join('')}</span><div><strong>{row.name}</strong><small>{row.nim||'NIM belum tersedia'}</small></div></div></td><td>{row.checkedInAt?wibLabel(row.checkedInAt):'—'}</td><td>{row.lastSeenAt?wibLabel(row.lastSeenAt):'—'}</td><td><span className={`ss-status ${row.checkedInAt?'ss-status-open':closed?'ss-status-absent':'ss-status-draft'}`}>{row.checkedInAt?'Hadir':closed?'Tidak hadir':'Belum check-in'}</span></td></tr>)}</tbody></table></div>
+    {!rows.length&&<div className="ss-empty"><Users size={28}/><h3>Tidak ada mahasiswa yang sesuai</h3><p>Coba nama atau status lain.</p></div>}
+    <p className="ss-table-note">{rows.length} dari {state.report.length} mahasiswa · Diperbarui setiap 30 detik</p>
   </section>;
 }

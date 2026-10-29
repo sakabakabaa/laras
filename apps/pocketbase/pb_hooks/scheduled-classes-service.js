@@ -293,4 +293,12 @@ function handle(app, body, user, now) {
   }
   return view(app, c, ctx, user, now);
 }
-module.exports = {handle, reconcile};
+function list(app, user, now) {
+  if (user.getString('role') !== 'faculty') throw new ForbiddenError('Daftar kelas hanya tersedia untuk dosen.');
+  return rows(app, 'scheduled_classes', 'owner={:u} || course.owner={:u}', {u:user.id}, '-startsAt').map(c => {
+    const course = app.findRecordById('courses', c.getString('course'));
+    const section = c.getString('section') ? app.findRecordById('course_sections', c.getString('section')).getString('name') : '';
+    return {id:c.id,session:c.getString('session'),title:c.getString('title'),status:c.getString('status'),phase:rules.phase(data(c),now),startsAt:c.getString('startsAt'),endsAt:c.getString('endsAt'),course:{id:course.id,title:course.getString('title'),code:course.getString('code')},section,activityCount:rows(app,'scheduled_class_activities','class={:c}',{c:c.id}).length,checkedIn:rows(app,'scheduled_class_participants','class={:c} && checkedInAt!=""',{c:c.id}).length};
+  });
+}
+module.exports = {handle, reconcile, list};

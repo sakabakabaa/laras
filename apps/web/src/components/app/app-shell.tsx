@@ -1,6 +1,6 @@
 import { TOUR_REPLAY_EVENT } from '@/components/app/welcome-tour';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
-import { BarChart3, BookOpen, CalendarDays, ClipboardList, FlaskConical, FolderOpen, Gamepad2, GraduationCap, Home, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Menu, Settings, Sparkles, Sun, User, X } from 'lucide-react';
+import { BarChart3, BookOpen, CalendarClock, CalendarDays, ClipboardList, FlaskConical, FolderOpen, Gamepad2, GraduationCap, Home, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Menu, Settings, Sparkles, Sun, User, X } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useT, useLanguage } from '@/lib/i18n';
@@ -24,6 +24,12 @@ const FACULTY_NAV = [{
   end: false,
   label: 'Mata Kuliah',
   icon: BookOpen,
+  ready: true
+}, {
+  to: '/app/kelas-terjadwal',
+  end: false,
+  label: 'Kelas terjadwal',
+  icon: CalendarClock,
   ready: true
 }, {
   to: '/app/tugas',
@@ -71,6 +77,7 @@ const FACULTY_NAV = [{
 const NAV_T: Record<string, string> = {
   Dashboard: 'nav.dashboard',
   'Mata Kuliah': 'nav.courses',
+  'Kelas terjadwal': 'nav.scheduledClasses',
   Latihan: 'nav.practice',
   Tugas: 'nav.tasks',
   Penilaian: 'nav.grades',

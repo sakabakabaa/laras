@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useParams } from 'react-router';
+import { Navigate, Outlet, useLocation, useParams } from 'react-router';
 import type { Route } from './+types/course';
 import { requireAuth } from '@/lib/require-auth';
 import { AppShell } from '@/components/app/app-shell';
@@ -18,7 +18,7 @@ export function HydrateFallback() {
 }
 
 export default function CourseLayout() {
-	const { courseId = '' } = useParams();
+	const { courseId = '', sessionId = '' } = useParams();
 	const location = useLocation();
 	const isStudentProfile = /\/mahasiswa\/[^/]+\/?$/.test(location.pathname);
 	const { user } = useAuth();
@@ -29,6 +29,7 @@ export default function CourseLayout() {
 	const courseQuery = useCourseByRoute(courseId);
 	const course = courseQuery.data ?? null;
 	const isOwner = !isStudent && course?.owner === pb.authStore.record?.id;
+	if (isLiveSession && !isStudent) return <Navigate replace to={`/app/kelas-terjadwal/${courseId}/${sessionId}${location.search}`} />;
 
 	return (
 		<AppShell

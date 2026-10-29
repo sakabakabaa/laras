@@ -1,4 +1,9 @@
 /// <reference path="../pb_data/types.d.ts" />
+routerAdd('GET', '/api/laras/scheduled-class-list', (e) => {
+  if (!e.auth || e.auth.isSuperuser()) throw new ForbiddenError('Gunakan akun dosen.');
+  e.response.header().set('Cache-Control', 'no-store');
+  return e.json(200, {items:require(__hooks + '/scheduled-classes-service.js').list(e.app,e.auth,Date.now())});
+}, $apis.requireAuth('users'));
 routerAdd('POST', '/api/laras/scheduled-classes', (e) => {
   if (!e.auth || e.auth.isSuperuser()) throw new ForbiddenError('Gunakan akun dosen atau mahasiswa.');
   let result;

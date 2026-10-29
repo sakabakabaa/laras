@@ -7,6 +7,8 @@ export default [
 	route('app', 'routes/app.tsx'),
 	route('analytics', 'routes/analytics.tsx'),
 	route('app/penilaian', 'routes/app.penilaian.tsx'),
+	route('app/kelas-terjadwal', 'routes/app.scheduled-classes.tsx'),
+	route('app/kelas-terjadwal/:courseId/:sessionId', 'routes/app.scheduled-session.tsx'),
 	route('kalender', 'routes/kalender.tsx'),
 	route('app/courses', 'routes/app.courses.tsx'),
 	route('app/student', 'routes/app.student.tsx'),

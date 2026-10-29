@@ -9,7 +9,7 @@ export function ScheduledDialogueAudio({turns,renderText}:{turns:NonNullable<Les
  const sources=audioSources as Record<string,string>;
  const source=(i:number)=>sources[turns[i].role+':'+turns[i].text.de];
  const stop=()=>{request.current++;sequence.current=false;current.current=-1;player.current?.pause();setActive(-1);setPlaying(false);};
- useEffect(()=>()=>{request.current++;player.current?.pause();},[]);
+ useEffect(()=>{const audio=player.current;return()=>{request.current++;audio?.pause();};},[]);
  const resume=()=>{const id=++request.current;setError('');player.current?.play().catch(()=>{if(id===request.current){setPlaying(false);sequence.current=false;setError('Audio belum dapat diputar. Coba lagi.');}});};
  const start=(i:number,all:boolean)=>{
   const audio=player.current;if(!audio||!source(i))return;

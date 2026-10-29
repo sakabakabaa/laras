@@ -18,3 +18,11 @@
 .sc-match-target h3[role=button]:focus-visible{outline:2px solid var(--r-red-600);outline-offset:5px}
 .sc-match-target h3[aria-disabled=true]{cursor:default}
 @media(max-width:600px){.sc-match-bank .sc-match-stack.sc-match-deck{padding:10px 5px 22px}.sc-page .sc-card-matching .sc-match-card.sc-match-deck-card{min-height:230px;padding:24px;gap:24px;border-radius:18px}.sc-match-deck-front::before,.sc-match-deck-front::after{border-radius:18px}.sc-match-deck-copy>[lang=de]{font-size:24px}.sc-page .sc-card-matching .sc-match-deck-copy>.sl-translation{font-size:16px;margin-top:16px}}
+
+/* Keep target height stable as cards are placed: numbers form one scrollable row. */
+.sc-match-drop-area{margin-top:14px;padding:10px;border:1px dashed var(--r-border);border-radius:10px;min-width:0}
+.sc-match-drop-label{display:flex;align-items:center;justify-content:center;gap:8px;margin:0;color:var(--r-ink-2);font-size:var(--r-type-meta-size);line-height:24px}
+.sc-match-drop-label .sc-match-count{margin:0}
+.sc-card-matching .sc-match-placed{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;height:58px;margin-top:6px;overflow-x:auto;overflow-y:hidden;padding:4px;overscroll-behavior-x:contain}
+.sc-page .sc-card-matching .sc-match-placed>button.sc-match-card{display:flex;flex:0 0 44px;align-items:center;justify-content:center;width:44px;height:44px;min-height:44px;padding:0;white-space:nowrap;text-align:center;overflow:visible}
+.sc-match-placed-number{font-size:var(--r-type-body-size);font-weight:700;font-variant-numeric:tabular-nums;line-height:1}

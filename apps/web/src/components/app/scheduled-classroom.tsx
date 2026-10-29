@@ -119,32 +119,42 @@ function PreviewAnswer({activity,onNext,canNext}:{activity:ScheduledActivity;onN
 }
 
 function StudentResults({activities,attempts}:{activities:ScheduledActivity[];attempts:ScheduledAttempt[]}){
-  const language=useLanguage();
-  const labels=language==='id'?{title:'Hasil kegiatan',activity:'Kegiatan',score:'Nilai',pending:'Menunggu penilaian dosen',submitted:'Terkumpul',complete:'Selesai',missing:'Belum dikumpulkan',answer:'Jawaban Anda',correct:'Jawaban benar',none:'Tidak ada jawaban',essay:'Jawaban tertulis sudah dikumpulkan dan belum dinilai.',legend:'Skala warna nilai'}:language==='de'?{title:'Ergebnisse der Aktivitäten',activity:'Aktivität',score:'Punkte',pending:'Bewertung durch die Lehrkraft ausstehend',submitted:'Abgegeben',complete:'Abgeschlossen',missing:'Nicht abgegeben',answer:'Deine Antwort',correct:'Richtige Antwort',none:'Keine Antwort',essay:'Der Text wurde unverändert abgegeben und noch nicht bewertet.',legend:'Farbskala der Ergebnisse'}:{title:'Activity results',activity:'Activity',score:'Score',pending:'Awaiting lecturer review',submitted:'Submitted',complete:'Complete',missing:'Not submitted',answer:'Your answer',correct:'Correct answer',none:'No answer',essay:'Writing submitted as entered; not yet graded.',legend:'Score color scale'};
-  return <section className="sc-results-review" aria-label={labels.title}>
-    <header className="sc-results-heading"><h3>{labels.title}</h3><p className="sc-score-legend" aria-label={labels.legend}><span className="is-green">≥ 80</span><span className="is-yellow">60–&lt;80</span><span className="is-red">&lt; 60</span></p></header>
-    <ol className="sc-score-summary">{activities.map((activity,index)=>{
-      const attempt=attempts.find(row=>row.activity===activity.id&&row.status!=='draft');
-      const graded=activity.kind==='quiz'||Object.values(activity.worksheet?.answerKey?.items||{}).some(entry=>entry.mode==='exact'&&entry.points>0);
-      const score=graded&&typeof attempt?.score==='number'?attempt.score:undefined;
-      const tone=score===undefined?'is-neutral':score>=80?'is-green':score>=60?'is-yellow':'is-red';
-      const status=!attempt?labels.missing:activity.kind==='material'?(attempt.complete?labels.complete:labels.missing):graded?labels.submitted:labels.pending;
-      return <li key={activity.id}><div><span>{labels.activity} {index+1}</span><strong>{activity.title}</strong></div>{score!==undefined?<span className={`sc-summary-score ${tone}`}><span>{labels.score}</span> <strong>{score} / 100</strong></span>:<span className="sc-summary-status">{status}</span>}</li>;
-    })}</ol>
-    <div className="sc-result-activities">{activities.map((activity,index)=>{
-      const attempt=attempts.find(row=>row.activity===activity.id&&row.status!=='draft');
-      const graded=activity.kind==='quiz'||Object.values(activity.worksheet?.answerKey?.items||{}).some(entry=>entry.mode==='exact'&&entry.points>0);
-      const score=graded&&typeof attempt?.score==='number'?attempt.score:undefined;
-      const tone=score===undefined?'is-neutral':score>=80?'is-green':score>=60?'is-yellow':'is-red';
-      const responses=(attempt?.answers.responses||{}) as Record<string,string>;
-      const writing=activity.kind!=='material'&&!graded;
-      const status=!attempt?labels.missing:activity.kind==='material'?(attempt.complete?labels.complete:labels.missing):writing?labels.pending:labels.submitted;
-      return <article className={`sc-result-activity ${tone}`} key={activity.id}>
-        <header className="sc-result-activity-heading"><div><span className="sc-result-step">{labels.activity} {index+1}</span><h4>{activity.title}</h4></div>{score!==undefined?<div className={`sc-score-badge ${tone}`} aria-label={`${labels.score}: ${score} / 100`}><span>{labels.score}</span><strong>{score}<small> / 100</small></strong></div>:<span className={`sc-result-status ${writing&&attempt?'is-pending':''}`}><CheckCircle2 size={16} aria-hidden="true"/>{status}</span>}</header>
-        {writing&&attempt&&<p className="sc-result-writing-note">{labels.essay}</p>}
-        {attempt&&activity.kind!=='material'&&<ol className="sc-result-answers">{activity.kind==='quiz'?activity.questions?.map(question=><li key={question.id}><p>{question.text}</p><p><strong>{labels.answer}:</strong> {question.options[Number(attempt.answers[question.id])]||labels.none}</p><p className="sc-correct-answer"><strong>{labels.correct}:</strong> {question.options[question.correctIndex]}</p></li>):activity.worksheet?activity.worksheet.items.map(item=>{const key=activity.worksheet?.answerKey?.items[item.id];return <li key={item.id}><p lang="de">{item.prompt}</p><p><strong>{labels.answer}:</strong> <span className="sc-submitted-text">{responses[item.id]||labels.none}</span></p>{key?.mode==='exact'&&<p className="sc-correct-answer"><strong>{labels.correct}:</strong> {key.accepted.join(' / ')}</p>}</li>;}):<li className="sc-submitted-text">{String(attempt.answers.text||labels.none)}</li>}</ol>}
-      </article>;
-    })}</div>
+  const language=useLanguage(),[reviewId,setReviewId]=useState(''),root=useRef<HTMLElement>(null);
+  const l=language==='id'?{title:'Hasil belajarmu',done:'Sesi selesai',intro:'Lihat hasil latihanmu. Tulisan akan dinilai setelah ditinjau dosen.',required:'kegiatan wajib selesai',automatic:'Latihan otomatis',writing:'Tulisanmu',pending:'Menunggu ulasan dosen',score:'Nilai',activity:'Kegiatan',review:'Lihat koreksi',viewWriting:'Lihat tulisan',back:'Kembali ke hasil',answer:'Jawabanmu',correct:'Jawaban benar',none:'Belum ada jawaban',good:'Baik',practice:'Terus berlatih',retry:'Perlu latihan',submitted:'Terkumpul',materials:'Materi pembelajaran',complete:'Selesai',missing:'Belum selesai',optional:'opsional',matching:'Mencocokkan',sentence:'Menulis kalimat',gap:'Melengkapi kalimat',legend:'Skala nilai',writingNote:'Tulisan ini tersimpan persis seperti saat dikumpulkan. Penilaian dosen belum tersedia.'}:language==='de'?{title:'Dein Lernrückblick',done:'Unterricht abgeschlossen',intro:'Hier findest du deine Übungsergebnisse. Deine Texte werden von der Lehrkraft geprüft.',required:'Pflichtaktivitäten abgeschlossen',automatic:'Automatisch bewertete Übungen',writing:'Deine Texte',pending:'Bewertung durch die Lehrkraft ausstehend',score:'Punkte',activity:'Aktivität',review:'Antworten ansehen',viewWriting:'Text ansehen',back:'Zurück zu den Ergebnissen',answer:'Deine Antwort',correct:'Richtige Antwort',none:'Keine Antwort',good:'Gut gemacht',practice:'Weiter üben',retry:'Noch einmal üben',submitted:'Abgegeben',materials:'Lernmaterialien',complete:'Abgeschlossen',missing:'Nicht abgeschlossen',optional:'optional',matching:'Zuordnen',sentence:'Sätze schreiben',gap:'Lücken ergänzen',legend:'Punkteskala',writingNote:'Dein Text wurde unverändert gespeichert. Die Bewertung der Lehrkraft steht noch aus.'}:{title:'Your learning recap',done:'Session complete',intro:'Explore your practice results. Your lecturer will review your writing separately.',required:'required activities completed',automatic:'Automatically graded practice',writing:'Your writing',pending:'Awaiting lecturer review',score:'Score',activity:'Activity',review:'Review answers',viewWriting:'View submission',back:'Back to results',answer:'Your answer',correct:'Correct answer',none:'No answer yet',good:'Well done',practice:'Keep practicing',retry:'More practice needed',submitted:'Submitted',materials:'Learning materials',complete:'Complete',missing:'Not completed',optional:'optional',matching:'Matching',sentence:'Sentence writing',gap:'Fill in the gaps',legend:'Score scale',writingNote:'Your writing is saved exactly as submitted. Your lecturer has not graded it yet.'};
+  const entries=activities.map((activity,index)=>{
+    const attempt=attempts.find(row=>row.activity===activity.id&&row.status!=='draft');
+    const graded=activity.kind==='quiz'||Object.values(activity.worksheet?.answerKey?.items||{}).some(entry=>entry.mode==='exact'&&entry.points>0);
+    const score=graded&&typeof attempt?.score==='number'?attempt.score:undefined;
+    const tone=score===undefined?'neutral':score>=80?'green':score>=60?'yellow':'red';
+    const name=activity.title.replace(/^Zusatz\s*·\s*/,'').replace(/\s*\(10a, S\. 103\)$/,'');
+    const format=activity.worksheet?.items.every(item=>item.type==='select')||activity.kind==='quiz'?l.matching:activity.worksheet?.items.some(item=>/_{3,}/.test(item.prompt))?l.gap:l.sentence;
+    return {activity,index,attempt,graded,score,tone,name,format};
+  });
+  const required=entries.filter(e=>e.activity.required),completed=required.filter(e=>e.attempt?.complete).length;
+  const graded=entries.filter(e=>e.graded),writing=entries.filter(e=>!e.graded&&e.activity.kind!=='material'),materials=entries.filter(e=>e.activity.kind==='material');
+  const open=(id:string)=>{setReviewId(id);requestAnimationFrame(()=>root.current?.scrollIntoView({block:'start',behavior:'smooth'}));};
+  const selected=entries.find(e=>e.activity.id===reviewId);
+  if(selected){
+    const {activity,attempt,score,tone,name}=selected,responses=(attempt?.answers.responses||{}) as Record<string,string>;
+    return <section className="sc-results-review sc-result-detail" ref={root}>
+      <button type="button" className="sc-results-back" onClick={()=>open('')}><ArrowRight size={16} aria-hidden="true"/>{l.back}</button>
+      <header className="sc-result-detail-heading"><div><span className="sc-results-eyebrow">{l.activity} {selected.index+1} · {selected.format}</span><h3>{name}</h3></div>{score!==undefined&&<div className={`sc-result-detail-score tone-${tone}`}><span>{l.score}</span><strong>{score}<small> / 100</small></strong></div>}</header>
+      {!selected.graded&&attempt&&<p className="sc-writing-notice"><Clock3 size={18} aria-hidden="true"/>{l.writingNote}</p>}
+      <ol className="sc-review-questions">{activity.kind==='quiz'?activity.questions?.map((q,i)=><li key={q.id}><span className="sc-review-question-number">{i+1}</span><div><p className="sc-review-prompt">{q.text}</p><div className="sc-review-answer-pair"><div><span>{l.answer}</span><p>{q.options[Number(attempt?.answers[q.id])]||l.none}</p></div><div className="sc-review-correct"><span>{l.correct}</span><p>{q.options[q.correctIndex]}</p></div></div></div></li>):activity.worksheet?activity.worksheet.items.map((item,i)=>{const key=activity.worksheet?.answerKey?.items[item.id];return <li key={item.id}><span className="sc-review-question-number">{i+1}</span><div><p className="sc-review-prompt" lang="de">{item.prompt}</p><div className={`sc-review-answer-pair ${key?.mode==='exact'?'':'is-writing'}`}><div><span>{l.answer}</span><p className="sc-submitted-text">{responses[item.id]||l.none}</p></div>{key?.mode==='exact'&&<div className="sc-review-correct"><span>{l.correct}</span><p>{key.accepted.join(' / ')}</p></div>}</div></div></li>;}):<li><div className="sc-submitted-text">{String(attempt?.answers.text||l.none)}</div></li>}</ol>
+    </section>;
+  }
+  return <section className="sc-results-review" ref={root} aria-label={l.title}>
+    <header className="sc-results-hero"><div><span className="sc-results-eyebrow"><CheckCircle2 size={18} aria-hidden="true"/>{l.done}</span><h3>{l.title}</h3><p>{l.intro}</p></div><div className="sc-results-completed"><strong>{completed}<span> / {required.length}</span></strong><span>{l.required}</span></div></header>
+    <div className="sc-results-section-heading"><h4>{l.automatic}</h4><span>{graded.length}</span></div>
+    <div className="sc-score-cards">{graded.map(e=><article className={`sc-score-card tone-${e.tone}`} key={e.activity.id}>
+      <div className="sc-score-card-meta"><span>{l.activity} {e.index+1}</span><span>{e.format}</span></div>
+      <div className="sc-score-card-main"><h5>{e.name}</h5><div className="sc-score-card-number">{e.score!==undefined?<><strong>{e.score}</strong><span>/ 100</span></>:<span>—</span>}</div></div>
+      <div className="sc-score-meter" aria-hidden="true"><span style={{width:`${e.score||0}%`}}/></div>
+      <footer><span>{e.score===undefined?l.missing:e.tone==='green'?l.good:e.tone==='yellow'?l.practice:l.retry}</span><button type="button" onClick={()=>open(e.activity.id)}>{l.review}<ArrowRight size={15} aria-hidden="true"/></button></footer>
+    </article>)}</div>
+    {writing.length>0&&<><div className="sc-results-section-heading"><h4>{l.writing}</h4><span>{writing.length}</span></div><div className="sc-writing-cards">{writing.map(e=><article key={e.activity.id}><span className="sc-writing-icon"><FileText size={22} aria-hidden="true"/></span><div><span className="sc-results-eyebrow">{l.activity} {e.index+1}</span><h5>{e.name}</h5><p><Clock3 size={13} aria-hidden="true"/>{e.attempt?l.pending:l.missing}</p></div><button type="button" onClick={()=>open(e.activity.id)} aria-label={`${l.viewWriting}: ${e.name}`}><ArrowRight size={18} aria-hidden="true"/></button></article>)}</div></>}
+    {materials.length>0&&<section className="sc-result-materials"><h4>{l.materials}</h4><div>{materials.map(e=><span key={e.activity.id}>{e.attempt?.complete?<CheckCircle2 size={14} aria-hidden="true"/>:<Clock3 size={14} aria-hidden="true"/>}<strong>{e.name.split(' · ')[0]}</strong><span>{e.attempt?.complete?l.complete:`${l.missing}${!e.activity.required?' · '+l.optional:''}`}</span></span>)}</div></section>}
+    <p className="sc-result-scale">{l.legend}: <span className="tone-green">≥80</span><span className="tone-yellow">60–&lt;80</span><span className="tone-red">&lt;60</span></p>
   </section>;
 }
 

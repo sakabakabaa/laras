@@ -102,13 +102,18 @@ services:
       - traefik.http.routers.laras-horizon-web.priority=1
       - traefik.http.routers.laras-horizon-web.service=laras-horizon-web
       - traefik.http.services.laras-horizon-web.loadbalancer.server.port=3000
+      - traefik.http.routers.laras-www.rule=Host(`www.laraslernen.com`)
+      - traefik.http.routers.laras-www.entrypoints=websecure
+      - traefik.http.routers.laras-www.tls=true
+      - traefik.http.routers.laras-www.tls.certresolver=letsencrypt
+      - traefik.http.routers.laras-www.service=laras-horizon-web
+      - traefik.http.routers.laras-www.middlewares=laras-domain-redirect
       # Keep old page links working; legacy API/file URLs remain served by PB.
-      - traefik.http.routers.laras-legacy.rule=Host(`laras.zulficar.me`) || Host(`laras.srv1957161.hstgr.cloud`) || Host(`www.laraslernen.com`)
+      - traefik.http.routers.laras-legacy.rule=Host(`laras.zulficar.me`) || Host(`laras.srv1957161.hstgr.cloud`)
       - traefik.http.routers.laras-legacy.entrypoints=websecure
       - traefik.http.routers.laras-legacy.tls=true
       - traefik.http.routers.laras-legacy.tls.certresolver=letsencrypt
       - traefik.http.routers.laras-legacy.tls.domains[0].main=laras.zulficar.me
-      - traefik.http.routers.laras-legacy.tls.domains[0].sans=www.laraslernen.com
       - traefik.http.routers.laras-legacy.priority=1
       - traefik.http.routers.laras-legacy.service=laras-horizon-web
       - traefik.http.routers.laras-legacy.middlewares=laras-domain-redirect

@@ -158,6 +158,18 @@ function StudentResults({activities,attempts}:{activities:ScheduledActivity[];at
   </section>;
 }
 
+function activityBookReference(activity:ScheduledActivity){
+  const title=activity.title;
+  if(/Arzt oder Patient/.test(title))return 'Arbeitsbuch (10a, S. 103)';
+  if(/Formen von dürfen/.test(title))return 'Arbeitsbuch (10e, S. 104)';
+  if(/Modalverben ergänzen/.test(title))return 'Arbeitsbuch (10f, S. 105)';
+  if(/Eine E-Mail schreiben/.test(title))return 'Arbeitsbuch (11c, S. 105)';
+  const source=[activity.lesson?.source?.sourceLabel,activity.worksheet?.sourceLabel,...(activity.lesson?.steps||[]).filter(step=>/^Bezug:/.test(step.de)).map(step=>step.de)].filter(Boolean).join(' ');
+  const page=source.match(/(?:S\.|Seite)\s*(\d+)/)?.[1];
+  const exercise=source.match(/Aufgabe\s*(\d+[a-z]?)/i)?.[1]||title.match(/^(\d+[a-z]?)\s*·/)?.[1];
+  return page&&exercise?`${/Arbeitsbuch/.test(source)?'Arbeitsbuch':'Kursbuch'} (${exercise}, S. ${page})`:'';
+}
+
 function ActivityBrief({content}:{content:string}){
   const t=useT(),parts=content.split(/\n\s*\n/).map(part=>part.trim()).filter(Boolean);
   const isEmailTask=parts[0]==='Sie können nicht zur Arbeit gehen.'&&parts[1]?.startsWith('Schreiben Sie eine E-Mail');
@@ -209,7 +221,7 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
       <section className="sc-card sc-workspace">
         {activity && state.participant && !cancelled && activity.content !== undefined ? <>
           <div className="sc-workspace-top"><span className="sc-activity-type"><ActivityIcon size={16} aria-hidden="true"/>{t(`studentClass.${activity.kind}`)}<span>· {t('studentClass.step', {index: String(state.activities.findIndex(a => a.id === activity.id) + 1), total: String(state.activities.length)})}</span><span className={`sc-requirement ${activity.required ? 'is-required' : ''}`}>{t(activity.required ? 'studentClass.required' : 'studentClass.optional')}</span><span>{t('studentClass.minutes', {count: String(activity.minutes)})}</span></span>{ended ? <button className="sc-text-action" onClick={() => choose('')}>{t('studentClass.backSummary')}</button> : !active && current ? <button className="sc-text-action" onClick={() => choose(current.id)}>{t('studentClass.returnCurrent')}</button> : null}</div>
-          <div className="sc-activity-heading"><h2 ref={heading} tabIndex={-1}>{activity.title}</h2><div className={`sc-student-clock ${warning ? 'is-urgent' : ''}`}><span>{t(active ? 'studentClass.remaining' : 'studentClass.timeClosed')}</span><strong>{active ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—'}</strong></div></div>
+          <div className="sc-activity-heading"><h2 ref={heading} tabIndex={-1}>{activity.title.replace(/\s*\(10a, S\. 103\)$/, '')}{activityBookReference(activity)&&<small className="sc-task-book-reference">{activityBookReference(activity)}</small>}</h2><div className={`sc-student-clock ${warning ? 'is-urgent' : ''}`}><span>{t(active ? 'studentClass.remaining' : 'studentClass.timeClosed')}</span><strong>{active ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—'}</strong></div></div>
           {warning && <p className="sc-deadline-warning" role="status">{t('studentClass.timeWarning')}</p>}
           {!active && <p className="sc-review-note">{t('studentClass.reviewMode')}</p>}
           <div className="sc-activity-content">{activity.lesson?<ScheduledLessonView key={activity.id} lesson={activity.lesson} compact={!activity.worksheet&&!activity.lesson.scenes?.length} showScenes={!activity.lesson.videos?.length}/>:activity.content?.trim()?<ActivityBrief content={activity.content}/>:null}</div>

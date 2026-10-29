@@ -52,3 +52,5 @@
 .sc-audio-source audio {width:100%;min-width:0;max-width:100%;}
 .sc-preview-navigation{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin:16px 0}.sc-preview-navigation button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:0}.sc-preview-navigation button:first-child{justify-self:start}.sc-preview-navigation button:last-child{justify-self:end}.sc-preview-navigation>span{text-align:center;font-size:var(--r-type-meta-size);color:var(--r-ink-2)}
 @media(max-width:600px){.sc-preview-navigation{grid-template-columns:1fr 1fr}.sc-preview-navigation>span{grid-column:1/-1;grid-row:1}.sc-preview-navigation button{width:100%}}
+
+.sc-task-book-reference{display:block;margin-top:10px;font-size:14px;font-weight:600;line-height:1.5;color:var(--r-ink-2)}

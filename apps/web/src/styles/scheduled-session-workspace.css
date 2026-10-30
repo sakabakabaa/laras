@@ -272,3 +272,23 @@
 .sr-batch summary{cursor:pointer;font-size:13px;font-weight:700}
 .sr-batch-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--ss-border);font-size:12px}
 .sr-grading{position:sticky;top:12px;align-self:start}
+
+.sr-overview,.sr-itemboard{margin:12px 0;border:1px solid var(--ss-border);border-radius:12px;background:var(--ss-panel);padding:12px 14px}
+.sr-overview summary,.sr-itemboard summary{cursor:pointer;font-weight:700;font-size:14px;margin-bottom:8px}
+.sr-overview-scroll,.sr-matrix-scroll{overflow:auto;max-height:340px}
+.sr-overview-table,.sr-item-table{border-collapse:collapse;font-size:13px;min-width:100%}
+.sr-overview-table th,.sr-overview-table td,.sr-item-table th,.sr-item-table td{padding:8px 10px;border-bottom:1px solid var(--ss-border);text-align:left;white-space:nowrap}
+.sr-overview-table th:first-child,.sr-overview-table td:first-child,.sr-item-table th:first-child,.sr-item-table td:first-child{position:sticky;left:0;background:var(--ss-panel);min-width:180px}
+.sr-overview-table small{display:block;color:var(--ss-muted);font-size:11px}
+.sr-oname{border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;padding:0;text-align:left;color:inherit}
+.sr-oname:hover{text-decoration:underline}
+.sr-ocell{display:inline-block;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--ss-border);cursor:pointer;background:none}
+button.sr-ocell{cursor:pointer}
+.sr-ocell.is-sub{background:#fff7e6;border-color:#ecd9a0;color:#8a6100}
+.sr-ocell.is-draft{background:#eef4ff;border-color:#b6ccf5;color:#1d4ed8}
+.sr-ocell.is-rev{background:#e8f7ee;border-color:#b7e2c6;color:#137333}
+.sr-ocell.is-pub{background:#137333;border-color:#137333;color:#fff}
+.sr-ocell.is-empty{background:transparent;color:var(--ss-muted);font-weight:400;cursor:default}
+.sr-ocell.is-ok{background:#e8f7ee;border-color:#b7e2c6;color:#137333}
+.sr-ocell.is-bad{background:#fdecec;border-color:#f3b8b8;color:#b3261e}
+.sr-ocell.is-txt{background:#eef4ff;border-color:#b6ccf5;color:#1d4ed8;max-width:220px;overflow:hidden;text-overflow:ellipsis}

@@ -4,6 +4,7 @@ import {requireAuth} from '@/lib/require-auth';
 import {AppShell} from '@/components/app/app-shell';
 import ScheduledClassPage from './course.scheduled-class';
 import '@/styles/scheduled-session-workspace.css';
+import '@/styles/scheduled-review-student-sidebar.css';
 
 export function meta(){return [{title:'Ruang kelas terjadwal | LARAS'}];}
 export function clientLoader({params}:Route.ClientLoaderArgs){const user=requireAuth();if(user.role!=='faculty')throw redirect(`/app/courses/${params.courseId}/pertemuan/${params.sessionId}/terjadwal`);return {user};}

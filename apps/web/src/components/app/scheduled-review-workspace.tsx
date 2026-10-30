@@ -1,10 +1,10 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,BookOpen,Check,CheckCheck,Clock3,FileCheck2,KeyRound,MessageSquare,Minus,Search,Send,Settings2,Users,X} from 'lucide-react';
+import {ArrowLeft,ArrowRight,BookOpen,Check,CheckCheck,Clock3,FileCheck2,KeyRound,Minus,Search,Send,Settings2,Users,X} from 'lucide-react';
 import {activityBookReference} from '@/lib/scheduled-book-reference';
 import type {ClassReportRow,ScheduledClassState} from '@/lib/scheduled-classes';
 import {buildAssessmentPayload,buildGradingSettingsPayload,buildPublishPayload,emptyGradeDraft,hydrateGradeDraft,validateManualGrade,type GradeDraftState} from '@/lib/scheduled-review';
 import {ASSESSMENT_LABELS,assessmentStatus,manualActivities} from '@/lib/scheduled-session-workspace';
-import {gradingModeLabel,nextManualTarget,requiresManual,responseVerdicts,reviewTally,verdictTally} from '@/lib/session-review-verdict';
+import {gradingModeLabel,nextManualTarget,responseVerdicts,reviewTally,verdictTally} from '@/lib/session-review-verdict';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter} from '@/components/ui/dialog';
 
 type Selection={student?:string;activity?:string};
@@ -32,6 +32,7 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const [criteria,setCriteria]=useState<CriterionDraft[]>([{id:'clarity',label:'Kejelasan',maxPoints:'10'}]);
   const [compact,setCompact]=useState(true);
   const bar=useRef<HTMLDivElement>(null);
+  const cardCache=useRef(new Map<string,ReturnType<typeof responseVerdicts>>());
   const student=state.report.find(r=>personKey(r)===studentKey)||state.report[0];
   const activity=activities.find(a=>a.id===activityId)||activities[0];
   const attempt=attempts.find(a=>a.student===student?.student&&a.activity===activity?.id);
@@ -44,6 +45,7 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const attemptId=attempt?.id||null,ownerRef=useRef<string|null>(attemptId);
   const status=assessmentStatus(assessment);
   const cards=useMemo(()=>activity&&attempt?responseVerdicts(activity,attempt):[],[activity,attempt]);
+  const cardsFor=(a:typeof activities[number],tryItem:typeof attempts[number]|undefined)=>{if(!tryItem)return [];const key=`${a.id}:${tryItem.id}`;if(!cardCache.current.has(key))cardCache.current.set(key,responseVerdicts(a,tryItem));return cardCache.current.get(key)||[];};
   const cardTally=useMemo(()=>verdictTally(cards,attempt),[cards,attempt]);
   const loadSettings=()=>{setSettingsMode(settings?.mode||'ungraded');setMaxPoints(String(settings?.maxPoints||10));setCriteria(settings?.criteria.map(c=>({...c,maxPoints:String(c.maxPoints)}))||[{id:'clarity',label:'Kejelasan',maxPoints:'10'}]);setSettingsEdited(false);};
   useEffect(()=>{loadSettings();},[activity?.id,settings?.revision]);
@@ -54,13 +56,14 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   },[attemptId,assessment?.revision,dirty]);
   useEffect(()=>{onDirtyChange?.(unsaved);return()=>onDirtyChange?.(false);},[unsaved,onDirtyChange]);
   useEffect(()=>{if(!unsaved)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[unsaved]);
+  const prefersReduced=()=>typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rememberDensity=(next:boolean)=>{setCompact(next);try{localStorage.setItem(DENSITY_KEY,next?'compact':'full');}catch{/* storage blocked */}};
   const guard=()=>!unsaved||window.confirm('Perubahan penilaian belum disimpan. Buang perubahan dan lanjutkan?');
   const reveal=()=>{requestAnimationFrame(()=>bar.current?.scrollIntoView({block:'start'}));};
   const select=(nextStudent:string,nextActivity=activity?.id||'')=>{
     if(nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow)&&nextActivity===activity?.id)return;
     if(!guard())return;
-    loadSettings();setStudentKey(nextStudent);setActivityId(nextActivity);setMessage('');reveal();onSelectionChange?.({student:nextStudent,activity:nextActivity});
+    loadSettings();const sameStudent=nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow);setStudentKey(nextStudent);setActivityId(nextActivity);setMessage('');if(sameStudent)document.getElementById(`review-activity-${nextActivity}`)?.scrollIntoView({block:'start',behavior:prefersReduced()?'auto':'smooth'});else reveal();onSelectionChange?.({student:nextStudent,activity:nextActivity});
   };
   const showError=(error:unknown)=>{setFailed(true);setMessage((error as Error).message||'Perubahan belum dapat disimpan. Coba lagi.');};
   const criteriaPayload=criteria.map(c=>({id:c.id,label:c.label.trim(),maxPoints:Number(c.maxPoints)}));
@@ -116,20 +119,17 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
       <aside className="sr-students" aria-label="Daftar mahasiswa"><div className="sr-student-tools"><label className="ss-search"><Search size={16}/><input aria-label="Cari mahasiswa untuk ditinjau" placeholder="Cari nama atau NIM..." value={search} onChange={e=>setSearch(e.target.value)}/></label><div className="sr-segments" role="group" aria-label="Filter penilaian">{FILTERS.map(([id,label])=><button key={id} type="button" aria-pressed={filter===id} className={filter===id?'is-active':undefined} onClick={()=>setFilter(id)}>{label}</button>)}</div><p>{visible.length} mahasiswa</p></div><ul>{visible.map(({row,relevant,status:studentStatus})=>{const current=personKey(row)===personKey(student||{student:'',roster:''} as ClassReportRow),score=relevant&&typeof relevant.score==='number'?relevant.score:undefined;return <li key={personKey(row)}><button aria-current={current?'true':undefined} onClick={()=>select(personKey(row))}><span className="ss-avatar">{row.name.split(/\s+/).slice(0,2).map(n=>n[0]).join('')}</span><span><strong>{row.name}</strong><small>{row.nim||'NIM belum tersedia'}</small><span className="sr-student-progress">{!relevant?'Belum ada kiriman':score!==undefined?`${score} / 100`:'Terkirim'}</span></span>{relevant&&['reviewed','published'].includes(studentStatus)?<CheckCheck size={16}/>:relevant&&studentStatus==='draft'?<span className="sr-student-dot" aria-label="Draf tersimpan"/>:null}</button></li>;})}</ul>{!visible.length&&<p className="sr-list-empty">Tidak ada mahasiswa yang sesuai.</p>}</aside>
       <div className="sr-answer-area">
         {student&&activity?<>
-        <header className="sr-answer-heading"><label className="sr-activity-picker">Kegiatan<select value={activity.id} onChange={e=>select(personKey(student),e.target.value)}>{activities.map(a=><option key={a.id} value={a.id}>{a.title}{requiresManual(a)?' · perlu dinilai':' · otomatis'}</option>)}</select></label>
-          <div className="sr-answer-meta"><span className={`sr-review-status sr-status-${attempt?status:'missing'}`}>{attempt?activity.kind==='quiz'?'Dinilai otomatis':ASSESSMENT_LABELS[status]:'Belum mengirim'}</span><span className="sr-mode-chip">{gradingModeLabel(activity)}</span>{attempt&&<span>{attempt.status==='expired'?'Difinalisasi saat waktu habis':'Dikumpulkan'} · {attempt.complete?'Lengkap':'Belum lengkap'}</span>}</div>
-          {(activityBookReference(activity)||activity.worksheet?.sourceLabel)&&<p className="ss-source-label"><BookOpen size={15}/>{activityBookReference(activity)||activity.worksheet?.sourceLabel}</p>}
-        </header>
-        {attempt?<ol className={`sr-response-list${compact?' is-compact':''}`}>{cards.map(card=>{const Icon=VERDICT_ICONS[card.verdict];const showKey=card.verdict==='wrong';return <li key={card.id} className={`sr-response-row is-${card.verdict}`}>
-          <span className="sr-row-verdict" title={VERDICT_LABELS[card.verdict]}><Icon size={14}/><span className="sr-sr-only">{VERDICT_LABELS[card.verdict]}</span></span>
-          <div className="sr-row-body">
-            <div className="sr-row-head"><span className="sr-row-number">{card.number}</span><p className="sr-row-prompt" lang="de">{card.prompt}</p>{card.points!==undefined&&<span className="sr-row-points">{card.earned||0}/{card.points}</span>}</div>
-            <div className="sr-row-answer"><span>Jawaban</span><p className={card.answer?'':'is-empty'}>{card.answer||'Belum dijawab'}</p></div>
-            {showKey&&card.accepted?.length?<div className="sr-row-key"><KeyRound size={13}/><span>Diterima</span><p>{card.accepted.join(' / ')}</p></div>:null}
-            {card.modelAnswer&&<details className="sr-row-reference" open={!compact}><summary><BookOpen size={13}/>Contoh jawaban & rubrik</summary><p className="sr-reference-answer">{card.modelAnswer}</p>{card.rubric&&<p className="sr-reference-rubric">{card.rubric}</p>}{settings&&<button type="button" className="ss-button ss-button-small" disabled={!canGrade||busy} onClick={()=>setDraft(d=>({...d,feedback:[card.rubric,card.modelAnswer?`Contoh jawaban:\n${card.modelAnswer}`:''].filter(Boolean).join('\n\n')}))}>Pakai sebagai umpan balik</button>}</details>}
-          </div>
-        </li>;})}</ol>:<div className="ss-empty sr-no-submission"><MessageSquare size={30}/><h3>Belum ada jawaban untuk kegiatan ini</h3><p>{student.checkedInAt?'Mahasiswa sudah check-in, tetapi belum mengirim jawaban ini.':'Mahasiswa belum tercatat check-in.'}</p></div>}
-        </>:<div className="ss-empty"><Users size={30}/><h3>Belum ada jawaban tugas</h3><p>Jawaban tugas dan refleksi akan tampil di sini.</p></div>}
+         {activities.map((a,index)=>{const own=attempts.find(t=>t.student===student?.student&&t.activity===a.id);const ownAssessment=state.assessments?.find(g=>g.attempt===own?.id);const ownStatus=assessmentStatus(ownAssessment);const ownCards=cardsFor(a,own);return <section key={a.id} id={'review-activity-'+a.id} data-activity-id={a.id} className={'sr-activity-block'+(activity?.id===a.id?' is-active':'')} aria-labelledby={'review-activity-title-'+a.id}>
+           <header className="sr-activity-head"><h3 id={'review-activity-title-'+a.id}><button type="button" className="sr-activity-select" aria-pressed={activity?.id===a.id} onClick={()=>select(personKey(student),a.id)}><span className="sr-activity-index">{index+1}</span>{a.title}</button></h3><span className="sr-mode-chip">{gradingModeLabel(a)}</span>{own&&typeof own.score==='number'&&<span className="sr-activity-total">{own.score} / 100</span>}<span className={'sr-review-status sr-status-'+(own?ownStatus:'missing')}>{own?(a.kind==='quiz'?'Dinilai otomatis':ASSESSMENT_LABELS[ownStatus]):'Belum mengirim'}</span></header>
+           {(activityBookReference(a)||a.worksheet?.sourceLabel)&&<p className="ss-source-label"><BookOpen size={15}/>{activityBookReference(a)||a.worksheet?.sourceLabel}</p>}
+           {own?<ol className={'sr-response-list'+(compact?' is-compact':'')}>{ownCards.map(card=>{const Icon=VERDICT_ICONS[card.verdict];const showKey=card.verdict==='wrong';return <li key={card.id} className={`sr-response-row is-${card.verdict}`}>
+             <span className="sr-row-verdict" title={VERDICT_LABELS[card.verdict]}><Icon size={14}/><span className="sr-sr-only">{VERDICT_LABELS[card.verdict]}</span></span><div className="sr-row-body">
+               <div className="sr-row-head"><span className="sr-row-number">{card.number}</span><p className="sr-row-prompt" lang="de">{card.prompt}</p>{card.points!==undefined&&<span className="sr-row-points">{card.earned||0}/{card.points}</span>}</div><div className="sr-row-answer"><span>Jawaban</span><p className={card.answer?'':'is-empty'}>{card.answer||'Belum dijawab'}</p></div>
+               {showKey&&card.accepted?.length?<div className="sr-row-key"><KeyRound size={13}/><span>Diterima</span><p>{card.accepted.join(' / ')}</p></div>:null}
+               {card.modelAnswer&&<details className="sr-row-reference" open={!compact}><summary><BookOpen size={13}/>Contoh jawaban & rubrik</summary><p className="sr-reference-answer">{card.modelAnswer}</p>{card.rubric&&<p className="sr-reference-rubric">{card.rubric}</p>}{settings&&<button type="button" className="ss-button ss-button-small" disabled={!canGrade||busy} onClick={()=>setDraft(d=>({...d,feedback:[card.rubric,card.modelAnswer?`Contoh jawaban:\n${card.modelAnswer}`:''].filter(Boolean).join('\n\n')}))}>Pakai sebagai umpan balik</button>}</details>}
+             </div></li>;})}</ol>:<p className="sr-activity-empty">Belum ada jawaban untuk kegiatan ini.</p>}
+         </section>;})}
+         </>:<div className="ss-empty"><Users size={30}/><h3>Belum ada jawaban tugas</h3><p>Jawaban tugas dan refleksi akan tampil di sini.</p></div>}
       </div>
       <aside className="sr-grading" aria-label="Penilaian mahasiswa"><div className="sr-grading-header"><h3>Penilaian</h3><button className="ss-icon-button" aria-label="Pengaturan penilaian kegiatan" disabled={!activity||activity.kind==='quiz'||busy} onClick={()=>{setFailed(false);setMessage('');setSettingsOpen(true);}}><Settings2 size={17}/></button></div>
         {activity&&<p className="sr-grading-mode">{gradingModeLabel(activity)}{settings&&settings.mode!=='ungraded'?` · maks. ${settings.maxPoints}`:''}</p>}

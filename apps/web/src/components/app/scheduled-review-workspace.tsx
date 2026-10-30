@@ -9,7 +9,7 @@ import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFo
 type Selection={student?:string;activity?:string};
 type Props={state:ScheduledClassState;onAction:(action:string,body?:Record<string,unknown>)=>Promise<void>;onDirtyChange?:(dirty:boolean)=>void;initialSelection?:Selection;onSelectionChange?:(selection:Selection)=>void};
 type CriterionDraft={id:string;label:string;maxPoints:string};
-function shortTitle(t) { const s = String(t||''); const m = s.match(/^(\d+[a-c]?)/); const prefix = m ? m[1] : ''; const rest = s.replace(/^[\d\s·\-–]+/, '').split('·')[0].trim(); const words = rest.split(/\s+/).slice(0,3).join(' '); return (prefix ? prefix + ' · ' : '') + words; }
+function shortTitle(t: any) { const s = String(t||''); const m = s.match(/^(\d+[a-c]?)/); const prefix = m ? m[1] : ''; const rest = s.replace(/^[\d\s·\-–]+/, '').split('·')[0].trim(); const words = rest.split(/\s+/).slice(0,3).join(' '); return (prefix ? prefix + ' · ' : '') + words; }
 const personKey=(row:ClassReportRow)=>row.student||row.roster;
 export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSelection,onSelectionChange}:Props){
   const activities=state.activities.filter(a=>a.kind==='assignment'||a.kind==='exit_ticket'||a.kind==='quiz');

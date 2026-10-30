@@ -263,3 +263,12 @@
 .sr-activity-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .sr-activity-tab{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border:1px solid var(--ss-border);border-radius:10px;background:var(--ss-panel);font-size:12px;min-width:120px}
 .sr-matrix{margin:12px 0;border:1px solid var(--ss-border);border-radius:12px;padding:10px}
+
+.sr-item-matrix{margin:12px 0;border:1px solid var(--ss-border);border-radius:12px;background:var(--ss-panel);padding:10px 12px}
+.sr-item-matrix summary{cursor:pointer;font-weight:700;font-size:13px}
+.sr-icell{border:none;background:none;cursor:pointer;font-size:14px;font-weight:700;padding:2px 8px;border-radius:6px}
+.sr-icell.ok{color:#137333}.sr-icell.bad{color:#b3261e}.sr-icell.txt{color:#2563eb}
+.sr-batch{margin:10px 0;border:1px dashed var(--ss-border);border-radius:10px;padding:10px}
+.sr-batch summary{cursor:pointer;font-size:13px;font-weight:700}
+.sr-batch-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--ss-border);font-size:12px}
+.sr-grading{position:sticky;top:12px;align-self:start}

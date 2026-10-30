@@ -5,10 +5,25 @@ export function formatScheduledResponse(activity: any, attempt?: any): string {
   const answers = attempt?.answers || {};
   const lines: string[] = [];
   const sheet = activity?.worksheet;
+  const keyItems: Record<string, any> = sheet?.answerKey?.items || {};
   for (const item of sheet?.items || []) {
     lines.push(String(item.prompt || ''));
     const response = answers.responses?.[item.id];
-    lines.push(response === undefined || response === null || response === '' ? 'Belum dijawab' : String(response));
+    const shown = response === undefined || response === null || response === '' ? 'Belum dijawab' : String(response);
+    lines.push(shown);
+    const key = keyItems[item.id];
+    if (key && shown !== 'Belum dijawab') {
+      if (key.mode === 'exact' && Array.isArray(key.accepted)) {
+        const want = key.accepted.map(String).join(' / ');
+        const ok = key.accepted.map(String).some((a: string) => a.trim().toLowerCase() === shown.trim().toLowerCase());
+        lines.push((ok ? '✓ Benar' : '✗ Salah') + ' · Kunci: ' + want);
+      } else if (key.mode === 'reference') {
+        if (key.modelAnswer) lines.push('Acuan: ' + String(key.modelAnswer));
+        if (key.rubric) lines.push('Rubrik: ' + String(key.rubric));
+      }
+    } else if (key && shown === 'Belum dijawab' && key.mode === 'exact' && Array.isArray(key.accepted)) {
+      lines.push('Belum dijawab · Kunci: ' + key.accepted.map(String).join(' / '));
+    }
   }
   const extra = typeof answers.text === 'string' ? answers.text : '';
   if (extra) lines.push('', extra);
@@ -20,15 +35,6 @@ export function formatScheduledResponse(activity: any, attempt?: any): string {
   for (const source of activity?.sources || []) add(source.title);
   if (attempt && !attempt.complete && !(arguments.length === 1 && activity?.answers)) lines.push('Belum lengkap');
   return lines.filter((line, index) => line !== '' || (index > 0 && lines[index - 1] !== '')).join('\n').replace(/\n{3,}/g, '\n\n');
-}
-
-export type GradeDraftState = {feedback: string; points: string; criterionScores: Record<string, string>};
-export const emptyGradeDraft: GradeDraftState = {feedback: '', points: '', criterionScores: {}};
-export function hydrateGradeDraft<T extends GradeDraftState>(draft: T, previousAttemptId: string | null, nextAttemptId: string | null, assessment: any, dirty = JSON.stringify(draft) !== JSON.stringify(emptyGradeDraft)) {
-  const changedIdentity = previousAttemptId !== nextAttemptId;
-  if (!changedIdentity && dirty) return {draft, changedIdentity};
-  if (!assessment) return {draft: emptyGradeDraft, changedIdentity};
-  return {draft: {feedback: assessment.feedback || '', points: assessment.points == null ? '' : String(assessment.points), criterionScores: Object.fromEntries(Object.entries(assessment.criterionScores || {}).map(([key, value]) => [key, String(value)]))}, changedIdentity};
 }
 
 export type AssessmentPayloadInput = {attemptId: string; assessmentRevision: number; attemptRevision: number; settingsRevision: number; status: 'draft' | 'reviewed'; points: number | null; criterionScores: Record<string, number>; feedback: string};

@@ -292,3 +292,24 @@ button.sr-ocell{cursor:pointer}
 .sr-ocell.is-ok{background:#e8f7ee;border-color:#b7e2c6;color:#137333}
 .sr-ocell.is-bad{background:#fdecec;border-color:#f3b8b8;color:#b3261e}
 .sr-ocell.is-txt{background:#eef4ff;border-color:#b6ccf5;color:#1d4ed8;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+
+.sr-sheet{margin:12px 0;border:1px solid var(--ss-border);border-radius:14px;background:var(--ss-panel);padding:16px}
+.sr-sheet-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.sr-sheet-head h3{margin:0;font-size:16px}.sr-sheet-head p{margin:2px 0 0;color:var(--ss-muted);font-size:12px}
+.sr-sheet-nav{display:flex;align-items:center;gap:8px}
+.sr-sheet-act{border-top:1px solid var(--ss-border);padding:12px 0}
+.sr-sheet-act header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.sr-sheet-act h4{margin:0;font-size:14px}
+.sr-sheet-score{font-weight:800;font-size:13px;background:#eef4ff;border:1px solid #b6ccf5;color:#1d4ed8;border-radius:999px;padding:2px 10px}
+.sr-sheet-score.ok{background:#e8f7ee;border-color:#b7e2c6;color:#137333}
+.sr-sheet-flag{font-size:11px;color:var(--ss-muted)}
+.sr-sheet-line{display:flex;flex-wrap:wrap;gap:8px;font-size:14px}
+.sr-tok{background:#fff;border:1px solid var(--ss-border);border-radius:8px;padding:4px 10px}
+.sr-tok.ok{background:#e8f7ee;border-color:#b7e2c6;color:#137333}
+.sr-tok.bad{background:#fdecec;border-color:#f3b8b8;color:#b3261e}
+.sr-sheet-empty{color:var(--ss-muted);font-size:13px}
+.sr-sheet-text{border:1px solid var(--ss-border);border-radius:10px;margin:8px 0;background:#fff}
+.sr-sheet-text summary{cursor:pointer;padding:8px 12px;font-size:13px}
+.sr-sheet-ans,.sr-sheet-ref{padding:8px 12px;border-top:1px dashed var(--ss-border);font-size:13px}
+.sr-sheet-ans span,.sr-sheet-ref span{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ss-muted);display:block;margin-bottom:4px}
+.sr-sheet-ans p,.sr-sheet-ref p{margin:0;line-height:1.7;white-space:pre-wrap}

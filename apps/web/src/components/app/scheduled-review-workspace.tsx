@@ -48,9 +48,12 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   useEffect(()=>{if(!unsaved)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[unsaved]);
   useEffect(()=>{const h=(e:KeyboardEvent)=>{const tag=(e.target as HTMLElement)?.tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;const idx=state.report.findIndex(r=>personKey(r)===personKey(student||{student:'',roster:''} as any));if(e.key==='j'||e.key==='J'){if(idx<state.report.length-1)select(personKey(state.report[idx+1]));}else if(e.key==='k'||e.key==='K'){if(idx>0)select(personKey(state.report[idx-1]));}else if(e.key==='s'||e.key==='S'){void saveGrade('draft');}else if(e.key==='r'||e.key==='R'){void saveGrade('reviewed');}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[studentKey,activityId,unsaved]);
   const guard=()=>!unsaved||window.confirm('Perubahan penilaian belum disimpan. Buang perubahan dan lanjutkan?');
+  const resetSheetState=()=>{setDraft(emptyGradeDraft);setSavedDraft(JSON.stringify(emptyGradeDraft));setSettingsEdited(false);setFailed(false);setMessage('');};
   const select=(nextStudent:string,nextActivity=activity?.id||'')=>{
-    if(nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow)&&nextActivity===activity?.id)return;
+    const sameStudent=nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow);
+    if(sameStudent&&nextActivity===activity?.id)return;
     if(!guard())return;
+    if(!sameStudent)resetSheetState();
     loadSettings();setStudentKey(nextStudent);setActivityId(nextActivity);setMessage('');onSelectionChange?.({student:nextStudent,activity:nextActivity});
   };
   const showError=(error:unknown)=>{setFailed(true);setMessage((error as Error).message||'Perubahan belum dapat disimpan. Coba lagi.');};

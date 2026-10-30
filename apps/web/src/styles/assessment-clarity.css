@@ -1,0 +1,57 @@
+/* Scoped to the worksheet and assessment panel; shares the existing app theme. */
+.assessment-clarity { --clarity-ink: hsl(var(--foreground)); --clarity-soft: hsl(var(--muted-foreground)); --clarity-line: hsl(var(--border)); color: var(--clarity-ink); }
+.assessment-clarity .evx-panel-head { padding-bottom: 14px; border-bottom: 1px solid var(--clarity-line); }
+.assessment-status { padding: 18px 0 12px; display: grid; gap: 8px; }
+.assessment-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .12em; color: var(--clarity-soft); }
+.assessment-status > strong { font-size: 20px; line-height: 1.3; letter-spacing: -.035em; }
+.assessment-status p { margin: 0; color: var(--clarity-soft); font-size: 12px; line-height: 1.7; }
+.assessment-save-state, .worksheet-save-state { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+.assessment-save-state.unsaved, .worksheet-save-state.unsaved { color: hsl(var(--primary)); }
+.assessment-progress { display: flex; flex-wrap: wrap; gap: 8px 16px; border-block: 1px solid var(--clarity-line); padding: 12px 0; margin-bottom: 16px; font-size: 11px; color: var(--clarity-soft); }
+.assessment-progress > span { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.assessment-progress b { display: inline-grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: hsl(var(--muted)); color: var(--clarity-ink); font-size: 10px; }
+.assessment-progress em { font-size: 10px; color: hsl(var(--primary)); font-style: normal; }
+.assessment-clarity .evx-ai-card.score-only { background: hsl(var(--muted) / .5); border: 1px solid var(--clarity-line); border-radius: 14px; padding: 16px; gap: 12px; align-items: center; }
+.assessment-clarity .evx-ai-score strong { font-size: 36px; letter-spacing: -.05em; color: var(--clarity-ink); }
+.assessment-clarity .evx-ai-score small { margin-left: 5px; font-size: 12px; letter-spacing: 0; }
+.assessment-clarity .evx-ai-score > span { color: var(--clarity-soft); }
+.assessment-clarity .evx-refresh { display: inline-flex; align-items: center; gap: 6px; width: auto; height: auto; padding: 8px; font-size: 11px; color: var(--clarity-soft); border: 1px solid var(--clarity-line); border-radius: 8px; background: hsl(var(--card)); }
+.assessment-rubric-help, .assessment-publish-help { margin: 8px 0 12px; color: var(--clarity-soft); font-size: 12px; line-height: 1.65; }
+.assessment-clarity .evx-rubric > li { border: 1px solid var(--clarity-line); border-radius: 10px; padding: 12px; margin-bottom: 8px; background: hsl(var(--card)); }
+.assessment-clarity.evx-compact .evx-rubric > li > button { grid-template-columns: minmax(0, 1fr) 40px 28px auto 12px; gap: 7px; color: var(--clarity-ink); }
+.assessment-weight { color: var(--clarity-soft); font-size: 10px; }
+.assessment-clarity .evx-sticky-actions { background: hsl(var(--card)); border-top: 1px solid var(--clarity-line); padding-top: 14px; }
+.assessment-clarity .evx-sticky-actions { position: static; }
+.assessment-clarity .evx-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+.assessment-clarity .evx-actions button { min-height: 44px; padding: 10px 12px; white-space: normal; }
+.assessment-clarity .evx-draft-btn { border: 1px solid var(--clarity-line); color: var(--clarity-ink); background: hsl(var(--card)); border-radius: 10px; }
+.assessment-clarity .evx-next-btn { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-radius: 10px; }
+.tws-writing .worksheet-submit-bar { position: sticky; bottom: 0; z-index: 8; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 0; border-top: 1px solid hsl(var(--border)); background: hsl(var(--card)); }
+.tws-writing .worksheet-save-copy { display: grid; gap: 5px; flex: 1 1 200px; }
+.tws-writing .worksheet-save-copy small { max-width: 390px; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.6; }
+.tws-writing .worksheet-submit-bar .tws-actions { margin: 0; gap: 8px; }
+.tws-writing .worksheet-submit-bar button { min-height: 44px; border-radius: 10px; padding: 10px 16px; }
+.tws-writing .worksheet-submit-bar .ld-btn-primary { border-radius: 10px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.tws-writing .ws-compose-head { border-bottom: 1px solid hsl(var(--border)); padding-bottom: 14px; margin-bottom: 4px; }
+.tws-writing .ws-compose-head h2 { font-size: 19px; color: hsl(var(--foreground)); letter-spacing: -.035em; }
+.tws-writing .ws-compose-meta { font-size: 12px; color: hsl(var(--muted-foreground)); }
+.tws-writing .lined-box { border: 1px solid hsl(var(--border)); border-radius: 12px; overflow: hidden; }
+.tws-writing .lined-box textarea { font-size: 16px; line-height: 1.9; color: hsl(var(--foreground)); background-color: hsl(var(--card)); }
+.worksheet-clarity [hidden] { display: none !important; }
+.worksheet-clarity .ws-task { min-height: 0; padding: 18px 20px; grid-template-columns: 1fr; }
+.worksheet-clarity .ws-task-art, .worksheet-clarity .ws-must-head > img, .worksheet-clarity .ws-must-head > .worksheet-art { display: none; }
+.worksheet-clarity .ws-must { padding: 16px 20px; min-height: 0; background: hsl(var(--card)); border-color: hsl(var(--border)); }
+.worksheet-clarity .ws-must ul { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.worksheet-clarity .ws-must li { display: flex; align-items: flex-start; gap: 10px; width: 100%; max-width: none; min-height: 0; padding: 0; background: transparent; border: 0; box-shadow: none; }
+.worksheet-clarity .ws-must li > strong { white-space: normal; overflow: visible; display: block; max-width: none; font-size: 13px; line-height: 1.7; color: hsl(var(--foreground)); -webkit-line-clamp: unset; }
+.worksheet-clarity .ws-must-ico { flex: 0 0 24px; width: 24px; height: 24px; background: hsl(var(--muted)); color: hsl(var(--primary)); }
+.worksheet-clarity .ws-must-head { margin-bottom: 12px; min-height: 0; }
+@media (max-width: 640px) {
+ .tws-writing .worksheet-submit-bar { gap: 12px; padding-block: 12px; }
+ .tws-writing .worksheet-submit-bar .tws-actions { width: 100%; display: grid; grid-template-columns: 1fr 1.3fr; }
+ .tws-writing .worksheet-submit-bar button { justify-content: center; padding-inline: 10px; }
+ .assessment-clarity .evx-ai-card.score-only { flex-wrap: wrap; }
+ .assessment-clarity.evx-compact .evx-rubric > li > button { grid-template-columns: minmax(0, 1fr) 28px auto 12px; }
+ .assessment-clarity .evx-rubric .evx-bar { display: none; }
+ .assessment-status > strong { font-size: 18px; }
+}

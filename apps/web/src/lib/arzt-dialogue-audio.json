@@ -1,0 +1,20 @@
+{
+  "doctor:Guten Tag! Wie geht es Ihnen? Was tut Ihnen weh?": "/audio/arzt-dialogues/ddeab86bf3a5af3f.mp3",
+  "patient:Guten Tag. Ich habe seit drei Tagen Bauchschmerzen. Mir ist auch schlecht.": "/audio/arzt-dialogues/64e31601bd9cd1e7.mp3",
+  "doctor:Haben Sie Fieber?": "/audio/arzt-dialogues/c5c20ab93f207429.mp3",
+  "patient:Nein, ich habe kein Fieber. Müssen Sie mich untersuchen?": "/audio/arzt-dialogues/4307cd8a16342e9c.mp3",
+  "doctor:Ja. Sie müssen mir bitte zeigen, wo es weh tut.": "/audio/arzt-dialogues/33ebe3cad41722a4.mp3",
+  "patient:Hier tut es weh. Darf ich eine Frage stellen?": "/audio/arzt-dialogues/72a5e0242b37cae3.mp3",
+  "doctor:Ja, Sie dürfen gern fragen.": "/audio/arzt-dialogues/29fb8b5119ffa205.mp3",
+  "patient:Was muss ich jetzt tun?": "/audio/arzt-dialogues/f9abe39f56ee0d50.mp3",
+  "doctor:Bleiben Sie bitte einen Moment hier. Sie dürfen hier nicht rauchen.": "/audio/arzt-dialogues/12bbc9761796d27e.mp3",
+  "doctor:Guten Tag! Was tut Ihnen weh?": "/audio/arzt-dialogues/59d4bc1e0784f725.mp3",
+  "patient:Mein Kopf und mein Hals tun weh. Aber ich habe kein Fieber.": "/audio/arzt-dialogues/556d6f5eaae780d8.mp3",
+  "doctor:Wie lange haben Sie die Schmerzen schon?": "/audio/arzt-dialogues/89b27d13312f5a3e.mp3",
+  "patient:Seit gestern. Müssen Sie meinen Hals untersuchen?": "/audio/arzt-dialogues/d0d2ccb8f2b3ea07.mp3",
+  "doctor:Ja. Machen Sie bitte den Mund auf und sagen Sie „A“.": "/audio/arzt-dialogues/92ffac72220e2b1e.mp3",
+  "patient:A. Darf ich danach noch etwas fragen?": "/audio/arzt-dialogues/3a32124b113390fb.mp3",
+  "doctor:Natürlich. Sie dürfen Fragen stellen. Sie müssen keine Angst haben.": "/audio/arzt-dialogues/fcd7f67e2e592179.mp3",
+  "patient:Danke. Muss ich noch hier bleiben?": "/audio/arzt-dialogues/5e39d94b63f8f061.mp3",
+  "doctor:Ja, bitte warten Sie kurz. Wir besprechen gleich alles zusammen.": "/audio/arzt-dialogues/856a2ee8619a4446.mp3"
+}

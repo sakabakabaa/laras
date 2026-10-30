@@ -1,0 +1,1 @@
+migrate(app=>{const c=app.findCollectionByNameOrId('file_library');if(!c.fields.getByName('restrictDownload')){c.fields.add(new BoolField({name:'restrictDownload'}));app.save(c);}},app=>{const c=app.findCollectionByNameOrId('file_library');c.fields.removeByName('restrictDownload');app.save(c);});

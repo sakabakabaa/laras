@@ -1,0 +1,29 @@
+.workspace-guide-trigger{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 11px;border:1px solid #eadbd7;border-radius:10px;background:#fff;color:#7f1d16;font:600 12px var(--body,Inter,sans-serif);cursor:pointer;transition:background .18s ease,border-color .18s ease}
+.workspace-guide-trigger:hover{background:#fff6f4;border-color:#d9b8b0}
+.workspace-guide-trigger:focus-visible,.wg-coach button:focus-visible{outline:2px solid #a95646;outline-offset:3px}
+.wg-overlay{position:fixed;inset:0;z-index:90;background:transparent}
+.wg-spotlight{position:fixed;z-index:91;pointer-events:none;border:2px solid #d6a28d;border-radius:12px;box-shadow:0 0 0 9999px rgba(19,24,32,.57),0 0 24px rgba(206,146,117,.25);overflow:hidden}
+.wg-target-motion{position:absolute;inset:0;border-radius:10px;animation:wgTargetPulse 2.4s .8s ease-in-out infinite}
+.gesture-scan:after{content:'';position:absolute;top:0;bottom:0;width:26%;background:linear-gradient(90deg,transparent,rgba(234,192,170,.2),transparent);animation:wgScan 3.2s .8s ease-in-out infinite}
+.gesture-search:after{content:'';position:absolute;top:28%;bottom:28%;left:15%;width:2px;background:#8a3427;animation:wgCaret 1s 1s steps(2) infinite}
+.wg-pointer{position:fixed;left:0;top:0;z-index:92;pointer-events:none;color:#6e241a;filter:drop-shadow(0 3px 4px rgba(0,0,0,.2))}
+.wg-pointer-tap{position:relative;animation:wgTap 2.8s 1s ease-in-out infinite}
+.wg-pointer-tap span{position:absolute;left:-10px;top:-10px;width:26px;height:26px;border:2px solid #ab5945;border-radius:50%;animation:wgRipple 2.8s 1s ease-out infinite}
+.wg-coach{position:fixed;z-index:93;padding:16px 18px 14px;border:1px solid #e9dcd6;border-radius:16px;background:#fff;color:#202938;box-shadow:0 12px 54px rgba(0,0,0,.2);outline:none;font-family:var(--body,Inter,sans-serif)}
+.wg-coach-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}.wg-coach-top>span{display:inline-flex;align-items:center;gap:6px;color:#8a3427;font-size:9px;letter-spacing:.09em;font-weight:750}
+.wg-step-count{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:9px;font-weight:700;letter-spacing:.06em;color:#7c818b}.wg-step-count span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;letter-spacing:0;font-weight:500}
+.wg-copy{min-height:96px;animation:wgCopyIn .4s ease both}.wg-copy h2{font-size:18px;font-weight:700;line-height:1.3;letter-spacing:-.025em;margin:9px 0 7px}.wg-copy p{font-size:12px;line-height:1.6;color:#657080;margin:0}
+.wg-timeline{display:flex;gap:4px;margin:14px 0 12px}.wg-timeline>span{flex:1;height:3px;overflow:hidden;border-radius:5px;background:#eee6e2}.wg-timeline>span.complete{background:#8a3427}.wg-timeline>span.current{background:#dfc1b6}.wg-timeline i{display:block;width:100%;height:100%;background:#8a3427;transform:scaleX(0);transform-origin:left}.wg-timeline i.running{animation:wgTime linear forwards}
+.wg-controls,.wg-controls>div{display:flex;align-items:center;justify-content:space-between;gap:5px}.wg-icon-button,.wg-back{display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:7px;background:transparent;color:#737b87;cursor:pointer}.wg-icon-button:hover,.wg-back:hover{background:#f5efeb;color:#8a3427}.wg-back:disabled{opacity:.3;cursor:default}.wg-next{display:inline-flex;align-items:center;gap:9px;height:32px;padding:0 12px;background:#7f2d23;border:0;border-radius:8px;color:#fff;font:600 11px var(--body,Inter,sans-serif);cursor:pointer}
+:root.dark .workspace-guide-trigger{border-color:#59413e;background:#2b2727;color:#f0c5bc}:root.dark .workspace-guide-trigger:hover{background:#382d2b}:root.dark .wg-coach{background:#272427;border-color:#62504a;color:#f0edf0}:root.dark .wg-copy p{color:#bfc2cb}:root.dark .wg-coach-top>span{color:#efbba7}:root.dark .wg-timeline>span{background:#4b4241}:root.dark .wg-timeline>span.complete{background:#d99177}:root.dark .wg-icon-button:hover,:root.dark .wg-back:hover{background:#413432;color:#efbba7}
+@keyframes wgTargetPulse{0%,100%{box-shadow:inset 0 0 0 0 rgba(228,166,133,0)}50%{box-shadow:inset 0 0 0 4px rgba(228,166,133,.22)}}
+@keyframes wgScan{0%{transform:translateX(-110%)}70%,100%{transform:translateX(510%)}}
+@keyframes wgCaret{0%,49%{opacity:0}50%,100%{opacity:1}}
+@keyframes wgTap{0%,20%,100%{transform:translate(0,0)}10%{transform:translate(-2px,-2px) scale(.92)}}
+@keyframes wgRipple{0%{transform:scale(.4);opacity:0}8%{opacity:.7}40%,100%{transform:scale(2.1);opacity:0}}
+@keyframes wgCopyIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes wgTime{to{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){.workspace-guide-trigger,.wg-coach *,.wg-pointer *,.wg-target-motion,.wg-target-motion:after{animation:none!important;transition:none!important}.wg-pointer-tap span{display:none}.wg-timeline i.running{transform:scaleX(1)}}
+@media(max-width:480px){.workspace-guide-trigger{width:34px;padding:0}.workspace-guide-trigger span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.wg-coach{padding:14px 16px}.wg-copy h2{font-size:17px}}
+
+.wg-spotlight[data-playing=false] .wg-target-motion,.wg-spotlight[data-playing=false] .wg-target-motion:after,.wg-pointer[data-playing=false] *{animation-play-state:paused}

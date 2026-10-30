@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router';
 import { scheduledRequest, type ScheduledClassState } from '@/lib/scheduled-classes';
 import { ScheduledClassroom } from '@/components/app/scheduled-classroom';
 import '@/styles/scheduled-session-workspace.css';
+import '@/styles/scheduled-review-student-sidebar.css';
 import '@/styles/scheduled-classes.css';
 import '@/styles/scheduled-student-workspace.css';
 import {ScheduledStudentPreview} from '@/components/app/scheduled-student-preview';

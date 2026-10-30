@@ -313,3 +313,8 @@ button.sr-ocell{cursor:pointer}
 .sr-sheet-ans,.sr-sheet-ref{padding:8px 12px;border-top:1px dashed var(--ss-border);font-size:13px}
 .sr-sheet-ans span,.sr-sheet-ref span{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ss-muted);display:block;margin-bottom:4px}
 .sr-sheet-ans p,.sr-sheet-ref p{margin:0;line-height:1.7;white-space:pre-wrap}
+
+.sr-sheet-foot{position:sticky;bottom:0;background:var(--ss-panel);border:1px solid var(--ss-border);border-radius:12px;padding:10px 12px;margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.sr-sheet-totals{display:flex;flex-wrap:wrap;gap:6px}
+.sr-sheet-chip{font-size:12px;font-weight:600;background:#fff;border:1px solid var(--ss-border);border-radius:999px;padding:3px 10px}
+.sr-sheet-actions{display:flex;gap:8px}

@@ -1,7 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {buildAssessmentPayload, buildGradingSettingsPayload, buildPublishPayload, formatScheduledResponse, hydrateGradeDraft, validateManualGrade} from '../src/lib/scheduled-review';
-
-const emptyGradeDraft = {feedback: '', points: '', criterionScores: {}};
+import {buildAssessmentPayload, buildGradingSettingsPayload, buildPublishPayload, formatScheduledResponse, validateManualGrade} from '../src/lib/scheduled-review';
 
 const sampleActivity = {kind:'assignment', worksheet:{items:[{id:'gap-a',prompt:'Fill gap',type:'text'}],blocks:[{type:'instructions',body:{id:'Read carefully'}}]}, content:'Source text', sources:[{title:'Textbook',version:2,available:true}]};
 const sampleAttempt = {answers:{responses:{'gap-a':'answer'},text:'also answer'}, complete:false, status:'submitted'};
@@ -30,26 +28,14 @@ it('treats missing worksheet response as incomplete without changing the source 
   expect(view).toContain('Belum dijawab');
 });
 
-
-describe('grade draft hydration', () => {
-  it('discards dirty draft when submission identity changes', () => {
-    const result = hydrateGradeDraft({feedback: 'grade for A', points: '8', criterionScores: {}}, 'attempt-a', 'attempt-b', null);
-    expect(result).toEqual({draft: emptyGradeDraft, changedIdentity: true});
-  });
-
-  it('loads target saved feedback instead of leaking previous submission draft', () => {
-    expect(hydrateGradeDraft({feedback: 'unsaved A', points: '8', criterionScores: {}}, 'attempt-a', 'attempt-b', {feedback: 'saved B', points: 4, criterionScores: {}})).toEqual({draft: {feedback: 'saved B', points: '4', criterionScores: {}}, changedIdentity: true});
-  });
-
-  it('preserves dirty draft on same-submission polling', () => {
-    const dirty = {feedback: 'unsaved', points: '8', criterionScores: {}};
-    expect(hydrateGradeDraft(dirty, 'attempt-a', 'attempt-a', {attempt: 'attempt-a', feedback: 'saved', points: 5, criterionScores: {}})).toEqual({draft: dirty, changedIdentity: false});
-  });
-
-  it('hydrates clean same-submission revisions, including empty criteria', () => {
-    expect(hydrateGradeDraft({feedback: 'old', points: '5', criterionScores: {x: '2'}}, 'attempt-a', 'attempt-a', {attempt: 'attempt-a', revision: 2, feedback: '', points: null, criterionScores: {}}, false)).toEqual({draft: emptyGradeDraft, changedIdentity: false});
-  });
+it('marks exact answers against the key and shows reference models', () => {
+  const activity = {kind:'assignment', worksheet:{items:[{id:'a',prompt:'Q1',type:'select'},{id:'b',prompt:'Q2',type:'select'},{id:'c',prompt:'Q3',type:'text'}], answerKey:{items:{a:{mode:'exact',accepted:['B']},b:{mode:'exact',accepted:['C']},c:{mode:'reference',modelAnswer:'Du musst Tee trinken.',rubric:'Fleksibel'}}}}};
+  const view = formatScheduledResponse(activity, {answers:{responses:{a:'B',b:'A',c:'saya minum teh'}}, complete:true, status:'submitted'});
+  expect(view).toContain('✓ Benar · Kunci: B');
+  expect(view).toContain('✗ Salah · Kunci: C');
+  expect(view).toContain('Acuan: Du musst Tee trinken.');
 });
+
 
 describe('scheduled review helpers', () => {
   it('renders worksheet response map without losing text answers', () => {

@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+	Fragment,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	type DragEvent,
+} from 'react';
 import { Link, useBlocker, useNavigate } from 'react-router';
 import {
 	ArrowDown,
@@ -9,6 +16,9 @@ import {
 	Download,
 	Eye,
 	FileCheck2,
+	GripVertical,
+	LayoutGrid,
+	ListTree,
 	Plus,
 	Redo2,
 	Save,
@@ -28,6 +38,7 @@ import pb from '@/lib/pocketbase-client';
 import { toWibInput, fromWibInput } from '@/lib/scheduled-classes';
 import {
 	appendBlock,
+	appendQuestion,
 	BLOCK_LABELS,
 	builderIssues,
 	builderRequest,
@@ -39,11 +50,15 @@ import {
 	removeBlock,
 	rich,
 	uid,
-	type BlockType,
 	type BuilderEnvelope,
 	type BuilderRecord,
 } from '@/lib/builder-document';
 import { BlockEditor, BuilderPreview, KeyInspector } from './builder-elements';
+import {
+	BuilderElementLibrary,
+	BUILDER_ELEMENTS,
+	BUILDER_DRAG_TYPE,
+} from './builder-element-library';
 
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 const encode = encodeBuilderDraft;
@@ -76,6 +91,14 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[selected, setSelected] = useState(''),
 		[panel, setPanel] = useState<'content' | 'delivery' | 'review'>('content'),
 		[picker, setPicker] = useState(false),
+		[leftTab, setLeftTab] = useState<'elements' | 'outline'>('elements'),
+		[insertion, setInsertion] = useState<{
+			activityId: string;
+			beforeId?: string;
+		} | null>(null),
+		[dragging, setDragging] = useState(false),
+		[dropTarget, setDropTarget] = useState(''),
+		[announcement, setAnnouncement] = useState(''),
 		[preview, setPreview] = useState(false),
 		[inspectorOpen, setInspectorOpen] = useState(false),
 		[previewMobile, setPreviewMobile] = useState(false),
@@ -86,7 +109,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		conflictRef = useRef(false),
 		past = useRef<BuilderEnvelope[]>([]),
 		future = useRef<BuilderEnvelope[]>([]),
-		activeId = useRef(id);
+		activeId = useRef(id),
+		dragItem = useRef<{
+			elementId?: string;
+			activityId?: string;
+			blockId?: string;
+		} | null>(null);
 	activeId.current = id;
 	const storageKey = `laras-builder:${pb.authStore.record?.id || 'anonymous'}:${id}`;
 	const dirty = Boolean(draft && encode(draft) !== saved);
@@ -290,8 +318,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		points = Object.values(d.questionsById).reduce((s, q) => s + q.points, 0);
 	const selectActivity = (activityId: string) => {
 		setActive(activityId);
+		setInsertion(null);
 		setSelected('');
 		setPanel('content');
+		setPicker(false);
 		requestAnimationFrame(() =>
 			document
 				.getElementById('builder-activity-' + activityId)
@@ -308,6 +338,324 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				next.document.activities[index],
 			];
 		});
+	const locked = conflict || Boolean(recovery);
+	const finishDrag = () => {
+		dragItem.current = null;
+		setDragging(false);
+		setDropTarget('');
+	};
+	const openElements = (activityId: string, beforeId?: string) => {
+		setActive(activityId);
+		setInsertion({ activityId, beforeId });
+		setLeftTab('elements');
+		setPanel('content');
+		if (window.matchMedia('(max-width: 1100px)').matches) setPicker(true);
+		else
+			requestAnimationFrame(() =>
+				document
+					.querySelector<HTMLInputElement>(
+						'.bd-builder-sidebar input[type="search"]',
+					)
+					?.focus(),
+			);
+	};
+	const revealBlock = (activityId: string, blockId: string) => {
+		setActive(activityId);
+		setSelected(blockId);
+		setPicker(false);
+		requestAnimationFrame(() => {
+			const element = document.getElementById('builder-block-' + blockId);
+			element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+			element?.focus({ preventScroll: true });
+		});
+	};
+	const addElement = (
+		elementId: string,
+		position = insertion || {
+			activityId: activity?.id,
+			beforeId: undefined as string | undefined,
+		},
+	) => {
+		const { activityId, beforeId } = position;
+		const element = BUILDER_ELEMENTS.find((e) => e.id === elementId);
+		if (!element || !activityId || locked) return;
+		const target = current.current?.document.activities.find(
+			(a) => a.id === activityId,
+		);
+		if (!target) return;
+		if (
+			current.current!.document.activities.reduce(
+				(sum, a) => sum + a.blocks.length,
+				0,
+			) >= 500 ||
+			Object.keys(current.current!.document.questionsById).length >= 500
+		) {
+			setAnnouncement(
+				'Batas 500 elemen atau pertanyaan tercapai. Hapus elemen sebelum menambah lagi.',
+			);
+			return;
+		}
+		let blockId = '';
+		change((next) => {
+			blockId = appendBlock(next, activityId, element.type);
+			const blocks = next.document.activities.find(
+				(a) => a.id === activityId,
+			)!.blocks;
+			const added = blocks.pop()!;
+			if (element.shortAnswer) {
+				for (const qid of added.questionIds || []) {
+					delete next.document.questionsById[qid];
+					delete next.privateKeys.answersByQuestionId[qid];
+				}
+				added.questionIds = [appendQuestion(next, 'short_answer')];
+			}
+			const index = beforeId ? blocks.findIndex((b) => b.id === beforeId) : -1;
+			blocks.splice(index < 0 ? blocks.length : index, 0, added);
+		});
+		setInsertion({ activityId, beforeId });
+		setAnnouncement(
+			`${element.label} ditambahkan ke ${target.title || 'kegiatan'}.`,
+		);
+		revealBlock(activityId, blockId);
+	};
+	const dropElement = (
+		event: DragEvent,
+		activityId: string,
+		beforeId?: string,
+	) => {
+		event.preventDefault();
+		const item = dragItem.current;
+		finishDrag();
+		if (!item || locked) return;
+		if (item.elementId) {
+			addElement(item.elementId, { activityId, beforeId });
+			return;
+		}
+		if (!item.blockId || !item.activityId || item.blockId === beforeId) return;
+		const source = current.current?.document.activities.find(
+			(a) => a.id === item.activityId,
+		);
+		if (!source?.blocks.some((b) => b.id === item.blockId)) return;
+		change((next) => {
+			const from = next.document.activities.find(
+				(a) => a.id === item.activityId,
+			)!;
+			const to = next.document.activities.find((a) => a.id === activityId);
+			if (!to) return;
+			const index = from.blocks.findIndex((b) => b.id === item.blockId);
+			const [moving] = from.blocks.splice(index, 1);
+			const at = beforeId ? to.blocks.findIndex((b) => b.id === beforeId) : -1;
+			to.blocks.splice(at < 0 ? to.blocks.length : at, 0, moving);
+		});
+		setInsertion(null);
+		setAnnouncement('Posisi elemen diperbarui.');
+		revealBlock(activityId, item.blockId);
+	};
+	const insertionSlot = (activityId: string, beforeId?: string) => {
+		const key = activityId + ':' + (beforeId || 'end');
+		return (
+			<div
+				className={
+					'bd-insertion-slot' +
+					(dragging ? ' is-dragging' : '') +
+					(dropTarget === key ? ' is-over' : '')
+				}
+				onDragOver={(event) => {
+					if (!dragItem.current || locked) return;
+					event.preventDefault();
+					event.dataTransfer.dropEffect = dragItem.current.elementId
+						? 'copy'
+						: 'move';
+					setDropTarget(key);
+				}}
+				onDragLeave={() =>
+					setDropTarget((current) => (current === key ? '' : current))
+				}
+				onDrop={(event) => dropElement(event, activityId, beforeId)}
+			>
+				<button
+					type="button"
+					disabled={locked}
+					aria-label={
+						beforeId
+							? `Sisipkan elemen sebelum ${BLOCK_LABELS[d.activities.find((a) => a.id === activityId)!.blocks.find((b) => b.id === beforeId)!.type]}`
+							: 'Tambah elemen di akhir kegiatan'
+					}
+					onClick={() => openElements(activityId, beforeId)}
+				>
+					<Plus size={14} />
+					<span>
+						{dragging ? 'Letakkan elemen di sini' : 'Sisipkan elemen'}
+					</span>
+				</button>
+			</div>
+		);
+	};
+	const outlineContents = (
+		<div className="bd-outline">
+			<header>
+				<span className="bd-kicker">KEGIATAN</span>
+				<span>{d.activities.length}</span>
+			</header>
+			<ol>
+				{d.activities.map((a, i) => (
+					<li key={a.id} className={activity?.id === a.id ? 'is-active' : ''}>
+						<button
+							type="button"
+							className="bd-outline-select"
+							onClick={() => selectActivity(a.id)}
+						>
+							<span>{String(i + 1).padStart(2, '0')}</span>
+							<strong>{a.title || 'Kegiatan tanpa judul'}</strong>
+							<small>
+								{a.blocks.length} elemen
+								{d.kind === 'kelas' ? ` · ${a.plannedMinutes} menit` : ''}
+							</small>
+						</button>
+						<div className="bd-outline-actions">
+							<button
+								type="button"
+								aria-label={`Naikkan kegiatan ${i + 1}`}
+								disabled={i === 0 || conflict || Boolean(recovery)}
+								onClick={() => moveActivity(a.id, -1)}
+							>
+								<ArrowUp size={13} />
+							</button>
+							<button
+								type="button"
+								aria-label={`Turunkan kegiatan ${i + 1}`}
+								disabled={
+									i === d.activities.length - 1 || conflict || Boolean(recovery)
+								}
+								onClick={() => moveActivity(a.id, 1)}
+							>
+								<ArrowDown size={13} />
+							</button>
+							<button
+								type="button"
+								aria-label={`Duplikat kegiatan ${i + 1}`}
+								disabled={
+									conflict || Boolean(recovery) || d.activities.length >= 50
+								}
+								onClick={() => {
+									let copied = '';
+									change((next) => {
+										copied = duplicateActivity(next, a.id);
+									});
+									setActive(copied);
+									setInsertion(null);
+									setSelected('');
+								}}
+							>
+								<Copy size={13} />
+							</button>
+						</div>
+					</li>
+				))}
+			</ol>
+			<button
+				className="bd-outline-add"
+				disabled={d.activities.length >= 50 || conflict || Boolean(recovery)}
+				onClick={() => {
+					const a = newActivity();
+					change((next) => {
+						next.document.activities.push(a);
+					});
+					setPicker(false);
+					setActive(a.id);
+					setInsertion(null);
+					setSelected('');
+				}}
+			>
+				<Plus size={16} />
+				Tambah kegiatan
+			</button>
+			<p>Draf pribadi · hanya dosen</p>
+		</div>
+	);
+	const insertionActivity =
+		d.activities.find((a) => a.id === insertion?.activityId) || activity;
+	const beforeIndex =
+		insertionActivity?.blocks.findIndex((b) => b.id === insertion?.beforeId) ??
+		-1;
+	const sidebarContents = (surface: string) => (
+		<>
+			<div
+				className="bd-sidebar-tabs"
+				role="tablist"
+				aria-label="Panel builder"
+				onKeyDown={(event) => {
+					if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
+						return;
+					event.preventDefault();
+					const tab =
+						event.key === 'Home'
+							? 'elements'
+							: event.key === 'End'
+								? 'outline'
+								: leftTab === 'elements'
+									? 'outline'
+									: 'elements';
+					setLeftTab(tab);
+					document.getElementById(`builder-${tab}-tab-${surface}`)?.focus();
+				}}
+			>
+				<button
+					type="button"
+					role="tab"
+					tabIndex={leftTab === 'elements' ? 0 : -1}
+					aria-selected={leftTab === 'elements'}
+					aria-controls={`builder-elements-panel-${surface}`}
+					id={`builder-elements-tab-${surface}`}
+					onClick={() => setLeftTab('elements')}
+				>
+					<LayoutGrid size={15} /> Elemen
+				</button>
+				<button
+					type="button"
+					role="tab"
+					tabIndex={leftTab === 'outline' ? 0 : -1}
+					aria-selected={leftTab === 'outline'}
+					aria-controls={`builder-outline-panel-${surface}`}
+					id={`builder-outline-tab-${surface}`}
+					onClick={() => setLeftTab('outline')}
+				>
+					<ListTree size={15} /> Outline
+				</button>
+			</div>
+			<div
+				role="tabpanel"
+				id={`builder-elements-panel-${surface}`}
+				aria-labelledby={`builder-elements-tab-${surface}`}
+				hidden={leftTab !== 'elements'}
+			>
+				<BuilderElementLibrary
+					disabled={locked || !activity}
+					target={
+						insertionActivity
+							? `${insertionActivity.title || 'Kegiatan'} · ${beforeIndex >= 0 ? `sebelum elemen ${beforeIndex + 1}` : 'akhir kegiatan'}`
+							: 'Tambahkan kegiatan terlebih dahulu.'
+					}
+					onAdd={(elementId) => addElement(elementId)}
+					onDragStart={(elementId, event) => {
+						dragItem.current = { elementId };
+						event.dataTransfer.setData(BUILDER_DRAG_TYPE, elementId);
+						event.dataTransfer.effectAllowed = 'copy';
+						setDragging(true);
+					}}
+					onDragEnd={finishDrag}
+				/>
+			</div>
+			<div
+				role="tabpanel"
+				id={`builder-outline-panel-${surface}`}
+				aria-labelledby={`builder-outline-tab-${surface}`}
+				hidden={leftTab !== 'outline'}
+			>
+				{outlineContents}
+			</div>
+		</>
+	);
 	const inspectorContents = (
 		<>
 			<header>
@@ -367,7 +715,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					<p className="bd-help">
 						Pilih elemen pertanyaan untuk mengatur kunci jawaban dan poin.
 					</p>
-					<button className="bd-secondary" onClick={() => setPicker(true)}>
+					<button
+						className="bd-secondary"
+						onClick={() => activity && openElements(activity.id)}
+					>
 						<Plus size={15} />
 						Tambah elemen
 					</button>
@@ -562,93 +913,33 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					</div>
 				</div>
 			)}
+			<p className="bd-sr-only" role="status" aria-live="polite">
+				{announcement}
+			</p>
 			{panel === 'content' ? (
 				<div className="bd-layout">
-					<aside className="bd-outline">
-						<header>
-							<span className="bd-kicker">KEGIATAN</span>
-							<span>{d.activities.length}</span>
-						</header>
-						<ol>
-							{d.activities.map((a, i) => (
-								<li
-									key={a.id}
-									className={activity?.id === a.id ? 'is-active' : ''}
-								>
-									<button
-										type="button"
-										className="bd-outline-select"
-										onClick={() => selectActivity(a.id)}
-									>
-										<span>{String(i + 1).padStart(2, '0')}</span>
-										<strong>{a.title || 'Kegiatan tanpa judul'}</strong>
-										<small>
-											{a.blocks.length} elemen
-											{d.kind === 'kelas' ? ` · ${a.plannedMinutes} menit` : ''}
-										</small>
-									</button>
-									<div className="bd-outline-actions">
-										<button
-											type="button"
-											aria-label={`Naikkan kegiatan ${i + 1}`}
-											disabled={i === 0 || conflict || Boolean(recovery)}
-											onClick={() => moveActivity(a.id, -1)}
-										>
-											<ArrowUp size={13} />
-										</button>
-										<button
-											type="button"
-											aria-label={`Turunkan kegiatan ${i + 1}`}
-											disabled={
-												i === d.activities.length - 1 ||
-												conflict ||
-												Boolean(recovery)
-											}
-											onClick={() => moveActivity(a.id, 1)}
-										>
-											<ArrowDown size={13} />
-										</button>
-										<button
-											type="button"
-											aria-label={`Duplikat kegiatan ${i + 1}`}
-											disabled={
-												conflict ||
-												Boolean(recovery) ||
-												d.activities.length >= 50
-											}
-											onClick={() => {
-												let copied = '';
-												change((next) => {
-													copied = duplicateActivity(next, a.id);
-												});
-												setActive(copied);
-												setSelected('');
-											}}
-										>
-											<Copy size={13} />
-										</button>
-									</div>
-								</li>
-							))}
-						</ol>
+					<div className="bd-mobile-library-actions">
 						<button
-							className="bd-outline-add"
-							disabled={
-								d.activities.length >= 50 || conflict || Boolean(recovery)
-							}
+							className="bd-secondary"
 							onClick={() => {
-								const a = newActivity();
-								change((next) => {
-									next.document.activities.push(a);
-								});
-								setActive(a.id);
-								setSelected('');
+								setLeftTab('elements');
+								setPicker(true);
 							}}
 						>
-							<Plus size={16} />
-							Tambah kegiatan
+							<LayoutGrid size={16} /> Elemen
 						</button>
-						<p>Draf pribadi · hanya dosen</p>
+						<button
+							className="bd-secondary"
+							onClick={() => {
+								setLeftTab('outline');
+								setPicker(true);
+							}}
+						>
+							<ListTree size={16} /> Outline
+						</button>
+					</div>
+					<aside className="bd-builder-sidebar" aria-label="Panel builder">
+						{sidebarContents('desktop')}
 					</aside>
 					<section className="bd-canvas" aria-label="Isi kegiatan">
 						<section className="bd-document-intro">
@@ -674,7 +965,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 									'bd-activity' + (activity?.id === a.id ? ' is-active' : '')
 								}
 								key={a.id}
-								onFocus={() => setActive(a.id)}
+								onFocus={() => {
+									setActive(a.id);
+									setInsertion(null);
+								}}
 							>
 								<header>
 									<div>
@@ -704,84 +998,118 @@ export function BuilderWorkspace({ id }: { id: string }) {
 									</button>
 								</header>
 								{a.blocks.map((b, j) => (
-									<article
-										className={
-											'bd-block' + (selected === b.id ? ' is-selected' : '')
-										}
-										key={b.id}
-										onFocus={() => {
-											setActive(a.id);
-											setSelected(b.id);
-										}}
-										onClick={() => {
-											setActive(a.id);
-											setSelected(b.id);
-										}}
-									>
-										<div className="bd-block-heading">
-											<span>{BLOCK_LABELS[b.type]}</span>
-											<div>
-												<button
-													type="button"
-													className="bd-icon"
-													aria-label="Naikkan elemen"
-													disabled={j === 0}
-													onClick={() =>
-														change((next) => {
-															const blocks = next.document.activities.find(
-																(x) => x.id === a.id,
-															)!.blocks;
-															[blocks[j - 1], blocks[j]] = [
-																blocks[j],
-																blocks[j - 1],
-															];
-														})
-													}
-												>
-													<ArrowUp size={14} />
-												</button>
-												<button
-													type="button"
-													className="bd-icon"
-													aria-label="Turunkan elemen"
-													disabled={j === a.blocks.length - 1}
-													onClick={() =>
-														change((next) => {
-															const blocks = next.document.activities.find(
-																(x) => x.id === a.id,
-															)!.blocks;
-															[blocks[j + 1], blocks[j]] = [
-																blocks[j],
-																blocks[j + 1],
-															];
-														})
-													}
-												>
-													<ArrowDown size={14} />
-												</button>
-												<button
-													type="button"
-													className="bd-icon"
-													aria-label="Hapus elemen"
-													onClick={(e) => {
-														e.stopPropagation();
-														change((next) => removeBlock(next, a.id, b.id));
-														setSelected('');
-													}}
-												>
-													<Trash2 size={14} />
-												</button>
+									<Fragment key={b.id}>
+										{insertionSlot(a.id, b.id)}
+										<article
+											className={
+												'bd-block' + (selected === b.id ? ' is-selected' : '')
+											}
+											id={'builder-block-' + b.id}
+											tabIndex={-1}
+											onFocus={() => {
+												setActive(a.id);
+												setSelected(b.id);
+											}}
+											onClick={() => {
+												setActive(a.id);
+												setSelected(b.id);
+											}}
+										>
+											<div className="bd-block-heading">
+												<span className="bd-block-title">
+													<button
+														type="button"
+														className="bd-block-grip"
+														draggable={!locked}
+														disabled={locked}
+														aria-label={`Seret ${BLOCK_LABELS[b.type]}`}
+														title="Seret untuk memindahkan elemen"
+														onDragStart={(event) => {
+															event.stopPropagation();
+															dragItem.current = {
+																activityId: a.id,
+																blockId: b.id,
+															};
+															event.dataTransfer.setData(
+																BUILDER_DRAG_TYPE,
+																b.id,
+															);
+															event.dataTransfer.effectAllowed = 'move';
+															setDragging(true);
+														}}
+														onDragEnd={finishDrag}
+													>
+														<GripVertical size={15} />
+													</button>
+													{BLOCK_LABELS[b.type]}
+												</span>
+												<div>
+													<button
+														type="button"
+														className="bd-icon"
+														aria-label="Naikkan elemen"
+														disabled={j === 0}
+														onClick={() =>
+															change((next) => {
+																const blocks = next.document.activities.find(
+																	(x) => x.id === a.id,
+																)!.blocks;
+																[blocks[j - 1], blocks[j]] = [
+																	blocks[j],
+																	blocks[j - 1],
+																];
+															})
+														}
+													>
+														<ArrowUp size={14} />
+													</button>
+													<button
+														type="button"
+														className="bd-icon"
+														aria-label="Turunkan elemen"
+														disabled={j === a.blocks.length - 1}
+														onClick={() =>
+															change((next) => {
+																const blocks = next.document.activities.find(
+																	(x) => x.id === a.id,
+																)!.blocks;
+																[blocks[j + 1], blocks[j]] = [
+																	blocks[j],
+																	blocks[j + 1],
+																];
+															})
+														}
+													>
+														<ArrowDown size={14} />
+													</button>
+													<button
+														type="button"
+														className="bd-icon"
+														aria-label="Hapus elemen"
+														onClick={(e) => {
+															e.stopPropagation();
+															change((next) => removeBlock(next, a.id, b.id));
+															setSelected('');
+														}}
+													>
+														<Trash2 size={14} />
+													</button>
+												</div>
 											</div>
-										</div>
-										<BlockEditor block={b} envelope={draft} onChange={change} />
-									</article>
+											<BlockEditor
+												block={b}
+												envelope={draft}
+												onChange={change}
+											/>
+										</article>
+									</Fragment>
 								))}
+								{insertionSlot(a.id)}
 								<button
 									className="bd-add-block"
 									disabled={conflict || Boolean(recovery)}
 									onClick={() => {
-										setActive(a.id);
-										setPicker(true);
+										openElements(a.id);
 									}}
 								>
 									<Plus size={18} />
@@ -881,35 +1209,14 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				</DialogContent>
 			</Dialog>
 			<Dialog open={picker} onOpenChange={setPicker}>
-				<DialogContent className="bd-picker-dialog">
+				<DialogContent className="bd-picker-dialog bd-library-drawer">
 					<DialogHeader>
-						<DialogTitle>Tambah elemen</DialogTitle>
+						<DialogTitle>Panel builder</DialogTitle>
 						<DialogDescription>
-							Pilih isi yang ingin Anda tambahkan ke kegiatan.
+							Pilih elemen atau kegiatan. Ketuk elemen untuk menambahkannya.
 						</DialogDescription>
 					</DialogHeader>
-					<div className="bd-block-picker">
-						{(Object.entries(BLOCK_LABELS) as [BlockType, string][]).map(
-							([type, label]) => (
-								<button
-									key={type}
-									type="button"
-									onClick={() => {
-										if (!activity) return;
-										let blockId = '';
-										change((next) => {
-											blockId = appendBlock(next, activity.id, type);
-										});
-										setSelected(blockId);
-										setPicker(false);
-									}}
-								>
-									<Plus size={17} />
-									{label}
-								</button>
-							),
-						)}
-					</div>
+					{sidebarContents('drawer')}
 				</DialogContent>
 			</Dialog>
 			<Dialog open={preview} onOpenChange={setPreview}>

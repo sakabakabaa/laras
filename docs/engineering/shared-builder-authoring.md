@@ -17,6 +17,10 @@ Instructions, image/audio/video/reference HTTPS links, reading acknowledgements,
 
 The current media path is explicit HTTPS links; library upload/import workflows are later work. Extended-writing guidance is available, while a structured rubric criterion editor and weighted aggregation remain later work. Draft timing policies are persisted; selecting a mode does not launch or schedule a student run.
 
+## Element library
+
+The left panel defaults to a searchable, categorized **Elemen** library, with **Outline** available in a second tab. Icon tiles include descriptions and separate choices for multiple-choice and short-answer questions. Click a tile to append to the active activity; a plus control between blocks selects an exact insertion position. Native desktop dragging supports adding from the library and moving an existing block using its grip, including across activities. Moving preserves question IDs and private keys. Existing arrow controls remain available for keyboard and touch use. Narrow screens use a left drawer with tap-to-add. New insertion and move operations use the existing undo/redo, recovery, and serialized autosave path; no schema or server changes are required.
+
 ## Persistence and safety
 
 Migration `1793424000_builder_drafts.js` creates `builder_documents` and `builder_private_keys`. All SDK CRUD rules are locked. Authenticated faculty commands through `POST /api/laras/builder` provide `create`, `get`, `list`, and `save`.
@@ -29,7 +33,7 @@ Preview receives only the document content and temporary answers. It never calls
 
 ## Still planned
 
-Immutable published versions, publishing/scheduling the new schema, student delivery runs, timers and whole-Tugas submission, accommodations, manual/automatic assessment and release snapshots, official gradebook synchronization, custom template library, file/audio submissions, library source/import/AI assistance, drag reordering and the complete rich-text authoring surface. Do not expose a publication button until the corresponding server/runtime contract is implemented.
+Immutable published versions, publishing/scheduling the new schema, student delivery runs, timers and whole-Tugas submission, accommodations, manual/automatic assessment and release snapshots, official gradebook synchronization, custom template library, file/audio submissions, library source/import/AI assistance, the complete rich-text authoring surface. Do not expose a publication button until the corresponding server/runtime contract is implemented.
 
 ## Verification
 

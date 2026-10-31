@@ -7,7 +7,7 @@ function data(record) {
   const value = JSON.parse(JSON.stringify(record.publicExport()));
   // JSVM publicExport exposes JSON fields as raw byte slices. Serializing
   // through JSON.stringify otherwise turns saved answers into numeric arrays.
-  for (const field of ['snapshot', 'answers', 'detail', 'academicSnapshot']) {
+  for (const field of ['snapshot', 'answers', 'detail', 'academicSnapshot', 'answerOverrides']) {
     if (Object.prototype.hasOwnProperty.call(value, field)) value[field] = JSON.parse(record.getString(field) || '{}');
   }
   return value;
@@ -17,6 +17,35 @@ function create(app, name, fields) { const r = new Record(app.findCollectionByNa
 function event(app, c, actor, action, detail = {}) { create(app, 'scheduled_class_events', {class: c.id, actor, action, detail}); }
 function activities(app, c) {
   return rules.windows(data(c), rows(app, 'scheduled_class_activities', 'class={:c}', {c: c.id}, 'position').map(r => ({...data(r), snapshot: json(r, 'snapshot')})));
+}
+function autoScoreItems(activity, answers, overrides = {}) {
+  const items = [];
+  if (activity.kind === 'quiz') {
+    for (const question of activity.snapshot.questions || []) {
+      if (typeof question.points !== 'number' || question.points <= 0) continue;
+      items.push({id:question.id,points:question.points,correct:answers[question.id] === question.correctIndex,answered:Number.isInteger(answers[question.id])});
+    }
+  } else {
+    const worksheet = activity.snapshot.worksheet, keys = worksheet?.answerKey?.items || {};
+    for (const item of worksheet?.items || []) {
+      const key = keys[item.id];
+      if (key?.mode !== 'exact' || typeof key.points !== 'number' || key.points <= 0) continue;
+      const answer = String(answers.responses?.[item.id] ?? '').trim().replace(/\s+/g,' ').replace(/[.!?]+$/g,'').toLowerCase();
+      items.push({id:item.id,points:key.points,correct:key.accepted.some(value=>String(value).trim().replace(/\s+/g,' ').replace(/[.!?]+$/g,'').toLowerCase()===answer),answered:Boolean(answer)});
+    }
+  }
+  if (!items.length) return null;
+  const total = items.reduce((sum,item)=>sum+item.points,0);
+  const earned = items.reduce((sum,item)=>{
+    const override = overrides[item.id];
+    const correct = override === 'correct' ? true : override === 'wrong' ? false : item.correct;
+    return sum + (correct ? item.points : 0);
+  },0);
+  return {score:Math.round(earned/total*10000)/100,items};
+}
+function isAutoScoredActivity(activity) {
+  const items = activity.snapshot.worksheet?.items || [], keys = activity.snapshot.worksheet?.answerKey?.items || {};
+  return activity.kind === 'quiz' || (['assignment','exit_ticket'].includes(activity.kind) && items.length > 0 && items.every(item=>keys[item.id]?.mode==='exact'));
 }
 function finalize(app, record, activity, now, status) {
   const outcome = rules.result(activity, json(record, 'answers'));
@@ -102,7 +131,7 @@ function gradingState(app, c, owner, user) {
   const settingsByActivity = Object.fromEntries(settings.map(r => [r.getString('activity'), r.getString('mode')]));
   return {
     gradingSettings: settings.map(r => ({id:r.id,activity:r.getString('activity'),revision:r.getInt('revision'),mode:r.getString('mode'),maxPoints:r.getFloat('maxPoints'),criteria:json(r,'criteria')||[]})),
-    assessments: assessments.map(r => ({id:r.id,attempt:r.getString('attempt'),activity:r.getString('activity'),student:r.getString('student'),revision:r.getInt('revision'),attemptRevision:r.getInt('attemptRevision'),settingsRevision:r.getInt('settingsRevision'),status:r.getString('status'),points:settingsByActivity[r.getString('activity')] === 'ungraded' ? null : r.get('points'),criterionScores:json(r,'criterionScores')||{},feedback:r.getString('feedback'),...(json(r,'published')&&Object.keys(json(r,'published')).length?{published:json(r,'published')}:{})}))
+    assessments: assessments.map(r => ({id:r.id,attempt:r.getString('attempt'),activity:r.getString('activity'),student:r.getString('student'),revision:r.getInt('revision'),attemptRevision:r.getInt('attemptRevision'),settingsRevision:r.getInt('settingsRevision'),status:r.getString('status'),points:settingsByActivity[r.getString('activity')] === 'ungraded' ? null : r.get('points'),criterionScores:json(r,'criterionScores')||{},answerOverrides:json(r,'answerOverrides')||{},feedback:r.getString('feedback'),...(json(r,'published')&&Object.keys(json(r,'published')).length?{published:json(r,'published')}:{})}))
   };
 }
 function view(app, c, ctx, user, now) {
@@ -117,10 +146,12 @@ function view(app, c, ctx, user, now) {
   const completedRequired = required.filter(a => attempts.some(t => t.activity === a.id && t.status !== 'draft' && t.complete)).length;
   const resultsReady = !owner && required.length > 0 && completedRequired === required.length;
   const released = resultsReady || (info.releaseResults && ['closed', 'reviewed'].includes(currentPhase));
+  const approvedAutoScores = owner ? {} : Object.fromEntries(rows(app,'scheduled_assessments','class={:c} && student={:u} && settingsRevision=0 && status="reviewed"',{c:c.id,u:user.id}).map(record=>[record.getString('attempt'),{score:record.get('points'),revision:record.getInt('attemptRevision')}]));
   const safeAttempts = attempts.map(a => {
     const activity = plan.find(item => item.id === a.activity);
     const graded = activity && (activity.kind === 'quiz' || Object.values(activity.snapshot.worksheet?.answerKey?.items || {}).some(entry => entry.mode === 'exact' && entry.points > 0));
     if (!graded || (!owner && !released)) delete a.score;
+    else if (!owner && approvedAutoScores[a.id]?.revision === a.revision && typeof approvedAutoScores[a.id].score === 'number') a.score = approvedAutoScores[a.id].score;
     return a;
   });
   return {
@@ -150,8 +181,8 @@ function handle(app, body, user, now) {
   const ctx = context(app, body.sessionId, user);
   let c = rows(app, 'scheduled_classes', 'session={:s}', {s: ctx.session.id})[0];
   const action = body.action;
-  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore'].includes(action)) bad('Aksi tidak dikenal.');
-  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
+  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore', 'overrideAutoAnswer'].includes(action)) bad('Aksi tidak dikenal.');
+  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore', 'overrideAutoAnswer'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
   if(action==='amendContent'){
     if(!c||c.getString('status')!=='scheduled'||now>=Date.parse(c.getString('startsAt')))bad('Materi hanya dapat direvisi sebelum kelas terjadwal dimulai.');
     if(body.baseRevision!==c.getInt('revision'))bad('Draf berubah. Muat ulang sebelum menyimpan.');
@@ -205,19 +236,53 @@ function handle(app, body, user, now) {
     if (!Number.isInteger(body.attemptRevision) || body.attemptRevision !== attempt.getInt('revision')) bad('Jawaban berubah. Muat ulang sebelum menyetujui.');
     const activity = activities(app,c).find(item => item.id === attempt.getString('activity'));
     if (!activity || activity.class !== c.id) throw new ForbiddenError('Kegiatan bukan dari kelas ini.');
-    const worksheetItems = activity.snapshot.worksheet?.items || [];
-    const answerKey = activity.snapshot.worksheet?.answerKey?.items || {};
-    const hasAutomaticKey = activity.kind === 'quiz' || (['assignment','exit_ticket'].includes(activity.kind) && worksheetItems.length > 0 && worksheetItems.every(item => answerKey[item.id]?.mode === 'exact'));
-    if (!hasAutomaticKey) bad('Persetujuan satu klik hanya tersedia untuk nilai otomatis dari kunci jawaban.');
-    const calculated = rules.result(activity, json(attempt,'answers'));
-    if (typeof calculated.score !== 'number' || calculated.score !== attempt.getFloat('score')) bad('Nilai otomatis tidak tersedia atau sudah berubah.');
-    const existing = rows(app,'scheduled_assessments','attempt={:a}',{a:attempt.id})[0];
+    if (!isAutoScoredActivity(activity)) bad('Persetujuan satu klik hanya tersedia untuk nilai otomatis dari kunci jawaban.');
+    const answers=json(attempt,'answers'), existing=rows(app,'scheduled_assessments','attempt={:a}',{a:attempt.id})[0], overrides=existing?.getInt('settingsRevision')===0?json(existing,'answerOverrides')||{}:{};
+    const calculated=autoScoreItems(activity,answers,overrides);
+    const baseline=autoScoreItems(activity,answers,{});
+    if (!calculated || !baseline || Math.abs(baseline.score-attempt.getFloat('score'))>0.01) bad('Nilai otomatis tidak tersedia atau sudah berubah.');
+    if (existing && existing.getInt('settingsRevision') !== 0) bad('Penilaian manual sudah dimulai untuk jawaban ini.');
+    const expectedAssessmentRevision=existing?.getInt('revision')||0;
+    if (!Number.isInteger(body.assessmentRevision)||body.assessmentRevision!==expectedAssessmentRevision) bad('Penilaian berubah. Muat ulang sebelum menyetujui.');
+    if (existing?.getString('status') === 'reviewed' && existing.getInt('attemptRevision') === attempt.getInt('revision')) return view(app,c,ctx,user,now);
     if (existing) {
-      if (existing.getInt('settingsRevision') === 0 && existing.getString('status') === 'reviewed' && existing.getInt('attemptRevision') === attempt.getInt('revision')) return view(app,c,ctx,user,now);
-      bad('Penilaian manual sudah dimulai untuk jawaban ini.');
+      existing.load({...data(existing),revision:expectedAssessmentRevision+1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'reviewed',points:calculated.score,answerOverrides:overrides});app.save(existing);
+    } else {
+      create(app,'scheduled_assessments',{class:c.id,activity:activity.id,attempt:attempt.id,student:attempt.getString('student'),revision:1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'reviewed',points:calculated.score,criterionScores:{},answerOverrides:{},feedback:'',published:{},publishedRevision:0});
     }
-    create(app,'scheduled_assessments',{class:c.id,activity:activity.id,attempt:attempt.id,student:attempt.getString('student'),revision:1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'reviewed',points:null,criterionScores:{},feedback:'',published:{},publishedRevision:0});
     event(app,c,user.id,'auto_score_approved',{attempt:attempt.id,activity:activity.id,score:calculated.score});
+  }
+  if (action === 'overrideAutoAnswer') {
+    const phaseNow=rules.phase(data(c),now);
+    if(!['closed','reviewed'].includes(phaseNow))bad('Perubahan jawaban tersedia setelah kelas selesai.');
+    const attempt=app.findRecordById('scheduled_activity_attempts',String(body.attemptId||''));
+    if(attempt.getString('class')!==c.id)throw new ForbiddenError('Jawaban bukan dari kelas ini.');
+    if(attempt.getString('status')==='draft')bad('Jawaban belum dikumpulkan.');
+    if(!Number.isInteger(body.attemptRevision)||body.attemptRevision!==attempt.getInt('revision'))bad('Jawaban berubah. Muat ulang sebelum mengubah penilaian.');
+    if(typeof body.itemId!=='string'||!body.itemId||!['correct','wrong',null].includes(body.verdict))bad('Perubahan jawaban tidak valid.');
+    const activity=activities(app,c).find(item=>item.id===attempt.getString('activity'));
+    if(!activity||activity.class!==c.id)throw new ForbiddenError('Kegiatan bukan dari kelas ini.');
+    if(!isAutoScoredActivity(activity))bad('Perubahan hanya tersedia untuk nilai otomatis dari kunci jawaban.');
+    const answers=json(attempt,'answers'), existing=rows(app,'scheduled_assessments','attempt={:a}',{a:attempt.id})[0];
+    if(existing&&existing.getInt('settingsRevision')!==0)bad('Penilaian manual sudah dimulai untuk jawaban ini.');
+    const expectedAssessmentRevision=existing?.getInt('revision')||0;
+    if(!Number.isInteger(body.assessmentRevision)||body.assessmentRevision!==expectedAssessmentRevision)bad('Penilaian berubah. Muat ulang sebelum mengubah jawaban.');
+    if(existing&&existing.getInt('attemptRevision')!==attempt.getInt('revision'))bad('Jawaban berubah. Muat ulang sebelum mengubah penilaian.');
+    const base=autoScoreItems(activity,answers,{}), item=base?.items.find(value=>value.id===body.itemId);
+    if(!base||Math.abs(base.score-attempt.getFloat('score'))>0.01)bad('Nilai otomatis berubah. Muat ulang sebelum mengubah penilaian.');
+    if(!item)bad('Jawaban tidak memakai kunci otomatis.');
+    if(!item.answered)bad('Jawaban kosong tidak dapat diubah.');
+    const overrides=existing?json(existing,'answerOverrides')||{}:{};
+    const previous=overrides[body.itemId];
+    if(body.verdict===previous&&existing)return view(app,c,ctx,user,now);
+    if(body.verdict===null)delete overrides[body.itemId];else overrides[body.itemId]=body.verdict;
+    const calculated=autoScoreItems(activity,answers,overrides);
+    if(existing){
+      existing.load({...data(existing),revision:expectedAssessmentRevision+1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'draft',points:calculated.score,answerOverrides:overrides,published:{},publishedRevision:0});app.save(existing);
+    }else{
+      create(app,'scheduled_assessments',{class:c.id,activity:activity.id,attempt:attempt.id,student:attempt.getString('student'),revision:1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'draft',points:calculated.score,criterionScores:{},answerOverrides:overrides,feedback:'',published:{},publishedRevision:0});
+    }
+    event(app,c,user.id,'auto_answer_overridden',{attempt:attempt.id,activity:activity.id,itemId:body.itemId,verdict:body.verdict,previous:previous||null,score:calculated.score});
   }
   if (['saveGradingSettings','saveAssessment','publishAssessment'].includes(action)) {
     const assess = require(__hooks + '/scheduled-assessment.js');

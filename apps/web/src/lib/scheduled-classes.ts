@@ -45,7 +45,7 @@ export type ClassReportRow = {
   suggestion: string; completed: number; total: number; reason: string; attendance: string; attempts: ScheduledAttempt[];
 };
 export type GradingSetting = {id: string;activity: string;revision: number;mode: 'ungraded'|'points'|'rubric';maxPoints: number;criteria: {id: string;label: string;maxPoints: number}[]};
-export type ScheduledAssessment = {attempt: string;activity: string;points: number|null;maxPoints: number;feedback?: string;publishedAt?: string;status?: string;revision?: number;settingsRevision?:number;criterionScores?: Record<string,number>;published?:{points:number|null;maxPoints:number;feedback:string;publishedAt:string;publishedRevision:number}};
+export type ScheduledAssessment = {attempt: string;activity: string;points: number|null;maxPoints: number;feedback?: string;publishedAt?: string;status?: string;revision?: number;settingsRevision?:number;criterionScores?: Record<string,number>;answerOverrides?:Record<string,'correct'|'wrong'>;published?:{points:number|null;maxPoints:number;feedback:string;publishedAt:string;publishedRevision:number}};
 export type ScheduledClassState = {
   serverNow: string; owner: boolean; session: {id: string; title: string; course: string; section?: string};
   class: ScheduledClass | null; activities: ScheduledActivity[]; attempts: ScheduledAttempt[];

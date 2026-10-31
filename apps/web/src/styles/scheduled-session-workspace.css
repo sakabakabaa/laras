@@ -184,6 +184,18 @@
 .sr-grading-header h3{font-size:14px}
 .sr-grading-header .ss-icon-button{min-height:30px;width:30px}
 .sr-grading-mode{font-size:11px;color:var(--ss-muted);margin-bottom:18px!important}
+.sr-grade-context{display:grid;gap:10px;padding:12px;margin:0 0 17px;border:1px solid var(--ss-border);border-radius:9px;background:var(--ss-soft)}
+.sr-grade-context-student{display:grid;gap:3px;min-width:0}
+.sr-grade-context-student>span{font-size:9px;letter-spacing:.06em;font-weight:650;color:var(--ss-muted)}
+.sr-grade-context-student>strong{font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.sr-grade-context-status{justify-self:start}
+.sr-status-auto{background:#ecfdf3;color:#067647}
+.sr-activity-progress{display:grid;gap:6px;padding-top:9px;border-top:1px solid var(--ss-border)}
+.sr-activity-progress>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;color:var(--ss-muted)}
+.sr-activity-progress>div:first-child strong{font-size:10px;color:var(--ss-text);font-variant-numeric:tabular-nums}
+.sr-activity-progress-track{height:5px;border-radius:4px;background:var(--ss-border);overflow:hidden}
+.sr-activity-progress-track>span{display:block;height:100%;background:#43856b;border-radius:4px;transition:width .2s ease}
+.sr-activity-progress>small{font-size:10px;color:var(--ss-muted)}
 .sr-configure{display:flex;flex-direction:column;gap:12px;padding:7px 0 5px}
 .sr-configure>svg{color:var(--ss-muted)}
 .sr-configure h4{font-size:13px}
@@ -204,6 +216,7 @@
 .sr-save-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .sr-save-actions .ss-button{font-size:11px;padding:8px}
 .sr-save-actions .ss-button-primary{grid-column:1/-1}
+.sr-save-hint{font-size:10px;line-height:1.6;color:var(--ss-muted);margin-top:9px!important}
 .sr-publish{border-top:1px solid var(--ss-border);margin-top:20px;padding-top:17px}
 .sr-publish p{font-size:11px;color:var(--ss-muted);margin-bottom:10px}
 .sr-publish .ss-button{width:100%;font-size:11px}

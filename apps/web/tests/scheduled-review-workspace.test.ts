@@ -1,12 +1,10 @@
-import {describe,it,expect} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {assessmentStatus,defaultSessionTab,manualActivities,responseCards,sessionWorkspacePath} from '../src/lib/scheduled-session-workspace';
+import {expect, it} from 'vitest';
 import {ScheduledReviewWorkspace} from '../src/components/app/scheduled-review-workspace';
-import {ScheduledClassReport} from '../src/components/app/scheduled-class-report';
-import type {ScheduledClassState,ScheduledActivity,ScheduledAttempt} from '../src/lib/scheduled-classes';
 
-const activity={id:'writing',kind:'assignment',title:'10c · Schreiben',minutes:10,required:true,startsAt:'',endsAt:'',worksheet:{items:[{id:'one',prompt:'Schreiben Sie einen Satz.',type:'text'},{id:'two',prompt:'Noch ein Satz.',type:'text'}]}} as ScheduledActivity;
-const attempt={id:'submission',activity:'writing',student:'student',revision:1,status:'submitted',complete:false,answers:{responses:{one:'Ich bin krank.'},text:'Combined export should not duplicate answers'}} as ScheduledAttempt;
-function fixture():ScheduledClassState{return {owner:true,session:{id:'session',title:'Beim Arzt',course:'course'},class:{id:'class',phase:'closed',status:'closed'} as ScheduledClassState['class'],activities:[activity,{...activity,id:'quiz',kind:'quiz'}],attempts:[attempt,{...attempt,id:'quiz-answer',activity:'quiz'}],report:[{roster:'roster',student:'student',name:'Student One',nim:'123',checkedInAt:'2026-10-29T06:00:00Z',lastSeenAt:'',suggestion:'absent',attendance:'0resent',completed:0,total:2,reason:'',attempts:[attempt]},{roster:'missing',student:'',name:'Student Missing',nim:'124',checkedInAt:'',lastSeenAt:'',suggestion:'absent',attendance:'absent',completed:0,total:2,reason:'',attempts:[]}],gradingSettings:[],assessments:[],events:[],serverNow:''};}
+const state:any={owner:true,session:{id:'session'},class:{id:'class',phase:'closed',revision:4},activities:[{id:'a',kind:'assignment',title:'Worksheet',minutes:10,required:true,startsAt:'',endsAt:'',worksheet:{items:[{id:'i',prompt:'Prompt',type:'text'}]}}],attempts:[{id:'attempt',activity:'a',student:'s',answers:{responses:{i:'My response'}},revision:2,status:'submitted',complete:true}],report:[{student:'s',name:'Student',nim:'1',attempts:[]}],gradingSettings:[{id:"settings",activity:"a",revision:1,mode:"points",maxPoints:10,criteria:[]}],assessments:[],events:[],serverNow:''};
+it('renders student response and provides manual review actions',()=>{const html=renderToStaticMarkup(createElement(ScheduledReviewWorkspace,{state,onAction:async()=>{}}));expect(html).toContain('My response');expect(html).toContain('Simpan draf');expect(html).toContain('Ditinjau');});
 
+const keyed:any={...state,activities:[{...state.activities[0],worksheet:{items:[{id:'i',prompt:'Haben Sie Schmerzen?',type:'select',options:['A','P']}],answerKey:{version:1,items:{i:{mode:'exact',accepted:['A'],points:1}}}}}],attempts:[{...state.attempts[0],answers:{responses:{i:'P'}},score:0}]};
+it('marks a wrong answer, shows the accepted key and keeps the server score visible',()=>{const html=renderToStaticMarkup(createElement(ScheduledReviewWorkspace,{state:keyed,onAction:async()=>{}}));expect(html).toContain('Salah');expect(html).toContain('Diterima');expect(html).toContain('Otomatis · kunci');expect(html).toContain('sr-response-list');});

@@ -129,11 +129,9 @@ function gradingState(app, c, owner, user) {
   });
   if (!owner) return {assessments:published};
   const settingsByActivity = Object.fromEntries(settings.map(r => [r.getString('activity'), r.getString('mode')]));
-  const attemptsById = Object.fromEntries(rows(app,'scheduled_activity_attempts','class={:c}',{c:c.id}).map(r=>[r.id,r]));
-  const activityById = Object.fromEntries(activities(app,c).map(activity=>[activity.id,activity]));
   return {
     gradingSettings: settings.map(r => ({id:r.id,activity:r.getString('activity'),revision:r.getInt('revision'),mode:r.getString('mode'),maxPoints:r.getFloat('maxPoints'),criteria:json(r,'criteria')||[]})),
-    assessments: assessments.map(r => {const attempt=attemptsById[r.getString('attempt')],activity=activityById[r.getString('activity')],overrides=json(r,'answerOverrides')||{},calculated=r.getInt('settingsRevision')===0&&attempt&&activity?autoScoreItems(activity,json(attempt,'answers'),overrides):null;return {id:r.id,attempt:r.getString('attempt'),activity:r.getString('activity'),student:r.getString('student'),revision:r.getInt('revision'),attemptRevision:r.getInt('attemptRevision'),settingsRevision:r.getInt('settingsRevision'),status:r.getString('status'),points:settingsByActivity[r.getString('activity')] === 'ungraded' ? null : calculated?.score??r.get('points'),criterionScores:json(r,'criterionScores')||{},answerOverrides:overrides,feedback:r.getString('feedback'),...(json(r,'published')&&Object.keys(json(r,'published')).length?{published:json(r,'published')}:{})};})
+    assessments: assessments.map(r => ({id:r.id,attempt:r.getString('attempt'),activity:r.getString('activity'),student:r.getString('student'),revision:r.getInt('revision'),attemptRevision:r.getInt('attemptRevision'),settingsRevision:r.getInt('settingsRevision'),status:r.getString('status'),points:settingsByActivity[r.getString('activity')] === 'ungraded' ? null : r.get('points'),criterionScores:json(r,'criterionScores')||{},answerOverrides:json(r,'answerOverrides')||{},feedback:r.getString('feedback'),...(json(r,'published')&&Object.keys(json(r,'published')).length?{published:json(r,'published')}:{})}))
   };
 }
 function view(app, c, ctx, user, now) {
@@ -148,7 +146,7 @@ function view(app, c, ctx, user, now) {
   const completedRequired = required.filter(a => attempts.some(t => t.activity === a.id && t.status !== 'draft' && t.complete)).length;
   const resultsReady = !owner && required.length > 0 && completedRequired === required.length;
   const released = resultsReady || (info.releaseResults && ['closed', 'reviewed'].includes(currentPhase));
-  const approvedAutoScores = owner ? {} : Object.fromEntries(rows(app,'scheduled_assessments','class={:c} && student={:u} && settingsRevision=0 && status="reviewed"',{c:c.id,u:user.id}).map(record=>{const attempt=attempts.find(item=>item.id===record.getString('attempt')),activity=plan.find(item=>item.id===record.getString('activity')),calculated=attempt&&activity?autoScoreItems(activity,attempt.answers,json(record,'answerOverrides')||{}):null;return [record.getString('attempt'),{score:calculated?.score??record.get('points'),revision:record.getInt('attemptRevision')}];}));
+  const approvedAutoScores = owner ? {} : Object.fromEntries(rows(app,'scheduled_assessments','class={:c} && student={:u} && settingsRevision=0 && status="reviewed"',{c:c.id,u:user.id}).map(record=>{const attempt=attempts.find(item=>item.id===record.getString('attempt')),overrides=json(record,'answerOverrides')||{};return [record.getString('attempt'),{score:Object.keys(overrides).length?record.get('points'):attempt?.score??record.get('points'),revision:record.getInt('attemptRevision')}];}));
   const safeAttempts = attempts.map(a => {
     const activity = plan.find(item => item.id === a.activity);
     const graded = activity && (activity.kind === 'quiz' || Object.values(activity.snapshot.worksheet?.answerKey?.items || {}).some(entry => entry.mode === 'exact' && entry.points > 0));

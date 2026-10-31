@@ -95,7 +95,7 @@ export function reviewTally(state: ScheduledClassState): ReviewTally {
     const activity = state.activities.find(item => item.id === attempt.activity);
     return activity ? requiresManual(activity) : false;
   });
-  const reviewed = manual.filter(attempt => state.assessments?.some(row => row.attempt === attempt.id && row.status === 'reviewed')).length;
+  const reviewed = manual.filter(attempt => state.assessments?.some(row => row.attempt === attempt.id && (row.status === 'reviewed' || row.status === 'published'))).length;
   const auto = open.filter(attempt => {
     const activity = state.activities.find(item => item.id === attempt.activity);
     return activity ? activity.kind === 'quiz' || (activity.worksheet?.items?.length || 0) > 0 && !requiresManual(activity) : false;
@@ -109,7 +109,7 @@ export function nextManualTarget(state: ScheduledClassState, activities: Schedul
   const manual = activities.filter(requiresManual);
   if (!manual.length) return undefined;
   const open = state.attempts.filter(attempt => attempt.status !== 'draft' && manual.some(item => item.id === attempt.activity));
-  const pending = (attempt: ScheduledAttempt) => !state.assessments?.some(row => row.attempt === attempt.id && row.status === 'reviewed');
+  const pending = (attempt: ScheduledAttempt) => !state.assessments?.some(row => row.attempt === attempt.id && (row.status === 'reviewed' || row.status === 'published'));
   const ordered = state.report.flatMap(row => manual.flatMap(activity => open.filter(attempt => attempt.student === row.student && attempt.activity === activity.id)));
   const rest = open.filter(attempt => !ordered.some(match => match.id === attempt.id));
   const all = [...ordered, ...rest];

@@ -666,6 +666,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 												<SessionLinks session={session} records={records} />
  {isFacultyOwner && <button className="ld-text-btn" onClick={() => navigate(`/app/courses/${course.id}/pertemuan/${session.id}/rencana`)}>Rencana pembelajaran →</button>}
  <button className="ld-text-btn" onClick={() => navigate(`/app/courses/${course.id}/pertemuan/${session.id}/terjadwal`)}>Kelas terjadwal →</button>
+ {isFacultyOwner && <span className="bd-inline-actions"><button className="ld-text-btn" onClick={() => navigate(`/app/builder/new?kind=kelas&course=${course.id}&meeting=${session.id}`)}>+ Buat kelas</button><button className="ld-text-btn" onClick={() => navigate(`/app/builder/new?kind=tugas&course=${course.id}&meeting=${session.id}`)}>+ Buat tugas</button></span>}
 											</div>
 											{isFacultyOwner && (
 												<div className="ld-session-actions">

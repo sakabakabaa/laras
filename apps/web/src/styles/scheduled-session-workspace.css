@@ -422,3 +422,5 @@
 @media(max-width:1120px){.sr-workspace .sr-review-grid{grid-template-columns:minmax(210px,240px) minmax(0,1fr)}.sr-workspace .sr-students{grid-row:span 2}}
 @media(max-width:900px){.sr-workspace .sr-activity-block{grid-template-columns:minmax(0,1fr)}.sr-workspace .sr-activity-assessment{grid-column:1;grid-row:auto;height:auto;margin-top:14px}}
 @media(max-width:720px){.sr-workspace .sr-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.sr-workspace .sr-summary .evx-stat,.sr-workspace .sr-summary .evx-stat.quiet{min-width:0;border:0;border-radius:9px;background:var(--ss-soft);padding:9px}.sr-workspace .sr-summary .evx-pager{grid-column:1/-1;justify-content:center;margin:0;padding:2px}.sr-workspace .sr-review-grid{grid-template-columns:minmax(0,1fr)}.sr-workspace .sr-students{position:static;grid-row:auto;max-height:310px}.sr-workspace .sr-students ul{display:grid;grid-template-columns:1fr;padding-top:6px}.sr-workspace .sr-students li>button{min-height:48px}}
+
+.ss-session-heading .ss-toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}

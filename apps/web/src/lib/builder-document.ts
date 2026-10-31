@@ -368,7 +368,16 @@ export function builderIssues({
 		if (d.kind === 'kelas' && a.plannedMinutes < 1)
 			add('Durasi kegiatan minimal 1 menit.', a.id);
 		for (const b of a.blocks) {
-			if (['question_group', 'matching', 'gap_passage', 'writing', 'reflection'].includes(b.type) && !questionIds(b).length)
+			if (
+				[
+					'question_group',
+					'matching',
+					'gap_passage',
+					'writing',
+					'reflection',
+				].includes(b.type) &&
+				!questionIds(b).length
+			)
 				add('Tambahkan pertanyaan pada elemen ini.', a.id, b.id);
 			if (b.type === 'instructions' && !plain(b.body).trim())
 				add('Isi teks instruksi.', a.id, b.id);
@@ -408,7 +417,14 @@ export function builderIssues({
 	if (d.kind === 'kelas') {
 		if (!d.context.meetingId) add('Pilih pertemuan untuk kelas.');
 		if (!d.delivery.checkInClosesAt) add('Isi batas check-in.');
-		else if (d.delivery.startsAt && d.delivery.endsAt && (Date.parse(d.delivery.checkInClosesAt) < Date.parse(d.delivery.startsAt) || Date.parse(d.delivery.checkInClosesAt) > Date.parse(d.delivery.endsAt))) add('Batas check-in harus berada dalam waktu kelas.');
+		else if (
+			d.delivery.startsAt &&
+			d.delivery.endsAt &&
+			(Date.parse(d.delivery.checkInClosesAt) <
+				Date.parse(d.delivery.startsAt) ||
+				Date.parse(d.delivery.checkInClosesAt) > Date.parse(d.delivery.endsAt))
+		)
+			add('Batas check-in harus berada dalam waktu kelas.');
 		if (!d.delivery.startsAt || !d.delivery.endsAt)
 			add('Isi waktu mulai dan selesai.');
 		else if (Date.parse(d.delivery.endsAt) <= Date.parse(d.delivery.startsAt))
@@ -423,8 +439,20 @@ export function builderIssues({
 			add('Total durasi kegiatan harus sesuai dengan jadwal kelas.');
 	} else {
 		if (!d.delivery.dueAt) add('Isi batas pengumpulan tugas.');
-		if (d.delivery.availableAt && d.delivery.dueAt && Date.parse(d.delivery.availableAt) >= Date.parse(d.delivery.dueAt)) add('Waktu tersedia harus sebelum batas pengumpulan.');
-		if (d.delivery.hardCloseAt && d.delivery.dueAt && Date.parse(d.delivery.hardCloseAt) < Date.parse(d.delivery.dueAt)) add('Tutup pengumpulan harus setelah atau sama dengan batas pengumpulan.');
+		if (
+			d.delivery.availableAt &&
+			d.delivery.dueAt &&
+			Date.parse(d.delivery.availableAt) >= Date.parse(d.delivery.dueAt)
+		)
+			add('Waktu tersedia harus sebelum batas pengumpulan.');
+		if (
+			d.delivery.hardCloseAt &&
+			d.delivery.dueAt &&
+			Date.parse(d.delivery.hardCloseAt) < Date.parse(d.delivery.dueAt)
+		)
+			add(
+				'Tutup pengumpulan harus setelah atau sama dengan batas pengumpulan.',
+			);
 	}
 	return issues;
 }
@@ -642,4 +670,15 @@ export function copyScheduledToBuilder(
 			appendBlock(next, activity.id, 'acknowledgement');
 	}
 	return next;
+}
+
+/** Stable draft comparison: field order is irrelevant; activity/element order is meaningful. */
+export function encodeBuilderDraft(envelope: BuilderEnvelope): string {
+	return JSON.stringify(envelope, (_key, value) =>
+		value && typeof value === 'object' && !Array.isArray(value)
+			? Object.fromEntries(
+					Object.entries(value).sort(([a], [b]) => a.localeCompare(b, 'en')),
+				)
+			: value,
+	);
 }

@@ -10,6 +10,7 @@ import {
 	removeBlock,
 	rich,
 	copyScheduledToBuilder,
+	encodeBuilderDraft,
 } from '../src/lib/builder-document';
 const mod = { exports: {} } as { exports: { normalize: (v: unknown) => any } };
 runInNewContext(
@@ -28,6 +29,17 @@ function fixture() {
 	return d;
 }
 describe('shared builder identity and private envelope', () => {
+	it('does not mistake normalized media field order for unsaved recovery edits', () => {
+		const d = fixture();
+		appendBlock(d, d.document.activities[0].id, 'image');
+		const saved = normalize(d);
+		expect(JSON.stringify(d)).not.toBe(JSON.stringify(saved));
+		expect(encodeBuilderDraft(d)).toBe(encodeBuilderDraft(saved));
+		const changed = structuredClone(d);
+		changed.document.activities[0].blocks.reverse();
+		expect(encodeBuilderDraft(changed)).not.toBe(encodeBuilderDraft(saved));
+	});
+
 	it('round trips incomplete drafts without changing question identity or alternatives', () => {
 		const d = fixture(),
 			id = Object.keys(d.document.questionsById).find(

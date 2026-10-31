@@ -31,6 +31,7 @@ import {
 	BLOCK_LABELS,
 	builderIssues,
 	builderRequest,
+	encodeBuilderDraft,
 	duplicateActivity,
 	newActivity,
 	plain,
@@ -45,7 +46,7 @@ import {
 import { BlockEditor, BuilderPreview, KeyInspector } from './builder-elements';
 
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
-const encode = (v: BuilderEnvelope) => JSON.stringify(v);
+const encode = encodeBuilderDraft;
 function readRecovery(key: string) {
 	try {
 		const saved = JSON.parse(localStorage.getItem(key) || 'null');

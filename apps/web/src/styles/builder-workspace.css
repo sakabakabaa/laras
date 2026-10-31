@@ -1061,3 +1061,311 @@
 		display: none;
 	}
 }
+
+/* Element library: persistent on desktop, tap-to-add drawer on narrow screens. */
+.bd-layout {
+	grid-template-columns: 260px minmax(0, 1fr) 275px;
+}
+.bd-builder-sidebar {
+	position: sticky;
+	top: 110px;
+	max-height: calc(100dvh - 230px);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	border: 1px solid var(--bd-border);
+	border-radius: 12px;
+	background: var(--bd-panel);
+	min-width: 0;
+}
+.bd-sidebar-tabs {
+	display: flex;
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background: var(--bd-panel);
+	border-bottom: 1px solid var(--bd-border);
+}
+.bd-sidebar-tabs button {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	background: none;
+	padding: 14px 8px;
+	font-size: 12px;
+	color: var(--bd-muted);
+}
+.bd-sidebar-tabs button[aria-selected='true'] {
+	color: var(--bd-accent);
+	border-bottom-color: var(--bd-accent);
+	background: var(--bd-soft);
+}
+.bd-element-library {
+	padding: 14px 12px;
+}
+.bd-library-search {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	border: 1px solid var(--bd-border);
+	border-radius: 7px;
+	padding: 0 8px;
+	color: var(--bd-muted);
+}
+.bd-element-library .bd-library-search input {
+	border: 0;
+	padding: 8px 0;
+	background: transparent;
+	box-shadow: none;
+	min-height: 36px;
+}
+.bd-library-search button {
+	border: 0;
+	background: none;
+	color: var(--bd-muted);
+	padding: 4px;
+}
+.bd-library-hint {
+	font-size: 11px;
+	color: var(--bd-muted);
+	padding: 10px 0 5px;
+}
+.bd-library-target {
+	font-size: 11px;
+	color: var(--bd-accent);
+	padding-bottom: 8px;
+	overflow-wrap: anywhere;
+}
+.bd-element-library h3 {
+	font-size: 11px;
+	font-weight: 650;
+	color: var(--bd-muted);
+	margin: 15px 0 8px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+.bd-element-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 7px;
+}
+.bd-element-tile {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 8px;
+	border: 1px solid var(--bd-border);
+	border-radius: 8px;
+	background: var(--bd-panel);
+	color: var(--bd-text);
+	padding: 18px 8px 12px;
+	text-align: center;
+	min-height: 128px;
+	cursor: grab !important;
+	transition:
+		border-color 0.15s,
+		background 0.15s;
+}
+.bd-element-tile:hover {
+	border-color: var(--bd-accent);
+	background: var(--bd-soft);
+}
+.bd-element-tile:active {
+	cursor: grabbing !important;
+}
+.bd-element-tile strong {
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.35;
+}
+.bd-element-tile small {
+	font-size: 10px;
+	line-height: 1.4;
+	color: var(--bd-muted);
+}
+.bd-tile-grip {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	color: var(--bd-muted);
+	opacity: 0.55;
+}
+.bd-library-empty {
+	font-size: 12px;
+	color: var(--bd-muted);
+	padding: 20px 0;
+}
+.bd-builder-sidebar .bd-outline,
+.bd-library-drawer .bd-outline {
+	position: static;
+	padding: 14px 12px;
+}
+.bd-builder-sidebar .bd-outline ol,
+.bd-library-drawer .bd-outline ol {
+	display: grid;
+	overflow: visible;
+}
+.bd-builder-sidebar .bd-outline li,
+.bd-library-drawer .bd-outline li {
+	width: auto;
+	min-width: 0;
+}
+.bd-mobile-library-actions {
+	display: none;
+}
+.bd-block-title {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+.bd-block-grip {
+	display: inline-flex;
+	border: 0;
+	padding: 5px 2px;
+	background: none;
+	color: var(--bd-muted);
+	cursor: grab !important;
+}
+.bd-block:focus {
+	outline: 2px solid var(--bd-accent);
+	outline-offset: 3px;
+}
+.bd-insertion-slot {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 24px;
+	position: relative;
+	margin: 0;
+}
+.bd-insertion-slot::before {
+	content: '';
+	position: absolute;
+	inset-inline: 0;
+	top: 50%;
+	height: 1px;
+	background: var(--bd-border);
+	opacity: 0;
+}
+.bd-insertion-slot button {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	position: relative;
+	border: 1px solid var(--bd-border);
+	background: var(--bd-panel);
+	border-radius: 20px;
+	padding: 2px 8px;
+	color: var(--bd-muted);
+	font-size: 10px;
+	opacity: 0;
+}
+.bd-insertion-slot:hover::before,
+.bd-insertion-slot:focus-within::before,
+.bd-insertion-slot.is-dragging::before,
+.bd-insertion-slot:hover button,
+.bd-insertion-slot:focus-within button,
+.bd-insertion-slot.is-dragging button {
+	opacity: 1;
+}
+.bd-insertion-slot.is-dragging {
+	min-height: 46px;
+}
+.bd-insertion-slot.is-dragging button {
+	pointer-events: none;
+}
+.bd-insertion-slot.is-over {
+	background: #a6281c0a;
+	border-radius: 6px;
+}
+.bd-insertion-slot.is-over::before {
+	background: var(--bd-accent);
+	height: 2px;
+}
+.bd-insertion-slot.is-over button {
+	background: var(--bd-accent);
+	border-color: var(--bd-accent);
+	color: white;
+}
+.bd-library-drawer {
+	width: min(380px, 100vw) !important;
+	max-width: 100vw !important;
+	left: 0 !important;
+	top: 0 !important;
+	height: 100dvh;
+	max-height: 100dvh;
+	transform: none !important;
+	border-radius: 0 !important;
+	overflow-y: auto;
+	padding: 20px 16px !important;
+	display: block !important;
+}
+.bd-library-drawer .bd-sidebar-tabs {
+	margin-top: 16px;
+}
+.bd-library-drawer .bd-element-library {
+	padding-inline: 0;
+}
+.bd-library-drawer button {
+	cursor: pointer;
+}
+.bd-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px !important;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+@media (max-width: 1200px) {
+	.bd-layout {
+		grid-template-columns: 235px minmax(0, 1fr) 235px;
+	}
+}
+@media (max-width: 1100px) {
+	.bd-layout {
+		grid-template-columns: minmax(0, 1fr) 250px;
+	}
+	.bd-builder-sidebar {
+		display: none;
+	}
+	.bd-mobile-library-actions {
+		display: flex;
+		gap: 8px;
+		grid-column: 1/-1;
+	}
+	.bd-topbar {
+		position: static;
+		flex-wrap: wrap;
+	}
+	.bd-toolbar-actions {
+		flex-wrap: wrap;
+	}
+	.bd-insertion-slot button {
+		opacity: 1;
+	}
+}
+@media (max-width: 650px) {
+	.bd-layout {
+		display: flex;
+	}
+	.bd-element-tile {
+		min-height: 120px;
+	}
+	.bd-library-drawer .bd-outline-add {
+		width: 100%;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.bd-element-tile {
+		transition: none;
+	}
+}

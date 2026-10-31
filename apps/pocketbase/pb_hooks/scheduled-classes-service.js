@@ -150,8 +150,8 @@ function handle(app, body, user, now) {
   const ctx = context(app, body.sessionId, user);
   let c = rows(app, 'scheduled_classes', 'session={:s}', {s: ctx.session.id})[0];
   const action = body.action;
-  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment'].includes(action)) bad('Aksi tidak dikenal.');
-  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
+  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore'].includes(action)) bad('Aksi tidak dikenal.');
+  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
   if(action==='amendContent'){
     if(!c||c.getString('status')!=='scheduled'||now>=Date.parse(c.getString('startsAt')))bad('Materi hanya dapat direvisi sebelum kelas terjadwal dimulai.');
     if(body.baseRevision!==c.getInt('revision'))bad('Draf berubah. Muat ulang sebelum menyimpan.');
@@ -196,6 +196,29 @@ function handle(app, body, user, now) {
   }
   assertClassAccess(c, ctx);
   reconcile(app, c, now);
+  if (action === 'approveAutoScore') {
+    const phaseNow = rules.phase(data(c), now);
+    if (!['closed','reviewed'].includes(phaseNow)) bad('Persetujuan nilai tersedia setelah kelas selesai.');
+    const attempt = app.findRecordById('scheduled_activity_attempts', String(body.attemptId||''));
+    if (attempt.getString('class') !== c.id) throw new ForbiddenError('Jawaban bukan dari kelas ini.');
+    if (attempt.getString('status') === 'draft') bad('Jawaban belum dikumpulkan.');
+    if (!Number.isInteger(body.attemptRevision) || body.attemptRevision !== attempt.getInt('revision')) bad('Jawaban berubah. Muat ulang sebelum menyetujui.');
+    const activity = activities(app,c).find(item => item.id === attempt.getString('activity'));
+    if (!activity || activity.class !== c.id) throw new ForbiddenError('Kegiatan bukan dari kelas ini.');
+    const worksheetItems = activity.snapshot.worksheet?.items || [];
+    const answerKey = activity.snapshot.worksheet?.answerKey?.items || {};
+    const hasAutomaticKey = activity.kind === 'quiz' || (['assignment','exit_ticket'].includes(activity.kind) && worksheetItems.length > 0 && worksheetItems.every(item => answerKey[item.id]?.mode === 'exact'));
+    if (!hasAutomaticKey) bad('Persetujuan satu klik hanya tersedia untuk nilai otomatis dari kunci jawaban.');
+    const calculated = rules.result(activity, json(attempt,'answers'));
+    if (typeof calculated.score !== 'number' || calculated.score !== attempt.getFloat('score')) bad('Nilai otomatis tidak tersedia atau sudah berubah.');
+    const existing = rows(app,'scheduled_assessments','attempt={:a}',{a:attempt.id})[0];
+    if (existing) {
+      if (existing.getInt('settingsRevision') === 0 && existing.getString('status') === 'reviewed' && existing.getInt('attemptRevision') === attempt.getInt('revision')) return view(app,c,ctx,user,now);
+      bad('Penilaian manual sudah dimulai untuk jawaban ini.');
+    }
+    create(app,'scheduled_assessments',{class:c.id,activity:activity.id,attempt:attempt.id,student:attempt.getString('student'),revision:1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'reviewed',points:null,criterionScores:{},feedback:'',published:{},publishedRevision:0});
+    event(app,c,user.id,'auto_score_approved',{attempt:attempt.id,activity:activity.id,score:calculated.score});
+  }
   if (['saveGradingSettings','saveAssessment','publishAssessment'].includes(action)) {
     const assess = require(__hooks + '/scheduled-assessment.js');
     const phaseNow = rules.phase(data(c), now);

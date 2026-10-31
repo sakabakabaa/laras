@@ -1,5 +1,7 @@
 import { mergeSubmissionChannels, isCollectedSubmission, isOfficiallyGraded } from '@/lib/submission-state';
 import { useEffect, useMemo, useState } from 'react';
+import {BuilderDraftList} from './builder/builder-entry';
+import '@/styles/builder-workspace.css';
 import { useNavigate, useSearchParams } from 'react-router';
 import { ClipboardCheck, ClipboardList, Clock3, LoaderCircle, Plus, Repeat, Search } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
@@ -63,15 +65,15 @@ export function TugasBoard() {
 	useEffect(() => {
 		if (!startNew) return;
 		const target = launchCourse
-			? `/app/tugas/buat?course=${encodeURIComponent(launchCourse)}`
-			: '/app/tugas/buat';
+			? `/app/builder/new?kind=tugas&course=${encodeURIComponent(launchCourse)}`
+			: '/app/builder/new?kind=tugas';
 		navigate(target, { replace: true });
 	}, [startNew, launchCourse, navigate]);
 	const openCreator = () => {
 		navigate(
 			courseId !== 'all'
-				? `/app/tugas/buat?course=${encodeURIComponent(courseId)}`
-				: '/app/tugas/buat',
+				? `/app/builder/new?kind=tugas&course=${encodeURIComponent(courseId)}`
+				: '/app/builder/new?kind=tugas',
 		);
 	};
 
@@ -213,11 +215,13 @@ export function TugasBoard() {
 						))}
 					</select>
 				</label>
+				<button type="button" className="ld-text-btn" onClick={()=>navigate(courseId!=='all'?`/app/tugas/buat?course=${encodeURIComponent(courseId)}`:'/app/tugas/buat')}>Editor tugas biasa</button>
 				<button type="button" className="ld-btn-primary mk-create" onClick={openCreator}>
 					<Plus size={17} /> Buat tugas
 				</button>
 			</div>
 
+			<BuilderDraftList kind="tugas"/>
 			{error && (
 				<div className="ld-alert" role="alert">
 					{error}

@@ -58,6 +58,22 @@ try {
     roster[u.id] = await create('course_roster', {owner: teacher.id, course: course.id, name: u.name, nim: u.nim, section: section.id});
     await create('enrollments', {owner: u.id, course: course.id, section: section.id});
   }
+  // New builder uses protected draft/key records; this exercise touches only the disposable backend.
+  const rich = text => ({type:'doc',content:[{type:'paragraph',content:[{type:'text',text}]}]});
+  const builderEnvelope = {document:{schemaVersion:1,kind:'kelas',context:{courseId:course.id,meetingId:meeting.id,sectionIds:[a.id]},title:'Builder integration draft',instructions:rich(''),activities:[{id:'activity1',title:'Draft',required:true,plannedMinutes:15,blocks:[{id:'block1',type:'question_group',questionIds:['question1']}]}],questionsById:{question1:{id:'question1',kind:'short_answer',prompt:rich('A prompt'),required:true,points:1}},delivery:{kind:'kelas',progression:'scheduled',timeZone:'Asia/Jakarta',lateAfterMinutes:10,allowLate:false,timeLimitMinutes:0},scoring:{mode:'points'},results:{release:'manual'}},privateKeys:{schemaVersion:1,answersByQuestionId:{question1:{strategy:'exact_text',accepted:['PRIVATE BUILDER KEY'],comparison:{ignoreCase:true,ignorePunctuation:false}}}}};
+  const builderCall = (user,action,body={}) => api('/api/laras/builder',{action,...body},user?.token||'');
+  const commandId=randomUUID();
+  const draft = await ok('/api/laras/builder',{action:'create',commandId,...builderEnvelope},teacher.token);
+  assert.equal(draft.revision,1);assert.equal(draft.privateKeys.answersByQuestionId.question1.accepted[0],'PRIVATE BUILDER KEY');assertions+=2;
+  const replay=await ok('/api/laras/builder',{action:'create',commandId,...builderEnvelope},teacher.token);assert.equal(replay.id,draft.id);assertions++;
+  for(const actor of [student,otherTeacher,null]){const response=await builderCall(actor,'get',{id:draft.id});assert(response.status>=400&&response.status<500);assert(!JSON.stringify(response).includes('PRIVATE BUILDER KEY'));assertions+=2;}
+  const direct=await api(records('builder_documents')+'/'+draft.id,{},teacher.token,'GET');assert(direct.status>=400);assertions++;
+  const changed=structuredClone(builderEnvelope);changed.document.title='Builder updated';
+  const saveId=randomUUID(),saved=await ok('/api/laras/builder',{action:'save',id:draft.id,baseRevision:1,commandId:saveId,...changed},teacher.token);assert.equal(saved.revision,2);assertions++;
+  const savedReplay=await ok('/api/laras/builder',{action:'save',id:draft.id,baseRevision:1,commandId:saveId,...changed},teacher.token);assert.equal(savedReplay.revision,2);assertions++;
+  const conflict=await builderCall(teacher,'save',{id:draft.id,baseRevision:1,commandId:randomUUID(),...builderEnvelope});assert.equal(conflict.status,400);assertions++;
+  const afterConflict=await ok('/api/laras/builder',{action:'get',id:draft.id},teacher.token);assert.equal(afterConflict.document.title,'Builder updated');assert.equal(afterConflict.privateKeys.answersByQuestionId.question1.accepted[0],'PRIVATE BUILDER KEY');assertions+=2;
+  const listDrafts=await ok('/api/laras/builder',{action:'list',kind:'kelas'},teacher.token);assert(listDrafts.items.some(row=>row.id===draft.id));assert(!JSON.stringify(listDrafts).includes('PRIVATE BUILDER KEY'));assertions+=2;
   const endpoint = '/api/laras/scheduled-classes';
   const call = (user, action, body = {}) => ok(endpoint, {sessionId: meeting.id, action, ...body}, user.token);
   const denied = async (user, action, body = {}) => {const r = await api(endpoint, {sessionId: meeting.id, action, ...body}, user?.token || ''); assert(r.status >= 400 && r.status < 500, JSON.stringify(r)); assertions++;};
@@ -231,4 +247,4 @@ try {
   assert.equal((await fetch(privateUrl,{headers:{Authorization:admin}})).status,200);assertions++;
   await ok(records('file_library')+'/'+retained.id,{restrictDownload:false,access:'student'},admin,'PATCH');assert.equal((await fetch(privateUrl)).status,200);assertions++;
   console.log(`Scheduled classroom integration passed (${assertions} checks, ${binary ? 'including backend restart recovery' : 'external local backend'}).`);
-} catch (error) {console.error(logs.slice(-6000)); throw error;} finally {if (binary) await stop();}
+} catch (error) {await delay(300);console.error(logs.slice(-12000)); throw error;} finally {if (binary) await stop();}

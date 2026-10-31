@@ -17,6 +17,8 @@ export default [
 	route('app/pengaturan', 'routes/app.pengaturan.tsx'),
 	route('app/coming/:slug', 'routes/app.coming.$slug.tsx'),
 	route('app/tugas', 'routes/app.tugas.tsx'),
+	route('app/builder/new', 'routes/app.builder-new.tsx'),
+	route('app/builder/:documentId', 'routes/app.builder.tsx'),
 	route('app/tugas/buat', 'routes/app.tugas.buat.tsx'),
 	route('app/tugas/insights', 'routes/app.tugas.insights.tsx'),
 	route('app/riset', 'routes/app.riset.tsx'),

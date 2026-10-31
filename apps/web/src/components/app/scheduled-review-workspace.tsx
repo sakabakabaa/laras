@@ -1,10 +1,10 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,BookOpen,Check,CheckCheck,Clock3,FileCheck2,KeyRound,Minus,Search,Send,Settings2,Users,X} from 'lucide-react';
+import {ArrowDownUp,ArrowLeft,ArrowRight,BookOpen,Check,CheckCheck,ChevronDown,Clock3,FileCheck2,KeyRound,ListFilter,Minus,Search,Send,Settings2,Users,X} from 'lucide-react';
 import {activityBookReference} from '@/lib/scheduled-book-reference';
 import type {ClassReportRow,ScheduledClassState} from '@/lib/scheduled-classes';
 import {buildAssessmentPayload,buildGradingSettingsPayload,buildPublishPayload,emptyGradeDraft,hydrateGradeDraft,validateManualGrade,type GradeDraftState} from '@/lib/scheduled-review';
 import {ASSESSMENT_LABELS,assessmentStatus,manualActivities} from '@/lib/scheduled-session-workspace';
-import {gradingModeLabel,nextManualTarget,responseVerdicts,reviewTally,verdictTally} from '@/lib/session-review-verdict';
+import {gradingModeLabel,nextManualTarget,requiresManual,responseVerdicts,reviewTally,verdictTally} from '@/lib/session-review-verdict';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter} from '@/components/ui/dialog';
 
 type Selection={student?:string;activity?:string};
@@ -13,7 +13,7 @@ type CriterionDraft={id:string;label:string;maxPoints:string};
 const personKey=(row:ClassReportRow)=>row.student||row.roster;
 const VERDICT_LABELS={correct:'Benar',wrong:'Salah',manual:'Perlu dinilai',ungraded:'Belum dijawab'} as const;
 const VERDICT_ICONS={correct:Check,wrong:X,manual:Minus,ungraded:Minus} as const;
-const FILTERS=[['all','Semua'],['unreviewed','Perlu nilai'],['reviewed','Siap'],['published','Terbit'],['missing','Kosong']] as const;
+const FILTERS=[['all','Semua mahasiswa'],['unreviewed','Perlu dinilai'],['reviewed','Sudah ditinjau'],['published','Sudah diterbitkan'],['missing','Belum mengirim']] as const;
 const DENSITY_KEY='laras.review.density';
 
 export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSelection,onSelectionChange}:Props){
@@ -22,9 +22,9 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const attempts=state.attempts.filter(a=>a.status!=='draft'&&activities.some(activity=>activity.id===a.activity));
   const tally=useMemo(()=>reviewTally(state),[state]);
   const queue=useMemo(()=>nextManualTarget(state,activities),[state,activities]);
-  const [studentKey,setStudentKey]=useState(initialSelection?.student||attempts[0]?.student||personKey(state.report[0]||{student:'',roster:''} as ClassReportRow));
-  const [activityId,setActivityId]=useState(initialSelection?.activity||activities[0]?.id||'');
-  const [search,setSearch]=useState(''),[filter,setFilter]=useState<string>('all');
+  const [studentKey,setStudentKey]=useState(initialSelection?.student||queue?.student||attempts[0]?.student||personKey(state.report[0]||{student:'',roster:''} as ClassReportRow));
+  const [activityId,setActivityId]=useState(initialSelection?.activity||queue?.activity||activities[0]?.id||'');
+  const [search,setSearch]=useState(''),[filters,setFilters]=useState<string[]>([]),[filterOpen,setFilterOpen]=useState(false),[sort,setSort]=useState<'roster'|'name'|'pending'>('roster');
   const [draft,setDraft]=useState<GradeDraftState>(emptyGradeDraft),[savedDraft,setSavedDraft]=useState(JSON.stringify(emptyGradeDraft));
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[failed,setFailed]=useState(false);
   const [settingsOpen,setSettingsOpen]=useState(false),[settingsEdited,setSettingsEdited]=useState(false);
@@ -56,13 +56,24 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   },[attemptId,assessment?.revision,dirty]);
   useEffect(()=>{onDirtyChange?.(unsaved);return()=>onDirtyChange?.(false);},[unsaved,onDirtyChange]);
   useEffect(()=>{if(!unsaved)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[unsaved]);
+  useEffect(()=>{
+    const onKeyDown=(event:KeyboardEvent)=>{
+      if(event.altKey||event.ctrlKey||event.metaKey||event.isComposing)return;
+      const target=event.target;
+      if(target instanceof HTMLElement&&target.closest('input,textarea,select,[contenteditable="true"]'))return;
+      if(event.key.toLowerCase()==='j'){event.preventDefault();step(1);}
+      else if(event.key.toLowerCase()==='k'){event.preventDefault();step(-1);}
+      else if(event.key.toLowerCase()==='n'&&student&&activity){event.preventDefault();const next=nextManualTarget(state,activities,{student:student.student,activity:activity.id});if(next)select(next.student,next.activity);}
+    };
+    window.addEventListener('keydown',onKeyDown);return()=>window.removeEventListener('keydown',onKeyDown);
+  });
   const prefersReduced=()=>typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rememberDensity=(next:boolean)=>{setCompact(next);try{localStorage.setItem(DENSITY_KEY,next?'compact':'full');}catch{/* storage blocked */}};
   const guard=()=>!unsaved||window.confirm('Perubahan penilaian belum disimpan. Buang perubahan dan lanjutkan?');
   const reveal=()=>{requestAnimationFrame(()=>bar.current?.scrollIntoView({block:'start'}));};
-  const select=(nextStudent:string,nextActivity=activity?.id||'')=>{
+  const select=(nextStudent:string,nextActivity=activity?.id||'',afterSave=false)=>{
     if(nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow)&&nextActivity===activity?.id)return;
-    if(!guard())return;
+    if(!afterSave&&!guard())return;
     loadSettings();const sameStudent=nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow);setStudentKey(nextStudent);setActivityId(nextActivity);setMessage('');if(sameStudent)document.getElementById(`review-activity-${nextActivity}`)?.scrollIntoView({block:'start',behavior:prefersReduced()?'auto':'smooth'});else reveal();onSelectionChange?.({student:nextStudent,activity:nextActivity});
   };
   const showError=(error:unknown)=>{setFailed(true);setMessage((error as Error).message||'Perubahan belum dapat disimpan. Coba lagi.');};
@@ -81,42 +92,71 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
     const grade={points,criterionScores:settings.mode==='rubric'?scores:{}};
     const error=validateManualGrade(settings,grade);if(error){showError(new Error(error));return;}
     setBusy(true);setFailed(false);
-    try{await onAction('saveAssessment',buildAssessmentPayload({attemptId:attempt.id,assessmentRevision:assessment?.revision||0,attemptRevision:attempt.revision,settingsRevision:settings.revision,status:reviewStatus,...grade,feedback:draft.feedback}));setSavedDraft(JSON.stringify(draft));setMessage(reviewStatus==='draft'?'Draf penilaian tersimpan.':'Penilaian ditinjau. Terbitkan saat siap dibagikan kepada mahasiswa.');if(next&&queue)select(queue.student,queue.activity);}catch(e){showError(e);}finally{setBusy(false);}
+    try{await onAction('saveAssessment',buildAssessmentPayload({attemptId:attempt.id,assessmentRevision:assessment?.revision||0,attemptRevision:attempt.revision,settingsRevision:settings.revision,status:reviewStatus,...grade,feedback:draft.feedback}));setSavedDraft(JSON.stringify(draft));setMessage(reviewStatus==='draft'?'Draf penilaian tersimpan.':'Penilaian ditinjau. Terbitkan saat siap dibagikan kepada mahasiswa.');if(next){const nextTarget=nextManualTarget(state,activities,{student:attempt.student,activity:activity.id});if(nextTarget&&nextTarget.id!==attempt.id)select(nextTarget.student,nextTarget.activity,true);}}catch(e){showError(e);}finally{setBusy(false);}
   };
   const publish=async()=>{
     if(!attempt||!settings||!assessment||dirty||!window.confirm(`Terbitkan nilai dan umpan balik ${student?.name} untuk ${activity?.title}?`))return;
     setBusy(true);setFailed(false);
     try{await onAction('publishAssessment',buildPublishPayload({attemptId:attempt.id,assessmentRevision:assessment.revision||0,attemptRevision:attempt.revision,settingsRevision:settings.revision}));setMessage('Nilai dan umpan balik sudah diterbitkan kepada mahasiswa.');}catch(e){showError(e);}finally{setBusy(false);}
   };
-  const visible=useMemo(()=>state.report.map(row=>{
+  const matchesFilter=(entry:{work:typeof attempts;relevant:typeof attempts[number]|undefined;status:string},value:string)=>{
+    if(value==='missing')return !entry.work.length;
+    if(!entry.relevant)return false;
+    if(!activity||!requiresManual(activity))return false;
+    if(value==='unreviewed')return entry.status==='unreviewed'||entry.status==='draft';
+    if(value==='reviewed')return entry.status==='reviewed'||entry.status==='published';
+    if(value==='published')return entry.status==='published';
+    return true;
+  };
+  const visible=useMemo(()=>{
+    const rows=state.report.map(row=>{
     const work=attempts.filter(a=>a.student===row.student);
     const relevant=activity?work.find(a=>a.activity===activity.id):undefined;
     const related=activity?state.assessments?.find(g=>g.attempt===relevant?.id):undefined;
     return {row,work,relevant,status:assessmentStatus(related)};
-  }).filter(({row,work,relevant})=>{
+    }).filter(entry=>{
+    const {row}=entry;
     if(!`${row.name} ${row.nim}`.toLowerCase().includes(search.toLowerCase()))return false;
-    if(filter==='missing')return !work.length;
-    if(filter==='all')return true;
-    if(!relevant)return false;
-    const rowStatus=assessmentStatus(state.assessments?.find(g=>g.attempt===relevant.id));
-    if(filter==='unreviewed')return rowStatus==='unreviewed'||rowStatus==='draft';
-    if(filter==='reviewed')return rowStatus==='reviewed'||rowStatus==='published';
-    if(filter==='published')return rowStatus==='published';
+    if(filters.length&&!filters.includes('all')&&!filters.some(value=>matchesFilter(entry,value)))return false;
     return true;
-  }),[state,attempts,activity,search,filter]);
-  const activeIndex=state.report.findIndex(r=>personKey(r)===personKey(student||{student:'',roster:''} as ClassReportRow));
-  const step=(delta:number)=>{const row=state.report[activeIndex+delta];if(row)select(personKey(row));};
+    });
+    return rows.sort((a,b)=>sort==='name'?a.row.name.localeCompare(b.row.name,'id'):sort==='pending'?Number(['reviewed','published'].includes(a.status))-Number(['reviewed','published'].includes(b.status))||a.row.name.localeCompare(b.row.name,'id'):state.report.findIndex(row=>personKey(row)===personKey(a.row))-state.report.findIndex(row=>personKey(row)===personKey(b.row)));
+  },[state,attempts,activity,search,filters,sort,matchesFilter]);
+  const activeIndex=visible.findIndex(({row})=>personKey(row)===personKey(student||{student:'',roster:''} as ClassReportRow));
+  const step=(delta:number)=>{const next=visible[activeIndex+delta];if(next)select(personKey(next.row));};
+  const countOf=(value:string)=>value==='all'?state.report.length:state.report.filter(row=>{const work=attempts.filter(item=>item.student===row.student);const relevant=activity?work.find(item=>item.activity===activity.id):undefined;const status=assessmentStatus(state.assessments?.find(item=>item.attempt===relevant?.id));return matchesFilter({work,relevant,status},value);}).length;
+  const toggleFilter=(value:string)=>setFilters(previous=>value==='all'?[]:previous.includes(value)?previous.filter(item=>item!==value):[...previous.filter(item=>item!=='all'),value]);
+  const filterLabel=filters.length===0||filters.includes('all')?'Semua mahasiswa':FILTERS.filter(([value])=>filters.includes(value)).map(([,label])=>label).join(' · ');
+  const pendingCount=tally.pending,autoCount=tally.autoScored;
   return <section className="sr-workspace" aria-label="Tinjau jawaban tugas">
+    <div className="evx-stats sr-summary" aria-label="Ringkasan pengumpulan kelas">
+      <div className="evx-stat"><span className="evx-stat-ico blue"><Users size={16}/></span><div><strong>{state.report.length}</strong><span>Mahasiswa</span></div></div>
+      <div className="evx-stat"><span className="evx-stat-ico blue"><FileCheck2 size={16}/></span><div><strong>{attempts.length}</strong><span>Jawaban terkumpul</span></div></div>
+      <div className="evx-stat"><span className="evx-stat-ico amber"><Clock3 size={16}/></span><div><strong>{pendingCount}</strong><span>Perlu dinilai</span></div></div>
+      <div className="evx-stat"><span className="evx-stat-ico green"><CheckCheck size={16}/></span><div><strong>{tally.reviewed}</strong><span>Sudah ditinjau</span></div></div>
+      <div className="evx-stat quiet"><div><strong>{autoCount}</strong><span>Dinilai otomatis</span></div></div>
+      <div className="evx-pager"><button type="button" aria-label="Mahasiswa sebelumnya" disabled={activeIndex<=0||busy} onClick={()=>step(-1)}><ArrowLeft size={16}/></button><span>{activeIndex<0?0:activeIndex+1} dari {visible.length}</span><button type="button" aria-label="Mahasiswa berikutnya" disabled={activeIndex<0||activeIndex>=visible.length-1||busy} onClick={()=>step(1)}><ArrowRight size={16}/></button></div>
+    </div>
     <div className="sr-toolbar"><div><h2>Jawaban & nilai</h2><p>{tally.reviewed} dari {tally.manual} kiriman ditinjau{tally.auto>0?` · ${tally.auto} dinilai otomatis`:''}</p></div><div className="sr-toolbar-actions">{tally.pending>0&&queue&&<button className="ss-button ss-button-small ss-button-primary" disabled={busy} onClick={()=>select(queue.student,queue.activity)}>Perlu nilai {tally.pending}<ArrowRight size={15}/></button>}<span className="sr-review-progress" aria-label={`${tally.reviewed} dari ${tally.manual} ditinjau`}><span style={{width:`${tally.manual?tally.reviewed/tally.manual*100:0}%`}}/></span></div></div>
     {!canGrade&&<p className="sr-notice"><Clock3 size={17}/>Jawaban dapat dipantau sekarang. Penilaian dan penerbitan tersedia setelah kelas selesai.</p>}
     <div className="sr-review-bar" ref={bar}>
       <div className="sr-review-bar-person">{student?<><span className="ss-avatar">{student.name.split(/\s+/).slice(0,2).map(n=>n[0]).join('')}</span><span><strong>{student.name}</strong><small>{student.nim||'NIM belum tersedia'}</small></span></>:<strong>Belum ada mahasiswa</strong>}</div>
       <div className="sr-review-bar-score">{attempt&&typeof attempt.score==='number'?<><span className="sr-score-value">{attempt.score}</span><span className="sr-score-unit">/ 100</span></>:<span className="sr-score-value sr-score-empty">—</span>}<small>{activity?gradingModeLabel(activity):'Tidak ada kegiatan'}</small></div>
       <div className="sr-review-bar-counts">{cards.length?<><span className="sr-verdict-count is-correct" title="Benar"><Check size={14}/>{cardTally.correct}</span><span className="sr-verdict-count is-wrong" title="Salah"><X size={14}/>{cardTally.wrong}</span><span className="sr-verdict-count is-manual" title="Perlu dinilai atau belum dijawab"><Minus size={14}/>{cardTally.manual+cardTally.ungraded}</span></>:<span className="sr-verdict-count is-manual">Belum ada jawaban</span>}</div>
-      <div className="sr-review-bar-nav"><button className="ss-icon-button" aria-label="Mahasiswa sebelumnya" disabled={activeIndex<=0||busy} onClick={()=>step(-1)}><ArrowLeft size={17}/></button><span>{activeIndex+1}/{state.report.length}</span><button className="ss-icon-button" aria-label="Mahasiswa berikutnya" disabled={activeIndex>=state.report.length-1||busy} onClick={()=>step(1)}><ArrowRight size={17}/></button><button className="ss-button ss-button-small" aria-pressed={compact} onClick={()=>rememberDensity(!compact)}>{compact?'Ringkas':'Lengkap'}</button></div>
+      <div className="sr-review-bar-nav"><button className="ss-icon-button" aria-label="Mahasiswa sebelumnya" disabled={activeIndex<=0||busy} onClick={()=>step(-1)}><ArrowLeft size={17}/></button><span>{activeIndex<0?0:activeIndex+1}/{visible.length}</span><button className="ss-icon-button" aria-label="Mahasiswa berikutnya" disabled={activeIndex<0||activeIndex>=visible.length-1||busy} onClick={()=>step(1)}><ArrowRight size={17}/></button><button className="ss-button ss-button-small" aria-pressed={compact} onClick={()=>rememberDensity(!compact)}>{compact?'Ringkas':'Lengkap'}</button></div>
     </div>
     <div className="sr-review-grid">
-      <aside className="sr-students" aria-label="Daftar mahasiswa"><div className="sr-student-tools"><label className="ss-search"><Search size={16}/><input aria-label="Cari mahasiswa untuk ditinjau" placeholder="Cari nama atau NIM..." value={search} onChange={e=>setSearch(e.target.value)}/></label><div className="sr-segments" role="group" aria-label="Filter penilaian">{FILTERS.map(([id,label])=><button key={id} type="button" aria-pressed={filter===id} className={filter===id?'is-active':undefined} onClick={()=>setFilter(id)}>{label}</button>)}</div><p>{visible.length} mahasiswa</p></div><ul>{visible.map(({row,relevant,status:studentStatus})=>{const current=personKey(row)===personKey(student||{student:'',roster:''} as ClassReportRow),score=relevant&&typeof relevant.score==='number'?relevant.score:undefined;return <li key={personKey(row)}><button aria-current={current?'true':undefined} onClick={()=>select(personKey(row))}><span className="ss-avatar">{row.name.split(/\s+/).slice(0,2).map(n=>n[0]).join('')}</span><span><strong>{row.name}</strong><small>{row.nim||'NIM belum tersedia'}</small><span className="sr-student-progress">{!relevant?'Belum ada kiriman':score!==undefined?`${score} / 100`:'Terkirim'}</span></span>{relevant&&['reviewed','published'].includes(studentStatus)?<CheckCheck size={16}/>:relevant&&studentStatus==='draft'?<span className="sr-student-dot" aria-label="Draf tersimpan"/>:null}</button></li>;})}</ul>{!visible.length&&<p className="sr-list-empty">Tidak ada mahasiswa yang sesuai.</p>}</aside>
+      <aside className="sr-students eval-col" aria-label="Daftar mahasiswa">
+        <div className="eval-col-head"><h2>Mahasiswa ({visible.length})</h2><span className="evx-kbd-hint"><kbd>J</kbd><kbd>K</kbd> pindah · <kbd>N</kbd> perlu dinilai</span></div>
+        <label className="cho-search sr-roster-search"><Search size={13}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="Cari nama atau NIM..." aria-label="Cari nama atau NIM mahasiswa"/></label>
+        <div className="evx-filter-drop">
+          <button type="button" className={`evx-filter-btn${filters.length?' active':''}`} aria-expanded={filterOpen} aria-haspopup="true" onClick={()=>setFilterOpen(value=>!value)}><ListFilter size={13}/><span>{filterLabel}</span><ChevronDown size={13} className={filterOpen?'open':''}/></button>
+          {filterOpen&&<div className="evx-filter-menu" role="group" aria-label="Saring mahasiswa">{FILTERS.map(([value,label])=>{const checked=value==='all'?filters.length===0:filters.includes(value);return <label key={value} className="evx-filter-item"><input type="checkbox" checked={checked} onChange={()=>toggleFilter(value)} aria-label={label}/><span>{label}</span><em>{countOf(value)}</em></label>;})}</div>}
+        </div>
+        <label className="eval-sort"><ArrowDownUp size={13}/><select value={sort} onChange={event=>setSort(event.target.value as typeof sort)} aria-label="Urutkan mahasiswa"><option value="roster">Urut: Daftar kelas</option><option value="name">Nama A–Z</option><option value="pending">Perlu dinilai dulu</option></select></label>
+        {visible.length? <ul className="eval-people">{visible.map(({row,relevant,status:studentStatus})=>{const current=personKey(row)===personKey(student||{student:'',roster:''} as ClassReportRow),assessmentForRow=state.assessments?.find(item=>item.attempt===relevant?.id),score=assessmentForRow?.points??relevant?.score;const statusLabel=!relevant?'Belum mengirim':activity&&!requiresManual(activity)?'Dinilai otomatis':studentStatus==='published'?'Diterbitkan':studentStatus==='reviewed'?'Sudah ditinjau':studentStatus==='draft'?'Draf tersimpan':'Terkirim';return <li key={personKey(row)}><button type="button" className={`evx-person${current?' active':''}${['reviewed','published'].includes(studentStatus)?' graded':' pending-grade'}`} aria-current={current?'true':undefined} onClick={()=>select(personKey(row))}><span className="cw-student-avatar">{row.name.split(/\s+/).slice(0,2).map(name=>name[0]).join('').toUpperCase()}</span><span><strong>{row.name}</strong><small>{row.nim||'NIM belum tersedia'}</small></span><em>{score==null?'—':score}</em><span className={`asg-tag sub-${studentStatus}`}>{statusLabel}</span></button></li>;})}</ul>:<div className="evx-empty-card" role="status"><Users size={18}/><strong>Belum ada mahasiswa</strong><p>{state.report.length?'Tidak ada mahasiswa pada saringan ini. Ubah filter atau kata kunci.':'Daftar mahasiswa akan tampil di sini.'}</p></div>}
+        <p className="sr-student-count">{visible.length} dari {state.report.length} mahasiswa</p>
+      </aside>
       <div className="sr-answer-area">
         {student&&activity?<>
          {activities.map((a,index)=>{const own=attempts.find(t=>t.student===student?.student&&t.activity===a.id);const ownAssessment=state.assessments?.find(g=>g.attempt===own?.id);const ownStatus=assessmentStatus(ownAssessment);const ownCards=cardsFor(a,own);return <section key={a.id} id={'review-activity-'+a.id} data-activity-id={a.id} className={'sr-activity-block'+(activity?.id===a.id?' is-active':'')} aria-labelledby={'review-activity-title-'+a.id}>

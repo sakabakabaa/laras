@@ -59,6 +59,14 @@ describe('lecturer review verdicts',()=>{
     expect(reviewTally(state)).toMatchObject({manual:2,reviewed:1,pending:1,auto:1,autoScored:1});
     expect(nextManualTarget(state,[sheet,writing,exit])?.id).toBe('e-1');
   });
+  it('counts published manual reviews as complete and skips them in the next-review queue',()=>{
+    const state = {owner:true,serverNow:'',session:{id:'s',title:'',course:''},class:{id:'c',phase:'closed'} as ScheduledClassState['class'],
+      activities:[writing],attempts:[attempt('w-1','w',{responses:{email:'a'}}),{...attempt('w-2','w',{responses:{email:'b'}}),student:'s2'}],
+      assessments:[{attempt:'w-1',activity:'w',points:8,maxPoints:10,status:'published'}],
+      report:[{roster:'r1',student:'s1',name:'Satu',nim:'',checkedInAt:'',lastSeenAt:'',suggestion:'',completed:0,total:0,reason:'',attendance:'',attempts:[]},{roster:'r2',student:'s2',name:'Dua',nim:'',checkedInAt:'',lastSeenAt:'',suggestion:'',completed:0,total:0,reason:'',attendance:'',attempts:[]}],events:[]} as unknown as ScheduledClassState;
+    expect(reviewTally(state)).toMatchObject({manual:2,reviewed:1,pending:1});
+    expect(nextManualTarget(state,[writing])?.id).toBe('w-2');
+  });
   it('walks the roster to the next manual submission that still needs review',()=>{
     const rows = ['s1','s2'].map((student,index)=>({roster:`r${index}`,student,name:student,nim:'',checkedInAt:'',lastSeenAt:'',suggestion:'',completed:0,total:0,reason:'',attendance:'',attempts:[]}));
     const state = {owner:true,serverNow:'',session:{id:'s',title:'',course:''},class:{id:'c',phase:'closed'} as ScheduledClassState['class'],

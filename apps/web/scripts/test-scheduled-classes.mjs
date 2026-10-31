@@ -247,4 +247,4 @@ try {
   assert.equal((await fetch(privateUrl,{headers:{Authorization:admin}})).status,200);assertions++;
   await ok(records('file_library')+'/'+retained.id,{restrictDownload:false,access:'student'},admin,'PATCH');assert.equal((await fetch(privateUrl)).status,200);assertions++;
   console.log(`Scheduled classroom integration passed (${assertions} checks, ${binary ? 'including backend restart recovery' : 'external local backend'}).`);
-} catch (error) {console.error(logs.slice(-6000)); throw error;} finally {if (binary) await stop();}
+} catch (error) {await delay(300);console.error(logs.slice(-12000)); throw error;} finally {if (binary) await stop();}

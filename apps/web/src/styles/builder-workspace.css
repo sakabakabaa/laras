@@ -276,7 +276,7 @@
 }
 .bd-topbar {
 	position: sticky;
-	top: 68px;
+	top: 0;
 	z-index: 15;
 	display: flex;
 	align-items: center;
@@ -361,7 +361,7 @@
 }
 .bd-outline {
 	position: sticky;
-	top: 165px;
+	top: 110px;
 	min-width: 0;
 }
 .bd-outline > header {
@@ -919,7 +919,7 @@
 		justify-content: flex-end;
 	}
 	.bd-topbar {
-		top: 64px;
+		top: 0;
 	}
 	.bd-activity {
 		padding: 14px;

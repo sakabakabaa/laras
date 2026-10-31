@@ -649,7 +649,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						</button>
 						<p>Draf pribadi · hanya dosen</p>
 					</aside>
-					<main className="bd-canvas">
+					<section className="bd-canvas" aria-label="Isi kegiatan">
 						<section className="bd-document-intro">
 							<label>
 								Instruksi umum
@@ -790,7 +790,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 								</button>
 							</section>
 						))}
-					</main>
+					</section>
 					<aside className="bd-inspector">{inspectorContents}</aside>
 				</div>
 			) : panel === 'delivery' ? (

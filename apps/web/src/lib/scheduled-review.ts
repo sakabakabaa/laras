@@ -5,10 +5,25 @@ export function formatScheduledResponse(activity: any, attempt?: any): string {
   const answers = attempt?.answers || {};
   const lines: string[] = [];
   const sheet = activity?.worksheet;
+  const keyItems: Record<string, any> = sheet?.answerKey?.items || {};
   for (const item of sheet?.items || []) {
     lines.push(String(item.prompt || ''));
     const response = answers.responses?.[item.id];
-    lines.push(response === undefined || response === null || response === '' ? 'Belum dijawab' : String(response));
+    const shown = response === undefined || response === null || response === '' ? 'Belum dijawab' : String(response);
+    lines.push(shown);
+    const key = keyItems[item.id];
+    if (key && shown !== 'Belum dijawab') {
+      if (key.mode === 'exact' && Array.isArray(key.accepted)) {
+        const want = key.accepted.map(String).join(' / ');
+        const ok = key.accepted.map(String).some((a: string) => a.trim().toLowerCase() === shown.trim().toLowerCase());
+        lines.push((ok ? '\u2713 Benar' : '\u2717 Salah') + ' \u00b7 Kunci: ' + want);
+      } else if (key.mode === 'reference') {
+        if (key.modelAnswer) lines.push('Acuan: ' + String(key.modelAnswer));
+        if (key.rubric) lines.push('Rubrik: ' + String(key.rubric));
+      }
+    } else if (key && shown === 'Belum dijawab' && key.mode === 'exact' && Array.isArray(key.accepted)) {
+      lines.push('Belum dijawab \u00b7 Kunci: ' + key.accepted.map(String).join(' / '));
+    }
   }
   const extra = typeof answers.text === 'string' ? answers.text : '';
   if (extra) lines.push('', extra);

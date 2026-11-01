@@ -50,7 +50,7 @@ export async function compileBookPage(plan:BookPagePlan,settings:BuilderImportSe
     const known=it.keyEvidence!=='unknown'&&!b.requiresAudio;
     if(it.keyEvidence==='inferred'&&known)report.inferredKeys.push(a.title+' · '+it.prompt.slice(0,140));
     if(!known)report.warnings.push(a.title+' · kunci perlu ditinjau: '+it.prompt.slice(0,140));
-    key.explanation=rich(it.explanation);key.privateGuidance=rich((known?'Sumber kunci: '+it.keyEvidence:'Kunci belum dapat ditentukan dari halaman ini.')+'\n'+it.explanation);
+    key.explanation=rich(it.explanation);key.privateGuidance=rich((known?'Sumber kunci: '+(it.keyEvidence==='printed'?'tercetak pada halaman':'disimpulkan AI; periksa sebelum menerbitkan'):'Kunci belum dapat ditentukan dari halaman ini.')+'\n'+it.explanation);
     if(kind==='single_choice'){
      if(it.choices.length<2)throw new Error('Pilihan ganda memerlukan minimal dua pilihan.');
      q.options=it.choices.map(label=>({id:uid(),label}));

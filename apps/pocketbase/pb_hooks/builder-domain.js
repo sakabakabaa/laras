@@ -224,10 +224,10 @@ function normalize(body) {
 					alt: str(image.alt, 1000),
 					caption: str(image.caption, 500),
 				}));
-				out.columns =
-					b.columns === undefined
-						? Math.max(1, out.images.length)
-						: num(b.columns, 4);
+			}
+			if (b.columns !== undefined) {
+				if (b.type !== 'image') fail('Kolom hanya untuk gambar.');
+				out.columns = num(b.columns, 4);
 				if (!Number.isInteger(out.columns) || out.columns < 1)
 					fail('Kolom gambar harus 1–4.');
 			}

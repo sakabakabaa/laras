@@ -85,7 +85,8 @@ export function BuilderRun({ id }: { id: string }) {
 		[busy, setBusy] = useState(false),
 		[submitting, setSubmitting] = useState(false),
 		[now, setNow] = useState(Date.now()),
-		[message, setMessage] = useState('');
+		[message, setMessage] = useState(''),
+		[preserved, setPreserved] = useState<Record<string, string>>({});
 	const current = useRef(answers),
 		saved = useRef('[]'),
 		revision = useRef(0),
@@ -167,6 +168,14 @@ export function BuilderRun({ id }: { id: string }) {
 				saved.current = answerKey(next.response?.answers || {});
 				apply(next, false);
 				if (action === 'submit' || next.response?.submittedAt) {
+					const unsent = Object.fromEntries(
+						Object.entries(current.current).filter(
+							([id, value]) =>
+								value && value !== (next.response?.answers[id] || ''),
+						),
+					);
+					if (Object.keys(unsent).length)
+						setPreserved((prior) => ({ ...prior, ...unsent }));
 					current.current = next.response?.answers || {};
 					setAnswers(current.current);
 				}
@@ -177,7 +186,46 @@ export function BuilderRun({ id }: { id: string }) {
 				);
 				return true;
 			} catch (e) {
-				setError((e as Error).message);
+				const message = (e as Error).message;
+				setError(message);
+				if (message.includes('Kegiatan sudah terkunci')) {
+					try {
+						const next = await deliveryRequest<BuilderRunState>('state', {
+							runId: id,
+						});
+						const accepted = next.response?.answers || {},
+							merged = { ...accepted },
+							rejected: Record<string, string> = {};
+						const writable = new Set(
+							(next.document?.activities || [])
+								.filter(
+									(a) =>
+										!next.response?.submittedAt &&
+										next.openActivityIds.includes(a.id) &&
+										!next.response?.submittedActivities.includes(a.id),
+								)
+								.flatMap((a) =>
+									a.blocks.flatMap((b) => [
+										...questionIds(b),
+										...(b.type === 'acknowledgement' ? [b.id] : []),
+									]),
+								),
+						);
+						for (const [qid, value] of Object.entries(current.current)) {
+							if (writable.has(qid)) merged[qid] = value;
+							else if (value && value !== (accepted[qid] || ''))
+								rejected[qid] = value;
+						}
+						if (Object.keys(rejected).length)
+							setPreserved((prior) => ({ ...prior, ...rejected }));
+						saved.current = answerKey(accepted);
+						apply(next, false);
+						current.current = merged;
+						setAnswers(merged);
+					} catch {
+						/* Preserve the original visible answers when refresh also fails. */
+					}
+				}
 				return false;
 			} finally {
 				inFlight.current = false;
@@ -310,6 +358,30 @@ export function BuilderRun({ id }: { id: string }) {
 				</div>
 			)}
 			{message && <p role="status">{message}</p>}
+			{Object.keys(preserved).length > 0 && (
+				<details className="bd-review-notice" open>
+					<summary>Salinan jawaban yang tidak diterima server</summary>
+					<p>
+						Jawaban ini berubah setelah kegiatan dikunci atau waktunya habis.
+						Salinan ini bukan bagian dari kiriman; Anda dapat menyalinnya untuk
+						disampaikan kepada dosen.
+					</p>
+					<textarea
+						readOnly
+						aria-label="Salinan jawaban yang tidak diterima"
+						rows={6}
+						value={Object.entries(preserved)
+							.map(
+								([id, value]) =>
+									(plain(state.document?.questionsById[id]?.prompt) || id) +
+									'\n' +
+									value,
+							)
+							.join('\n\n')}
+					/>
+				</details>
+			)}
+
 			{state.owner && (
 				<>
 					<div className="bd-inline-actions">

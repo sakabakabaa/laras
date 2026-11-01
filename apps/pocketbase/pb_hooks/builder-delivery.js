@@ -417,6 +417,7 @@ function handle(app, user, body) {
 						ctx.version.getString('document') !== body.documentId
 					)
 						return [];
+                    const studentResponse = ctx.owner ? null : find(app, 'builder_responses', 'run={:r} && student={:s}', {r:run.id,s:user.id});
 					return [
 						{
 							id: run.id,
@@ -426,6 +427,11 @@ function handle(app, user, body) {
 							revision: ctx.version.getInt('revision'),
 							startsAt: ctx.d.delivery.startsAt || ctx.d.delivery.availableAt,
 							dueAt: ctx.d.delivery.dueAt || ctx.d.delivery.endsAt,
+                            checkInClosesAt: ctx.d.delivery.checkInClosesAt || '',
+                            closesAt: new Date(endTime(ctx, studentResponse)).toISOString(),
+                            startedAt: studentResponse?.getString('startedAt') || '',
+                            submittedAt: studentResponse?.getString('submittedAt') || '',
+                            feedbackReady: Boolean(studentResponse && Object.keys(data(studentResponse,'released',null) || {}).length),
 							courseTitle: app
 								.findRecordById('courses', run.getString('course'))
 								.getString('title'),

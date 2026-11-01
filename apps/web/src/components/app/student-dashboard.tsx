@@ -1,543 +1,88 @@
-import { BuilderRunList } from './builder/builder-run';
-import '@/styles/builder-workspace.css';
-import { isCollectedSubmission } from '@/lib/submission-state';
-import { useStudentHomeText } from '@/lib/student-home-copy';
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router';
-import {
-	ArrowRight,
-	BookOpen,
-	CalendarDays,
-	LoaderCircle,
-	Search,
-} from 'lucide-react';
-import { AppShell } from '@/components/app/app-shell';
-import { CourseThumb } from '@/components/app/course-thumb';
-import { CardCta } from '@/components/card-cta';
-import { StudentHomeAdventure } from '@/components/app/student-home-adventure';
-import { StudentSectionChip } from '@/components/app/course-sections';
-import { useCachedQuery } from '@/hooks/use-cached-query';
+import {useEffect,useMemo,useState} from 'react';
+import {Link} from 'react-router';
+import {ArrowRight,BookOpen,CalendarDays,CheckCircle2,Clock3,FileText,MessageCircle,Radio} from 'lucide-react';
+import {AppShell} from '@/components/app/app-shell';
+import {CourseThumb} from '@/components/app/course-thumb';
+import {useCachedQuery} from '@/hooks/use-cached-query';
 import pb from '@/lib/pocketbase-client';
-import type { Course, ClassSession, Enrollment } from '@/lib/learning';
-import { courseRouteId } from '@/lib/course-route';
-import { useLanguage, useT } from '@/lib/i18n';
-import {
-	activityTypeOf,
-	studentWorkPath,
-	type Assignment,
-	type AssignmentSubmission,
-} from '@/lib/assignments';
+import {courseRouteId} from '@/lib/course-route';
+import {useLanguage} from '@/lib/i18n';
+import {activityTypeOf,studentWorkPath,type Assignment,type AssignmentSubmission} from '@/lib/assignments';
+import {deliveryRequest,type BuilderRunItem} from '@/lib/builder-delivery';
+import {sessionClock} from '@/lib/session-clock';
+import {dashboardClasses,dashboardWeek,jakartaDay,orderByDeadline,type StudentLiveClass} from '@/lib/student-dashboard-data';
+import type {Course,Enrollment} from '@/lib/learning';
+import '@/styles/student-dashboard-v2.css';
 
-type EnrichedEnrollment = Enrollment & { expand?: { course?: Course } };
-
-/** A session date is usable when it exists and parses to a real timestamp. */
-function validDate(value: string) {
-	return Boolean(value) && !Number.isNaN(new Date(value).getTime());
+type Work={id:string;title:string;course:string;deadline:string;href:string;status:'assigned'|'draft'|'revision'|'feedback'};
+const copy={
+ id:{eyebrow:'RUANG BELAJAR',hello:'Halo',intro:'Semua yang kamu perlukan untuk belajar, di satu tempat.',live:'Kelas berlangsung',next:'Kelas berikutnya',noClass:'Belum ada kelas terjadwal',noClassHint:'Kelas yang sedang berlangsung dan jadwal berikutnya akan muncul di sini.',join:'Masuk kelas',resume:'Lanjutkan kelas',viewClass:'Lihat kelas',joinClosed:'Batas check-in sudah lewat',starts:'Mulai',ends:'Berakhir',work:'Perlu dikerjakan',workHint:'Tugas dan revisi, diurutkan berdasarkan tenggat.',allDone:'Semua tugas sudah selesai',allDoneHint:'Tugas atau revisi baru akan muncul di sini.',due:'Tenggat',noDue:'Tanpa tenggat',assigned:'Belum dimulai',draft:'Draf tersimpan',revision:'Perlu revisi',feedback:'Lihat umpan balik',start:'Mulai',continue:'Lanjutkan',revise:'Perbaiki',courses:'Mata kuliah saya',coursesHint:'Buka materi, kegiatan, dan hasil belajar.',allCourses:'Semua mata kuliah',emptyCourses:'Belum ada mata kuliah',emptyCoursesHint:'Mata kuliah yang kamu ikuti akan muncul di sini.',openCourse:'Buka mata kuliah',feedbackTitle:'Umpan balik',feedbackHint:'Hasil yang sudah dibagikan dosen.',more:'Lihat semua',loading:'Memuat…',error:'Bagian ini belum dapat dimuat.',retry:'Coba lagi',preview:'Pratinjau dosen: data pribadi mahasiswa tidak ditampilkan.',back:'Kembali ke dashboard dosen',person:'selamat datang',open:'Buka',moreClasses:'Kelas lainnya',calendar:'Kalender',calendarHint:'Kelas dan tenggat tujuh hari ke depan.',noEvents:'Tidak ada kelas atau tenggat pada hari ini.',classEvent:'Kelas',workEvent:'Tugas',overdue:'Tenggat lewat',upcoming:'Akan datang'},
+ en:{eyebrow:'YOUR LEARNING SPACE',hello:'Hello',intro:'Everything you need for learning, in one place.',live:'Class in progress',next:'Next class',noClass:'No class scheduled',noClassHint:'Live and upcoming classes will appear here.',join:'Join class',resume:'Continue class',viewClass:'View class',joinClosed:'Check-in has closed',starts:'Starts',ends:'Ends',work:'Things to do',workHint:'Assignments and revisions, ordered by deadline.',allDone:'You are all caught up',allDoneHint:'New assignments and revisions will appear here.',due:'Due',noDue:'No deadline',assigned:'Not started',draft:'Draft saved',revision:'Revision requested',feedback:'View feedback',start:'Start',continue:'Continue',revise:'Revise',courses:'My courses',coursesHint:'Open materials, activities, and results.',allCourses:'All courses',emptyCourses:'No courses yet',emptyCoursesHint:'Your enrolled courses will appear here.',openCourse:'Open course',feedbackTitle:'Feedback',feedbackHint:'Results shared by your lecturer.',more:'View all',loading:'Loading…',error:'This section could not be loaded.',retry:'Try again',preview:'Lecturer preview: personal student data is not shown.',back:'Back to lecturer dashboard',person:'welcome',open:'Open',moreClasses:'Other classes',calendar:'Calendar',calendarHint:'Classes and deadlines for the next seven days.',noEvents:'No classes or deadlines on this day.',classEvent:'Class',workEvent:'Assignment',overdue:'Past deadline',upcoming:'Upcoming'},
+ de:{eyebrow:'DEIN LERNBEREICH',hello:'Hallo',intro:'Alles für dein Lernen an einem Ort.',live:'Unterricht läuft',next:'Nächster Unterricht',noClass:'Kein Unterricht geplant',noClassHint:'Laufender und anstehender Unterricht erscheint hier.',join:'Unterricht beitreten',resume:'Unterricht fortsetzen',viewClass:'Unterricht ansehen',joinClosed:'Die Check-in-Frist ist abgelaufen',starts:'Beginn',ends:'Ende',work:'Zu erledigen',workHint:'Aufgaben und Überarbeitungen nach Frist sortiert.',allDone:'Alles erledigt',allDoneHint:'Neue Aufgaben und Überarbeitungen erscheinen hier.',due:'Abgabe',noDue:'Keine Frist',assigned:'Noch nicht begonnen',draft:'Entwurf gespeichert',revision:'Überarbeitung nötig',feedback:'Feedback ansehen',start:'Starten',continue:'Fortsetzen',revise:'Überarbeiten',courses:'Meine Kurse',coursesHint:'Materialien, Aktivitäten und Ergebnisse öffnen.',allCourses:'Alle Kurse',emptyCourses:'Noch keine Kurse',emptyCoursesHint:'Deine Kurse erscheinen hier.',openCourse:'Kurs öffnen',feedbackTitle:'Feedback',feedbackHint:'Von deiner Lehrkraft freigegebene Ergebnisse.',more:'Alle ansehen',loading:'Wird geladen…',error:'Dieser Bereich konnte nicht geladen werden.',retry:'Erneut versuchen',preview:'Lehrkraftvorschau: Persönliche Daten werden nicht angezeigt.',back:'Zurück zum Dashboard',person:'willkommen',open:'Öffnen',moreClasses:'Weitere Kurse',calendar:'Kalender',calendarHint:'Unterricht und Fristen für die nächsten sieben Tage.',noEvents:'An diesem Tag gibt es keinen Unterricht und keine Fristen.',classEvent:'Unterricht',workEvent:'Aufgabe',overdue:'Frist überschritten',upcoming:'Demnächst'},
+} as const;
+type Labels=typeof copy.id|typeof copy.en|typeof copy.de;
+type EnrollmentWithCourse=Enrollment & {expand?:{course?:Course}};
+function dateLabel(value:string,language:'id'|'en'|'de'){
+ const date=new Date(value);if(!value||Number.isNaN(date.getTime()))return '';
+ return new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Jakarta'}).format(date)+' WIB';
 }
-
-function studentDate(value: string, language: 'id' | 'en' | 'de') {
-	const date = new Date(value);
-	if (Number.isNaN(date.getTime())) return '';
-	return new Intl.DateTimeFormat(language === 'id' ? 'id-ID' : language === 'de' ? 'de-DE' : 'en-GB', {
-		day: 'numeric', month: 'short', year: 'numeric',
-	}).format(date);
-}
-
-type ResumeKind = 'revision' | 'draft' | 'feedback' | 'assigned' | 'practice';
-
-/** Priority rank — the most important next action sorts first. */
-const KIND_PRIORITY: Record<ResumeKind, number> = {
-	revision: 0,
-	draft: 1,
-	feedback: 2,
-	assigned: 3,
-	practice: 4,
-};
-
-type ResumeItem = {
-	assignment: Assignment;
-	submission?: AssignmentSubmission;
-	course: Course;
-	routeId: string;
-	kind: ResumeKind;
-	/** Type + skill label, e.g. "Latihan formatif · Berbicara". */
-	label: string;
-	/** Deep link straight into the course's tugas/latihan section. */
-	href: string;
-	/** Most recent touch timestamp, for "most recently touched first" ordering. */
-	touched: string;
-};
-
-/** Build a localized type + skill line for the dashboard. */
-function typeLine(kind: ResumeKind, assignment: Assignment, t: (key: string) => string) {
-	const base = t(`sd.kind.${kind}`);
-	const skill = assignment.shape ? t(`sd.shape.${assignment.shape}`) : '';
-	return skill ? `${base} · ${skill}` : base;
-}
-
-export function StudentDashboard({ preview = false }: { preview?: boolean }) {
-	const t = useT();
- const label = useStudentHomeText();
-	const language = useLanguage();
-	const [query, setQuery] = useState('');
-	const [now, setNow] = useState<number | null>(null);
-
-	// `now` is only needed to tell future sessions from past ones, which is a
-	// client-only concern. Set it in an effect so the server render and the
-	// first client render agree (both render the loading state).
-	useEffect(() => {
-		setNow(Date.now());
-	}, []);
-
-	// Cached reads, returning to the ruang belajar reuses these rows.
-	const coursesQuery = useCachedQuery<Course[]>('courses:all:title', () =>
-		pb.collection('courses').getFullList<Course>({ sort: 'title' }),
-	);
-	const enrollmentsQuery = useCachedQuery<EnrichedEnrollment[]>('enrollments:mine', () =>
-		pb
-			.collection('enrollments')
-			.getFullList<EnrichedEnrollment>({
-				filter: pb.filter('owner = {:me}', { me: pb.authStore.record?.id }),
-				expand: 'course',
-				sort: '-created',
-			}),
-	);
-	const sessionsQuery = useCachedQuery<ClassSession[]>('class_sessions:all:date', () =>
-		pb.collection('class_sessions').getFullList<ClassSession>({ sort: 'date' }),
-	);
-	// Student-visible assignments across every enrolled course. The collection's
-	// list rule already hides drafts and non-enrolled courses, so this reuses
-	// existing data, not a new endpoint.
-	const assignmentsQuery = useCachedQuery<Assignment[]>('assignments:student:all', () =>
-		pb.collection('assignments').getFullList<Assignment>({
-			sort: '-updated',
-			expand: 'session,subCpmk,parentAssignment',
-		}),
-	);
-	const me = pb.authStore.record?.id || '';
-	const submissionsQuery = useCachedQuery<AssignmentSubmission[]>(
-		me ? `assignment_submissions:mine:all:${me}` : null,
-		() =>
-			pb.collection('assignment_submissions').getFullList<AssignmentSubmission>({
-				filter: pb.filter('owner = {:me}', { me }),
-				sort: '-updated',
-			}),
-	);
-
-	const courses = coursesQuery.data ?? [];
-	const enrollments = enrollmentsQuery.data ?? [];
-	const sessions = sessionsQuery.data ?? [];
-	const assignments = assignmentsQuery.data ?? [];
-	const submissions = submissionsQuery.data ?? [];
-	const loading =
-		coursesQuery.loading ||
-		enrollmentsQuery.loading ||
-		sessionsQuery.loading ||
-		assignmentsQuery.loading ||
-		submissionsQuery.loading;
-	const error =
-		coursesQuery.error ||
-		enrollmentsQuery.error ||
-		sessionsQuery.error ||
-		assignmentsQuery.error ||
-		submissionsQuery.error;
-	const load = () => {
-		coursesQuery.reload();
-		enrollmentsQuery.reload();
-		sessionsQuery.reload();
-		assignmentsQuery.reload();
-		submissionsQuery.reload();
-	};
-
-	const enrolledCourseIds = useMemo(() => new Set(preview ? courses.filter(c => c.owner === pb.authStore.record?.id).map(c => c.id) : enrollments.map((e) => e.course)), [enrollments, courses, preview]);
-	const myCourses = useMemo(
-		() => courses.filter((c) => enrolledCourseIds.has(c.id)),
-		[courses, enrolledCourseIds],
-	);
-	const mySessions = useMemo(
-		() =>
-			sessions
-				.filter((s) => enrolledCourseIds.has(s.course))
-				.sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999')),
-		[sessions, enrolledCourseIds],
-	);
-	const myAssignments = useMemo(
-		() => assignments.filter((a) => enrolledCourseIds.has(a.course) && a.status !== 'draft'),
-		[assignments, enrolledCourseIds],
-	);
-	const courseById = useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
-	const subsByAssignment = useMemo(() => {
-		const map = new Map<string, AssignmentSubmission>();
-		for (const s of submissions) if (!map.has(s.assignment)) map.set(s.assignment, s);
-		return map;
-	}, [submissions]);
-
-	// ── Resume / next-action items ──────────────────────────────
-	// In-progress or actionable work: saved drafts, requested revisions,
-	// unstarted formal tasks, and repeatable formative practice. Ordered by
-	// most recent touch so the work the student just left is on top.
-	const resumeItems = useMemo<ResumeItem[]>(() => {
-		const items: ResumeItem[] = [];
-		for (const assignment of myAssignments) {
-			const course = courseById.get(assignment.course);
-			if (!course) continue;
-			const routeId = courseRouteId(course);
-			const formative = activityTypeOf(assignment) === 'formative';
-			const submission = subsByAssignment.get(assignment.id);
-			const href = studentWorkPath(assignment.id);
-			if (formative) {
-				items.push({
-					assignment,
-					submission,
-					course,
-					routeId,
-					kind: 'practice',
-					label: typeLine('practice', assignment, t),
-					href,
-					touched: submission?.updated || assignment.updated,
-				});
-				continue;
-			}
-			// Formal task.
-			const status = submission?.status;
-			if (status === 'draft') {
-				items.push({
-					assignment,
-					submission,
-					course,
-					routeId,
-					kind: 'draft',
-									label: typeLine('draft', assignment, t),
-					href,
-					touched: submission!.updated,
-				});
-			} else if (status === 'revision') {
-				items.push({
-					assignment,
-					submission,
-					course,
-					routeId,
-					kind: 'revision',
-									label: typeLine('revision', assignment, t),
-					href,
-					touched: submission!.updated,
-				});
-			} else if (!submission) {
-				// Published formal task not yet started.
-				items.push({
-					assignment,
-					course,
-					routeId,
-					kind: 'assigned',
-					label: typeLine('assigned', assignment, t),
-					href,
-					touched: assignment.updated,
-				});
-			}
-			// A graded formal task with lecturer feedback is a clear next
-			// action: review the result, then practise / resubmit if a linked
-			// practice exists.
-			if (status === 'graded') {
-				items.push({
-					assignment,
-					submission,
-					course,
-					routeId,
-					kind: 'feedback',
-					label: typeLine('feedback', assignment, t),
-					href,
-					touched: submission!.gradedAt || submission!.updated,
-				});
-			}
-			// submitted / late (not yet graded) are awaiting review, not actionable.
-		}
-		return items.sort((a, b) => {
-			const p = KIND_PRIORITY[a.kind] - KIND_PRIORITY[b.kind];
-			if (p !== 0) return p;
-			return (b.touched || '').localeCompare(a.touched || '');
-		});
-	}, [myAssignments, courseById, subsByAssignment, t]);
-
-	const primary = resumeItems[0];
-
-	// ── Outstanding task count per course (for course card badges) ──
-	const outstandingByCourse = useMemo(() => {
-		const counts = new Map<string, number>();
-		for (const item of resumeItems) {
-			// Graded work with feedback is done, not outstanding — exclude it
-			// from the "belum selesai" badge count on course cards.
-			if (item.kind === 'feedback') continue;
-			counts.set(item.assignment.course, (counts.get(item.assignment.course) || 0) + 1);
-		}
-		return counts;
-	}, [resumeItems]);
-
-	// ── Sessions panel ──────────────────────────────────────────
-	// Only treat the panel as time-ordered "upcoming" when at least one
-	// session actually has a date. Otherwise group by week so undated rows
-	// are not presented as time-sorted.
-	const hasDates = mySessions.some((s) => validDate(s.date));
-	const incompleteSessions = useMemo(
-		() => mySessions.filter((s) => !s.completed),
-		[mySessions],
-	);
-
-	const todayStart = now === null ? null : new Date(now).setHours(0, 0, 0, 0);
-	const upcomingIncompleteSessions = useMemo(
-		() => incompleteSessions.filter((session) =>
-			validDate(session.date) && todayStart !== null && new Date(session.date).getTime() >= todayStart,
-		),
-		[incompleteSessions, todayStart],
-	);
-	const sessionFocus = useMemo<ClassSession | null>(() => {
-		if (incompleteSessions.length === 0) return null;
-		if (hasDates) {
-			return upcomingIncompleteSessions
-				.slice()
-				.sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0] ?? null;
-		}
-		return incompleteSessions.slice().sort((a, b) => (a.week || 9999) - (b.week || 9999))[0];
-	}, [incompleteSessions, hasDates, upcomingIncompleteSessions]);
-
-	const sessionRest = useMemo<ClassSession[]>(() => {
-		if (!sessionFocus) return [];
-		const source = hasDates ? upcomingIncompleteSessions : incompleteSessions;
-		const others = source.filter((s) => s.id !== sessionFocus.id);
-		if (hasDates) {
-			return others
-				.sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-				.slice(0, 4);
-		}
-		return others.sort((a, b) => (a.week || 9999) - (b.week || 9999)).slice(0, 4);
-	}, [sessionFocus, incompleteSessions, upcomingIncompleteSessions, hasDates]);
-
-	const taskProgressByCourse = useMemo(() => {
-		const progress = new Map<string, { submitted: number; total: number }>();
-		for (const assignment of myAssignments) {
-			if (activityTypeOf(assignment) !== 'formal') continue;
-			const current = progress.get(assignment.course) ?? { submitted: 0, total: 0 };
-			current.total += 1;
-			const status = subsByAssignment.get(assignment.id)?.status;
-			if (isCollectedSubmission({ status: status || 'draft' })) current.submitted += 1;
-			progress.set(assignment.course, current);
-		}
-		return progress;
-	}, [myAssignments, subsByAssignment]);
-
-	// ── Catalog (only when there is something to browse) ───────
-	const catalog = useMemo(
-		() =>
-			courses.filter((c) => {
-				if (enrolledCourseIds.has(c.id)) return false;
-				if (!query.trim()) return true;
-				const q = query.toLowerCase();
-				return (
-					c.title.toLowerCase().includes(q) ||
-					c.code.toLowerCase().includes(q) ||
-					c.description.toLowerCase().includes(q)
-				);
-			}),
-		[courses, enrolledCourseIds, query],
-	);
-
-	return (
-		<AppShell title={t('sd.title')} eyebrow={t('sd.eyebrow')} variant="saas" hideHeading>
-                {!preview && <BuilderRunList />}
-			{error && (
-				<div className="ld-alert" role="alert">
-					{error}{' '}
-					<button type="button" onClick={() => void load()}>
-						{t('sd.retry')}
-					</button>
-				</div>
-			)}
-			{loading ? (
-				<div className="ld-loading">
-					<LoaderCircle size={24} className="spin" /> {t('sd.loading')}
-				</div>
-			) : (
-				<div className="ld-student sd-adventure-page">
-                    {primary && <Link to={primary.href} className="sd-game-task-reminder"><span className="sd-game-task-icon"><BookOpen size={18} /></span><span><small>{label('Tugas kelas')} · {primary.course.title}</small><strong>{primary.assignment.title}</strong></span><span className="sd-game-task-action">{t(`sd.cta.${primary.kind}`)} <ArrowRight size={16} /></span></Link>}
-                    <StudentHomeAdventure courses={myCourses} preview={preview} />
-                    <details className="sd-game-coursework">
-                        <summary>{label('Kelas & tugas')} <span>{primary ? `${primary.course.title} · ${primary.assignment.title}` : label('Materi, tugas, dan jadwal kelasmu')}</span></summary>
-                        {primary && <section className="sd-resume"><div className="sd-resume-primary"><div className="sd-resume-copy"><span className="sd-resume-eyebrow">{primary.label}</span><h2>{primary.assignment.title}</h2><p className="sd-resume-meta">{primary.course.title}</p></div><Link to={primary.href} className="sd-resume-cta">{t(`sd.cta.${primary.kind}`)} <ArrowRight size={16} /></Link></div></section>}
-					<div className="ld-student-grid">
-						<section className="ld-panel">
-							<div className="ld-card-head">
-								<h2>{t('sd.myCourses')}</h2>
-								<span className="ld-chip">{myCourses.length === 1 ? t('sd.classOne') : t('sd.classes', { n: String(myCourses.length) })}</span>
-							</div>
-							{myCourses.length === 0 ? (
-								<div className="ld-empty">
-									<div className="ld-empty-icon">
-										<BookOpen size={26} strokeWidth={1.4} />
-									</div>
-									<h3>{t('sd.noCourses')}</h3>
-									<p>
-										{t('sd.noCoursesSub')}
-										
-									</p>
-								</div>
-							) : (
-								<ul className="sd-course-list">
-									{myCourses.map((course) => {
-										const courseSessions = mySessions.filter((s) => s.course === course.id);
-										const taskProgress = taskProgressByCourse.get(course.id) ?? { submitted: 0, total: 0 };
-										const pct = taskProgress.total === 0 ? 0 : Math.round((taskProgress.submitted / taskProgress.total) * 100);
-										const next = courseSessions
-											.filter((s) => !s.completed && (!hasDates || (todayStart !== null && validDate(s.date) && new Date(s.date).getTime() >= todayStart)))
-											.sort((a, b) => {
-												if (hasDates) return (a.date || '').localeCompare(b.date || '');
-												return (a.week || 9999) - (b.week || 9999);
-											})[0];
-										const outstanding = outstandingByCourse.get(course.id) || 0;
-										return (
-											<li key={course.id}>
-												<article className="sd-course-card">
-													<CourseThumb course={course} />
-													<div className="sd-course-body">
-														<div className="sd-course-head">
-															<strong>{course.title}</strong>
-															<StudentSectionChip courseId={course.id} />
-															{outstanding > 0 && (
-												<span className="sd-task-badge" title={t('sd.outstandingTasks')}>
-																	{outstanding}
-																</span>
-															)}
-														</div>
-														<small>
-															{course.code || t('sd.noCode')}
-															{course.semester ? ` · ${course.semester}` : ''}
-														</small>
-														{next ? (
-															<p className="sd-course-next">
-																<CalendarDays size={12} />
-												{t('sd.next', { n: next.week ? String(next.week).padStart(2, '0') : '-' })}
-																{next.title ? ` · ${next.title}` : ''}
-															</p>
-														) : (
-															<p className="sd-course-next muted">
-																<CalendarDays size={12} />
-																{t('sd.noNext')}
-															</p>
-														)}
-														<div className="sd-course-foot">
-															<div className="ld-progress-wrap">
-																<div className="ld-progress">
-																	<span style={{ width: `${pct}%` }} />
-																</div>
-																<em>{pct}%</em>
-															</div>
-															<span className="sd-sesi-count">
-										{taskProgress.total > 0
-											? t('sd.tasksSubmitted', { done: String(taskProgress.submitted), total: String(taskProgress.total) })
-											: t('sd.noFormalTasks')}
-															</span>
-														</div>
-													</div>
-													<CardCta to={`/app/courses/${courseRouteId(course)}`} label={t('sd.open')} />
-												</article>
-											</li>
-										);
-									})}
-								</ul>
-							)}
-						</section>
-
-						<aside className="ld-panel">
-							<div className="ld-card-head">
-								<h2>{hasDates ? t('sd.upcoming') : t('sd.schedule')}</h2>
-								<CalendarDays size={18} className="ld-spark" />
-							</div>
-							{sessionFocus ? (
-								<>
-									<div className="sd-focus-session">
-										<span className="sd-focus-eyebrow">
-											{hasDates ? t('sd.nextSession') : t('sd.nextMeeting')}
-										</span>
-										<strong>{sessionFocus.title || t('sd.noTitle')}</strong>
-										<div className="sd-focus-meta">
-											<span>
-												{t('sd.week', { n: sessionFocus.week ? String(sessionFocus.week).padStart(2, '0') : '-' })}
-											</span>
-											{hasDates && validDate(sessionFocus.date) ? (
-												<span>{studentDate(sessionFocus.date, language)}</span>
-											) : null}
-											<span>
-												{courseById.get(sessionFocus.course)?.title || t('sd.course')}
-											</span>
-										</div>
-									</div>
-									{sessionRest.length > 0 && (
-										<ul className="sd-session-rest">
-											{sessionRest.map((s) => (
-												<li key={s.id}>
-													<span className="sd-sch-week">
-														{s.week ? String(s.week).padStart(2, '0') : '-'}
-													</span>
-													<div>
-														<strong>{s.title || t('sd.noTitle')}</strong>
-														<small>
-															{courseById.get(s.course)?.title || t('sd.course')}
-														{hasDates && validDate(s.date) ? ` · ${studentDate(s.date, language)}` : ''}
-														</small>
-													</div>
-												</li>
-											))}
-										</ul>
-									)}
-								</>
-							) : (
-								<div className="ld-empty-sm">
-									{myCourses.length > 0
-									? (hasDates ? t('sd.noUpcoming') : t('sd.allDone'))
-										: t('sd.noSessions')}
-								</div>
-							)}
-						</aside>
-					</div>
-
-					{catalog.length > 0 && (
-						<section className="ld-panel" id="jelajahi">
-							<div className="ld-card-head">
-								<h2>{t('sd.explore')}</h2>
-								<span className="ld-chip">{catalog.length === 1 ? t('sd.availableOne') : t('sd.available', { n: String(catalog.length) })}</span>
-							</div>
-							<label className="ld-search-bar">
-								<Search size={16} strokeWidth={1.75} aria-hidden />
-								<input
-									type="search"
-									placeholder={t('sd.searchPlaceholder')}
-									value={query}
-									onChange={(e) => setQuery(e.target.value)}
-									aria-label={t('sd.searchLabel')}
-								/>
-							</label>
-							<ul className="ld-course-rows">
-								{catalog.map((course) => (
-									<li key={course.id}>
-										<article className="ld-course-row compact">
-											<CourseThumb course={course} />
-											<div className="ld-course-meta">
-												<strong>{course.title}</strong>
-												<small>
-													{course.code || t('sd.noCode')}
-													{course.semester ? ` · ${course.semester}` : ''}
-													{course.rps ? ' · RPS tersedia' : ''}
-													{course.syllabus ? ' · Silabus tersedia' : ''}
-												</small>
-											</div>
-											<CardCta to={`/app/courses/${courseRouteId(course)}`} label={t('sd.view')} />
-										</article>
-									</li>
-								))}
-							</ul>
-						</section>
-					)}
-                    </details>
-				</div>
-			)}
-		</AppShell>
-	);
+function SectionError({onRetry,labels}:{onRetry:()=>void;labels:Labels}){return <div className="sd2-error" role="alert"><span>{labels.error}</span><button type="button" onClick={onRetry}>{labels.retry}</button></div>;}
+export function StudentDashboard({preview=false}:{preview?:boolean}){
+ const language=useLanguage(),l=copy[language],user=pb.authStore.record,me=user?.id||'';
+ const [localNow,setLocalNow]=useState(Date.now()),[clockOffset,setClockOffset]=useState(0),[showAll,setShowAll]=useState(false),[calendarDay,setCalendarDay]=useState('');
+ const now=localNow+clockOffset;
+ useEffect(()=>{const timer=window.setInterval(()=>setLocalNow(Date.now()),30000);return()=>window.clearInterval(timer);},[]);
+ const coursesQuery=useCachedQuery<Course[]>(`student-dashboard:courses:${me}`,()=>pb.collection('courses').getFullList<Course>({sort:'title'}));
+ const enrollmentsQuery=useCachedQuery<EnrollmentWithCourse[]>(preview?null:`student-dashboard:enrollments:${me}`,()=>pb.collection('enrollments').getFullList<EnrollmentWithCourse>({filter:pb.filter('owner = {:me}',{me}),expand:'course'}));
+ const assignmentsQuery=useCachedQuery<Assignment[]>(preview?null:`student-dashboard:assignments:${me}`,()=>pb.collection('assignments').getFullList<Assignment>({sort:'-updated',expand:'session,subCpmk,parentAssignment'}));
+ const submissionsQuery=useCachedQuery<AssignmentSubmission[]>(preview?null:`student-dashboard:submissions:${me}`,()=>pb.collection('assignment_submissions').getFullList<AssignmentSubmission>({filter:pb.filter('owner = {:me}',{me}),sort:'-updated'}));
+ const liveQuery=useCachedQuery<{items:StudentLiveClass[];serverNow?:string}>(preview?null:`student-dashboard:live:${me}`,()=>pb.send('/api/laras/student-scheduled-classes',{method:'GET',requestKey:null}));
+ const runsQuery=useCachedQuery<{items:BuilderRunItem[]}>(preview?null:`student-dashboard:runs:${me}`,()=>deliveryRequest('list'));
+ useEffect(()=>{const server=Date.parse(liveQuery.data?.serverNow||'');if(Number.isFinite(server)){const local=Date.now();setClockOffset(server-local);setLocalNow(local);}},[liveQuery.data]);
+ const reloadLive=liveQuery.reload,reloadRuns=runsQuery.reload;
+ useEffect(()=>{if(preview)return;const refresh=()=>{if(document.visibilityState==='visible'){reloadLive();reloadRuns();}};const timer=window.setInterval(refresh,60000);document.addEventListener('visibilitychange',refresh);return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',refresh);};},[preview,reloadLive,reloadRuns]);
+ const courses=useMemo(()=>{const ids=new Set((enrollmentsQuery.data||[]).map(e=>e.course));return (coursesQuery.data||[]).filter(c=>preview?c.owner===me:ids.has(c.id));},[coursesQuery.data,enrollmentsQuery.data,me,preview]);
+ const courseMap=useMemo(()=>new Map(courses.map(c=>[c.id,c])),[courses]);
+ const classes=useMemo(()=>dashboardClasses(liveQuery.data?.items||[],runsQuery.data?.items||[],now),[liveQuery.data,runsQuery.data,now]);
+ const work=useMemo(()=>{
+  const submissions=new Map<string,AssignmentSubmission>();for(const s of submissionsQuery.data||[])if(!submissions.has(s.assignment))submissions.set(s.assignment,s);
+  const rows:Work[]=[];
+  for(const a of assignmentsQuery.data||[]){const course=courseMap.get(a.course);if(!course||a.status==='draft'||activityTypeOf(a)!=='formal')continue;const s=submissions.get(a.id);const status=s?.status==='draft'?'draft':s?.status==='revision'?'revision':s?.status==='graded'?'feedback':!s?'assigned':null;if(status)rows.push({id:a.id,title:a.title,course:course.title,deadline:a.deadline,href:studentWorkPath(a.id),status});}
+  for(const run of runsQuery.data?.items||[]){if(run.kind!=='tugas')continue;if(run.startsAt&&Date.parse(run.startsAt)>now)continue;const status=run.submittedAt?(run.feedbackReady?'feedback':null):run.startedAt?'draft':'assigned';if(status!=='feedback'&&(run.closed||Boolean(run.closesAt&&Date.parse(run.closesAt)<=now)))continue;if(status)rows.push({id:run.id,title:run.title,course:run.courseTitle,deadline:run.dueAt,href:`/app/kegiatan/${run.id}`,status});}
+  return orderByDeadline(rows);
+ },[assignmentsQuery.data,submissionsQuery.data,courseMap,runsQuery.data,now]);
+ const pending=work.filter(item=>item.status!=='feedback'),feedback=work.filter(item=>item.status==='feedback');
+ const calendar=useMemo(()=>dashboardWeek(now,classes,pending),[now,classes,pending]);
+ const selectedDay=calendar.days.includes(calendarDay)?calendarDay:calendar.days[0];
+ const dayEvents=calendar.events.filter(event=>jakartaDay(event.date)===selectedDay);
+ const coursesLoading=coursesQuery.loading||enrollmentsQuery.loading,workLoading=coursesLoading||assignmentsQuery.loading||submissionsQuery.loading||runsQuery.loading;
+ const courseError=coursesQuery.error||enrollmentsQuery.error,workError=courseError||assignmentsQuery.error||submissionsQuery.error||runsQuery.error;
+ const retryCourses=()=>{coursesQuery.reload();enrollmentsQuery.reload();};
+ const retryWork=()=>{retryCourses();assignmentsQuery.reload();submissionsQuery.reload();runsQuery.reload();};
+ const liveError=liveQuery.error||runsQuery.error;
+ const liveItems=classes.filter(item=>item.phase==='live');const upcoming=classes.filter(item=>item.phase==='upcoming');const shown=liveItems.length?liveItems:upcoming.slice(0,3);
+ const name=String(user?.name||'').trim().split(/\s+/)[0];
+ return <AppShell title={l.eyebrow} eyebrow={l.eyebrow} variant="saas" hideHeading><div className="sd2-dashboard">
+  {preview&&<div className="sd2-preview">{l.preview} <Link to="/app">{l.back}</Link></div>}
+  <header className="sd2-header"><div><span>{l.eyebrow}</span><h1>{name?`${l.hello}, ${name}`:l.person}</h1><p>{l.intro}</p></div><div className="sd2-date"><CalendarDays size={17} aria-hidden="true"/>{new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{dateStyle:'full',timeZone:'Asia/Jakarta'}).format(new Date(now))}</div></header>
+  <section className="sd2-live-section" aria-labelledby="sd2-live-heading"><div className="sd2-section-head"><div><span className="sd2-kicker"><Radio size={15} aria-hidden="true"/> {liveItems.length?l.live:l.next}</span><h2 id="sd2-live-heading">{liveItems.length?l.live:l.next}</h2></div></div>
+   {liveError&&<SectionError onRetry={()=>{reloadLive();reloadRuns();}} labels={l}/>}
+   {!preview&&(liveQuery.loading||runsQuery.loading)&&!classes.length?<div className="sd2-empty" role="status">{l.loading}</div>:shown.length?<div className="sd2-live-list">{shown.map(item=>{const locked=!item.checkedIn&&Boolean(item.joinUntil)&&Date.parse(item.joinUntil)<=now;return <article className={`sd2-live-card ${item.phase==='live'?'is-live':'is-upcoming'}`} key={`${item.source}:${item.id}`}><div className="sd2-live-symbol"><Radio size={23} aria-hidden="true"/></div><div className="sd2-live-body"><span className="sd2-live-label"><i aria-hidden="true"/>{item.phase==='live'?l.live:l.upcoming}</span><h3>{item.title}</h3><p>{item.courseTitle}</p><div className="sd2-time"><Clock3 size={15} aria-hidden="true"/><span>{item.phase==='live'?`${l.ends}: ${dateLabel(item.endsAt,language)} · ${sessionClock(Math.max(0,Math.ceil((Date.parse(item.endsAt)-now)/1000)))}`:`${l.starts}: ${dateLabel(item.startsAt,language)}`}</span></div>{locked&&item.phase==='live'&&<small>{l.joinClosed}</small>}</div><Link className="sd2-primary" to={item.href}>{item.phase==='upcoming'||locked||item.finished?l.viewClass:item.checkedIn?l.resume:l.join}<ArrowRight size={17} aria-hidden="true"/></Link></article>;})}</div>:!liveError&&<div className="sd2-empty sd2-empty-live"><CalendarDays size={21} aria-hidden="true"/><div><strong>{l.noClass}</strong><p>{l.noClassHint}</p></div></div>}
+   {liveItems.length>0&&upcoming.length>0&&<p className="sd2-next-line">{l.next}: {upcoming[0].title} · {dateLabel(upcoming[0].startsAt,language)}</p>}
+  </section>
+  <div className="sd2-columns"><section className="sd2-panel" aria-labelledby="sd2-work-heading"><div className="sd2-panel-head"><div><h2 id="sd2-work-heading">{l.work}</h2><p>{l.workHint}</p></div><span className="sd2-count">{pending.length}</span></div>
+   {workError&&<SectionError onRetry={retryWork} labels={l}/>}
+   {workLoading?<div className="sd2-empty" role="status">{l.loading}</div>:pending.length?<ul className="sd2-work-list">{(showAll?pending:pending.slice(0,5)).map(item=><li key={`${item.href}:${item.id}`}><Link to={item.href} className="sd2-work-row"><span className="sd2-work-icon"><FileText size={18} aria-hidden="true"/></span><span className="sd2-work-copy"><strong>{item.title}</strong><small>{item.course}</small><span>{item.deadline?`${Date.parse(item.deadline)<now?l.overdue:l.due}: ${dateLabel(item.deadline,language)}`:l.noDue}</span></span><span className="sd2-work-action"><small className={`sd2-status is-${item.status}`}>{l[item.status]}</small><b>{item.status==='revision'?l.revise:item.status==='draft'?l.continue:l.start} <ArrowRight size={15} aria-hidden="true"/></b></span></Link></li>)}</ul>:!workError&&<div className="sd2-empty"><CheckCircle2 size={22} aria-hidden="true"/><div><strong>{l.allDone}</strong><p>{l.allDoneHint}</p></div></div>}
+   {pending.length>5&&!showAll&&<button type="button" className="sd2-more" onClick={()=>setShowAll(true)}>{l.more} <ArrowRight size={15}/></button>}
+  </section>
+  <section className="sd2-panel" aria-labelledby="sd2-courses-heading"><div className="sd2-panel-head"><div><h2 id="sd2-courses-heading">{l.courses}</h2><p>{l.coursesHint}</p></div><Link className="sd2-text-link" to="/app/courses">{l.allCourses}<ArrowRight size={15}/></Link></div>
+   {courseError&&<SectionError onRetry={retryCourses} labels={l}/>}
+   {coursesLoading?<div className="sd2-empty" role="status">{l.loading}</div>:courses.length?<ul className="sd2-course-list">{courses.map(course=><li key={course.id}><Link to={`/app/courses/${courseRouteId(course)}`} className="sd2-course"><CourseThumb course={course}/><span><strong>{course.title}</strong><small>{[course.code,course.semester].filter(Boolean).join(' · ')}</small></span><ArrowRight size={17} aria-hidden="true"/></Link></li>)}</ul>:!courseError&&<div className="sd2-empty"><BookOpen size={22} aria-hidden="true"/><div><strong>{l.emptyCourses}</strong><p>{l.emptyCoursesHint}</p><Link to="/app/courses">{l.allCourses} <ArrowRight size={14}/></Link></div></div>}
+  </section></div>
+  <section className="sd2-panel sd2-calendar" aria-labelledby="sd2-calendar-heading"><div className="sd2-panel-head"><div><h2 id="sd2-calendar-heading">{l.calendar}</h2><p>{l.calendarHint}</p></div><CalendarDays size={20} aria-hidden="true"/></div>
+   <div className="sd2-calendar-days" role="group" aria-label={l.calendar}>{calendar.days.map(day=>{const date=new Date(`${day}T12:00:00Z`),count=calendar.events.filter(event=>jakartaDay(event.date)===day).length;return <button type="button" key={day} aria-pressed={selectedDay===day} onClick={()=>setCalendarDay(day)} aria-label={new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{dateStyle:'full',timeZone:'Asia/Jakarta'}).format(date)}><span>{new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{weekday:'short',timeZone:'Asia/Jakarta'}).format(date)}</span><strong>{date.getUTCDate()}</strong><i className={count?'has-events':''} aria-hidden="true"/></button>;})}</div>
+   {liveError||workError?<div className="sd2-calendar-note">{l.error}</div>:liveQuery.loading||workLoading?<div className="sd2-calendar-note" role="status">{l.loading}</div>:dayEvents.length?<ul className="sd2-calendar-events">{dayEvents.map(event=><li key={event.id}><Link to={event.href}><span className={`sd2-event-icon is-${event.kind}`}>{event.kind==='class'?<Radio size={15}/>:<FileText size={15}/>}</span><span><strong>{event.title}</strong><small>{event.kind==='class'?l.classEvent:l.workEvent} · {event.detail}</small></span><time>{new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date(event.date))} WIB</time><ArrowRight size={15} aria-hidden="true"/></Link></li>)}</ul>:<p className="sd2-calendar-note">{l.noEvents}</p>}
+  </section>
+  {!workLoading&&feedback.length>0&&<section className="sd2-panel sd2-feedback" aria-labelledby="sd2-feedback-heading"><div className="sd2-panel-head"><div><h2 id="sd2-feedback-heading">{l.feedbackTitle}</h2><p>{l.feedbackHint}</p></div></div><ul>{feedback.slice(0,3).map(item=><li key={`${item.href}:${item.id}`}><Link to={item.href}><MessageCircle size={18} aria-hidden="true"/><span><strong>{item.title}</strong><small>{item.course}</small></span><b>{l.feedback} <ArrowRight size={15}/></b></Link></li>)}</ul></section>}
+ </div></AppShell>;
 }

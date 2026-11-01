@@ -225,8 +225,8 @@
 
 :root:not(.dark) .ld-layout {
 	--r-app-background:
-		radial-gradient(100% 70% at 0% 0%, rgba(179, 38, 30, 0.06), transparent 65%),
-		linear-gradient(135deg, #f0eae5 0%, #edf0f4 55%, #e8edf0 100%);
+		radial-gradient(100% 70% at 0% 0%, color-mix(in srgb, var(--r-red-600) 9%, transparent), transparent 65%),
+		linear-gradient(135deg, var(--r-surface-3) 0%, var(--r-surface-2) 60%, var(--r-canvas) 100%);
 }
 
 .ld-mast {

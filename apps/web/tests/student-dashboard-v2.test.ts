@@ -14,7 +14,7 @@ beforeEach(()=>{mock.language='id';vi.useFakeTimers();vi.setSystemTime(new Date(
 afterEach(()=>vi.useRealTimers());
 describe('student dashboard',()=>{
  it('prioritizes live class and courses and hides pending work',()=>{const html=render();expect(html.indexOf('Unterricht')).toBeLessThan(html.indexOf('Mata kuliah saya'));expect(html).not.toContain('Essay');expect(html).toContain('November 2026');expect(html).toContain('Bulan berikutnya');expect(html).toContain('Masuk kelas');expect(html).toContain('01:00:00');expect(html).toContain('/app/courses/c/pertemuan/meeting/terjadwal');expect(html).not.toContain('Petualanganmu');expect(html).not.toContain('Kegiatan diterbitkan');});
- it('shows honest empty states when there are no classes, work or courses',()=>{mock.data={courses:[],enrollments:[],assignments:[],submissions:[],live:{items:[]},runs:{items:[]}};const html=render();expect(html).toContain('Belum ada kelas terjadwal');expect(html).not.toContain('Perlu dikerjakan');expect(html).toContain('Belum ada mata kuliah');});
+ it('shows honest empty states when there are no classes, work or courses',()=>{mock.data={courses:[],enrollments:[],assignments:[],submissions:[],live:{items:[]},runs:{items:[]}};const html=render();expect(html).not.toContain('sd2-live-section');expect(html).not.toContain('Perlu dikerjakan');expect(html).toContain('Belum ada mata kuliah');});
 });
 
 describe('class arrival timing',()=>{
@@ -41,5 +41,29 @@ describe('class arrival timing',()=>{
   setClass({startsAt:'2026-11-02T06:59:00Z'});mock.language='en';expect(render()).toContain('1 minute late');expect(render()).toContain('Time remaining: 01:00:00');
   mock.language='de';expect(render()).toContain('1 Minute zu spät');
   setClass({startsAt:'2026-11-02T07:02:00Z'});expect(render()).toContain('In 2 Minuten');
+ });
+});
+
+describe('prominent class display window',()=>{
+ const setClass=(changes:Record<string,unknown>)=>{
+  const live=mock.data.live as {items:Record<string,unknown>[]};
+  Object.assign(live.items[0],changes);
+ };
+ it('shows a session at 30 minutes but keeps later sessions only in the calendar',()=>{
+  setClass({startsAt:'2026-11-02T07:30:00Z',endsAt:'2026-11-02T09:00:00Z'});
+  expect(render()).toContain('Dalam 30 menit');
+  setClass({startsAt:'2026-11-02T07:30:01Z'});
+  const html=render();expect(html).not.toContain('sd2-live-section');expect(html).toContain('Unterricht');expect(html).toContain('/app/courses/c/pertemuan/meeting/terjadwal');
+ });
+ it('does not promote a distant next session beneath a live class',()=>{
+  const live=mock.data.live as {items:Record<string,unknown>[]};
+  live.items.push({...live.items[0],id:'distant',sessionId:'later',title:'Distant class',startsAt:'2026-11-05T07:00:00Z',endsAt:'2026-11-05T08:00:00Z'});
+  const html=render();expect(html).toContain('Masuk kelas');expect(html).not.toContain('Distant class');expect(html).not.toContain('sd2-next-line');
+ });
+ it('applies the same window to builder classes',()=>{
+  mock.data.live={items:[]};
+  const run={id:'builder',kind:'kelas',title:'Builder session',courseTitle:'Deutsch',startsAt:'2026-11-02T07:30:00Z',dueAt:'2026-11-02T09:00:00Z',startedAt:'',submittedAt:'',closed:false};
+  mock.data.runs={items:[run]};expect(render()).toContain('Dalam 30 menit');
+  run.startsAt='2026-11-02T08:00:00Z';const html=render();expect(html).not.toContain('sd2-live-section');expect(html).toContain('Builder session');
  });
 });

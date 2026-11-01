@@ -216,7 +216,7 @@
 	border-radius: 0;
 	padding: 17px 20px;
 }
-.ld-dash .ld-stat { border: 0; border-right: 1px solid var(--p-line); border-radius: 0; background: transparent; }
+.ld-dash .ld-stat { border: 0; border-right: 1px solid var(--p-line); border-radius: 0; background: var(--r-surface); }
 .ld-stat:last-child { border-right: 0; }
 .ld-stat strong { font-size: 30px; font-weight: 600; }
 .ld-stat-ico { width: 29px; height: 29px; border-radius: 7px; }

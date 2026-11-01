@@ -217,16 +217,14 @@
 /* ── 2. App shell ───────────────────────────────────────────────────────── */
 
 .ld-layout {
-	--r-app-background: var(--r-canvas);
+	--r-app-background: radial-gradient(ellipse 75% 65% at 100% 0%, #B3261E 0%, rgba(179, 38, 30, 0.22) 28%, rgba(179, 38, 30, 0) 68%), #fff;
 	--body: 'Plus Jakarta Sans', system-ui, sans-serif;
 	color: var(--r-ink);
 	background: var(--r-canvas);
 }
 
-:root:not(.dark) .ld-layout {
-	--r-app-background:
-		radial-gradient(100% 70% at 0% 0%, color-mix(in srgb, var(--r-red-600) 9%, transparent), transparent 65%),
-		linear-gradient(135deg, var(--r-surface-3) 0%, var(--r-surface-2) 60%, var(--r-canvas) 100%);
+:root.dark .ld-layout {
+	--r-app-background: radial-gradient(ellipse 75% 65% at 100% 0%, #B3261E 0%, rgba(179, 38, 30, 0.22) 28%, rgba(179, 38, 30, 0) 68%), #171b22;
 }
 
 .ld-mast {
@@ -587,15 +585,8 @@
 
 /* ── 6. Student: keep the adventure, unify execution ────────────────────── */
 
-/* Share the softer light app canvas; preserve the separate dark student treatment. */
 .student-adventure-shell .ld-main {
 	background: var(--r-app-background);
-}
-
-:root.dark .student-adventure-shell .ld-main {
-	background:
-		radial-gradient(120% 60% at 8% -12%, rgba(240, 113, 104, 0.14), transparent 62%),
-		linear-gradient(180deg, #171214 0%, var(--r-canvas) 320px);
 }
 
 .student-page-banner {

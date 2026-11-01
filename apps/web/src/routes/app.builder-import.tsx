@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, redirect, useParams } from 'react-router';
 import { AppShell } from '@/components/app/app-shell';
 import { requireAuth } from '@/lib/require-auth';
-import pb from '@/lib/pocketbase-client';
-import type { BuilderImportJob } from '@/lib/builder-import';
+import { builderImportRequest, type BuilderImportJob } from '@/lib/builder-import';
 import '@/styles/builder-workspace.css';
 export function meta(){return [{title:'Dari halaman buku | LARAS'}];}
 export function clientLoader(){const user=requireAuth();if(user.role!=='faculty')throw redirect('/app/student');return {user};}
@@ -12,8 +11,8 @@ export function HydrateFallback(){return <p className="route-loading">Membuka im
 export default function ImportRoute(){const {jobId=''}=useParams();return <AppShell title="Dari halaman buku" eyebrow="BUILDER" variant="saas" hideHeading><ImportStatus key={jobId} id={jobId}/></AppShell>;}
 function ImportStatus({id}:{id:string}){
  const [job,setJob]=useState<BuilderImportJob|null>(null),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
- useEffect(()=>{let live=true,timer:ReturnType<typeof setTimeout>;const load=async()=>{try{const next=await pb.send<BuilderImportJob>('/api/builder-import',{method:'POST',body:{action:'get',id},requestKey:null});if(!live)return;setJob(next);setError('');if(next.status==='queued'||next.status==='running')timer=setTimeout(()=>void load(),3000);}catch(e){if(live)setError((e as Error).message||'Status belum dapat dimuat.');}};void load();return()=>{live=false;clearTimeout(timer);};},[id,refresh]);
- const retry=async()=>{try{setError('');await pb.send('/api/builder-import',{method:'POST',body:{action:'retry',id},requestKey:null});setRefresh(n=>n+1);}catch(e){setError((e as Error).message);}};
+ useEffect(()=>{let live=true,timer:ReturnType<typeof setTimeout>;const load=async()=>{try{const next=await builderImportRequest<BuilderImportJob>({action:'get',id});if(!live)return;setJob(next);setError('');if(next.status==='queued'||next.status==='running')timer=setTimeout(()=>void load(),3000);}catch(e){if(live)setError((e as Error).message||'Status belum dapat dimuat.');}};void load();return()=>{live=false;clearTimeout(timer);};},[id,refresh]);
+ const retry=async()=>{try{setError('');await builderImportRequest({action:'retry',id});setRefresh(n=>n+1);}catch(e){setError((e as Error).message);}};
  return <section className="bd-new bd-import-status">
   <span className="bd-kicker">DARI HALAMAN BUKU</span><h1>{job?.status==='ready'?'Draf siap dibuka':job?.status==='failed'?'Halaman belum berhasil dibangun':'Menyusun halaman menjadi kegiatan'}</h1>
   {error&&<p role="alert" className="bd-error">{error} <button className="bd-secondary" onClick={()=>setRefresh(n=>n+1)}>Muat ulang status</button></p>}

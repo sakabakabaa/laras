@@ -146,7 +146,7 @@ try {
   await call(student, 'submit', {activityId: quiz, baseRevision: savedQuiz.revision, requestId: randomUUID(), answers: {q0: 0}});
   await call(student, 'submit', {activityId: writing, baseRevision: 0, requestId: randomUUID(), answers: {text: 'My explanation'}});
   await retime(195000);
-  await call(student, 'saveAnswer', {activityId: exit, baseRevision: 0, requestId: randomUUID(), answers: {text: 'My reflection'}});
+  await call(student, 'saveAnswer', {activityId: exit, baseRevision: 0, requestId: randomUUID(), answers: {text: 'My reflection', feedback: 'More speaking practice, please.'}});
   // End while no student or lecturer is visiting the classroom.
   await retime(255000);
   if (binary) {await stop(); await launch();}
@@ -154,7 +154,7 @@ try {
   const attempts = await ok(records('scheduled_activity_attempts') + '?filter=' + encodeURIComponent(`class="${classId}"`), {}, admin, 'GET');
   assert(attempts.items.every(t => t.status !== 'draft')); assertions++;
   await denied(second, 'saveAnswer', {activityId: quiz, baseRevision: 2, requestId: randomUUID(), answers: {q0: 0}});
-  s = await call(student, 'state'); assert.equal(s.class.phase, 'closed'); assert.equal(s.participant.checkedInAt, joined); assertions += 2;
+  s = await call(student, 'state'); assert.equal(s.attempts.find(t => t.activity === exit).answers.feedback, 'More speaking practice, please.'); assertions++; assert.equal(s.class.phase, 'closed'); assert.equal(s.participant.checkedInAt, joined); assertions += 2;
   // Current upstream automatically reveals objective results once required work is complete.
   assert.equal(s.class.resultsReady, true); assert.equal(s.attempts.find(t => t.activity === quiz).score, 100); assertions += 2;
   state = await call(teacher, 'state'); assert.equal(state.report.find(r => r.student === student.id).suggestion, 'present'); assertions++;

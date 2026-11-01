@@ -9,8 +9,10 @@ function shellRule(selector: string) {
 }
 
 describe('student app shell theme backgrounds', () => {
-	it('uses the white surface in light mode', () => {
-		expect(shellRule('.student-adventure-shell .ld-main')).toMatch(/background:\s*var\(--r-surface\);/);
+	it('uses the shared soft gradient canvas in light mode', () => {
+		expect(shellRule('.student-adventure-shell .ld-main')).toMatch(/background:\s*var\(--r-app-background\);/);
+		expect(shellRule('.ld-main')).toMatch(/background:\s*var\(--r-app-background\);/);
+		expect(shellRule(':root:not(.dark) .ld-layout')).toContain('linear-gradient(');
 	});
 
 	it('keeps the dark shell background in dark mode', () => {

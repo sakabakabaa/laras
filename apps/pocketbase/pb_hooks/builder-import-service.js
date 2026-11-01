@@ -27,7 +27,7 @@ function handle(app,user,b){
   if(r.getString('status')!=='queued'&&!(r.getString('status')==='running'&&r.getFloat('leaseUntil')<Date.now()))return null;
   if(r.getInt('attempts')>=3){r.load({status:'failed',error:'Impor belum selesai setelah tiga percobaan. Buat impor baru dengan gambar yang lebih jelas.'});app.save(r);return null;}
   if(typeof b.lease!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(b.lease))throw new BadRequestError('Lease tidak valid.');
-  r.load({status:'running',lease:b.lease,leaseUntil:Date.now()+240000,attempts:r.getInt('attempts')+1});app.save(r);return view(r);
+  r.load({status:'running',lease:b.lease,leaseUntil:Date.now()+360000,attempts:r.getInt('attempts')+1});app.save(r);return view(r);
  }
  if(!['finish','fail'].includes(b.action)||r.getString('status')!=='running'||b.lease!==r.getString('lease')||r.getFloat('leaseUntil')<Date.now())throw new BadRequestError('Pekerjaan sudah berubah. Muat ulang status.');
  if(b.action==='fail'){r.load({status:'failed',error:String(b.error||'Impor gagal.').slice(0,1000),lease:'',leaseUntil:0});app.save(r);return view(r);}

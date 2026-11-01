@@ -18,6 +18,7 @@ import type {
 	ScheduledLesson,
 } from '@/lib/scheduled-lesson';
 
+import { BuilderClassroomMatching, BuilderClassroomQuestions, matchingPictures } from './builder-classroom-blocks';
 import { BuilderMediaEditor, BuilderMediaView } from './builder-media';
 
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
@@ -1063,6 +1064,7 @@ export function BuilderPreview({
 	activityId,
 	readOnly = false,
 	live = false,
+	classroom = false,
 }: {
 	document: BuilderEnvelope['document'];
 	answers?: Record<string, string>;
@@ -1070,6 +1072,7 @@ export function BuilderPreview({
 	activityId?: string;
 	readOnly?: boolean;
 	live?: boolean;
+	classroom?: boolean;
 }) {
 	const [localAnswers, setLocalAnswers] = useState<Record<string, string>>({});
 	const answers = suppliedAnswers || localAnswers;
@@ -1118,9 +1121,8 @@ export function BuilderPreview({
 		const url = safeUrl(b.url);
 		switch (b.type) {
 			case 'instructions':
-				return (
-					<p className="bd-prose">{plain(b.body) || 'Instruksi belum diisi'}</p>
-				);
+                if (classroom && d.activities.find(a=>a.blocks.some(block=>block.id===b.id))?.blocks.find(block=>block.type==='instructions')?.id===b.id) return <section className="sc-activity-brief"><h3>Yang perlu Anda lakukan</h3><p className="sc-prose">{plain(b.body)||'Instruksi belum diisi'}</p></section>;
+				return <p className="bd-prose">{plain(b.body) || 'Instruksi belum diisi'}</p>;
 			case 'acknowledgement':
 				return (
 					<label className="bd-check">
@@ -1156,6 +1158,12 @@ export function BuilderPreview({
 					<p>Penjelasan belum diisi.</p>
 				);
 			case 'matching':
+				if (classroom) {
+                    const activity=d.activities.find(a=>a.blocks.some(block=>block.id===b.id));
+                    const at=activity?.blocks.findIndex(block=>block.id===b.id)??-1;
+                    const prior=activity?.blocks[at-1];
+                    return <BuilderClassroomMatching key={b.id} block={b} document={d} images={matchingPictures(b,prior?.type==='image'?prior.images:undefined)} answers={answers} onChange={setAnswers}/>;
+                }
 				return b.destinations?.length && b.questionIds?.length ? (
 					<ScheduledCardMatching
 						sheet={{
@@ -1209,9 +1217,13 @@ export function BuilderPreview({
 					</div>
 				);
 			default:
-				return questionIds(b).map(question);
+				return classroom ? <BuilderClassroomQuestions ids={questionIds(b)} document={d} answers={answers} onChange={setAnswers}/> : questionIds(b).map(question);
 		}
 	};
+    if (classroom) return <div className="bd-student-preview bd-classroom-content">{d.activities.filter(a=>!activityId||a.id===activityId).map(a=><fieldset className="sc-fields" disabled={readOnly} key={a.id}>{a.blocks.map((b,i)=>{
+        if(b.type==='image'&&a.blocks[i+1]?.type==='matching'&&matchingPictures(a.blocks[i+1],b.images))return null;
+        return <div className={`bd-preview-block bd-classroom-block is-${b.type}`} key={b.id}>{render(b)}</div>;
+    })}</fieldset>)}</div>;
 	return (
 		<div className="bd-student-preview">
 			{!live && (

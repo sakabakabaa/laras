@@ -1,0 +1,32 @@
+/* Reuse the original classroom surface, without a second bordered preview panel. */
+.bd-preview-page .bd-preview-frame.is-classroom{border:0;padding:0;background:transparent}
+.bd-preview-page-header.sc-heading h1{font-size:var(--r-type-title-size);line-height:1.2;margin-top:8px}
+.bd-classroom-preview .sc-card{margin-bottom:24px}
+.bd-classroom-preview-controls>h2{margin-top:0}
+.bd-classroom-preview-controls>p{color:var(--r-ink-2)}
+.bd-preview-simulation{margin-top:14px;color:var(--r-ink-2);font-size:var(--r-type-meta-size)}
+.bd-preview-simulation>.bd-inline-actions{margin-top:12px}
+.bd-classroom-content{padding:0}
+.bd-classroom-content>.sc-fields{margin:0;padding:0;border:0;min-width:0}
+.bd-classroom-block.is-instructions{margin:20px 0 24px;line-height:1.75}
+.bd-classroom-content .sc-worksheet{margin:24px 0}
+.bd-classroom-content .sc-worksheet>ol{display:grid;gap:16px}
+.bd-classroom-content .sc-worksheet li{border:1px solid var(--r-border);border-radius:10px}
+.bd-classroom-content .sc-worksheet textarea{width:100%;box-sizing:border-box}
+.bd-classroom-content .bd-gap-input{display:inline-block;width:14ch;min-height:44px;padding:8px 10px;border:1px solid var(--r-border);border-radius:6px;background:var(--r-surface);font:inherit}
+.bd-classroom-preview .sc-answer-footer{margin-top:24px}
+.bd-classroom-preview .sc-activity-heading{margin-top:0}
+.bd-preview-frame.is-mobile .sc-preview-navigation{grid-template-columns:1fr 1fr}
+.bd-preview-frame.is-mobile .sc-preview-navigation>span{grid-column:1/-1;grid-row:1}
+.bd-preview-frame.is-mobile .sc-preview-navigation button{width:100%}
+.bd-preview-frame.is-mobile .sc-activity-heading{flex-direction:column}
+.bd-preview-frame.is-mobile .sc-student-clock{display:flex;align-items:center;justify-content:space-between;width:100%;box-sizing:border-box}
+.bd-preview-frame.is-mobile .sc-student .sc-workspace{padding:16px}
+.bd-preview-frame.is-mobile .sc-match-targets{grid-template-columns:1fr}
+.bd-preview-frame.is-mobile .sc-match-target>header{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:center;text-align:start}
+.bd-preview-frame.is-mobile .sc-match-target img{height:130px}
+@media(max-width:600px){.bd-classroom-preview .sc-card{margin-bottom:16px}.bd-preview-page-header.sc-heading h1{font-size:24px}}
+
+.bd-preview-frame.is-mobile .sc-worksheet-paired>ol{grid-template-columns:1fr}
+.bd-preview-frame.is-mobile .sc-answer-footer .sc-actions{display:flex;flex-wrap:nowrap}
+.bd-preview-frame.is-mobile .sc-answer-footer .sc-actions>button{flex:1;min-width:0;white-space:normal}

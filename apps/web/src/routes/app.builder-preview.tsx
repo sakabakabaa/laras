@@ -4,7 +4,10 @@ import { requireAuth } from '@/lib/require-auth';
 import { builderRequest, type BuilderDocument, type BuilderRecord } from '@/lib/builder-document';
 import { AppShell } from '@/components/app/app-shell';
 import { BuilderJourneyPreview } from '@/components/app/builder/builder-journey-preview';
+import '@/styles/scheduled-classes.css';
+import '@/styles/scheduled-student-workspace.css';
 import '@/styles/builder-workspace.css';
+import '@/styles/builder-classroom-preview.css';
 
 export function meta() {
 	return [{ title: 'Pratinjau mahasiswa | LARAS' }];
@@ -35,9 +38,9 @@ function PreviewPage({ id }: { id: string }) {
 		}).catch((e: Error) => { if (live) setError(e.message); });
 		return () => { live = false; };
 	}, [id]);
-	return <div className="bd-preview-page">
-		<header className="bd-preview-page-header">
-			<div><h1>Pratinjau mahasiswa</h1><p>Draf tersimpan · jawaban percobaan tidak dikirim ke mahasiswa.</p></div>
+	return <div className="bd-preview-page sc-page sc-student-page">
+		<header className="bd-preview-page-header sc-heading">
+			<div><small>PRATINJAU MAHASISWA</small><h1>{document?.title||'Memuat draf…'}</h1></div>
 			<div className="bd-inline-actions">
 				<button className="bd-secondary" aria-pressed={!mobile} onClick={() => setMobile(false)}>Desktop</button>
 				<button className="bd-secondary" aria-pressed={mobile} onClick={() => setMobile(true)}>Ponsel</button>
@@ -45,7 +48,7 @@ function PreviewPage({ id }: { id: string }) {
 			</div>
 		</header>
 		{error ? <p role="alert">{error}</p> : !document ? <p role="status">Memuat draf…</p> :
-			<div className={mobile ? 'bd-preview-frame is-mobile' : 'bd-preview-frame'}>
+			<div className={mobile ? 'bd-preview-frame is-classroom is-mobile' : 'bd-preview-frame is-classroom'}>
 				<BuilderJourneyPreview document={document} />
 			</div>}
 	</div>;

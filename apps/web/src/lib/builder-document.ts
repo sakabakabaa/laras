@@ -179,7 +179,7 @@ export function blankBuilder(
 			questionsById: {},
 			delivery: {
 				kind,
-				progression: 'scheduled',
+				progression: 'free',
 				timeZone: 'Asia/Jakarta',
 				startsAt: '',
 				endsAt: '',
@@ -494,14 +494,7 @@ export function builderIssues({
 			add('Isi waktu mulai dan selesai.');
 		else if (Date.parse(d.delivery.endsAt) <= Date.parse(d.delivery.startsAt))
 			add('Waktu selesai harus setelah mulai.');
-		else if (
-			d.delivery.progression === 'scheduled' &&
-			Math.round(
-				(Date.parse(d.delivery.endsAt) - Date.parse(d.delivery.startsAt)) /
-					60000,
-			) !== d.activities.reduce((s, a) => s + a.plannedMinutes, 0)
-		)
-			add('Total durasi kegiatan harus sesuai dengan jadwal kelas.');
+
 	} else {
 		if (!d.delivery.dueAt) add('Isi batas pengumpulan tugas.');
 		if (

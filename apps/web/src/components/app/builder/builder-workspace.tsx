@@ -1676,22 +1676,7 @@ function DeliverySettings({
 								}
 							/>
 						</label>
-						<label>
-							Alur kegiatan
-							<select
-								value={p.progression}
-								onChange={(e) =>
-									onChange((next) => {
-										next.document.delivery.progression = e.target
-											.value as typeof p.progression;
-									})
-								}
-							>
-								<option value="scheduled">Terjadwal otomatis</option>
-								<option value="guided">Dipandu dosen</option>
-								<option value="free">Navigasi bebas</option>
-							</select>
-						</label>
+                        <p className="bd-muted">Navigasi bebas selama waktu kelas. Durasi tiap kegiatan adalah perkiraan; batas pengerjaan mengikuti waktu selesai kelas.</p>
 					</>
 				) : (
 					<>

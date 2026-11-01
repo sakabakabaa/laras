@@ -411,3 +411,70 @@
 @media (prefers-reduced-motion: reduce) { .login-feature-preview * { animation: none !important; transition: none !important; } }
 @media (max-width: 980px) { .lp-story { padding-bottom: 0; } }
 @media (max-width: 640px) { .login-feature-preview { padding: 14px; } .login-feature-preview-stage { height: 190px; } }
+
+/* Mobile sign-in focuses on the form, without the desktop introduction. */
+@media (max-width: 640px) {
+	.lp {
+		grid-template-columns: minmax(0, 1fr);
+		align-content: start;
+		overflow: clip;
+	}
+	.lp-story,
+	.lp-shapes {
+		display: none;
+	}
+	.lp-pane {
+		min-width: 0;
+		min-height: 100dvh;
+		align-items: center;
+		padding: max(20px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+	}
+	.lp-card {
+		min-width: 0;
+		padding: 24px clamp(16px, 5vw, 24px);
+		border-radius: 22px;
+	}
+	.lp-card h2 {
+		font-size: clamp(22px, 6vw, 28px);
+		overflow-wrap: anywhere;
+	}
+	.lp .login-field,
+	.lp .login-input-wrap {
+		min-width: 0;
+	}
+	.lp .login-field input[type='text'],
+	.lp .login-field input[type='password'] {
+		min-width: 0;
+		height: 48px;
+		font-size: 16px;
+		padding-right: 48px;
+	}
+	.lp .login-eye {
+		width: 44px;
+		height: 44px;
+		right: 2px;
+	}
+	.lp .login-role-toggle button {
+		min-width: 0;
+		height: 44px;
+	}
+	.lp .login-row-opts {
+		flex-wrap: wrap;
+		gap: 4px 12px;
+	}
+	.lp .login-remember,
+	.lp .login-forgot {
+		min-height: 44px;
+		display: inline-flex;
+		align-items: center;
+	}
+	.lp .login-oauth {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px;
+	}
+	.lp .login-oauth-btn {
+		min-width: 0;
+		gap: 6px;
+		font-size: 12px;
+	}
+}

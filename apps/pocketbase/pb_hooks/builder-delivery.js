@@ -153,12 +153,6 @@ function publishIssues(d, keys) {
 			Date.parse(t.checkInClosesAt) > Date.parse(t.endsAt)
 		)
 			add('Batas check-in harus dalam waktu kelas.');
-		if (
-			t.progression === 'scheduled' &&
-			d.activities.reduce((s, a) => s + a.plannedMinutes, 0) !==
-				Math.round((Date.parse(t.endsAt) - Date.parse(t.startsAt)) / 60000)
-		)
-			add('Durasi kegiatan harus sesuai jadwal kelas.');
 		if (Date.parse(t.endsAt) <= Date.now()) add('Jadwal kelas sudah berakhir.');
 	} else {
 		if (!t.dueAt) add('Isi batas pengumpulan.');
@@ -189,7 +183,7 @@ function endTime(ctx, response) {
 			: t.allowLate
 				? Date.parse(t.hardCloseAt || '9999-01-01')
 				: Date.parse(t.dueAt);
-	if (t.timeLimitMinutes > 0 && response?.getString('startedAt'))
+	if (ctx.d.kind !== 'kelas' && t.timeLimitMinutes > 0 && response?.getString('startedAt'))
 		end = Math.min(
 			end,
 			Date.parse(response.getString('startedAt')) + t.timeLimitMinutes * 60000,
@@ -204,17 +198,8 @@ function openActivity(ctx, index, now, response) {
 		now >= endTime(ctx, response)
 	)
 		return false;
-	if (ctx.d.kind === 'tugas' || ctx.d.delivery.progression === 'free')
-		return true;
-	if (ctx.d.delivery.progression === 'guided')
-		return index === ctx.run.getInt('activeIndex');
-	const start =
-		Date.parse(ctx.d.delivery.startsAt) +
-		ctx.d.activities.slice(0, index).reduce((s, a) => s + a.plannedMinutes, 0) *
-			60000;
-	return (
-		now >= start && now < start + ctx.d.activities[index].plannedMinutes * 60000
-	);
+	// Activities share the session deadline; planned minutes are guidance only.
+	return true;
 }
 function finalize(app, ctx, response, now) {
 	if (!response || response.getString('submittedAt')) return;

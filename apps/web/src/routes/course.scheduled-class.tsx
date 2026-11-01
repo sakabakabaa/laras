@@ -64,12 +64,16 @@ export default function ScheduledClassPage() {
     <ScheduledLecturerSession state={state} courseId={courseId} busy={busy} onAction={actOrThrow} onState={accept}/>
   </>;
   const returnParams=new URLSearchParams(searchParams);returnParams.delete('preview');
+  if(state?.owner && preview && state.class) return <div className="sc-page sc-student-page">
+    <ScheduledStudentPreview key={state.class.id} state={state} exitTo={'?'+returnParams.toString()} audience={t('scheduledPreview.audience',{section:sections.find(s=>s.id===state.class?.section)?.name||t('scheduledPreview.allSections')})}/>
+    {error&&<div className="sc-alert" role="alert">{error}<button onClick={()=>void refresh()}>{t('studentClass.reload')}</button></div>}
+  </div>;
   return <div className="sc-page sc-student-page">
     <Link className="ld-text-btn" to={state?.owner?'?'+returnParams.toString():`/app/courses/${courseId}/mata-kuliah`}>← {state?.owner?'Kembali ke ruang dosen':t('studentClass.back')}</Link>
     <header className="sc-heading"><div><small>{t('studentClass.eyebrow')}</small><h1>{state?.class?.title || state?.session.title || t('studentClass.title')}</h1></div></header>
     {state?.owner && state.class && <p>{t('scheduledPreview.audience', {section:sections.find(s=>s.id===state.class?.section)?.name || t('scheduledPreview.allSections')})}</p>}
     {error && <div className="sc-alert" role="alert">{error} <button onClick={() => void refresh()}>{t('studentClass.reload')}</button></div>}
     {!connected && <p role="status">{t('studentClass.offline')}</p>}
-    {!state ? <p role="status">{t('studentClass.loading')}</p> : state.owner && preview && state.class ? <ScheduledStudentPreview state={state}/> : !state.class ? <section className="sc-card"><h2>Belum ada kelas terjadwal</h2><p>Dosen belum menjadwalkan kegiatan untuk pertemuan ini.</p></section> : <ScheduledClassroom state={state} now={now} onState={accept} connected={connected}/>}
+    {!state ? <p role="status">{t('studentClass.loading')}</p> : !state.class ? <section className="sc-card"><h2>Belum ada kelas terjadwal</h2><p>Dosen belum menjadwalkan kegiatan untuk pertemuan ini.</p></section> : <ScheduledClassroom state={state} now={now} onState={accept} connected={connected}/>}
   </div>;
 }

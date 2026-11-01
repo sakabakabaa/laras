@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, redirect, useParams } from 'react-router';
+import { redirect, useParams } from 'react-router';
 import { requireAuth } from '@/lib/require-auth';
 import { builderRequest, type BuilderDocument, type BuilderRecord } from '@/lib/builder-document';
 import { AppShell } from '@/components/app/app-shell';
@@ -41,15 +41,14 @@ function PreviewPage({ id }: { id: string }) {
 	return <div className="bd-preview-page sc-page sc-student-page">
 		<header className="bd-preview-page-header sc-heading">
 			<div><small>PRATINJAU MAHASISWA</small><h1>{document?.title||'Memuat draf…'}</h1></div>
-			<div className="bd-inline-actions">
-				<button className="bd-secondary" aria-pressed={!mobile} onClick={() => setMobile(false)}>Desktop</button>
-				<button className="bd-secondary" aria-pressed={mobile} onClick={() => setMobile(true)}>Ponsel</button>
-				<Link className="bd-secondary" to={`/app/builder/${id}`}>← Kembali ke builder</Link>
-			</div>
+
 		</header>
 		{error ? <p role="alert">{error}</p> : !document ? <p role="status">Memuat draf…</p> :
 			<div className={mobile ? 'bd-preview-frame is-classroom is-mobile' : 'bd-preview-frame is-classroom'}>
-				<BuilderJourneyPreview document={document} />
+				<BuilderJourneyPreview document={document} exitTo={`/app/builder/${id}`} tools={<div className="bd-inline-actions">
+				<button className="bd-secondary" aria-pressed={!mobile} onClick={() => setMobile(false)}>Desktop</button>
+				<button className="bd-secondary" aria-pressed={mobile} onClick={() => setMobile(true)}>Ponsel</button>
+			</div>} />
 			</div>}
 	</div>;
 }

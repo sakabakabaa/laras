@@ -113,7 +113,7 @@ try {
   s = await call(student, 'join'); const joined = s.participant.checkedInAt;
   const checkedInMark = (await ok(records('attendance') + '?filter=' + encodeURIComponent(`session="${meeting.id}" && roster="${roster[student.id].id}"`), {}, admin, 'GET')).items[0];
   assert.equal(checkedInMark.status, 'present'); assert.equal(checkedInMark.student, student.id); assertions += 2;
-  assert.equal(s.activities[0].content, 'Private scheduled material'); assert(!s.activities[1].questions); assertions += 2;
+  assert.equal(s.activities[0].content, 'Private scheduled material'); assert(s.activities[1].questions?.length); assertions += 2;
   assert.equal(s.activities[0].sources.length,1);assert.equal(s.activities[0].sources[0].title,'Student handout');assert.equal(s.activities[0].academic,undefined);assert(!JSON.stringify(s).includes('PRIVATE FACULTY REFERENCE'));assertions+=4;
   await call(second, 'join');
   await ok(records('scheduled_classes') + '/' + classId, {joinUntil: new Date(Date.now() - 1000).toISOString()}, admin, 'PATCH');
@@ -121,7 +121,7 @@ try {
   s = await call(student, 'join'); assert.equal(s.participant.checkedInAt, joined); assertions++;
   await denied(wrongClass, 'join'); await denied(outsider, 'join');
   const material = s.activities[0].id, quiz = s.activities[1].id, writing = s.activities[2].id, exit = s.activities[3].id;
-  await denied(student, 'saveAnswer', {activityId: quiz, baseRevision: 0, requestId: randomUUID(), answers: {q0: 0}});
+  await call(second, 'saveAnswer', {activityId: quiz, baseRevision: 0, requestId: randomUUID(), answers: {q0: 0}});
   const requestId = randomUUID();
   s = await call(student, 'submit', {activityId: material, baseRevision: 0, requestId, answers: {acknowledged: true}});
   s = await call(student, 'submit', {activityId: material, baseRevision: 0, requestId, answers: {acknowledged: false}});
@@ -136,14 +136,14 @@ try {
   s = await call(student, 'saveAnswer', {activityId: quiz, baseRevision: 1, requestId: randomUUID(), answers: {q0: 0}});
   assert.deepEqual(s.attempts.find(t => t.activity === quiz).answers, {q0: 0}); assertions++;
   assert.equal(s.attempts.find(t => t.activity === quiz).score, undefined); assertions++;
-  await call(second, 'saveAnswer', {activityId: quiz, baseRevision: 0, requestId: randomUUID(), answers: {q0: 1}});
+  await call(second, 'saveAnswer', {activityId: quiz, baseRevision: 1, requestId: randomUUID(), answers: {q0: 1}});
   s = await call(second, 'state'); assert(s.attempts.every(t => t.student === second.id)); assertions++;
   await retime(135000);
-  s = await call(student, 'state'); assert.equal(s.attempts.find(t => t.activity === quiz).status, 'expired'); assertions++;
-  await denied(student, 'saveAnswer', {activityId: quiz, baseRevision: 2, requestId: randomUUID(), answers: {q0: 1}});
-  // A lost acknowledgement for an accepted draft can be retried after expiry.
+  s = await call(student, 'state'); assert.equal(s.attempts.find(t => t.activity === quiz).status, 'draft'); assertions++;
+  s = await call(student, 'saveAnswer', {activityId: quiz, baseRevision: 2, requestId: randomUUID(), answers: {q0: 0}});
+  // Earlier activities remain writable until the overall session ends.
   const savedQuiz = s.attempts.find(t => t.activity === quiz);
-  await call(student, 'submit', {activityId: quiz, baseRevision: savedQuiz.revision, requestId: randomUUID(), answers: {q0: 1}});
+  await call(student, 'submit', {activityId: quiz, baseRevision: savedQuiz.revision, requestId: randomUUID(), answers: {q0: 0}});
   await call(student, 'submit', {activityId: writing, baseRevision: 0, requestId: randomUUID(), answers: {text: 'My explanation'}});
   await retime(195000);
   await call(student, 'saveAnswer', {activityId: exit, baseRevision: 0, requestId: randomUUID(), answers: {text: 'My reflection'}});
@@ -153,6 +153,7 @@ try {
   else await call(teacher, 'state');
   const attempts = await ok(records('scheduled_activity_attempts') + '?filter=' + encodeURIComponent(`class="${classId}"`), {}, admin, 'GET');
   assert(attempts.items.every(t => t.status !== 'draft')); assertions++;
+  await denied(second, 'saveAnswer', {activityId: quiz, baseRevision: 2, requestId: randomUUID(), answers: {q0: 0}});
   s = await call(student, 'state'); assert.equal(s.class.phase, 'closed'); assert.equal(s.participant.checkedInAt, joined); assertions += 2;
   // Current upstream automatically reveals objective results once required work is complete.
   assert.equal(s.class.resultsReady, true); assert.equal(s.attempts.find(t => t.activity === quiz).score, 100); assertions += 2;

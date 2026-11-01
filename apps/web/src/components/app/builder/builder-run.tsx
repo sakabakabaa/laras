@@ -385,33 +385,7 @@ export function BuilderRun({ id }: { id: string }) {
 			{state.owner && (
 				<>
 					<div className="bd-inline-actions">
-						{state.kind === 'kelas' &&
-							state.delivery.progression === 'guided' &&
-							document?.activities.map((a, index) => (
-								<button
-									key={a.id}
-									className="bd-secondary"
-									aria-pressed={state.activeIndex === index}
-									disabled={busy || state.closed}
-									onClick={async () => {
-										setBusy(true);
-										try {
-											apply(
-												await deliveryRequest<BuilderRunState>('advance', {
-													runId: id,
-													index,
-												}),
-											);
-										} catch (e) {
-											setError((e as Error).message);
-										} finally {
-											setBusy(false);
-										}
-									}}
-								>
-									Buka {index + 1}: {a.title}
-								</button>
-							))}
+
 						<button
 							className="bd-secondary"
 							disabled={busy || state.closed}

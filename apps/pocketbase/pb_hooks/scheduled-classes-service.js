@@ -72,7 +72,7 @@ function reconcile(app, c, now) {
   const plan = activities(app, c), drafts = rows(app, 'scheduled_activity_attempts', 'class={:c} && status="draft"', {c: c.id});
   for (const attempt of drafts) {
     const activity = plan.find(a => a.id === attempt.getString('activity'));
-    if (activity && now >= Date.parse(activity.endsAt)) finalize(app, attempt, activity, now, 'expired');
+    if (activity && now >= Date.parse(c.getString('endsAt'))) finalize(app, attempt, activity, now, 'expired');
   }
   if (c.getString('status') === 'scheduled' && now >= Date.parse(c.getString('endsAt'))) {
     c.set('status', 'closed'); app.save(c); event(app, c, '', 'closed');
@@ -160,7 +160,7 @@ function view(app, c, ctx, user, now) {
     activities: plan.map(a => {
       const {snapshot,materials,cpmks,subCpmks, ...meta} = a;
       if (owner) return {...meta, ...snapshot, materialIds:materials||[],cpmkIds:cpmks||[],subCpmkIds:subCpmks||[]};
-      if (!participant || now < Date.parse(a.startsAt) || currentPhase === 'cancelled') return meta;
+      if (!participant || now < Date.parse(info.startsAt) || currentPhase === 'cancelled') return meta;
       let worksheet;
       if (snapshot.worksheet) {
         const {answerKey, ...studentWorksheet} = snapshot.worksheet;
@@ -367,7 +367,7 @@ function handle(app, body, user, now) {
       if (typeof body.requestId !== 'string' || !/^[\w-]{8,100}$/.test(body.requestId)) bad('Identitas permintaan tidak valid.');
       // A retry is an acknowledgement, never a second submission or overwrite.
       if (!(attempt && (attempt.getString('lastRequest') === body.requestId || (action === 'submit' && attempt.getString('status') !== 'draft')))) {
-        if (now < Date.parse(activity.startsAt) || now >= Date.parse(activity.endsAt)) bad('Waktu pengerjaan kegiatan sudah ditutup atau belum dibuka.');
+        if (now < Date.parse(c.getString('startsAt')) || now >= Date.parse(c.getString('endsAt'))) bad('Waktu pengerjaan kelas sudah ditutup atau belum dibuka.');
         if (attempt && attempt.getString('status') !== 'draft') bad('Jawaban sudah dikumpulkan.');
         if (!Number.isInteger(body.baseRevision) || body.baseRevision !== (attempt?.getInt('revision') || 0)) bad('Jawaban berubah di tab lain. Muat ulang sebelum melanjutkan.');
         let answers;

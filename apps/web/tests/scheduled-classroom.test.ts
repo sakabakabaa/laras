@@ -24,11 +24,11 @@ const render = (state: ScheduledClassState, time = now) => renderToStaticMarkup(
 describe('student scheduled classroom', () => {
   it('leads with the active activity and shows a server-clock countdown', () => {
     const html = render(fixture());
-    expect(html).toContain('05:00');
+    expect(html).toContain('20:00');
     expect(html).toContain('Public chapter excerpt');
     expect(html.indexOf('sc-student-schedule')).toBeLessThan(html.indexOf('sc-workspace'));
 		expect(html).not.toContain('sc-activity-plan');
-    expect(html).toContain('Time remaining');
+    expect(html).toContain('Session time remaining');
     expect(html).not.toContain('Chapter quiz');
   });
   it('withholds the workspace until check-in and disables joining before class opens', () => {
@@ -65,6 +65,7 @@ describe('student scheduled classroom', () => {
   });
   it('offers finishing the last activity instead of waiting for a nonexistent next step', () => {
     const state = fixture(); state.activities[1].content = 'Final question';
+    state.attempts=[{id:'done',activity:'read',student:'student',answers:{acknowledged:true},revision:1,status:'submitted',savedAt:iso(0),finalizedAt:iso(0),complete:true}];
     const html = render(state, now + 10 * 60000);
     expect(html).toContain('Finish activity');
     expect(html).toContain('Final question');

@@ -7,22 +7,24 @@ import { localeOf, useLanguage, useT } from '@/lib/i18n';
 import pb from '@/lib/pocketbase-client';
 import { scheduledRequest, type ScheduledActivity, type ScheduledAttempt, type ScheduledClassState } from '@/lib/scheduled-classes';
 
-import {StudentActivityHeading,StudentPreviewAnswerFooter} from './student-classroom-ui';
+import {StudentActivityHeading,StudentPreviewNavigation} from './student-classroom-ui';
 import {WorksheetAnswers,WorksheetSource} from './scheduled-worksheet';
+
+export type ClassroomRequest = typeof scheduledRequest;
 
 type Answers = Record<string, unknown>;
 type PendingSave = {requestId: string; baseRevision: number; answers: Answers; submit: boolean};
 function storageKey(classId: string, activityId: string) {return `laras:scheduled:${pb.authStore.record?.id}:${classId}:${activityId}`;}
 
-function ActivityAnswer({activity, attempt, state, now, onState,onNext}: {activity: ScheduledActivity; attempt?: ScheduledAttempt; state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void;onNext:(s:ScheduledClassState)=>void}) {
+function ActivityAnswer({activity, attempt, state, now, onState,onNext,request:sendRequest=scheduledRequest,preview=false,previewScope}: {request?:ClassroomRequest;preview?:boolean;previewScope?:string;activity: ScheduledActivity; attempt?: ScheduledAttempt; state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void;onNext:(s:ScheduledClassState)=>void}) {
   const t = useT();
   const initial = attempt?.answers || {};
   const [answers, setAnswers] = useState<Answers>(initial), [dirty, setDirty] = useState(false), [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(attempt ? t('studentClass.saved') : ''), [error, setError] = useState(''), [conflict, setConflict] = useState(false);
   const latest = useRef(initial), revision = useRef(attempt?.revision || 0), changed = useRef(false), saving = useRef(false), pending = useRef<PendingSave | null>(null);
-  const storage = storageKey(state.class!.id, activity.id);
+  const storage = preview ? `laras:preview:${previewScope}:${state.class!.id}:${activity.id}` : storageKey(state.class!.id, activity.id);
   const final = Boolean(attempt && attempt.status !== 'draft');
-  const open = state.class!.phase === 'open' && now >= Date.parse(activity.startsAt) && now < Date.parse(activity.endsAt);
+  const open = state.class!.phase === 'open' && now >= Date.parse(state.class!.startsAt) && now < Date.parse(state.class!.endsAt);
   const persist = () => {try {localStorage.setItem(storage, JSON.stringify({answers: latest.current, baseRevision: revision.current, pending: pending.current}));} catch {setMessage(t('studentClass.localUnavailable'));}};
   useEffect(() => {
     try {
@@ -59,13 +61,13 @@ function ActivityAnswer({activity, attempt, state, now, onState,onNext}: {activi
     let request = pending.current || {requestId: crypto.randomUUID(), baseRevision: revision.current, answers: {...latest.current}, submit};
     pending.current = request; persist();
     try {
-      let next = await scheduledRequest(state.session.id, request.submit ? 'submit' : 'saveAnswer', {activityId: activity.id, ...request});
+      let next = await sendRequest(state.session.id, request.submit ? 'submit' : 'saveAnswer', {activityId: activity.id, ...request});
       let saved = next.attempts.find(a => a.activity === activity.id);
       if (saved) revision.current = saved.revision;
       if (submit && !request.submit && saved?.status === 'draft') {
         request = {requestId: crypto.randomUUID(), baseRevision: revision.current, answers: {...latest.current}, submit: true};
         pending.current = request; persist();
-        next = await scheduledRequest(state.session.id, 'submit', {activityId: activity.id, ...request});
+        next = await sendRequest(state.session.id, 'submit', {activityId: activity.id, ...request});
         saved = next.attempts.find(a => a.activity === activity.id);
         if (saved) revision.current = saved.revision;
       }
@@ -82,7 +84,7 @@ function ActivityAnswer({activity, attempt, state, now, onState,onNext}: {activi
         setConflict(true); pending.current = null; persist();
         // Refresh the authoritative revision, while retaining local edits until
         // the student explicitly chooses the server copy.
-        try {onState(await scheduledRequest(state.session.id, 'state'));} catch { /* Retry remains available. */ }
+        try {onState(await sendRequest(state.session.id, 'state'));} catch { /* Retry remains available. */ }
       }
     } finally {saving.current = false; setBusy(false);}
   };
@@ -115,12 +117,6 @@ function ActivityAnswer({activity, attempt, state, now, onState,onNext}: {activi
 }
 
 const activityIcons = {material: BookOpen, quiz: ListChecks, assignment: FileText, exit_ticket: MessageSquare};
-
-function PreviewAnswer({activity,onNext,canNext}:{activity:ScheduledActivity;onNext?:()=>void;canNext:boolean}){
-  const t=useT(),[answers,setAnswers]=useState<Answers>({}),[saved,setSaved]=useState(false);
-  const edit=(next:Answers)=>{setAnswers(next);setSaved(false);};
-  return <div className="sc-answer"><fieldset className="sc-fields">{activity.worksheet?<WorksheetAnswers activity={activity} sheet={activity.worksheet} responses={(answers.responses||{}) as Record<string,string>} onChange={responses=>edit({responses})}/>:activity.kind==='quiz'?<ol className="sc-questions">{activity.questions?.map(q=><li key={q.id}><fieldset><legend>{q.text}</legend>{q.options.map((option,i)=><label className="sc-option" key={i}><input type="radio" name={'preview-'+q.id} checked={answers[q.id]===i} onChange={()=>edit({...answers,[q.id]:i})}/><span>{option}</span></label>)}</fieldset></li>)}</ol>:activity.kind==='material'?<label className="sc-check"><input type="checkbox" checked={answers.acknowledged===true} onChange={e=>edit({acknowledged:e.target.checked})}/>{t('studentClass.acknowledge')}</label>:<label>{t('studentClass.answer')}<textarea rows={8} maxLength={20000} value={String(answers.text||'')} onChange={e=>edit({text:e.target.value})}/></label>}</fieldset>{saved&&<p className="sc-preview-save" role="status">{t('studentClass.previewSaved')}</p>}<StudentPreviewAnswerFooter onSave={()=>setSaved(true)} onNext={()=>canNext?onNext?.():setSaved(true)} canNext={canNext}/></div>;
-}
 
 function StudentResults({activities,attempts}:{activities:ScheduledActivity[];attempts:ScheduledAttempt[]}){
   const language=useLanguage(),[reviewId,setReviewId]=useState(''),root=useRef<HTMLElement>(null);
@@ -169,14 +165,14 @@ function ActivityBrief({content}:{content:string}){
   return <section className="sc-activity-brief"><h3>{t('lesson.now')}</h3>{directions.map((part,index)=><p key={index} lang="de">{part}</p>)}{isEmailTask&&details.length>0&&<p lang="de">Verwenden Sie alle Angaben:</p>}<ul className="sc-brief-steps">{details.map((part,index)=><li key={index}><Check size={18} aria-hidden="true"/><span>{part}</span></li>)}</ul></section>;
 }
 
-export function ScheduledClassroom({state, now, onState, connected,preview=false,onPreviewNext}: {state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void; connected: boolean;preview?:boolean;onPreviewNext?:(activityId:string)=>void}) {
+export function ScheduledClassroom({state, now, onState, connected,preview=false,onPreviewNext,request=scheduledRequest,previewScope,initialActivityId}: {state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void; connected: boolean;initialActivityId?:string;request?:ClassroomRequest;previewScope?:string;preview?:boolean;onPreviewNext?:(activityId:string)=>void}) {
   const t = useT(), language = useLanguage();
   const date = (value: string) => new Date(value).toLocaleString(localeOf(language), {timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short'}) + ' WIB';
   const time = (value: string) => new Date(value).toLocaleTimeString(localeOf(language), {timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit'}) + ' WIB';
   const c = state.class!;
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [selected, setSelected] = useState('');
   const heading = useRef<HTMLHeadingElement>(null);
-  const current = c.phase === 'open' ? state.activities.find(a => now >= Date.parse(a.startsAt) && now < Date.parse(a.endsAt)) : undefined;
+  const current = c.phase === 'open' ? (state.activities.find(a=>!state.attempts.some(attempt=>attempt.activity===a.id&&attempt.status!=='draft'))||state.activities[0]) : undefined;
   const next = state.activities.find(a => now < Date.parse(a.startsAt));
   const checkedInAt = state.participant?.checkedInAt;
   const ended = ['closed', 'reviewed'].includes(c.phase);
@@ -185,19 +181,20 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
   const required = state.activities.filter(a=>a.required);
   const completed = required.filter(a => state.attempts.some(attempt => attempt.activity === a.id && attempt.status !== 'draft' && attempt.complete)).length;
   const percent = required.length ? Math.round(completed / required.length * 100) : 0;
-  useEffect(() => {setSelected('');}, [current?.id]);
+  useEffect(() => {setSelected(initialActivityId||'');}, [initialActivityId]);
   useEffect(() => {
     if (preview || !checkedInAt || c.phase !== 'open') return;
-    const timer = setInterval(() => {if (document.visibilityState === 'visible') void scheduledRequest(state.session.id, 'heartbeat').then(onState).catch(() => {});}, 60000);
+    const timer = setInterval(() => {if (document.visibilityState === 'visible') void request(state.session.id, 'heartbeat').then(onState).catch(() => {});}, 60000);
     return () => clearInterval(timer);
-  }, [checkedInAt, c.phase, state.session.id, onState,preview]);
+  }, [checkedInAt, c.phase, state.session.id, onState,preview,request]);
+  const classroomRequest:ClassroomRequest = preview && request === scheduledRequest ? async () => {throw new Error('Preview transport is required.');} : request;
   const join = async () => {
     setBusy(true); setError('');
-    try {onState(await scheduledRequest(state.session.id, 'join'));} catch (e) {setError((e as Error).message);} finally {setBusy(false);}
+    try {onState(await classroomRequest(state.session.id, 'join'));} catch (e) {setError((e as Error).message);} finally {setBusy(false);}
   };
   const choose = (id: string) => {setSelected(id); requestAnimationFrame(() => {heading.current?.focus({preventScroll: true}); heading.current?.scrollIntoView({block: 'start', behavior: 'instant'});});};
-  const seconds = activity ? Math.max(0, Math.ceil((Date.parse(activity.endsAt) - now) / 1000)) : 0;
-  const active = activity?.id === current?.id && Boolean(current);
+  const seconds = activity ? Math.max(0, Math.ceil((Date.parse(c.endsAt) - now) / 1000)) : 0;
+  const active = c.phase === 'open' && now>=Date.parse(c.startsAt) && now<Date.parse(c.endsAt);
   const warning = active && seconds > 0 && seconds <= 60;
   const joinClosed = now >= Date.parse(c.joinUntil);
   const ActivityIcon = activity ? activityIcons[activity.kind] : BookOpen;
@@ -208,17 +205,18 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
     {error && <p role="alert" className="sc-alert">{error}</p>}
     <div className="sc-student-grid">
       <section className="sc-card sc-workspace">
+        {state.participant && !cancelled && <StudentPreviewNavigation index={Math.max(0,state.activities.findIndex(a=>a.id===activity?.id))} total={state.activities.length} onChange={index=>choose(state.activities[index].id)}/>}
         {activity && state.participant && !cancelled && activity.content !== undefined ? <>
           <div className="sc-workspace-top"><span className="sc-activity-type"><ActivityIcon size={16} aria-hidden="true"/>{t(`studentClass.${activity.kind}`)}<span>· {t('studentClass.step', {index: String(state.activities.findIndex(a => a.id === activity.id) + 1), total: String(state.activities.length)})}</span><span className={`sc-requirement ${activity.required ? 'is-required' : ''}`}>{t(activity.required ? 'studentClass.required' : 'studentClass.optional')}</span><span>{t('studentClass.minutes', {count: String(activity.minutes)})}</span></span>{ended ? <button className="sc-text-action" onClick={() => choose('')}>{t('studentClass.backSummary')}</button> : !active && current ? <button className="sc-text-action" onClick={() => choose(current.id)}>{t('studentClass.returnCurrent')}</button> : null}</div>
-          <StudentActivityHeading headingRef={heading} title={activity.title.replace(/\s*\(10a, S\. 103\)$/, '')} clockLabel={t(active ? 'studentClass.remaining' : 'studentClass.timeClosed')} clockValue={active ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—'} urgent={warning}/>
+          <StudentActivityHeading headingRef={heading} title={activity.title.replace(/\s*\(10a, S\. 103\)$/, '')} clockLabel={t(active ? 'scheduledPreview.sessionRemaining' : 'studentClass.timeClosed')} clockValue={active ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—'} urgent={warning}/>
           {activityBookReference(activity)&&<p className="sc-book-reference"><BookOpen size={18} aria-hidden="true"/>{activityBookReference(activity)}</p>}
           {warning && <p className="sc-deadline-warning" role="status">{t('studentClass.timeWarning')}</p>}
           {!active && <p className="sc-review-note">{t('studentClass.reviewMode')}</p>}
           <div className="sc-activity-content">{activity.lesson?<ScheduledLessonView key={activity.id} lesson={activity.lesson} compact={!activity.worksheet&&!activity.lesson.scenes?.length} showScenes={!activity.lesson.videos?.length}/>:activity.content?.trim()?<ActivityBrief content={activity.content}/>:null}</div>
           <WorksheetSource activity={activity} showPictures={false}/>
           {(activity.url || Boolean(activity.sources?.some(s=>!s.url||!/\.(jpe?g|png|webp)$/i.test(s.url)))) && <section className="sc-resources"><h3>{t('studentClass.resources')}</h3>{activity.url && <a href={activity.url} target="_blank" rel="noreferrer"><BookOpen size={18} aria-hidden="true"/><span>{t('studentClass.openMaterial')}</span><ExternalLink size={16} aria-hidden="true"/></a>}{activity.sources?.filter(s=>!s.url||!/\.(jpe?g|png|webp)$/i.test(s.url)).map((source, i) => source.available && source.url && /\.(mp3|wav|ogg|m4a)$/i.test(source.url) ? <div className="sc-audio-source" key={i}><label>{source.title.replace(/.*Audio_(\d+)-0*(\d+)$/i,(_,disc,track)=>`Audio ${disc}.${Number(track)}`)}<audio aria-label={source.title} controls preload="none" src={source.url}/></label></div> : source.available && source.url ? <a key={i} href={source.url} target="_blank" rel="noreferrer"><FileText size={18} aria-hidden="true"/><span>{source.title}<small>{t('studentClass.version', {version: String(source.version)})}</small></span><ExternalLink size={16} aria-hidden="true"/></a> : <p key={i}>{source.title} — {t('studentClass.unavailable')}</p>)}</section>}
-          {preview?<PreviewAnswer key={activity.id} activity={activity} onNext={()=>onPreviewNext?.(activity.id)} canNext={state.activities.findIndex(a=>a.id===activity.id)<state.activities.length-1}/>:<ActivityAnswer key={activity.id} activity={activity} attempt={state.attempts.find(t => t.activity === activity.id)} state={state} now={now} onState={onState} onNext={nextState=>{const i=nextState.activities.findIndex(a=>a.id===activity.id);choose(nextState.activities[i+1]?.id||activity.id);}}/>}
-          {!preview&&state.class?.resultsReady&&<StudentResults activities={state.activities} attempts={state.attempts}/>}
+          <ActivityAnswer key={activity.id} activity={activity} attempt={state.attempts.find(t => t.activity === activity.id)} state={state} now={now} onState={onState} request={classroomRequest} preview={preview} previewScope={previewScope} onNext={nextState=>{const i=nextState.activities.findIndex(a=>a.id===activity.id);if(preview){onPreviewNext?.(activity.id);}else{choose(nextState.activities[i+1]?.id||activity.id);}}}/>
+          {state.class?.resultsReady&&<StudentResults activities={state.activities} attempts={state.attempts}/>}
         </> : <div className={`sc-session-empty ${ended&&state.participant&&(c.resultsReady||c.releaseResults)?'sc-session-results':''}`}>
           <div className={`sc-empty-icon ${ended ? 'is-finished' : ''}`}>{cancelled ? <LockKeyhole size={30} aria-hidden="true"/> : ended ? <CheckCircle2 size={30} aria-hidden="true"/> : <Clock3 size={30} aria-hidden="true"/>}</div>
           <h2 ref={heading} tabIndex={-1}>{t(cancelled ? 'studentClass.cancelled' : ended ? 'studentClass.finishedTitle' : c.phase === 'scheduled' ? 'studentClass.waitTitle' : state.participant ? 'studentClass.betweenTitle' : 'studentClass.startTitle')}</h2>

@@ -24,7 +24,7 @@ const render = (state: ScheduledClassState, time = now) => renderToStaticMarkup(
 describe('student scheduled classroom', () => {
   it('leads with the active activity and shows a server-clock countdown', () => {
     const html = render(fixture());
-    expect(html).toContain('20:00');
+    expect(html).toContain('00:20:00');
     expect(html).toContain('Public chapter excerpt');
     expect(html.indexOf('sc-student-schedule')).toBeLessThan(html.indexOf('sc-workspace'));
 		expect(html).not.toContain('sc-activity-plan');

@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {Link} from 'react-router';
+import {StudentPreviewDock} from './student-preview-dock';
 import {StudentPreviewNavigation} from './student-classroom-ui';
 import {useT} from '@/lib/i18n';
 import type {ScheduledAttempt, ScheduledClassState} from '@/lib/scheduled-classes';
@@ -36,10 +36,7 @@ export function ScheduledStudentPreview({state,exitTo,audience}:{state:Scheduled
   };
   useEffect(()=>()=>{try{for(const key of Object.keys(localStorage))if(key.startsWith(`laras:preview:${scope}:`))localStorage.removeItem(key);}catch{/* Storage is optional. */}},[scope]);
   return <div ref={top} className="sc-preview-container">
-    <aside className="sc-preview-banner" aria-label={t('scheduledPreview.title')}>
-      <strong>{t('scheduledPreview.title')}</strong>
-      <div><button type="button" aria-expanded={toolbar} aria-controls="sc-preview-tools" onClick={()=>setToolbar(value=>!value)}>{t(toolbar?'scheduledPreview.hideTools':'scheduledPreview.showTools')}</button><Link to={exitTo}>{t('scheduledPreview.exit')}</Link></div>
-    </aside>
+    <StudentPreviewDock toolsVisible={toolbar} onToggleTools={()=>setToolbar(value=>!value)} exitTo={exitTo}/>
     {toolbar&&<section id="sc-preview-tools" className="sc-card sc-fields sc-preview-tools" aria-label={t('scheduledPreview.tools')}>
       <p>{audience}</p><p>{t('scheduledPreview.localOnly')}</p>
       {state.activities.length>0&&<><StudentPreviewNavigation index={selected} total={state.activities.length} onChange={go}/><label>{t('scheduledPreview.activity')}<select value={selected} onChange={e=>go(Number(e.target.value))}>{state.activities.map((a,i)=><option key={a.id} value={i}>{i+1}. {a.title} · {wibLabel(a.startsAt)}</option>)}</select></label></>}

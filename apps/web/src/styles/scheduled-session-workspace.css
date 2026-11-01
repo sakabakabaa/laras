@@ -424,3 +424,10 @@
 @media(max-width:720px){.sr-workspace .sr-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.sr-workspace .sr-summary .evx-stat,.sr-workspace .sr-summary .evx-stat.quiet{min-width:0;border:0;border-radius:9px;background:var(--ss-soft);padding:9px}.sr-workspace .sr-summary .evx-pager{grid-column:1/-1;justify-content:center;margin:0;padding:2px}.sr-workspace .sr-review-grid{grid-template-columns:minmax(0,1fr)}.sr-workspace .sr-students{position:static;grid-row:auto;max-height:310px}.sr-workspace .sr-students ul{display:grid;grid-template-columns:1fr;padding-top:6px}.sr-workspace .sr-students li>button{min-height:48px}}
 
 .ss-session-heading .ss-toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+/* Review sections keep drafts mounted while their accordion is collapsed. */
+.sr-workspace .sr-activity-response[hidden],.sr-workspace .sr-activity-assessment[hidden]{display:none}
+.sr-workspace .sr-activity-chevron{flex:none;align-self:center;margin-right:8px;transition:transform .15s}
+.sr-workspace .sr-activity-select[aria-expanded=true] .sr-activity-chevron{transform:rotate(180deg)}
+.sr-workspace .sr-activity-select:focus-visible{outline:2px solid var(--ss-accent);outline-offset:3px;border-radius:6px}
+@media(prefers-reduced-motion:reduce){.sr-workspace .sr-activity-chevron{transition:none}}

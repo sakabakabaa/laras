@@ -38,3 +38,7 @@ Additive migrations create `builder_saved_items`, `builder_versions`, `builder_v
 ## Checks
 
 Changed-file lint, type generation/typecheck and production compilation are run locally. Existing repository CI runs unit/render checks and isolated PocketBase integration (including additive migrations). Production UI inspection must preserve the lecturer's current draft and must not publish it to real students as a verification side effect.
+
+## Full-page author preview
+
+The builder preview opens `/app/builder/:documentId/pratinjau` after autosave finishes. The faculty-only page loads the owner-authorized saved draft, reuses `BuilderJourneyPreview`, and keeps simulated answers in memory. It has desktop/phone widths and a return link to the builder. No publication is created. Shared matching card styles no longer require the classroom `.sc-page` ancestor; compact placed cards and screen-reader labels also apply in builder delivery.

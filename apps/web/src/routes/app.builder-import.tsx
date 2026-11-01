@@ -19,7 +19,7 @@ function ImportStatus({id}:{id:string}){
   {(!job||job.status==='queued'||job.status==='running')&&<div role="status" aria-live="polite"><p>{job?.status==='running'?'AI sedang membaca latihan, menyiapkan elemen, dan menyusun penilaian…':'Menyiapkan impor…'}</p><p>Anda boleh meninggalkan halaman ini. Buka kembali tautan ini untuk melanjutkan dan melihat hasilnya.</p></div>}
   {job?.status==='failed'&&<><p role="alert">{job.error}</p>{job.attempts<3&&<button className="bd-primary" onClick={()=>void retry()}>Coba lagi</button>}<Link className="bd-secondary" to="/app/builder/new?kind=tugas&from=book">Gunakan gambar lain</Link></>}
   {job?.status==='ready'&&<>
-   <p>{job.report.activityCount} kegiatan · {job.report.questionCount} pertanyaan. Tersimpan sebagai draf pribadi.</p>
+   <p>{job.report.activityCount} kegiatan · {job.report.questionCount} pertanyaan · {job.report.illustrationCount||0} ilustrasi. Tersimpan sebagai draf pribadi.</p>
    <div className="bd-inline-actions"><Link className="bd-primary" to={`/app/builder/${job.documentId}`}>Buka builder</Link><Link className="bd-secondary" to={`/app/builder/${job.documentId}/pratinjau`}>Pratinjau mahasiswa</Link></div>
    {job.report.missingMedia?.length>0&&<section className="bd-import-report"><h2>Media yang perlu ditambahkan</h2><ul>{job.report.missingMedia.map((s,i)=><li key={i}>{s}</li>)}</ul></section>}
    {job.report.warnings?.length>0&&<section className="bd-import-report"><h2>Perlu ditinjau</h2><ul>{job.report.warnings.map((s,i)=><li key={i}>{s}</li>)}</ul></section>}

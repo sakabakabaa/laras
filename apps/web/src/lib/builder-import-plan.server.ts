@@ -13,7 +13,7 @@ export const BOOK_PAGE_INSTRUCTIONS = `You convert ONE photographed exercise-boo
 Rules:
 - Reconstruct EVERY readable numbered exercise and subquestion in page order. Preserve original exercise language, numbering, punctuation, accents, word banks, reading passages and choices. Do not answer student-facing blanks. Keep word banks in instructions.
 - Use native matching for assigning cards to destinations; answerIndex refers to zero-based destinations. MC answerIndex refers to choices. At least 2 destinations/choices are needed. Short answers use accepted strings. Gap passages use {{1}}, {{2}} etc., exactly one corresponding item per placeholder in order, each once; no filled answers in the passage.
-- Images: crop only relevant illustrations needed to solve the task. box coordinates are integers normalized to 0..1000 relative to the entire oriented input image. Avoid answer-key regions and neighboring exercises. Up to 4 images per block, multiple image blocks allowed. Do not include the whole page as a student image when it contains an answer key. A textual description cannot replace a necessary illustration: flag uncertainty.
+- Images: reproduce every instructional illustration on the page, including all labeled matching pictures even when the task could be solved from their text labels. box coordinates are integers normalized to 0..1000 relative to the entire oriented input image. Avoid answer-key regions and neighboring exercises. Up to 4 images per block, multiple image blocks allowed. Do not include the whole page as a student image when it contains an answer key. A textual description cannot replace a necessary illustration: flag uncertainty.
 - If an exercise requires unavailable audio/video, set requiresAudio true, transcribe visible tasks but DO NOT invent a transcript, audio, or answers from a track number. Mark dependent keys unknown and add a warning specifying what is missing. Reading a page cannot recover a recording.
 - Printed answer keys belong ONLY in answerIndex/accepted/explanation/modelAnswer, never student-facing text. keyEvidence printed means visibly printed on this page, inferred means confidently solved from visible information, unknown means insufficient evidence. Never guess missing/unreadable words or claim inferred answers are printed. Unknown keys have no answerIndex/accepted.
 - Writing uses a useful rubric and a private example when possible. Reflection may be unscored. Include student instructions in an instructions block; do not duplicate whole source questions in instructions and question prompts. No external URLs, HTML, code, scheduling, students, or publishing. All results are PRIVATE DRAFTS for lecturer review.
@@ -38,7 +38,7 @@ export async function compileBookPage(plan:BookPagePlan,settings:BuilderImportSe
    const block:BuilderBlock={id:uid(),type:b.type==='single_choice'||b.type==='short_answer'?'question_group':b.type==='writing'?'writing':b.type==='reflection'?'reflection':b.type,questionIds:[]};
    if(b.type==='matching'){
     if(b.destinations.length<2)throw new Error('Mencocokkan memerlukan dua kelompok atau lebih.');
-    block.destinations=b.destinations.map((title,i)=>({id:uid(),label:String.fromCharCode(65+i),title}));
+    block.destinations=b.destinations.map((title,i)=>({id:uid(),label:String.fromCharCode(65+i),title:title.replace(/^[A-Z]\s*[·.)-]\s*/, '')}));
    }
    const qids:string[]=[];
    for(const it of b.items){
@@ -46,10 +46,10 @@ export async function compileBookPage(plan:BookPagePlan,settings:BuilderImportSe
     const kind=b.type==='gap_passage'?'short_answer':b.type==='writing'?'long_writing':b.type;
     if(!['single_choice','short_answer','matching','long_writing','reflection'].includes(kind))throw new Error('Jenis pertanyaan tidak didukung.');
     const id=appendQuestion(envelope,kind as Parameters<typeof appendQuestion>[1]);qids.push(id);
-    const q=envelope.document.questionsById[id],key=envelope.privateKeys.answersByQuestionId[id];q.prompt=rich(it.prompt);q.points=b.type==='reflection'?0:it.points;
+    const q=envelope.document.questionsById[id],key=envelope.privateKeys.answersByQuestionId[id];q.prompt=rich(it.prompt.replace(/\s*_{2,}\s*$/, ''));q.points=b.type==='reflection'?0:it.points;
     const known=it.keyEvidence!=='unknown'&&!b.requiresAudio;
     if(it.keyEvidence==='inferred'&&known)report.inferredKeys.push(a.title+' · '+it.prompt.slice(0,140));
-    if(!known)report.warnings.push(a.title+' · kunci perlu ditinjau: '+it.prompt.slice(0,140));
+    if(!known&&!['long_writing','reflection'].includes(kind))report.warnings.push(a.title+' · kunci perlu ditinjau: '+it.prompt.slice(0,140));
     key.explanation=rich(it.explanation);key.privateGuidance=rich((known?'Sumber kunci: '+(it.keyEvidence==='printed'?'tercetak pada halaman':'disimpulkan AI; periksa sebelum menerbitkan'):'Kunci belum dapat ditentukan dari halaman ini.')+'\n'+it.explanation);
     if(kind==='single_choice'){
      if(it.choices.length<2)throw new Error('Pilihan ganda memerlukan minimal dua pilihan.');

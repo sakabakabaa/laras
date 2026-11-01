@@ -84,7 +84,7 @@ describe('Phase 14 — structured tool-call parsing', () => {
 describe('Phase 14 — tool registry permissions', () => {
 	it('registers all available tools (including search_history)', () => {
 		expect([...TOOL_REGISTRY.keys()].sort()).toEqual(
-			['add_roster_students', 'agent_task_status', 'calendar_events', 'course_detail', 'course_materials', 'create_assignment', 'create_course', 'get_grade_change_status', 'get_gradebook', 'import_rps_pdf', 'link_session_outcomes', 'list_assignments', 'list_courses', 'prepare_grade_changes', 'prepare_lesson', 'search_history', 'student_profile', 'summarize_insights'],
+			['add_roster_students', 'agent_task_status', 'build_from_book_page', 'builder_import_status', 'calendar_events', 'course_detail', 'course_materials', 'create_assignment', 'create_course', 'find_builder_media', 'get_builder_context', 'get_grade_change_status', 'get_gradebook', 'import_rps_pdf', 'link_session_outcomes', 'list_assignments', 'list_courses', 'prepare_grade_changes', 'prepare_lesson', 'search_history', 'student_profile', 'summarize_insights', 'validate_builder_draft'],
 		);
 	});
 

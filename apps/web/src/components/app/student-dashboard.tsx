@@ -10,7 +10,7 @@ import {useLanguage} from '@/lib/i18n';
 import {activityTypeOf,studentWorkPath,type Assignment,type AssignmentSubmission} from '@/lib/assignments';
 import {deliveryRequest,type BuilderRunItem} from '@/lib/builder-delivery';
 import {sessionClock} from '@/lib/session-clock';
-import {dashboardClasses,jakartaDay,orderByDeadline,type StudentLiveClass} from '@/lib/student-dashboard-data';
+import {dashboardClasses,jakartaDay,orderByDeadline,type DashboardClass,type StudentLiveClass} from '@/lib/student-dashboard-data';
 import type {Course,Enrollment} from '@/lib/learning';
 import '@/styles/student-dashboard-v2.css';
 
@@ -21,6 +21,20 @@ const copy={
  de:{eyebrow:'DEIN LERNBEREICH',hello:'Hallo',intro:'Alles für dein Lernen an einem Ort.',live:'Unterricht läuft',next:'Nächster Unterricht',noClass:'Kein Unterricht geplant',noClassHint:'Laufender und anstehender Unterricht erscheint hier.',join:'Unterricht beitreten',resume:'Unterricht fortsetzen',viewClass:'Unterricht ansehen',joinClosed:'Die Check-in-Frist ist abgelaufen',starts:'Beginn',ends:'Ende',work:'Zu erledigen',workHint:'Aufgaben und Überarbeitungen nach Frist sortiert.',allDone:'Alles erledigt',allDoneHint:'Neue Aufgaben und Überarbeitungen erscheinen hier.',due:'Abgabe',noDue:'Keine Frist',assigned:'Noch nicht begonnen',draft:'Entwurf gespeichert',revision:'Überarbeitung nötig',feedback:'Feedback ansehen',start:'Starten',continue:'Fortsetzen',revise:'Überarbeiten',courses:'Meine Kurse',coursesHint:'Materialien, Aktivitäten und Ergebnisse öffnen.',allCourses:'Alle Kurse',emptyCourses:'Noch keine Kurse',emptyCoursesHint:'Deine Kurse erscheinen hier.',openCourse:'Kurs öffnen',feedbackTitle:'Feedback',feedbackHint:'Von deiner Lehrkraft freigegebene Ergebnisse.',more:'Alle ansehen',loading:'Wird geladen…',error:'Dieser Bereich konnte nicht geladen werden.',retry:'Erneut versuchen',preview:'Lehrkraftvorschau: Persönliche Daten werden nicht angezeigt.',back:'Zurück zum Dashboard',person:'willkommen',open:'Öffnen',moreClasses:'Weitere Kurse',calendar:'Kalender',calendarHint:'Unterricht und Fristen für die nächsten sieben Tage.',noEvents:'An diesem Tag gibt es keinen Unterricht und keine Fristen.',classEvent:'Unterricht',workEvent:'Aufgabe',overdue:'Frist überschritten',upcoming:'Demnächst'},
 } as const;
 type Labels=typeof copy.id|typeof copy.en|typeof copy.de;
+const timingCopy={
+ id:{soon:(n:number)=>`Dalam ${n} menit`,late:(n:number)=>`Telat ${n} menit`,started:(n:number)=>`Berlangsung ${n} menit`,now:'Baru dimulai',finished:'Selesai',remaining:'Sisa waktu'},
+ en:{soon:(n:number)=>`In ${n} ${n===1?'minute':'minutes'}`,late:(n:number)=>`${n} ${n===1?'minute':'minutes'} late`,started:(n:number)=>`Started ${n} ${n===1?'minute':'minutes'} ago`,now:'Just started',finished:'Completed',remaining:'Time remaining'},
+ de:{soon:(n:number)=>`In ${n} ${n===1?'Minute':'Minuten'}`,late:(n:number)=>`${n} ${n===1?'Minute':'Minuten'} zu spät`,started:(n:number)=>`Seit ${n} ${n===1?'Minute':'Minuten'}`,now:'Gerade begonnen',finished:'Abgeschlossen',remaining:'Verbleibende Zeit'},
+};
+function classTimeLabel(item:DashboardClass,now:number,language:'id'|'en'|'de'){
+ const labels=timingCopy[language],elapsed=now-Date.parse(item.startsAt);
+ if(elapsed<0)return labels.soon(Math.ceil(-elapsed/60000));
+ if(item.finished)return labels.finished;
+ const minutes=Math.floor(elapsed/60000);
+ if(minutes===0)return labels.now;
+ return item.checkedIn?labels.started(minutes):labels.late(minutes);
+}
+
 type EnrollmentWithCourse=Enrollment & {expand?:{course?:Course}};
 function dateLabel(value:string,language:'id'|'en'|'de'){
  const date=new Date(value);if(!value||Number.isNaN(date.getTime()))return '';
@@ -31,7 +45,7 @@ export function StudentDashboard({preview=false}:{preview?:boolean}){
  const language=useLanguage(),l=copy[language],user=pb.authStore.record,me=user?.id||'';
  const [localNow,setLocalNow]=useState(Date.now()),[clockOffset,setClockOffset]=useState(0),[calendarDay,setCalendarDay]=useState(''),[monthOffset,setMonthOffset]=useState(0);
  const now=localNow+clockOffset;
- useEffect(()=>{const timer=window.setInterval(()=>setLocalNow(Date.now()),30000);return()=>window.clearInterval(timer);},[]);
+ useEffect(()=>{const timer=window.setInterval(()=>setLocalNow(Date.now()),1000);return()=>window.clearInterval(timer);},[]);
  const coursesQuery=useCachedQuery<Course[]>(`student-dashboard:courses:${me}`,()=>pb.collection('courses').getFullList<Course>({sort:'title'}));
  const enrollmentsQuery=useCachedQuery<EnrollmentWithCourse[]>(preview?null:`student-dashboard:enrollments:${me}`,()=>pb.collection('enrollments').getFullList<EnrollmentWithCourse>({filter:pb.filter('owner = {:me}',{me}),expand:'course'}));
  const assignmentsQuery=useCachedQuery<Assignment[]>(preview?null:`student-dashboard:assignments:${me}`,()=>pb.collection('assignments').getFullList<Assignment>({sort:'-updated',expand:'session,subCpmk,parentAssignment'}));
@@ -70,9 +84,9 @@ export function StudentDashboard({preview=false}:{preview?:boolean}){
  return <AppShell title={l.eyebrow} eyebrow={l.eyebrow} variant="saas" hideHeading><div className="sd2-dashboard">
   {preview&&<div className="sd2-preview">{l.preview} <Link to="/app">{l.back}</Link></div>}
   <header className="sd2-header"><div><span>{l.eyebrow}</span><h1>{name?`${l.hello}, ${name}`:l.person}</h1><p>{l.intro}</p></div><div className="sd2-date"><CalendarDays size={17} aria-hidden="true"/>{new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{dateStyle:'full',timeZone:'Asia/Jakarta'}).format(new Date(now))}</div></header>
-  <section className="sd2-live-section" aria-labelledby="sd2-live-heading"><div className="sd2-section-head"><div><span className="sd2-kicker"><Radio size={15} aria-hidden="true"/> {liveItems.length?l.live:l.next}</span><h2 id="sd2-live-heading">{liveItems.length?l.live:l.next}</h2></div></div>
+  <section className="sd2-live-section" aria-labelledby="sd2-live-heading"><h2 id="sd2-live-heading" className={liveItems.length?'sd2-sr':'sd2-live-heading'}>{liveItems.length?l.live:l.next}</h2>
    {liveError&&<SectionError onRetry={()=>{reloadLive();reloadRuns();}} labels={l}/>}
-   {!preview&&(liveQuery.loading||runsQuery.loading)&&!classes.length?<div className="sd2-empty" role="status">{l.loading}</div>:shown.length?<div className="sd2-live-list">{shown.map(item=>{const locked=!item.checkedIn&&Boolean(item.joinUntil)&&Date.parse(item.joinUntil)<=now;return <article className={`sd2-live-card ${item.phase==='live'?'is-live':'is-upcoming'}`} key={`${item.source}:${item.id}`}><div className="sd2-live-symbol"><Radio size={23} aria-hidden="true"/></div><div className="sd2-live-body"><span className="sd2-live-label"><i aria-hidden="true"/>{item.phase==='live'?l.live:l.upcoming}</span><h3>{item.title}</h3><p>{item.courseTitle}</p><div className="sd2-time"><Clock3 size={15} aria-hidden="true"/><span>{item.phase==='live'?`${l.ends}: ${dateLabel(item.endsAt,language)} · ${sessionClock(Math.max(0,Math.ceil((Date.parse(item.endsAt)-now)/1000)))}`:`${l.starts}: ${dateLabel(item.startsAt,language)}`}</span></div>{locked&&item.phase==='live'&&<small>{l.joinClosed}</small>}</div><Link className="sd2-primary" to={item.href}>{item.phase==='upcoming'||locked||item.finished?l.viewClass:item.checkedIn?l.resume:l.join}<ArrowRight size={17} aria-hidden="true"/></Link></article>;})}</div>:!liveError&&<div className="sd2-empty sd2-empty-live"><CalendarDays size={21} aria-hidden="true"/><div><strong>{l.noClass}</strong><p>{l.noClassHint}</p></div></div>}
+   {!preview&&(liveQuery.loading||runsQuery.loading)&&!classes.length?<div className="sd2-empty" role="status">{l.loading}</div>:shown.length?<div className="sd2-live-list">{shown.map(item=>{const locked=!item.checkedIn&&Boolean(item.joinUntil)&&Date.parse(item.joinUntil)<=now;return <article className={`sd2-live-card ${item.phase==='live'?'is-live':'is-upcoming'}`} key={`${item.source}:${item.id}`}><div className="sd2-live-symbol"><Radio size={23} aria-hidden="true"/></div><div className="sd2-live-body"><span className="sd2-live-label"><i aria-hidden="true"/>{item.phase==='live'?l.live:l.upcoming}</span><h3>{item.title}</h3><p>{item.courseTitle}</p><strong className="sd2-arrival">{classTimeLabel(item,now,language)}</strong><div className="sd2-time"><Clock3 size={15} aria-hidden="true"/><span>{item.phase==='live'?`${timingCopy[language].remaining}: ${sessionClock(Math.max(0,Math.ceil((Date.parse(item.endsAt)-now)/1000)))}`:`${l.starts}: ${dateLabel(item.startsAt,language)}`}</span></div>{locked&&item.phase==='live'&&<small>{l.joinClosed}</small>}</div><Link className="sd2-primary" to={item.href}>{item.phase==='upcoming'||locked||item.finished?l.viewClass:item.checkedIn?l.resume:l.join}<ArrowRight size={17} aria-hidden="true"/></Link></article>;})}</div>:!liveError&&<div className="sd2-empty sd2-empty-live"><CalendarDays size={21} aria-hidden="true"/><div><strong>{l.noClass}</strong><p>{l.noClassHint}</p></div></div>}
    {liveItems.length>0&&upcoming.length>0&&<p className="sd2-next-line">{l.next}: {upcoming[0].title} · {dateLabel(upcoming[0].startsAt,language)}</p>}
   </section>
   <div className="sd2-columns">

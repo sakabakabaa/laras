@@ -261,6 +261,7 @@ export function AppShell({
 						<GlobalSearch userId={user?.id || ''} isStudent={isStudent} />
 					</div>
 					<div className="ld-topbar-right ld-mast-actions">
+                        <div id="student-preview-dock" />
 						{!isStudent && !isAssistantPage && <AgentDock open={agentOpen} onOpenChange={setAgentOpen} />}
 						<WorkspaceGuide pathname={`${location.pathname}${location.hash}`} title={title} isStudent={isStudent} />
 						<div className={`ld-profile-wrap${profileOpen ? ' open' : ''}`}>

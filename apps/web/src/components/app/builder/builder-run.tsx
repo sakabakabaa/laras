@@ -1,3 +1,4 @@
+import {sessionClock} from '@/lib/session-clock';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import pb from '@/lib/pocketbase-client';
@@ -342,7 +343,7 @@ export function BuilderRun({ id }: { id: string }) {
 						: response?.submittedAt
 							? 'Terkumpul'
 							: response
-								? `Sisa ${Math.floor(remaining / 3600)}:${String(Math.floor(remaining / 60) % 60).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`
+								? `Sisa ${sessionClock(remaining)}`
 								: state.available
 									? 'Tersedia'
 									: 'Belum dibuka'}

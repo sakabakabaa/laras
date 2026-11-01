@@ -1,3 +1,4 @@
+import {sessionClock} from '@/lib/session-clock';
 import {activityBookReference} from '@/lib/scheduled-book-reference';
 import {scheduledAnswerComplete} from '@/lib/scheduled-answer-complete';
 import {ScheduledLessonView} from './scheduled-lesson';
@@ -208,7 +209,7 @@ export function ScheduledClassroom({state, now, onState, connected,preview=false
         {state.participant && !cancelled && <StudentPreviewNavigation index={Math.max(0,state.activities.findIndex(a=>a.id===activity?.id))} total={state.activities.length} onChange={index=>choose(state.activities[index].id)}/>}
         {activity && state.participant && !cancelled && activity.content !== undefined ? <>
           <div className="sc-workspace-top"><span className="sc-activity-type"><ActivityIcon size={16} aria-hidden="true"/>{t(`studentClass.${activity.kind}`)}<span>· {t('studentClass.step', {index: String(state.activities.findIndex(a => a.id === activity.id) + 1), total: String(state.activities.length)})}</span><span className={`sc-requirement ${activity.required ? 'is-required' : ''}`}>{t(activity.required ? 'studentClass.required' : 'studentClass.optional')}</span><span>{t('studentClass.minutes', {count: String(activity.minutes)})}</span></span>{ended ? <button className="sc-text-action" onClick={() => choose('')}>{t('studentClass.backSummary')}</button> : !active && current ? <button className="sc-text-action" onClick={() => choose(current.id)}>{t('studentClass.returnCurrent')}</button> : null}</div>
-          <StudentActivityHeading headingRef={heading} title={activity.title.replace(/\s*\(10a, S\. 103\)$/, '')} clockLabel={t(active ? 'scheduledPreview.sessionRemaining' : 'studentClass.timeClosed')} clockValue={active ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—'} urgent={warning}/>
+          <StudentActivityHeading headingRef={heading} title={activity.title.replace(/\s*\(10a, S\. 103\)$/, '')} clockLabel={t(active ? 'scheduledPreview.sessionRemaining' : 'studentClass.timeClosed')} clockValue={active ? sessionClock(seconds) : '—'} urgent={warning}/>
           {activityBookReference(activity)&&<p className="sc-book-reference"><BookOpen size={18} aria-hidden="true"/>{activityBookReference(activity)}</p>}
           {warning && <p className="sc-deadline-warning" role="status">{t('studentClass.timeWarning')}</p>}
           {!active && <p className="sc-review-note">{t('studentClass.reviewMode')}</p>}

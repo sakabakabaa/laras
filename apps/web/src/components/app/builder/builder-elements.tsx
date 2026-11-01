@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { ScheduledLessonView } from '../scheduled-lesson';
 import { ScheduledCardMatching } from '../scheduled-card-matching';
@@ -18,6 +18,8 @@ import type {
 	ScheduledLesson,
 } from '@/lib/scheduled-lesson';
 
+import { BuilderMediaEditor, BuilderMediaView } from './builder-media';
+
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 const safeUrl = (url?: string) =>
 	url && /^https:\/\/[^\s<>"']+$/i.test(url) ? url : '';
@@ -30,6 +32,10 @@ export function BlockEditor({
 	envelope: BuilderEnvelope;
 	onChange: Change;
 }) {
+	const [bulk, setBulk] = useState('');
+	const [bulkKind, setBulkKind] = useState<'short_answer' | 'single_choice'>(
+		'short_answer',
+	);
 	const update = (edit: (b: BuilderBlock) => void) =>
 		onChange((d) => {
 			for (const a of d.document.activities) {
@@ -79,7 +85,15 @@ export function BlockEditor({
 				/>
 			</label>
 		);
-	if (['image', 'audio', 'video', 'reference'].includes(block.type))
+	if (['image', 'audio', 'video'].includes(block.type))
+		return (
+			<BuilderMediaEditor
+				block={block}
+				courseId={envelope.document.context.courseId}
+				onUpdate={update}
+			/>
+		);
+	if (block.type === 'reference')
 		return (
 			<div className="bd-fields">
 				<label>
@@ -108,20 +122,7 @@ export function BlockEditor({
 						}
 					/>
 				</label>
-				{block.type === 'image' && (
-					<label>
-						Teks alternatif gambar
-						<input
-							value={block.alt || ''}
-							maxLength={1000}
-							onChange={(e) =>
-								update((b) => {
-									b.alt = e.target.value;
-								})
-							}
-						/>
-					</label>
-				)}
+
 				<p className="bd-help">
 					Gunakan tautan media yang diizinkan untuk mahasiswa. Pemilihan sumber
 					privat tidak otomatis membagikan berkasnya.
@@ -319,15 +320,101 @@ export function BlockEditor({
 					</button>
 				</fieldset>
 			)}
+			{block.type === 'question_group' && (
+				<details className="bd-bulk">
+					<summary>Tempel beberapa pertanyaan</summary>
+					<label>
+						Jenis pertanyaan
+						<select
+							value={bulkKind}
+							onChange={(e) => setBulkKind(e.target.value as typeof bulkKind)}
+						>
+							<option value="short_answer">Jawaban singkat</option>
+							<option value="single_choice">Pilihan ganda</option>
+						</select>
+					</label>
+					<label>
+						Satu pertanyaan per baris
+						<textarea
+							rows={5}
+							maxLength={20000}
+							value={bulk}
+							placeholder="1. Wie heißen Sie?
+2. Wo wohnen Sie?"
+							onChange={(e) => setBulk(e.target.value)}
+						/>
+					</label>
+					<p className="bd-help">
+						Pertanyaan baru ditambahkan setelah yang sudah ada. Lengkapi pilihan
+						dan kunci setelah menambah.
+					</p>
+					<button
+						className="bd-secondary"
+						disabled={
+							!bulk.trim() ||
+							Object.keys(envelope.document.questionsById).length +
+								bulk.split('\n').filter((line) => line.trim()).length >
+								500
+						}
+						onClick={() => {
+							const prompts = bulk
+								.split('\n')
+								.map((line) =>
+									line.replace(/^\s*(?:\d+[.)]|[-•])\s*/, '').trim(),
+								)
+								.filter(Boolean);
+							onChange((d) => {
+								const b = d.document.activities
+									.flatMap((a) => a.blocks)
+									.find((b) => b.id === block.id)!;
+								for (const prompt of prompts) {
+									const id = appendQuestion(d, bulkKind);
+									d.document.questionsById[id].prompt = rich(prompt);
+									b.questionIds!.push(id);
+								}
+							});
+							setBulk('');
+						}}
+					>
+						Tambahkan {bulk.split('\n').filter((line) => line.trim()).length}{' '}
+						pertanyaan
+					</button>
+				</details>
+			)}
 			{questionIds(block).map((id, index) => {
 				const q = envelope.document.questionsById[id];
 				if (!q) return null;
 				return (
-					<fieldset className="bd-question-editor" key={id}>
+					<fieldset
+						className="bd-question-editor"
+						key={id}
+						id={'builder-question-' + id}
+					>
 						<legend>
 							{block.type === 'matching' ? 'Pernyataan' : 'Pertanyaan'}{' '}
 							{index + 1}
 						</legend>
+						<p className="bd-question-scoring">
+							{['rubric', 'feedback_only'].includes(
+								envelope.privateKeys.answersByQuestionId[id]?.strategy,
+							)
+								? envelope.privateKeys.answersByQuestionId[id]?.strategy ===
+									'feedback_only'
+									? 'Tanpa nilai'
+									: 'Dinilai dosen'
+								: 'Otomatis'}{' '}
+							· {q.points} poin
+							{(() => {
+								const k = envelope.privateKeys.answersByQuestionId[id];
+								return (k?.strategy === 'single_choice' &&
+									!k.correctOptionId) ||
+									(k?.strategy === 'exact_text' &&
+										!k.accepted?.some((v) => v.trim())) ||
+									(k?.strategy === 'matching' && !k.correctDestinationId)
+									? ' · Kunci belum lengkap'
+									: '';
+							})()}
+						</p>
 						<label>
 							Pertanyaan
 							<textarea
@@ -465,7 +552,7 @@ export function KeyInspector({
 				const change = (edit: (draft: BuilderEnvelope) => void) =>
 					onChange(edit);
 				return (
-					<fieldset className="bd-key" key={id}>
+					<fieldset className="bd-key" key={id} id={'builder-key-' + id}>
 						<legend>Butir {index + 1}</legend>
 						<p>{plain(q.prompt) || 'Pertanyaan belum diisi'}</p>
 						<label className="bd-check">
@@ -512,6 +599,7 @@ export function KeyInspector({
 										min={0}
 										max={100000}
 										step="any"
+										disabled={Boolean(q.rubric?.criteria.length)}
 										value={q.points}
 										onChange={(e) =>
 											change((d) => {
@@ -622,6 +710,90 @@ export function KeyInspector({
 						)}
 						{key.strategy === 'rubric' && (
 							<>
+								<div className="bd-rubric-editor">
+									<strong>Rubrik penilaian</strong>
+									{q.rubric?.criteria.map((criterion, index) => (
+										<div className="bd-rubric-row" key={criterion.id}>
+											<label>
+												Kriteria {index + 1}
+												<input
+													maxLength={1000}
+													value={criterion.label}
+													onChange={(e) =>
+														change((d) => {
+															d.document.questionsById[id].rubric!.criteria[
+																index
+															].label = e.target.value;
+														})
+													}
+												/>
+											</label>
+											<label>
+												Poin maksimum
+												<input
+													type="number"
+													min={0}
+													max={100000}
+													step="any"
+													value={criterion.maxPoints}
+													onChange={(e) =>
+														change((d) => {
+															const target = d.document.questionsById[id];
+															target.rubric!.criteria[index].maxPoints = Number(
+																e.target.value,
+															);
+															target.points = target.rubric!.criteria.reduce(
+																(sum, c) => sum + c.maxPoints,
+																0,
+															);
+														})
+													}
+												/>
+											</label>
+											<button
+												className="bd-icon"
+												aria-label={`Hapus kriteria ${index + 1}`}
+												onClick={() =>
+													change((d) => {
+														const target = d.document.questionsById[id];
+														target.rubric!.criteria.splice(index, 1);
+														target.points = target.rubric!.criteria.reduce(
+															(sum, c) => sum + c.maxPoints,
+															0,
+														);
+													})
+												}
+											>
+												<Trash2 size={14} />
+											</button>
+										</div>
+									))}
+									<button
+										className="bd-secondary"
+										disabled={(q.rubric?.criteria.length || 0) >= 30}
+										onClick={() =>
+											change((d) => {
+												const target = d.document.questionsById[id];
+												target.rubric ||= { criteria: [] };
+												target.rubric.criteria.push({
+													id: uid(),
+													label: '',
+													maxPoints: 1,
+												});
+												target.points = target.rubric.criteria.reduce(
+													(sum, c) => sum + c.maxPoints,
+													0,
+												);
+											})
+										}
+									>
+										+ Tambah kriteria
+									</button>
+									<p className="bd-help">
+										Poin pertanyaan mengikuti jumlah poin kriteria.
+									</p>
+								</div>
+
 								<label>
 									Contoh jawaban
 									<textarea
@@ -886,10 +1058,27 @@ function LessonEditor({
 }
 export function BuilderPreview({
 	document: d,
+	answers: suppliedAnswers,
+	onAnswersChange,
+	activityId,
+	readOnly = false,
+	live = false,
 }: {
 	document: BuilderEnvelope['document'];
+	answers?: Record<string, string>;
+	onAnswersChange?: Dispatch<SetStateAction<Record<string, string>>>;
+	activityId?: string;
+	readOnly?: boolean;
+	live?: boolean;
 }) {
-	const [answers, setAnswers] = useState<Record<string, string>>({});
+	const [localAnswers, setLocalAnswers] = useState<Record<string, string>>({});
+	const answers = suppliedAnswers || localAnswers;
+	const setAnswers: Dispatch<SetStateAction<Record<string, string>>> = (
+		value,
+	) => {
+		if (readOnly) return;
+		(onAnswersChange || setLocalAnswers)(value);
+	};
 	const question = (id: string) => {
 		const q = d.questionsById[id];
 		if (!q) return null;
@@ -949,45 +1138,9 @@ export function BuilderPreview({
 					</label>
 				);
 			case 'image':
-				return url ? (
-					<figure>
-						<img src={url} alt={b.alt || ''} loading="lazy" />
-						<figcaption>{b.label}</figcaption>
-					</figure>
-				) : (
-					<p>Gambar belum dipilih.</p>
-				);
 			case 'audio':
-				return url ? (
-					<div>
-						<p>{b.label}</p>
-						<audio
-							controls
-							src={url}
-							preload="none"
-							aria-label={b.label || 'Audio'}
-						/>
-					</div>
-				) : (
-					<p>Audio belum dipilih.</p>
-				);
 			case 'video':
-				return url ? (
-					<div>
-						<p>{b.label}</p>
-						<video
-							controls
-							src={url}
-							preload="none"
-							aria-label={b.label || 'Video'}
-						/>
-						<a href={url} target="_blank" rel="noreferrer">
-							Buka video
-						</a>
-					</div>
-				) : (
-					<p>Video belum dipilih.</p>
-				);
+				return <BuilderMediaView block={b} />;
 			case 'reference':
 				return url ? (
 					<a href={url} target="_blank" rel="noreferrer">
@@ -1061,30 +1214,39 @@ export function BuilderPreview({
 	};
 	return (
 		<div className="bd-student-preview">
-			<div className="bd-preview-banner">
-				<span>Pratinjau — jawaban ini tidak dikirim ke kelas.</span>
-				<button type="button" onClick={() => setAnswers({})}>
-					Reset jawaban
-				</button>
-			</div>
+			{!live && (
+				<div className="bd-preview-banner">
+					<span>Pratinjau — jawaban ini tidak dikirim ke kelas.</span>
+					<button type="button" onClick={() => setAnswers({})}>
+						Reset jawaban
+					</button>
+				</div>
+			)}
 			<h1>{d.title}</h1>
 			<p className="bd-prose">{plain(d.instructions)}</p>
-			{d.activities.map((a, i) => (
-				<section className="bd-preview-activity" key={a.id}>
-					<header>
-						<span>
-							Kegiatan {i + 1}
-							{d.kind === 'kelas' ? ` · ${a.plannedMinutes} menit` : ''}
-						</span>
-						<h2>{a.title}</h2>
-					</header>
-					{a.blocks.map((b) => (
-						<div className="bd-preview-block" key={b.id}>
-							{render(b)}
-						</div>
-					))}
-				</section>
-			))}
+			{d.activities.map(
+				(a, i) =>
+					(!activityId || a.id === activityId) && (
+						<fieldset
+							disabled={readOnly}
+							className="bd-preview-activity"
+							key={a.id}
+						>
+							<header>
+								<span>
+									Kegiatan {i + 1}
+									{d.kind === 'kelas' ? ` · ${a.plannedMinutes} menit` : ''}
+								</span>
+								<h2>{a.title}</h2>
+							</header>
+							{a.blocks.map((b) => (
+								<div className="bd-preview-block" key={b.id}>
+									{render(b)}
+								</div>
+							))}
+						</fieldset>
+					),
+			)}
 		</div>
 	);
 }

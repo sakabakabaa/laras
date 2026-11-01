@@ -1,5 +1,7 @@
 # Shared Kelas/Tugas builder — authoring milestone
 
+> Updated: media, authoring tools and versioned delivery are now described in [builder-media-and-delivery.md](builder-media-and-delivery.md). The text below records the initial release.
+
 This is the first working milestone of the shared builder project planned on 31 October 2026. It implements draft authoring, not the complete published delivery and assessment roadmap.
 
 ## Available flow

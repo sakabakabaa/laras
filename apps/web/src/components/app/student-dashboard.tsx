@@ -1,3 +1,5 @@
+import { BuilderRunList } from './builder/builder-run';
+import '@/styles/builder-workspace.css';
 import { isCollectedSubmission } from '@/lib/submission-state';
 import { useStudentHomeText } from '@/lib/student-home-copy';
 import { useEffect, useMemo, useState } from 'react';
@@ -340,6 +342,7 @@ export function StudentDashboard({ preview = false }: { preview?: boolean }) {
 
 	return (
 		<AppShell title={t('sd.title')} eyebrow={t('sd.eyebrow')} variant="saas" hideHeading>
+                {!preview && <BuilderRunList />}
 			{error && (
 				<div className="ld-alert" role="alert">
 					{error}{' '}

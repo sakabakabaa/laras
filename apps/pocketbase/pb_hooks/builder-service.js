@@ -26,6 +26,54 @@ function authorizeContext(app, user, d) {
 			throw new BadRequestError('Rombel berasal dari mata kuliah lain.');
 	}
 }
+function authorizeAssets(app, user, d) {
+	for (const activity of d.activities)
+		for (const b of activity.blocks) {
+			for (const asset of [
+				b.asset,
+				...(b.images || []).map((image) => image.asset),
+			].filter(Boolean)) {
+				const file = app.findRecordById('file_library', asset.fileId);
+				if (
+					file.getString('owner') !== user.id ||
+					!Array.from(file.getStringSlice('course')).includes(
+						d.context.courseId,
+					)
+				)
+					throw new ForbiddenError(
+						'Berkas harus milik Anda pada mata kuliah ini.',
+					);
+				if (
+					file.getString('file') !== asset.filename ||
+					(file.getInt('version') || 1) !== asset.version
+				) {
+					const prior = find(
+						app,
+						'file_versions',
+						'file={:f} && version={:v}',
+						{ f: file.id, v: asset.version },
+					);
+					if (
+						!prior ||
+						prior.getString('filename') !== asset.filename ||
+						!prior.getString('fileData')
+					)
+						throw new BadRequestError(
+							'Versi berkas tidak tersedia. Pilih ulang berkas.',
+						);
+				}
+				const ext = asset.filename.split('.').pop().toLowerCase();
+				const allowed =
+					b.type === 'image'
+						? ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg']
+						: b.type === 'audio'
+							? ['mp3', 'wav', 'ogg', 'aac', 'm4a']
+							: ['mp4', 'webm', 'mov'];
+				if (!allowed.includes(ext))
+					throw new BadRequestError('Jenis berkas tidak cocok dengan elemen.');
+			}
+		}
+}
 function view(app, r) {
 	const k = find(app, 'builder_private_keys', 'document={:d}', { d: r.id });
 	if (!k)
@@ -66,6 +114,114 @@ function handle(app, user, body) {
 						.getString('title'),
 				})),
 		};
+	if (
+		['savedList', 'savedGet', 'saveSnapshot', 'saveTemplate'].includes(
+			body.action,
+		)
+	) {
+		if (body.action === 'savedGet') {
+			const item = app.findRecordById(
+				'builder_saved_items',
+				String(body.itemId || ''),
+			);
+			if (item.getString('owner') !== user.id)
+				throw new ForbiddenError('Salinan tidak tersedia.');
+			authorizeContext(app, user, json(item, 'envelope').document);
+			return {
+				id: item.id,
+				title: item.getString('title'),
+				kind: item.getString('kind'),
+				documentId: item.getString('document'),
+				envelope: json(item, 'envelope'),
+			};
+		}
+		const source = app.findRecordById(
+			'builder_documents',
+			String(body.id || ''),
+		);
+		if (source.getString('owner') !== user.id)
+			throw new ForbiddenError('Draf tidak tersedia.');
+		const envelope = view(app, source);
+		authorizeContext(app, user, envelope.document);
+		if (body.action === 'savedList')
+			return {
+				items: app
+					.findRecordsByFilter(
+						'builder_saved_items',
+						'owner={:u} && ((kind="snapshot" && document={:d}) || (kind="template" && course={:c}))',
+						'-created',
+						200,
+						0,
+						{ u: user.id, d: source.id, c: source.getString('course') },
+					)
+					.map((r) => ({
+						id: r.id,
+						title: r.getString('title'),
+						kind: r.getString('kind'),
+						revision: r.getInt('revision'),
+						created: r.getString('created'),
+					})),
+			};
+		if (!/^[a-zA-Z0-9_-]{1,80}$/.test(String(body.commandId || '')))
+			throw new BadRequestError('Identitas penyimpanan tidak valid.');
+		const existing = find(
+			app,
+			'builder_saved_items',
+			'owner={:u} && commandId={:k}',
+			{ u: user.id, k: body.commandId },
+		);
+		if (existing) return { id: existing.id };
+		if (body.baseRevision !== source.getInt('revision'))
+			throw new BadRequestError('Draf berubah. Simpan dan coba lagi.');
+		const title = String(body.title || '').trim();
+		if (!title || title.length > 200)
+			throw new BadRequestError('Isi nama salinan (maksimal 200 karakter).');
+		let stored = {
+			document: envelope.document,
+			privateKeys: envelope.privateKeys,
+		};
+		if (body.action === 'saveTemplate') {
+			const activity = stored.document.activities.find(
+				(a) => a.id === body.activityId,
+			);
+			if (!activity) throw new BadRequestError('Kegiatan tidak ditemukan.');
+			stored.document.activities = [activity];
+			const references = new Set();
+			for (const b of activity.blocks) {
+				for (const q of b.questionIds || []) references.add(q);
+				if (b.questionId) references.add(b.questionId);
+				for (const section of b.sections || [])
+					for (const segment of section.segments)
+						if (segment.type === 'gap') references.add(segment.questionId);
+			}
+			stored.document.questionsById = Object.fromEntries(
+				Object.entries(stored.document.questionsById).filter(([key]) =>
+					references.has(key),
+				),
+			);
+			stored.privateKeys.answersByQuestionId = Object.fromEntries(
+				Object.entries(stored.privateKeys.answersByQuestionId).filter(([key]) =>
+					references.has(key),
+				),
+			);
+		}
+		stored = domain.normalize(stored);
+		const item = new Record(
+			app.findCollectionByNameOrId('builder_saved_items'),
+		);
+		item.load({
+			owner: user.id,
+			course: source.getString('course'),
+			document: source.id,
+			kind: body.action === 'saveTemplate' ? 'template' : 'snapshot',
+			title,
+			revision: source.getInt('revision'),
+			envelope: stored,
+			commandId: body.commandId,
+		});
+		app.save(item);
+		return { id: item.id };
+	}
 	let record;
 	if (body.action === 'get' || body.action === 'save') {
 		if (typeof body.id !== 'string' || !/^[a-z0-9]{15}$/.test(body.id))
@@ -113,6 +269,7 @@ function handle(app, user, body) {
 		throw new BadRequestError(String(e.message || e));
 	}
 	authorizeContext(app, user, normalized.document);
+	authorizeAssets(app, user, normalized.document);
 	if (record && normalized.document.kind !== record.getString('kind'))
 		throw new BadRequestError(
 			'Jenis draf tidak dapat diubah. Duplikat untuk membuat jenis baru.',
@@ -144,4 +301,4 @@ function handle(app, user, body) {
 	app.save(key);
 	return view(app, record);
 }
-module.exports = { handle };
+module.exports = { handle, authorizeAssets, authorizeContext };

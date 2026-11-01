@@ -1,3 +1,4 @@
+import { BuilderRunList } from './builder/builder-run';
 import { mergeSubmissionChannels, isCollectedSubmission, isOfficiallyGraded } from '@/lib/submission-state';
 import { useEffect, useMemo, useState } from 'react';
 import {BuilderDraftList} from './builder/builder-entry';
@@ -221,7 +222,7 @@ export function TugasBoard() {
 				</button>
 			</div>
 
-			<BuilderDraftList kind="tugas"/>
+			<BuilderDraftList kind="tugas"/><BuilderRunList kind="tugas"/>
 			{error && (
 				<div className="ld-alert" role="alert">
 					{error}

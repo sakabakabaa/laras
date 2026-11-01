@@ -19,6 +19,8 @@ export default [
 	route('app/tugas', 'routes/app.tugas.tsx'),
 	route('app/builder/new', 'routes/app.builder-new.tsx'),
 	route('app/builder/:documentId', 'routes/app.builder.tsx'),
+	route('app/kegiatan/:runId', 'routes/app.builder-run.tsx'),
+	route('api/builder-media', 'routes/api.builder-media.ts'),
 	route('app/tugas/buat', 'routes/app.tugas.buat.tsx'),
 	route('app/tugas/insights', 'routes/app.tugas.insights.tsx'),
 	route('app/riset', 'routes/app.riset.tsx'),

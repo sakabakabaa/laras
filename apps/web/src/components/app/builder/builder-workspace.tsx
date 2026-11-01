@@ -60,7 +60,6 @@ import {
 } from '@/lib/builder-document';
 import { BlockEditor, KeyInspector } from './builder-elements';
 import { BuilderRunList } from './builder-run';
-import { BuilderJourneyPreview } from './builder-journey-preview';
 import { deliveryRequest } from '@/lib/builder-delivery';
 import {
 	BuilderSavedItems,
@@ -115,10 +114,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[savedItems, setSavedItems] = useState<{ activityId?: string } | null>(
 			null,
 		),
-		[preview, setPreview] = useState(false),
 		[publishing, setPublishing] = useState(false),
 		[inspectorOpen, setInspectorOpen] = useState(false),
-		[previewMobile, setPreviewMobile] = useState(false),
 		[historyVersion, setHistoryVersion] = useState(0);
 	const current = useRef<BuilderEnvelope | null>(null),
 		revisionRef = useRef(0),
@@ -853,7 +850,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					<button className="bd-secondary" onClick={() => setSavedItems({})}>
 						<History size={15} /> Riwayat & template
 					</button>
-					<button className="bd-secondary" onClick={() => setPreview(true)}>
+					<button className="bd-secondary" disabled={dirty || saving || conflict || Boolean(recovery)} title={dirty || saving ? 'Menunggu perubahan tersimpan…' : 'Buka halaman pratinjau'} onClick={() => navigate(`/app/builder/${id}/pratinjau`)}>
 						<Eye size={15} />
 						Pratinjau
 					</button>
@@ -1465,7 +1462,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<p>Gunakan pratinjau untuk mencoba kegiatan sebagai mahasiswa.</p>
 					)}
 					<div className="bd-inline-actions">
-						<button className="bd-primary" onClick={() => setPreview(true)}>
+						<button className="bd-primary" disabled={dirty || saving || conflict || Boolean(recovery)} title={dirty || saving ? 'Menunggu perubahan tersimpan…' : 'Buka halaman pratinjau'} onClick={() => navigate(`/app/builder/${id}/pratinjau`)}>
 							<Eye size={15} />
 							Pratinjau mahasiswa
 						</button>
@@ -1570,40 +1567,6 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						</DialogDescription>
 					</DialogHeader>
 					{sidebarContents('drawer')}
-				</DialogContent>
-			</Dialog>
-			<Dialog open={preview} onOpenChange={setPreview}>
-				<DialogContent className="bd-preview-dialog">
-					<DialogHeader>
-						<DialogTitle>Pratinjau mahasiswa</DialogTitle>
-						<DialogDescription>
-							Menampilkan perubahan terbaru. Jawaban percobaan tidak disimpan
-							sebagai kiriman mahasiswa.
-						</DialogDescription>
-					</DialogHeader>
-					<div className="bd-inline-actions">
-						<button
-							className="bd-secondary"
-							aria-pressed={!previewMobile}
-							onClick={() => setPreviewMobile(false)}
-						>
-							Desktop
-						</button>
-						<button
-							className="bd-secondary"
-							aria-pressed={previewMobile}
-							onClick={() => setPreviewMobile(true)}
-						>
-							Ponsel
-						</button>
-					</div>
-					<div
-						className={
-							previewMobile ? 'bd-preview-frame is-mobile' : 'bd-preview-frame'
-						}
-					>
-						<BuilderJourneyPreview document={d} />
-					</div>
 				</DialogContent>
 			</Dialog>
 			<Dialog

@@ -96,12 +96,6 @@ export const STUDENT_COURSE_SECTIONS: CourseSection[] = [
 	'ringkasan',
 	'mata-kuliah',
 	'absensi',
-	'tugas',
-	'latihan',
-	'berkas',
-	'nilai',
-	'analitik',
-	'info',
 ];
 
 /** Sections shown in the lecturer course rail, in order. */

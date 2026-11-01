@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import {Link} from 'react-router';
-import {ArrowRight,BookOpen,CalendarDays,CheckCircle2,Clock3,FileText,MessageCircle,Radio} from 'lucide-react';
+import {ArrowRight,BookOpen,CalendarDays,ChevronLeft,ChevronRight,Clock3,MessageCircle,Radio} from 'lucide-react';
 import {AppShell} from '@/components/app/app-shell';
 import {CourseThumb} from '@/components/app/course-thumb';
 import {useCachedQuery} from '@/hooks/use-cached-query';
@@ -10,7 +10,7 @@ import {useLanguage} from '@/lib/i18n';
 import {activityTypeOf,studentWorkPath,type Assignment,type AssignmentSubmission} from '@/lib/assignments';
 import {deliveryRequest,type BuilderRunItem} from '@/lib/builder-delivery';
 import {sessionClock} from '@/lib/session-clock';
-import {dashboardClasses,dashboardWeek,jakartaDay,orderByDeadline,type StudentLiveClass} from '@/lib/student-dashboard-data';
+import {dashboardClasses,jakartaDay,orderByDeadline,type StudentLiveClass} from '@/lib/student-dashboard-data';
 import type {Course,Enrollment} from '@/lib/learning';
 import '@/styles/student-dashboard-v2.css';
 
@@ -29,14 +29,14 @@ function dateLabel(value:string,language:'id'|'en'|'de'){
 function SectionError({onRetry,labels}:{onRetry:()=>void;labels:Labels}){return <div className="sd2-error" role="alert"><span>{labels.error}</span><button type="button" onClick={onRetry}>{labels.retry}</button></div>;}
 export function StudentDashboard({preview=false}:{preview?:boolean}){
  const language=useLanguage(),l=copy[language],user=pb.authStore.record,me=user?.id||'';
- const [localNow,setLocalNow]=useState(Date.now()),[clockOffset,setClockOffset]=useState(0),[showAll,setShowAll]=useState(false),[calendarDay,setCalendarDay]=useState('');
+ const [localNow,setLocalNow]=useState(Date.now()),[clockOffset,setClockOffset]=useState(0),[calendarDay,setCalendarDay]=useState(''),[monthOffset,setMonthOffset]=useState(0);
  const now=localNow+clockOffset;
  useEffect(()=>{const timer=window.setInterval(()=>setLocalNow(Date.now()),30000);return()=>window.clearInterval(timer);},[]);
  const coursesQuery=useCachedQuery<Course[]>(`student-dashboard:courses:${me}`,()=>pb.collection('courses').getFullList<Course>({sort:'title'}));
  const enrollmentsQuery=useCachedQuery<EnrollmentWithCourse[]>(preview?null:`student-dashboard:enrollments:${me}`,()=>pb.collection('enrollments').getFullList<EnrollmentWithCourse>({filter:pb.filter('owner = {:me}',{me}),expand:'course'}));
  const assignmentsQuery=useCachedQuery<Assignment[]>(preview?null:`student-dashboard:assignments:${me}`,()=>pb.collection('assignments').getFullList<Assignment>({sort:'-updated',expand:'session,subCpmk,parentAssignment'}));
  const submissionsQuery=useCachedQuery<AssignmentSubmission[]>(preview?null:`student-dashboard:submissions:${me}`,()=>pb.collection('assignment_submissions').getFullList<AssignmentSubmission>({filter:pb.filter('owner = {:me}',{me}),sort:'-updated'}));
- const liveQuery=useCachedQuery<{items:StudentLiveClass[];serverNow?:string}>(preview?null:`student-dashboard:live:${me}`,()=>pb.send('/api/laras/student-scheduled-classes',{method:'GET',requestKey:null}));
+ const liveQuery=useCachedQuery<{items:StudentLiveClass[];serverNow?:string}>(preview?null:`student-dashboard:live:${me}`,()=>pb.send('/api/laras/student-scheduled-classes?includePast=1',{method:'GET',requestKey:null}));
  const runsQuery=useCachedQuery<{items:BuilderRunItem[]}>(preview?null:`student-dashboard:runs:${me}`,()=>deliveryRequest('list'));
  useEffect(()=>{const server=Date.parse(liveQuery.data?.serverNow||'');if(Number.isFinite(server)){const local=Date.now();setClockOffset(server-local);setLocalNow(local);}},[liveQuery.data]);
  const reloadLive=liveQuery.reload,reloadRuns=runsQuery.reload;
@@ -51,14 +51,19 @@ export function StudentDashboard({preview=false}:{preview?:boolean}){
   for(const run of runsQuery.data?.items||[]){if(run.kind!=='tugas')continue;if(run.startsAt&&Date.parse(run.startsAt)>now)continue;const status=run.submittedAt?(run.feedbackReady?'feedback':null):run.startedAt?'draft':'assigned';if(status!=='feedback'&&(run.closed||Boolean(run.closesAt&&Date.parse(run.closesAt)<=now)))continue;if(status)rows.push({id:run.id,title:run.title,course:run.courseTitle,deadline:run.dueAt,href:`/app/kegiatan/${run.id}`,status});}
   return orderByDeadline(rows);
  },[assignmentsQuery.data,submissionsQuery.data,courseMap,runsQuery.data,now]);
- const pending=work.filter(item=>item.status!=='feedback'),feedback=work.filter(item=>item.status==='feedback');
- const calendar=useMemo(()=>dashboardWeek(now,classes,pending),[now,classes,pending]);
- const selectedDay=calendar.days.includes(calendarDay)?calendarDay:calendar.days[0];
- const dayEvents=calendar.events.filter(event=>jakartaDay(event.date)===selectedDay);
+ const feedback=work.filter(item=>item.status==='feedback');
+ const today=jakartaDay(now), [year,month]=today.split('-').map(Number);
+ const monthStart=new Date(Date.UTC(year,month-1+monthOffset,1));
+ const monthKey=monthStart.toISOString().slice(0,7);
+ const firstOffset=(monthStart.getUTCDay()+6)%7;
+ const daysInMonth=new Date(Date.UTC(monthStart.getUTCFullYear(),monthStart.getUTCMonth()+1,0)).getUTCDate();
+ const days=Array.from({length:Math.ceil((firstOffset+daysInMonth)/7)*7},(_,i)=>i<firstOffset||i>=firstOffset+daysInMonth?'':`${monthKey}-${String(i-firstOffset+1).padStart(2,'0')}`);
+ const selectedDay=calendarDay.startsWith(monthKey)?calendarDay:(monthKey===today.slice(0,7)?today:`${monthKey}-01`);
+ const calendarClasses=useMemo(()=>[...(liveQuery.data?.items||[]).map(item=>({id:item.id,source:'scheduled',title:item.title,courseTitle:item.courseTitle,startsAt:item.startsAt,href:`/app/courses/${item.courseId}/pertemuan/${item.sessionId}/terjadwal`})),...classes.filter(item=>item.source==='builder')],[liveQuery.data,classes]);
+ const dayEvents=calendarClasses.filter(item=>jakartaDay(item.startsAt)===selectedDay);
  const coursesLoading=coursesQuery.loading||enrollmentsQuery.loading,workLoading=coursesLoading||assignmentsQuery.loading||submissionsQuery.loading||runsQuery.loading;
- const courseError=coursesQuery.error||enrollmentsQuery.error,workError=courseError||assignmentsQuery.error||submissionsQuery.error||runsQuery.error;
+ const courseError=coursesQuery.error||enrollmentsQuery.error;
  const retryCourses=()=>{coursesQuery.reload();enrollmentsQuery.reload();};
- const retryWork=()=>{retryCourses();assignmentsQuery.reload();submissionsQuery.reload();runsQuery.reload();};
  const liveError=liveQuery.error||runsQuery.error;
  const liveItems=classes.filter(item=>item.phase==='live');const upcoming=classes.filter(item=>item.phase==='upcoming');const shown=liveItems.length?liveItems:upcoming.slice(0,3);
  const name=String(user?.name||'').trim().split(/\s+/)[0];
@@ -70,18 +75,15 @@ export function StudentDashboard({preview=false}:{preview?:boolean}){
    {!preview&&(liveQuery.loading||runsQuery.loading)&&!classes.length?<div className="sd2-empty" role="status">{l.loading}</div>:shown.length?<div className="sd2-live-list">{shown.map(item=>{const locked=!item.checkedIn&&Boolean(item.joinUntil)&&Date.parse(item.joinUntil)<=now;return <article className={`sd2-live-card ${item.phase==='live'?'is-live':'is-upcoming'}`} key={`${item.source}:${item.id}`}><div className="sd2-live-symbol"><Radio size={23} aria-hidden="true"/></div><div className="sd2-live-body"><span className="sd2-live-label"><i aria-hidden="true"/>{item.phase==='live'?l.live:l.upcoming}</span><h3>{item.title}</h3><p>{item.courseTitle}</p><div className="sd2-time"><Clock3 size={15} aria-hidden="true"/><span>{item.phase==='live'?`${l.ends}: ${dateLabel(item.endsAt,language)} · ${sessionClock(Math.max(0,Math.ceil((Date.parse(item.endsAt)-now)/1000)))}`:`${l.starts}: ${dateLabel(item.startsAt,language)}`}</span></div>{locked&&item.phase==='live'&&<small>{l.joinClosed}</small>}</div><Link className="sd2-primary" to={item.href}>{item.phase==='upcoming'||locked||item.finished?l.viewClass:item.checkedIn?l.resume:l.join}<ArrowRight size={17} aria-hidden="true"/></Link></article>;})}</div>:!liveError&&<div className="sd2-empty sd2-empty-live"><CalendarDays size={21} aria-hidden="true"/><div><strong>{l.noClass}</strong><p>{l.noClassHint}</p></div></div>}
    {liveItems.length>0&&upcoming.length>0&&<p className="sd2-next-line">{l.next}: {upcoming[0].title} · {dateLabel(upcoming[0].startsAt,language)}</p>}
   </section>
-  <div className="sd2-columns"><section className="sd2-panel" aria-labelledby="sd2-work-heading"><div className="sd2-panel-head"><div><h2 id="sd2-work-heading">{l.work}</h2><p>{l.workHint}</p></div><span className="sd2-count">{pending.length}</span></div>
-   {workError&&<SectionError onRetry={retryWork} labels={l}/>}
-   {workLoading?<div className="sd2-empty" role="status">{l.loading}</div>:pending.length?<ul className="sd2-work-list">{(showAll?pending:pending.slice(0,5)).map(item=><li key={`${item.href}:${item.id}`}><Link to={item.href} className="sd2-work-row"><span className="sd2-work-icon"><FileText size={18} aria-hidden="true"/></span><span className="sd2-work-copy"><strong>{item.title}</strong><small>{item.course}</small><span>{item.deadline?`${Date.parse(item.deadline)<now?l.overdue:l.due}: ${dateLabel(item.deadline,language)}`:l.noDue}</span></span><span className="sd2-work-action"><small className={`sd2-status is-${item.status}`}>{l[item.status]}</small><b>{item.status==='revision'?l.revise:item.status==='draft'?l.continue:l.start} <ArrowRight size={15} aria-hidden="true"/></b></span></Link></li>)}</ul>:!workError&&<div className="sd2-empty"><CheckCircle2 size={22} aria-hidden="true"/><div><strong>{l.allDone}</strong><p>{l.allDoneHint}</p></div></div>}
-   {pending.length>5&&!showAll&&<button type="button" className="sd2-more" onClick={()=>setShowAll(true)}>{l.more} <ArrowRight size={15}/></button>}
-  </section>
+  <div className="sd2-columns">
   <section className="sd2-panel" aria-labelledby="sd2-courses-heading"><div className="sd2-panel-head"><div><h2 id="sd2-courses-heading">{l.courses}</h2><p>{l.coursesHint}</p></div><Link className="sd2-text-link" to="/app/courses">{l.allCourses}<ArrowRight size={15}/></Link></div>
    {courseError&&<SectionError onRetry={retryCourses} labels={l}/>}
    {coursesLoading?<div className="sd2-empty" role="status">{l.loading}</div>:courses.length?<ul className="sd2-course-list">{courses.map(course=><li key={course.id}><Link to={`/app/courses/${courseRouteId(course)}`} className="sd2-course"><CourseThumb course={course}/><span><strong>{course.title}</strong><small>{[course.code,course.semester].filter(Boolean).join(' · ')}</small></span><ArrowRight size={17} aria-hidden="true"/></Link></li>)}</ul>:!courseError&&<div className="sd2-empty"><BookOpen size={22} aria-hidden="true"/><div><strong>{l.emptyCourses}</strong><p>{l.emptyCoursesHint}</p><Link to="/app/courses">{l.allCourses} <ArrowRight size={14}/></Link></div></div>}
   </section></div>
-  <section className="sd2-panel sd2-calendar" aria-labelledby="sd2-calendar-heading"><div className="sd2-panel-head"><div><h2 id="sd2-calendar-heading">{l.calendar}</h2><p>{l.calendarHint}</p></div><CalendarDays size={20} aria-hidden="true"/></div>
-   <div className="sd2-calendar-days" role="group" aria-label={l.calendar}>{calendar.days.map(day=>{const date=new Date(`${day}T12:00:00Z`),count=calendar.events.filter(event=>jakartaDay(event.date)===day).length;return <button type="button" key={day} aria-pressed={selectedDay===day} onClick={()=>setCalendarDay(day)} aria-label={new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{dateStyle:'full',timeZone:'Asia/Jakarta'}).format(date)}><span>{new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{weekday:'short',timeZone:'Asia/Jakarta'}).format(date)}</span><strong>{date.getUTCDate()}</strong><i className={count?'has-events':''} aria-hidden="true"/></button>;})}</div>
-   {liveError||workError?<div className="sd2-calendar-note">{l.error}</div>:liveQuery.loading||workLoading?<div className="sd2-calendar-note" role="status">{l.loading}</div>:dayEvents.length?<ul className="sd2-calendar-events">{dayEvents.map(event=><li key={event.id}><Link to={event.href}><span className={`sd2-event-icon is-${event.kind}`}>{event.kind==='class'?<Radio size={15}/>:<FileText size={15}/>}</span><span><strong>{event.title}</strong><small>{event.kind==='class'?l.classEvent:l.workEvent} · {event.detail}</small></span><time>{new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date(event.date))} WIB</time><ArrowRight size={15} aria-hidden="true"/></Link></li>)}</ul>:<p className="sd2-calendar-note">{l.noEvents}</p>}
+  <section className="sd2-panel sd2-calendar" aria-labelledby="sd2-calendar-heading"><div className="sd2-panel-head"><h2 id="sd2-calendar-heading">{l.calendar}</h2><div className="sd2-month-nav"><button type="button" aria-label={language==='de'?'Vorheriger Monat':language==='id'?'Bulan sebelumnya':'Previous month'} onClick={()=>setMonthOffset(v=>v-1)}><ChevronLeft size={20}/></button><strong>{new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{month:'long',year:'numeric',timeZone:'UTC'}).format(monthStart)}</strong><button type="button" aria-label={language==='de'?'Nächster Monat':language==='id'?'Bulan berikutnya':'Next month'} onClick={()=>setMonthOffset(v=>v+1)}><ChevronRight size={20}/></button></div></div>
+   <div className="sd2-calendar-weekdays">{Array.from({length:7},(_,i)=><span key={i}>{new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{weekday:'short',timeZone:'UTC'}).format(new Date(Date.UTC(2026,10,2+i)))}</span>)}</div>
+   <div className="sd2-calendar-days">{days.map((day,i)=>day?<button type="button" key={day} aria-pressed={selectedDay===day} aria-label={new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{dateStyle:'full',timeZone:'UTC'}).format(new Date(`${day}T12:00:00Z`))} onClick={()=>setCalendarDay(day)}><strong className={day===today?'is-today':''}>{Number(day.slice(-2))}</strong><i className={calendarClasses.some(item=>jakartaDay(item.startsAt)===day)?'has-events':''} aria-hidden="true"/></button>:<span key={`empty-${i}`}/>)}</div>
+   {liveError?<div className="sd2-calendar-note">{l.error}</div>:liveQuery.loading||runsQuery.loading?<div className="sd2-calendar-note" role="status">{l.loading}</div>:dayEvents.length?<ul className="sd2-calendar-events">{dayEvents.map(event=><li key={`${event.source}:${event.id}`}><Link to={event.href}><span className="sd2-event-icon is-class"><Radio size={15}/></span><span><strong>{event.title}</strong><small>{event.courseTitle}</small></span><time>{new Intl.DateTimeFormat(language==='id'?'id-ID':language==='de'?'de-DE':'en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'}).format(new Date(event.startsAt))} WIB</time><ArrowRight size={15} aria-hidden="true"/></Link></li>)}</ul>:<p className="sd2-calendar-note">{language==='de'?'Kein Unterricht an diesem Tag.':language==='id'?'Tidak ada kelas pada hari ini.':'No classes on this day.'}</p>}
   </section>
   {!workLoading&&feedback.length>0&&<section className="sd2-panel sd2-feedback" aria-labelledby="sd2-feedback-heading"><div className="sd2-panel-head"><div><h2 id="sd2-feedback-heading">{l.feedbackTitle}</h2><p>{l.feedbackHint}</p></div></div><ul>{feedback.slice(0,3).map(item=><li key={`${item.href}:${item.id}`}><Link to={item.href}><MessageCircle size={18} aria-hidden="true"/><span><strong>{item.title}</strong><small>{item.course}</small></span><b>{l.feedback} <ArrowRight size={15}/></b></Link></li>)}</ul></section>}
  </div></AppShell>;

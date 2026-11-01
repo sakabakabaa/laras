@@ -742,7 +742,7 @@ export function CourseDetail({ routeId }: { routeId: string }) {
 					<LecturerGradebook course={course} />
 				)}
 				{section === 'info' && (
-					<CourseInfo course={course} routeId={routeId} isStudent={isStudent} />
+					isStudent ? <StudentCourseOverview course={course} routeId={routeId} sessions={sessions} /> : <CourseInfo course={course} routeId={routeId} isStudent={isStudent} />
 				)}
 				</>
 			)}

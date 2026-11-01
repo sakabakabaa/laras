@@ -11,6 +11,7 @@
  * student submissions, and per-student data are never touched.
  */
 import type PocketBase from 'pocketbase';
+import { BUILDER_TOOLS } from './builder-tools.server';
 import { importRpsPdf } from '@/lib/rps-pdf-import.server';
 import { buildAssignmentDraft } from '@/lib/assignment-draft.server';
 import { buildTaskConfigDraft } from '@/lib/task-config-draft.server';
@@ -407,6 +408,7 @@ export const runReadTool = async (
  * implementations, returning the standardized {@link TypedToolResult} contract.
  */
 export const TOOL_REGISTRY: ReadonlyMap<string, AssistantToolDefinition> = new Map<string, AssistantToolDefinition>([
+ ...BUILDER_TOOLS.map(tool => [tool.name, tool] as [string, AssistantToolDefinition]),
  [ 'prepare_lesson', {
   name: 'prepare_lesson', description: 'Siapkan rencana pelajaran berdasarkan bukti kelas dan materi yang disetujui. Menjalankan tugas latar belakang; tidak mengubah catatan akademik. Draf ditinjau dan disetujui di panel tugas sebelum disimpan.',
   permission: 'draft', requiresConfirmation: false,

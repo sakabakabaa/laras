@@ -10,6 +10,7 @@ import {
 	RefreshCw,
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
+import type { BuilderImportJob } from '@/lib/builder-import';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { scheduledRequest } from '@/lib/scheduled-classes';
 import { useCourseSections } from '@/hooks/use-course-sections';
@@ -80,6 +81,7 @@ export function BuilderDraftList({ kind }: { kind: BuilderKind }) {
 					<RefreshCw size={16} />
 				</button>
 			</header>
+			<BuilderImportList kind={kind} />
 			{loading ? (
 				<p role="status">Memuat draf…</p>
 			) : error ? (
@@ -118,12 +120,15 @@ export function BuilderNew() {
 		[section, setSection] = useState(''),
 		[title, setTitle] = useState(''),
 		[template, setTemplate] = useState<
-			'blank' | 'listening' | 'writing' | 'reflection'
-		>('blank'),
+			'blank' | 'listening' | 'writing' | 'reflection' | 'book'
+		>(params.get('from') === 'book' ? 'book' : 'blank'),
 		[source, setSource] = useState(params.get('source') || ''),
+		[pageImage, setPageImage] = useState<File | null>(null),
+		[goal, setGoal] = useState(''),
 		[busy, setBusy] = useState(false),
 		[error, setError] = useState('');
 	const command = useRef(uid());
+	useEffect(()=>{command.current=uid();},[kind,course,meeting,section,title,goal,template,source]);
 	const courses = useCachedQuery<Course[]>('builder-course-options', () =>
 		pb
 			.collection('courses')
@@ -163,6 +168,16 @@ export function BuilderNew() {
 						? [section]
 						: [],
 			};
+			if (template === 'book' && !source && !sourceSession) {
+                if (!pageImage) throw new Error('Pilih satu gambar halaman buku.');
+                const form = new FormData();
+                form.append('page', pageImage);
+                form.append('settings', JSON.stringify({kind, context, title, goal}));
+                form.append('commandId', command.current);
+                const job = await pb.send<BuilderImportJob>('/api/builder-import', {method:'POST', body:form, requestKey:null});
+                navigate(`/app/builder/impor/${job.id}`);
+                return;
+            }
 			let envelope = blankBuilder(kind, course, meeting, context.sectionIds);
 			if (sourceSession) {
 				const sourceState = await scheduledRequest(sourceSession, 'state');
@@ -178,7 +193,7 @@ export function BuilderNew() {
 					id: source,
 				});
 				envelope = copyBuilder(saved, kind, context);
-			} else applyTemplate(envelope, template);
+			} else applyTemplate(envelope, template === 'book' ? 'blank' : template);
 			if (title.trim()) envelope.document.title = title.trim();
 			const record = await builderRequest<BuilderRecord>('create', {
 				...envelope,
@@ -299,6 +314,7 @@ export function BuilderNew() {
 							<div className="bd-template-options">
 								{(
 									[
+										{ id: 'book', title: 'Dari halaman buku', description: 'Unggah foto → AI menyusun kegiatan', icon: BookOpen },
 										{
 											id: 'blank',
 											title: 'Kosong',
@@ -343,6 +359,12 @@ export function BuilderNew() {
 									</button>
 								))}
 							</div>
+                            {template === 'book' && !source && <section className="bd-book-upload">
+                                <label>Gambar halaman buku<input type="file" accept="image/png,image/jpeg,image/webp" required={!source} onChange={e=>{setPageImage(e.target.files?.[0]||null);command.current=uid();}} /></label>
+                                <p className="bd-help">Satu halaman PNG, JPG, atau WebP, maksimal 8 MB. Foto seluruh latihan dengan teks yang jelas. AI akan menyusun elemen, ilustrasi, dan penilaian sebagai draf pribadi.</p>
+                                <label>Arahan tambahan (opsional)<textarea value={goal} maxLength={2000} placeholder="Contoh: Pertahankan bahasa Jerman, gunakan tingkat A1." onChange={e=>setGoal(e.target.value)}/></label>
+                                <p className="bd-help">Rekaman audio tidak bisa diambil dari foto. Latihan yang memerlukannya akan ditandai untuk dilengkapi.</p>
+                            </section>}
 							<label>
 								Atau duplikat draf yang sudah ada
 								<select
@@ -381,7 +403,7 @@ export function BuilderNew() {
 								busy
 							}
 						>
-							{busy ? 'Membuat draf…' : 'Mulai menyusun'}
+							{busy ? 'Menyiapkan draf…' : template === 'book' && !source ? 'Bangun dari halaman buku' : 'Mulai menyusun'}
 							<ArrowRight size={16} />
 						</button>
 					</footer>
@@ -389,4 +411,11 @@ export function BuilderNew() {
 			</form>
 		</div>
 	);
+}
+
+function BuilderImportList({kind}:{kind:BuilderKind}) {
+ const [jobs,setJobs]=useState<BuilderImportJob[]>([]);
+ useEffect(()=>{let live=true,timer:ReturnType<typeof setTimeout>;const load=async()=>{try{const result=await pb.send<{items:BuilderImportJob[]}>('/api/builder-import',{method:'POST',body:{action:'list'},requestKey:null});if(!live)return;setJobs(result.items.filter(job=>job.settings.kind===kind));if(result.items.some(job=>job.status==='queued'||job.status==='running'))timer=setTimeout(()=>void load(),5000);}catch{/* Normal draft list remains available. */}};void load();return()=>{live=false;clearTimeout(timer);};},[kind]);
+ if(!jobs.length)return null;
+ return <details className="bd-import-report"><summary>Impor halaman buku ({jobs.length})</summary><ul>{jobs.map(job=><li key={job.id}><Link to={`/app/builder/impor/${job.id}`}>{job.settings.title||'Halaman buku'} · {job.status==='ready'?'Draf siap':job.status==='failed'?'Perlu dicoba lagi':'Sedang disusun'}</Link></li>)}</ul></details>;
 }

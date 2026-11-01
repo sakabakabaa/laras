@@ -159,7 +159,7 @@ export const handleSend = async (
 		structured: activeSession.structuredContext ?? null,
 	});
 
-	const systemPrompt = baseSystemPrompt + (resumeAfterAction ? '\nAKSI TERAKHIR SUDAH DIEKSEKUSI DAN DIVERIFIKASI. Lanjutkan tujuan asli dari riwayat bila masih ada langkah yang diperlukan. Jangan mengulang aksi yang sudah selesai. Setiap perubahan baru tetap memerlukan persetujuan sendiri. Bila tujuan sudah tercapai, ringkas hasil dan tautan; jangan mengusulkan aksi tambahan di luar permintaan.' : '');
+	const systemPrompt = baseSystemPrompt + '\nBUILDER: Jika dosen meminta mengubah foto/halaman buku menjadi kegiatan, gunakan get_builder_context bila perlu, lalu build_from_book_page dengan gambar pesan ini. Hasil merupakan draf privat. Tautkan halaman status; jangan mengklaim selesai sebelum ready. Jangan gunakan create_assignment lama untuk tujuan builder ini. Jangan mengulang build_from_book_page untuk satu permintaan yang sudah mempunyai jobId. Bila rekaman tidak ada, tandai kebutuhan rekaman dan jangan mengarangnya.' + (resumeAfterAction ? '\nAKSI TERAKHIR SUDAH DIEKSEKUSI DAN DIVERIFIKASI. Lanjutkan tujuan asli dari riwayat bila masih ada langkah yang diperlukan. Jangan mengulang aksi yang sudah selesai. Setiap perubahan baru tetap memerlukan persetujuan sendiri. Bila tujuan sudah tercapai, ringkas hasil dan tautan; jangan mengusulkan aksi tambahan di luar permintaan.' : '');
 	const toolCtx: ToolExecutionContext = { pb, userId, files, courseRoute, sessionId: sid };
 
 	// ── Agent loop ──────────────────────────────────────────────────────────

@@ -17,3 +17,8 @@ it('expands only the selected activity and keeps other responses collapsed',()=>
  expect(html).toContain('id="review-response-b" class="sr-activity-response"><');
  expect(html).toContain('id="review-assessment-a" hidden=""');expect(html).toContain('Second response');
 });
+it('shows student feedback separately in lecturer exit-ticket review',()=>{
+ const feedbackState={...state,activities:[{...state.activities[0],kind:'exit_ticket'}],attempts:[{...state.attempts[0],answers:{responses:{i:'My reflection'},feedback:'More speaking practice, please.'}}]};
+ const html=renderToStaticMarkup(createElement(ScheduledReviewWorkspace,{state:feedbackState,onAction:async()=>{}}));
+ expect(html).toContain('Masukan untuk pembelajaran');expect(html).toContain('More speaking practice, please.');expect(html).toContain('Masukan mahasiswa · tidak dinilai');expect(html).toContain('My reflection');
+});

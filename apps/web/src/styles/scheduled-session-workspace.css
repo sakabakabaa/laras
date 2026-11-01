@@ -431,3 +431,8 @@
 .sr-workspace .sr-activity-select[aria-expanded=true] .sr-activity-chevron{transform:rotate(180deg)}
 .sr-workspace .sr-activity-select:focus-visible{outline:2px solid var(--ss-accent);outline-offset:3px;border-radius:6px}
 @media(prefers-reduced-motion:reduce){.sr-workspace .sr-activity-chevron{transition:none}}
+
+.sr-exit-feedback{margin-top:20px;padding:16px;border:1px solid var(--ss-border);border-radius:10px;background:var(--ss-soft)}
+.sr-exit-feedback h4{margin:0 0 10px;font-size:14px}
+.sr-exit-feedback p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}
+.sr-exit-feedback small{color:var(--ss-muted)}

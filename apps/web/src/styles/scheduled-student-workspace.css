@@ -162,3 +162,9 @@
 .sc-preview-tools { margin-bottom: 20px; }
 .sc-preview-tools select { width: 100%; min-width: 0; }
 @media(max-width:640px) { .sc-preview-banner { align-items: flex-start; } .sc-preview-banner button, .sc-preview-banner a { min-height: 44px; } }
+
+.sc-exit-feedback{margin-top:24px;padding-top:20px;border-top:1px solid var(--r-border)}
+.sc-exit-feedback h3{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+.sc-exit-feedback h3 small{font-size:12px;font-weight:500;color:var(--r-ink-2)}
+.sc-exit-feedback>p{margin:0 0 16px;color:var(--r-ink-2);font-size:14px;line-height:1.6}
+.sc-exit-feedback textarea{width:100%;box-sizing:border-box;resize:vertical}

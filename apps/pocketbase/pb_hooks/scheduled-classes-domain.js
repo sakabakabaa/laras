@@ -222,6 +222,7 @@ function windows(c, activities) {
 }
 function cleanAnswers(activity, input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('Jawaban tidak valid.');
+  const feedback = activity.kind === 'exit_ticket' && text(input.feedback, 4000) ? {feedback: text(input.feedback, 4000)} : {};
   if (activity.kind === 'quiz') {
     const result = {};
     for (const q of activity.snapshot.questions) {
@@ -242,9 +243,9 @@ function cleanAnswers(activity, input) {
       if (typeof value !== 'string' || value.length > 2000 || (item.type === 'select' && !item.options.includes(value))) fail('Jawaban butir lembar kerja tidak valid.');
       responses[item.id] = value.trim(); lines.push(item.prompt + '\n' + value.trim());
     }
-    return {responses, text: lines.join('\n\n')};
+    return {responses, text: lines.join('\n\n'), ...feedback};
   }
-  return {text: text(input.text, 20000), acknowledged: input.acknowledged === true};
+  return {text: text(input.text, 20000), acknowledged: input.acknowledged === true, ...feedback};
 }
 function result(activity, answers) {
   if (activity.snapshot.worksheet) {

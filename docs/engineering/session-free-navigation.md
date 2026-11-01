@@ -10,3 +10,5 @@ The mobile login page shows only its login card at widths up to 640px, with 16px
 
 
 Review activities use a controlled accordion, opening the selected activity and retaining unsaved form state when collapsed. The matching widget keeps its captured source card mounted in a stable position, renders a pointer-transparent drag overlay, scopes hit testing to its own worksheet, and clears drag state on release, cancellation, lost capture and window blur. Live and preview timers use a shared HH:MM:SS formatter.
+
+Exit tickets include an optional learning-feedback textarea in both student and preview views. Feedback is stored as `answers.feedback` (trimmed, maximum 4,000 characters), separately from reflection text/worksheet responses. The lecturer sees it inside the exit-ticket review accordion. It does not contribute to completion, grading, attendance, or automatic assessment. Other activity kinds discard this field.

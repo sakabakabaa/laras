@@ -53,3 +53,17 @@ describe('scheduled-class timing and assessment rules', () => {
     expect(rules.attendance(c, null, activities, []).suggestion).toBe('absent');
   });
 });
+
+it('preserves optional exit feedback separately from reflection answers and scoring',()=>{
+ const activity={kind:'exit_ticket',snapshot:{}};
+ const answers=rules.cleanAnswers(activity,{text:'My reflection',feedback:'  More speaking practice, please.  '});
+ expect(answers.feedback).toBe('More speaking practice, please.');
+ expect(answers.text).toBe('My reflection');expect(rules.result(activity,answers).complete).toBe(true);
+ expect(rules.result(activity,rules.cleanAnswers(activity,{feedback:'Feedback alone'})).complete).toBe(false);
+ expect(rules.cleanAnswers({...activity,kind:'assignment'},{text:'Answer',feedback:'Injected'}).feedback).toBeUndefined();
+ expect(rules.cleanAnswers(activity,{text:'Reflection',feedback:'x'.repeat(5000)}).feedback).toHaveLength(4000);
+ const sheet={kind:'exit_ticket',snapshot:{worksheet:{items:[{id:'r',prompt:'Reflect',type:'text'}]}}};
+ const worksheet=rules.cleanAnswers(sheet,{responses:{r:'I learned modal verbs'},feedback:'More examples'});
+ expect(worksheet.feedback).toBe('More examples');expect(worksheet.responses.r).toBe('I learned modal verbs');
+ expect(rules.result(sheet,worksheet)).toEqual({complete:true});
+});

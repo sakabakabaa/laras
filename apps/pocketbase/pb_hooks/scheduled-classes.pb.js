@@ -8,7 +8,7 @@ routerAdd('GET', '/api/laras/student-scheduled-classes', (e) => {
   if (!e.auth || e.auth.isSuperuser()) throw new ForbiddenError('Gunakan akun mahasiswa.');
   e.response.header().set('Cache-Control', 'no-store');
   const now=Date.now();
-  return e.json(200, {serverNow:new Date(now).toISOString(),items:require(__hooks + '/scheduled-classes-service.js').studentList(e.app,e.auth,now)});
+  return e.json(200, {serverNow:new Date(now).toISOString(),items:require(__hooks + '/scheduled-classes-service.js').studentList(e.app,e.auth,now,e.requestInfo().query.includePast === "1")});
 }, $apis.requireAuth('users'));
 routerAdd('POST', '/api/laras/scheduled-classes', (e) => {
   if (!e.auth || e.auth.isSuperuser()) throw new ForbiddenError('Gunakan akun dosen atau mahasiswa.');

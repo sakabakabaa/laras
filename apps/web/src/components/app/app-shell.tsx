@@ -98,7 +98,7 @@ const STUDENT_NAV = [{
   end: true,
   label: 'Latihan',
   icon: Gamepad2,
-  ready: true
+  ready: false
 }, {
   to: '/app/courses',
   end: false,
@@ -110,7 +110,7 @@ const STUDENT_NAV = [{
   end: false,
   label: 'Analitik',
   icon: BarChart3,
-  ready: true
+  ready: false
 }] as const;
 export function AppShell({
   children,
@@ -315,10 +315,8 @@ export function AppShell({
               const studentLabels: Record<string, Record<string, string>> = { id: { Dashboard: 'Beranda', 'Mata Kuliah': 'Kelas', Analitik: 'Progres' }, en: { Dashboard: 'Home', 'Mata Kuliah': 'Classes', Analitik: 'Progress' }, de: { Dashboard: 'Start', 'Mata Kuliah': 'Kurse', Analitik: 'Fortschritt' } };
               const label = (isStudent && studentLabels[language]?.[item.label]) || t(NAV_T[item.label] ?? item.label);
               if (!item.ready) {
-									return <Link key={item.label} to={item.to} className="ld-nav-link" aria-label={label} title={label} data-nav-label={label} onClick={() => setMobileOpen(false)}>
-											<Icon size={18} strokeWidth={1.75} />
-											<span>{label}</span>
-										</Link>;
+                const soon = language === 'de' ? 'Demnächst' : language === 'id' ? 'Segera hadir' : 'Coming soon';
+                return <span key={item.label} className="ld-nav-link ld-nav-upcoming" aria-label={`${label} — ${soon}`} title={`${label} — ${soon}`} data-nav-label={`${label} · ${soon}`}><Icon size={18} strokeWidth={1.75}/><span>{label} <small>{soon}</small></span></span>;
               }
               const hash = 'hash' in item ? item.hash : undefined;
               return <NavLink key={item.label} to={hash ? `${item.to}#${hash}` : item.to} end={'end' in item ? item.end : false} aria-label={label} title={label} data-nav-label={label} className={({

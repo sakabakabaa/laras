@@ -390,7 +390,7 @@ function list(app, user, now) {
   });
 }
 // Student dashboard only: reuse the same enrollment and roster checks as the classroom.
-function studentList(app, user, now) {
+function studentList(app, user, now, includePast = false) {
   if (user.getString('role') !== 'student') throw new ForbiddenError('Daftar kelas ini hanya tersedia untuk mahasiswa.');
   const enrollments = rows(app, 'enrollments', 'owner={:u}', {u:user.id});
   const courseIds = [...new Set(enrollments.map(item=>item.getString('course')).filter(Boolean))];
@@ -399,7 +399,7 @@ function studentList(app, user, now) {
     const classes=rows(app,'scheduled_classes','course={:c} && status="scheduled"',{c:courseId},'startsAt');
     for(const c of classes){
       const endsAt=Date.parse(c.getString('endsAt'));
-      if(!Number.isFinite(endsAt)||endsAt<=now)continue;
+      if(!Number.isFinite(endsAt)||(!includePast && endsAt<=now))continue;
       let ctx;
       try {ctx=context(app,c.getString('session'),user);assertClassAccess(c,ctx);}
       catch(error){if(error instanceof ForbiddenError)continue;throw error;}

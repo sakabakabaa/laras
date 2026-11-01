@@ -142,8 +142,8 @@
 /* Shared surfaces use hairline dividers and restrained corners. */
 .ld-content :is(.ld-panel,.ld-stat,.ld-schedule-card,.eval-col,.eval-answer,.eval-people,
 	.ac2-card,.srs-card,.sas-card,.sd-resume,.ld-course-card,.ld-course-panel),
-.ld-content [class*="-card"],
-.ld-content [class*="-panel"] {
+.ld-content [class*="-card"]:not(.sd2-live-card.is-live),
+.ld-content [class*="-panel"]:not(.sd2-live-card.is-live) {
 	border-color: var(--p-line);
 	box-shadow: none;
 	border-radius: 9px;
@@ -838,7 +838,8 @@
 :root.dark .asst-drawer .asst-mic.live { border-color: #81231d; background: #81231d; color: #fff; }
 :root.dark .asst-drawer .asst-send:disabled { background: #343b45; color: #8290a2; }
 
-/* Carry the same restrained surfaces through every workspace route. */
+/* Carry the same restrained surfaces through every workspace route.
+ * Live-session cards retain their own high-contrast status surface. */
 .ld-content {
 	--surface: var(--p-surface);
 	--border: var(--p-line);
@@ -846,13 +847,13 @@
 	--muted: var(--p-muted);
 	color: var(--p-ink);
 }
-.ld-content :is([class*="-card"],[class*="-panel"]):not(a):not(button):not([role="button"]) {
+.ld-content :is([class*="-card"],[class*="-panel"]):not(.sd2-live-card.is-live):not(a):not(button):not([role="button"]) {
 	border-color: var(--p-line);
 	border-radius: 9px;
 	box-shadow: none;
 	background-image: none;
 }
-.ld-content :is([class*="-card"],[class*="-panel"]):not(a):not(button):not([role="button"]):not(.ld-dash):not(.ld-student) {
+.ld-content :is([class*="-card"],[class*="-panel"]):not(.sd2-live-card.is-live):not(a):not(button):not([role="button"]):not(.ld-dash):not(.ld-student) {
 	background-color: var(--p-surface);
 }
 .ld-content .ld-card-cta { background: var(--p-cta); border-color: var(--p-cta); color: #fff; }
@@ -907,7 +908,7 @@
 .ld-content :is([class*="-row"],li)+:is([class*="-row"],li) { border-color: #eeecea; }
 :root.dark .ld-content :is([class*="-row"],li)+:is([class*="-row"],li) { border-color: #2a3038; }
 :root.dark .ld-content .flb-row:hover { border-color: rgba(201,52,43,.28); }
-:root.dark .ld-content :is([class*="-card"],[class*="-panel"]) {
+:root.dark .ld-content :is([class*="-card"],[class*="-panel"]):not(.sd2-live-card.is-live) {
 	border-color: #2a3038;
 	background-color: #171b21;
 }

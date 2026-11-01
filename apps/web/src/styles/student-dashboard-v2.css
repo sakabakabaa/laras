@@ -16,7 +16,7 @@
 /* Live classes are the primary action on the student dashboard. */
 .sd2-live-heading{margin:0 0 14px;font-size:20px;letter-spacing:-.02em}
 .sd2-arrival{display:block;margin-top:16px;font-size:15px;font-weight:700;color:var(--sd-accent);font-variant-numeric:tabular-nums}
-.sd2-live-card.is-live,:root.dark .sd2-live-card.is-live{padding:32px;border-color:#7f1d16;border-radius:20px;background:linear-gradient(115deg,#7f1d16,#a12b22);color:#fff;box-shadow:0 12px 28px #76221a20}
+.sd2-live-card.is-live,:root.dark .sd2-live-card.is-live{padding:32px;border-color:#7f1d16;border-radius:20px;background:#7f1d16 linear-gradient(115deg,#7f1d16,#a12b22);color:#fff;box-shadow:0 12px 28px #76221a20}
 .sd2-live-card.is-live .sd2-live-symbol{width:56px;height:56px;background:#ffffff1f;color:#fff;border:1px solid #ffffff26}
 .sd2-live-card.is-live .sd2-live-body h3{font-size:clamp(23px,2.6vw,30px);color:#fff;letter-spacing:-.025em;line-height:1.25;margin:12px 0 7px}
 .sd2-live-card.is-live .sd2-live-body p,.sd2-live-card.is-live .sd2-time{color:#ffe4df}

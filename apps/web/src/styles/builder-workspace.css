@@ -1692,3 +1692,11 @@
 .bd-preview-page .bd-preview-frame.is-mobile .sc-match-deck-copy > [lang=de] { font-size: 24px; }
 .bd-preview-page .bd-preview-frame.is-mobile .sc-match-deck-card { padding: 24px; gap: 24px; }
 @media(max-width:600px) { .bd-preview-page { padding: 16px 8px; } .bd-preview-page .bd-preview-frame { padding: 12px 4px; } .bd-preview-page .bd-student-preview { padding: 8px; } }
+
+.bd-book-upload, .bd-import-report { margin:20px 0; padding:20px; border:1px solid var(--bd-border); border-radius:12px; background:var(--bd-soft); }
+.bd-book-upload textarea { min-height:90px; width:100%; padding:12px; border:1px solid var(--bd-border); border-radius:8px; background:var(--bd-panel); font:inherit; }
+.bd-import-status { max-width:900px; }
+.bd-import-report h2 { font-size:17px; margin-top:0; }
+.bd-import-report ul { padding-left:22px; }
+.bd-import-report li { margin:8px 0; overflow-wrap:anywhere; }
+.bd-import-report summary { cursor:pointer; font-weight:600; }

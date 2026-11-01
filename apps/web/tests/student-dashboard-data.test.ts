@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {dashboardClasses,orderByDeadline,type StudentLiveClass} from '../src/lib/student-dashboard-data';
+import {dashboardClasses,dashboardWeek,jakartaDay,orderByDeadline,type StudentLiveClass} from '../src/lib/student-dashboard-data';
 import type {BuilderRunItem} from '../src/lib/builder-delivery';
 const now=Date.parse('2026-11-02T07:00:00Z');
 const scheduled:StudentLiveClass={id:'s',sessionId:'meeting',courseId:'course',courseTitle:'German',title:'Live class',startsAt:'2026-11-02T06:30:00Z',endsAt:'2026-11-02T07:30:00Z',joinUntil:'2026-11-02T07:15:00Z',phase:'open',checkedIn:true};
@@ -15,4 +15,11 @@ describe('student dashboard priorities',()=>{
  it('orders deadlines first and leaves undated work at the end',()=>{
   expect(orderByDeadline([{id:'none',deadline:''},{id:'later',deadline:'2026-11-04T00:00:00Z'},{id:'soon',deadline:'2026-11-02T09:00:00Z'}]).map(item=>item.id)).toEqual(['soon','later','none']);
  });
+});
+
+it('groups classes and deadlines by Jakarta day across midnight',()=>{
+ const start=Date.parse('2026-11-01T17:30:00Z');expect(jakartaDay(start)).toBe('2026-11-02');
+ const klass=dashboardClasses([{...scheduled,startsAt:'2026-11-02T03:00:00Z',endsAt:'2026-11-02T04:00:00Z'}],[],start);
+ const week=dashboardWeek(start,klass,[{id:'work',title:'Essay',course:'German',deadline:'2026-11-02T16:00:00Z',href:'/task'}]);
+ expect(week.days[0]).toBe('2026-11-02');expect(week.days[1]).toBe('2026-11-03');expect(week.events.map(e=>jakartaDay(e.date))).toEqual(['2026-11-02','2026-11-02']);expect(week.events.map(e=>e.href)).toEqual(['/app/courses/course/pertemuan/meeting/terjadwal','/task']);
 });

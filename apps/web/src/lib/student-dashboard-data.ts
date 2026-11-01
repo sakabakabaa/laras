@@ -12,3 +12,18 @@ export function orderByDeadline<T extends {deadline:string}>(items:T[]):T[]{
  const time=(item:T)=>{const value=Date.parse(item.deadline);return Number.isFinite(value)?value:Number.POSITIVE_INFINITY;};
  return [...items].sort((a,b)=>time(a)-time(b));
 }
+
+export type DashboardCalendarEvent={id:string;title:string;detail:string;date:string;href:string;kind:'class'|'work'};
+/** Day keys use the same Jakarta calendar as LARAS class schedules. */
+export function jakartaDay(value:number|string){
+ const date=new Date(value);if(!Number.isFinite(date.getTime()))return '';
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+ const part=(type:string)=>parts.find(p=>p.type===type)?.value||'';
+ return `${part('year')}-${part('month')}-${part('day')}`;
+}
+export function dashboardWeek(now:number,classes:DashboardClass[],work:{id:string;title:string;course:string;deadline:string;href:string}[]){
+ const start=jakartaDay(now);const anchor=Date.parse(`${start}T12:00:00Z`);
+ const days=Array.from({length:7},(_,i)=>new Date(anchor+i*86400000).toISOString().slice(0,10));
+ const events:DashboardCalendarEvent[]=[...classes.map(c=>({id:`${c.source}:${c.id}`,title:c.title,detail:c.courseTitle,date:c.startsAt,href:c.href,kind:'class' as const})),...work.filter(w=>Boolean(w.deadline)).map(w=>({id:`work:${w.id}`,title:w.title,detail:w.course,date:w.deadline,href:w.href,kind:'work' as const}))].filter(e=>days.includes(jakartaDay(e.date))).sort((a,b)=>Date.parse(a.date)-Date.parse(b.date));
+ return {days,events};
+}

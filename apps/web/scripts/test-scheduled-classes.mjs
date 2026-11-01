@@ -100,14 +100,15 @@ try {
   assert(!(await ok(listEndpoint, {}, otherTeacher.token, 'GET')).items.some(item => item.id === classId)); assertions++;
   assert.equal((await api(listEndpoint, {}, student.token, 'GET')).status, 403); assertions++;
   const studentList='/api/laras/student-scheduled-classes';
-  const availableClasses=await ok(studentList,{},student.token,'GET');
-  assert.equal(availableClasses.items.length,1);assert.equal(availableClasses.items[0].sessionId,meeting.id);assert.equal(availableClasses.items[0].phase,'scheduled');assert.equal(availableClasses.items[0].checkedIn,false);assert(!JSON.stringify(availableClasses).includes('PRIVATE'));assertions+=5;
-  assert.equal((await ok(studentList,{},wrongClass.token,'GET')).items.length,0);assert.equal((await ok(studentList,{},outsider.token,'GET')).items.length,0);assert.equal((await api(studentList,{},teacher.token,'GET')).status,403);assertions+=3;
+  assert.equal((await ok(studentList,{},student.token,'GET')).items.length,0); assertions++;
 
   assert.equal((await api(listEndpoint, {}, '', 'GET')).status, 401); assertions++;
 
   await denied(student, 'schedule', {baseRevision: 1});
   state = await call(teacher, 'schedule', {...state.class, baseRevision: 1, activities: state.activities});
+  const availableClasses=await ok(studentList,{},student.token,'GET');
+  assert.equal(availableClasses.items.length,1);assert.equal(availableClasses.items[0].sessionId,meeting.id);assert.equal(availableClasses.items[0].phase,'scheduled');assert.equal(availableClasses.items[0].checkedIn,false);assert(!JSON.stringify(availableClasses).includes('PRIVATE'));assertions+=5;
+  assert.equal((await ok(studentList,{},wrongClass.token,'GET')).items.length,0);assert.equal((await ok(studentList,{},outsider.token,'GET')).items.length,0);assert.equal((await api(studentList,{},teacher.token,'GET')).status,403);assertions+=3;
   let s = await call(student, 'state'); assert(!JSON.stringify(s).includes('Private')); assert(!JSON.stringify(s).includes(shared.id));assert(!s.class.academicSnapshot);assert(!s.activities[0].academic);assertions+=4;
   await denied(student, 'join');
   for (const name of ['scheduled_classes', 'scheduled_class_activities', 'scheduled_activity_attempts', 'scheduled_class_events']) {

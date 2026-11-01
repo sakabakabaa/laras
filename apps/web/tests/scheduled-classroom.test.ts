@@ -76,7 +76,7 @@ describe('student scheduled classroom', () => {
 it('offers an optional feedback field on exit tickets without changing other activities',()=>{
  const state=fixture();state.activities=[{...state.activities[0],kind:'exit_ticket',content:'Reflect on your learning'}];
  const html=render(state);
- expect(html).toContain('Learning feedback');expect(html).toContain('Optional');expect(html).toContain('maxlength="4000"');
+ expect(html).toContain('Learning feedback');expect(html).toContain('Optional');expect(html).toContain('maxLength="4000"');
  expect(html).toContain('It does not affect your score or completion.');
  expect(render(fixture())).not.toContain('Learning feedback');
 });

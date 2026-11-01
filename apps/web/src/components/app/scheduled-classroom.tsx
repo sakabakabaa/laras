@@ -112,7 +112,7 @@ function ActivityAnswer({activity, attempt, state, now, onState,onNext,request:s
         <h3>{t('exitFeedback.title')} <small>{t('exitFeedback.optional')}</small></h3>
         <p>{t('exitFeedback.hint')}</p>
         <label><span>{t('exitFeedback.label')}</span><textarea rows={4} maxLength={4000} value={String(answers.feedback||'')} onChange={event=>edit({feedback:event.target.value})} placeholder={t('exitFeedback.placeholder')}/></label>
-        <span className="sc-character-count">{t('studentClass.characters',{count:String(String(answers.feedback||'').length)})}</span>
+        <span className="sc-character-count">{t('exitFeedback.characters',{count:String(String(answers.feedback||'').length)})}</span>
       </section>}
     </fieldset>
     <div className={`sc-save-status ${dirty ? 'is-pending' : final || attempt ? 'is-saved' : ''}`} role="status"><ShieldCheck size={17} aria-hidden="true"/><span>{busy ? t('studentClass.saving') : final ? attempt?.status === 'expired' ? t('studentClass.expired') : t('studentClass.submitted') : message || t('studentClass.initial')}</span></div>

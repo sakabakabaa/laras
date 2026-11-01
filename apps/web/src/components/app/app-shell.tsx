@@ -106,8 +106,7 @@ const STUDENT_NAV = [{
   icon: BookOpen,
   ready: true
 }, {
-  to: '/app/student',
-  hash: 'progres-belajar',
+  to: '/analytics',
   end: false,
   label: 'Analitik',
   icon: BarChart3,

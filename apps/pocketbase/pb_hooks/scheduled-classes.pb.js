@@ -4,6 +4,12 @@ routerAdd('GET', '/api/laras/scheduled-class-list', (e) => {
   e.response.header().set('Cache-Control', 'no-store');
   return e.json(200, {items:require(__hooks + '/scheduled-classes-service.js').list(e.app,e.auth,Date.now())});
 }, $apis.requireAuth('users'));
+routerAdd('GET', '/api/laras/student-scheduled-classes', (e) => {
+  if (!e.auth || e.auth.isSuperuser()) throw new ForbiddenError('Gunakan akun mahasiswa.');
+  e.response.header().set('Cache-Control', 'no-store');
+  const now=Date.now();
+  return e.json(200, {serverNow:new Date(now).toISOString(),items:require(__hooks + '/scheduled-classes-service.js').studentList(e.app,e.auth,now)});
+}, $apis.requireAuth('users'));
 routerAdd('POST', '/api/laras/scheduled-classes', (e) => {
   if (!e.auth || e.auth.isSuperuser()) throw new ForbiddenError('Gunakan akun dosen atau mahasiswa.');
   let result;

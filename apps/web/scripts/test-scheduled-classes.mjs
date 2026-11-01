@@ -99,6 +99,11 @@ try {
   assert.equal(listedClass.snapshot, undefined); assert.equal(listedClass.attempts, undefined); assertions += 2;
   assert(!(await ok(listEndpoint, {}, otherTeacher.token, 'GET')).items.some(item => item.id === classId)); assertions++;
   assert.equal((await api(listEndpoint, {}, student.token, 'GET')).status, 403); assertions++;
+  const studentList='/api/laras/student-scheduled-classes';
+  const availableClasses=await ok(studentList,{},student.token,'GET');
+  assert.equal(availableClasses.items.length,1);assert.equal(availableClasses.items[0].sessionId,meeting.id);assert.equal(availableClasses.items[0].phase,'scheduled');assert.equal(availableClasses.items[0].checkedIn,false);assert(!JSON.stringify(availableClasses).includes('PRIVATE'));assertions+=5;
+  assert.equal((await ok(studentList,{},wrongClass.token,'GET')).items.length,0);assert.equal((await ok(studentList,{},outsider.token,'GET')).items.length,0);assert.equal((await api(studentList,{},teacher.token,'GET')).status,403);assertions+=3;
+
   assert.equal((await api(listEndpoint, {}, '', 'GET')).status, 401); assertions++;
 
   await denied(student, 'schedule', {baseRevision: 1});
@@ -111,6 +116,7 @@ try {
   async function retime(offset) {const startsAt = Date.now() - offset; await ok(records('scheduled_classes') + '/' + classId, {startsAt: new Date(startsAt).toISOString(), endsAt: new Date(startsAt + 240000).toISOString(), joinUntil: new Date(startsAt + 239000).toISOString()}, admin, 'PATCH');}
   await retime(15000);
   s = await call(student, 'join'); const joined = s.participant.checkedInAt;
+  const liveClasses=await ok(studentList,{},student.token,'GET');assert.equal(liveClasses.items[0].phase,'open');assert.equal(liveClasses.items[0].checkedIn,true);assertions+=2;
   const checkedInMark = (await ok(records('attendance') + '?filter=' + encodeURIComponent(`session="${meeting.id}" && roster="${roster[student.id].id}"`), {}, admin, 'GET')).items[0];
   assert.equal(checkedInMark.status, 'present'); assert.equal(checkedInMark.student, student.id); assertions += 2;
   assert.equal(s.activities[0].content, 'Private scheduled material'); assert(s.activities[1].questions?.length); assertions += 2;

@@ -389,4 +389,23 @@ function list(app, user, now) {
     return {id:c.id,session:c.getString('session'),title:c.getString('title'),status:c.getString('status'),phase:rules.phase(data(c),now),startsAt:c.getString('startsAt'),endsAt:c.getString('endsAt'),course:{id:course.id,title:course.getString('title'),code:course.getString('code')},section,activityCount:rows(app,'scheduled_class_activities','class={:c}',{c:c.id}).length,checkedIn:rows(app,'scheduled_class_participants','class={:c} && checkedInAt!=""',{c:c.id}).length};
   });
 }
-module.exports = {handle, reconcile, list};
+// Student dashboard only: reuse the same enrollment and roster checks as the classroom.
+function studentList(app, user, now) {
+  if (user.getString('role') !== 'student') throw new ForbiddenError('Daftar kelas ini hanya tersedia untuk mahasiswa.');
+  const enrollments = rows(app, 'enrollments', 'owner={:u}', {u:user.id});
+  const courseIds = [...new Set(enrollments.map(item=>item.getString('course')).filter(Boolean))];
+  const items=[];
+  for (const courseId of courseIds) {
+    const classes=rows(app,'scheduled_classes','course={:c} && status="scheduled" && endsAt>{:now}',{c:courseId,now:new Date(now).toISOString()},'startsAt');
+    for(const c of classes){
+      let ctx;
+      try {ctx=context(app,c.getString('session'),user);assertClassAccess(c,ctx);}
+      catch(error){if(error instanceof ForbiddenError)continue;throw error;}
+      const participant=rows(app,'scheduled_class_participants','class={:c} && student={:u}',{c:c.id,u:user.id})[0];
+      const info=data(c);
+      items.push({id:c.id,sessionId:ctx.session.id,courseId:ctx.course.id,courseTitle:ctx.course.getString('title'),title:c.getString('title'),startsAt:c.getString('startsAt'),endsAt:c.getString('endsAt'),joinUntil:c.getString('joinUntil'),phase:rules.phase(info,now),checkedIn:Boolean(participant)});
+    }
+  }
+  return items.sort((a,b)=>a.startsAt.localeCompare(b.startsAt));
+}
+module.exports = {handle, reconcile, list, studentList};

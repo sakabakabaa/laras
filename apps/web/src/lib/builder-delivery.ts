@@ -52,6 +52,11 @@ export type BuilderRunItem = {
 	startsAt: string;
 	dueAt: string;
 	courseTitle: string;
+	checkInClosesAt?: string;
+	closesAt?: string;
+	startedAt?: string;
+	submittedAt?: string;
+	feedbackReady?: boolean;
 };
 export async function deliveryRequest<T>(
 	action: string,

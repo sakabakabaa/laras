@@ -9,6 +9,9 @@ import {
 import { Link, useBlocker, useNavigate } from 'react-router';
 import {
 	ArrowDown,
+	ChevronDown,
+	ChevronRight,
+	History,
 	ArrowLeft,
 	ArrowUp,
 	Check,
@@ -44,6 +47,8 @@ import {
 	builderRequest,
 	encodeBuilderDraft,
 	duplicateActivity,
+	duplicateBlock,
+	activitySummary,
 	newActivity,
 	plain,
 	questionIds,
@@ -53,7 +58,14 @@ import {
 	type BuilderEnvelope,
 	type BuilderRecord,
 } from '@/lib/builder-document';
-import { BlockEditor, BuilderPreview, KeyInspector } from './builder-elements';
+import { BlockEditor, KeyInspector } from './builder-elements';
+import { BuilderRunList } from './builder-run';
+import { BuilderJourneyPreview } from './builder-journey-preview';
+import { deliveryRequest } from '@/lib/builder-delivery';
+import {
+	BuilderSavedItems,
+	insertActivityTemplate,
+} from './builder-saved-items';
 import {
 	BuilderElementLibrary,
 	BUILDER_ELEMENTS,
@@ -99,7 +111,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[dragging, setDragging] = useState(false),
 		[dropTarget, setDropTarget] = useState(''),
 		[announcement, setAnnouncement] = useState(''),
+		[collapsed, setCollapsed] = useState<string[]>([]),
+		[savedItems, setSavedItems] = useState<{ activityId?: string } | null>(
+			null,
+		),
 		[preview, setPreview] = useState(false),
+		[publishing, setPublishing] = useState(false),
 		[inspectorOpen, setInspectorOpen] = useState(false),
 		[previewMobile, setPreviewMobile] = useState(false),
 		[historyVersion, setHistoryVersion] = useState(0);
@@ -110,6 +127,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		past = useRef<BuilderEnvelope[]>([]),
 		future = useRef<BuilderEnvelope[]>([]),
 		activeId = useRef(id),
+		publishCommand = useRef({ revision: 0, id: '' }),
 		dragItem = useRef<{
 			elementId?: string;
 			activityId?: string;
@@ -317,6 +335,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		questionCount = Object.keys(d.questionsById).length,
 		points = Object.values(d.questionsById).reduce((s, q) => s + q.points, 0);
 	const selectActivity = (activityId: string) => {
+		setCollapsed((items) => items.filter((id) => id !== activityId));
 		setActive(activityId);
 		setInsertion(null);
 		setSelected('');
@@ -360,6 +379,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			);
 	};
 	const revealBlock = (activityId: string, blockId: string) => {
+		setCollapsed((items) => items.filter((id) => id !== activityId));
 		setActive(activityId);
 		setSelected(blockId);
 		setPicker(false);
@@ -743,6 +763,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 								d.activities.find((a) => a.id !== activity.id)?.id || '',
 							);
 							setSelected('');
+							setInsertion(null);
+							setAnnouncement(
+								'Kegiatan dihapus. Gunakan Urungkan untuk mengembalikannya.',
+							);
 						}}
 					>
 						Hapus kegiatan
@@ -826,6 +850,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<Settings2 size={15} />
 						Pengaturan
 					</button>
+					<button className="bd-secondary" onClick={() => setSavedItems({})}>
+						<History size={15} /> Riwayat & template
+					</button>
 					<button className="bd-secondary" onClick={() => setPreview(true)}>
 						<Eye size={15} />
 						Pratinjau
@@ -839,7 +866,21 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			<div className="bd-subbar">
 				<span>
 					{d.activities.length} kegiatan · {questionCount} pertanyaan · {points}{' '}
-					poin · Revisi {revision}
+					poin · {d.activities.reduce((sum, a) => sum + a.plannedMinutes, 0)}{' '}
+					menit
+					{d.kind === 'kelas' && d.delivery.startsAt && d.delivery.endsAt && (
+						<>
+							{' '}
+							/{' '}
+							{Math.round(
+								(Date.parse(d.delivery.endsAt) -
+									Date.parse(d.delivery.startsAt)) /
+									60000,
+							)}{' '}
+							menit kelas
+						</>
+					)}{' '}
+					· Revisi {revision}
 				</span>
 				<nav aria-label="Bagian builder">
 					{(
@@ -997,126 +1038,246 @@ export function BuilderWorkspace({ id }: { id: string }) {
 										<Settings2 size={17} />
 									</button>
 								</header>
-								{a.blocks.map((b, j) => (
-									<Fragment key={b.id}>
-										{insertionSlot(a.id, b.id)}
-										<article
-											className={
-												'bd-block' + (selected === b.id ? ' is-selected' : '')
-											}
-											id={'builder-block-' + b.id}
-											tabIndex={-1}
-											onFocus={() => {
-												setActive(a.id);
-												setSelected(b.id);
-											}}
+								<div className="bd-activity-summary">
+									<button
+										className="bd-text-button"
+										aria-expanded={!collapsed.includes(a.id)}
+										onClick={() =>
+											setCollapsed((items) =>
+												items.includes(a.id)
+													? items.filter((id) => id !== a.id)
+													: [...items, a.id],
+											)
+										}
+									>
+										{collapsed.includes(a.id) ? (
+											<ChevronRight size={15} />
+										) : (
+											<ChevronDown size={15} />
+										)}
+										{collapsed.includes(a.id) ? 'Buka' : 'Ringkas'}
+									</button>
+									<span>
+										{a.blocks.length} elemen ·{' '}
+										{activitySummary(draft, a).questions} pertanyaan ·{' '}
+										{activitySummary(draft, a).points} poin · {a.plannedMinutes}{' '}
+										menit · {a.required ? 'Wajib' : 'Opsional'}
+									</span>
+									<button
+										className="bd-text-button"
+										disabled={locked || dirty || saving}
+										onClick={() => setSavedItems({ activityId: a.id })}
+									>
+										Simpan template
+									</button>
+								</div>
+								{!collapsed.includes(a.id) && (
+									<>
+										{a.blocks.map((b, j) => (
+											<Fragment key={b.id}>
+												{insertionSlot(a.id, b.id)}
+												<article
+													className={
+														'bd-block' +
+														(selected === b.id ? ' is-selected' : '')
+													}
+													id={'builder-block-' + b.id}
+													tabIndex={-1}
+													onFocus={() => {
+														setActive(a.id);
+														setSelected(b.id);
+													}}
+													onClick={() => {
+														setActive(a.id);
+														setSelected(b.id);
+													}}
+												>
+													<div className="bd-block-heading">
+														<span className="bd-block-title">
+															<button
+																type="button"
+																className="bd-block-grip"
+																draggable={!locked}
+																disabled={locked}
+																aria-label={`Seret ${BLOCK_LABELS[b.type]}`}
+																title="Seret untuk memindahkan elemen"
+																onDragStart={(event) => {
+																	event.stopPropagation();
+																	dragItem.current = {
+																		activityId: a.id,
+																		blockId: b.id,
+																	};
+																	event.dataTransfer.setData(
+																		BUILDER_DRAG_TYPE,
+																		b.id,
+																	);
+																	event.dataTransfer.effectAllowed = 'move';
+																	setDragging(true);
+																}}
+																onDragEnd={finishDrag}
+															>
+																<GripVertical size={15} />
+															</button>
+															{BLOCK_LABELS[b.type]}
+														</span>
+														<div>
+															<button
+																className="bd-icon"
+																disabled={
+																	locked ||
+																	questionCount + questionIds(b).length > 500 ||
+																	d.activities.reduce(
+																		(sum, a) => sum + a.blocks.length,
+																		0,
+																	) >= 500
+																}
+																aria-label="Duplikat elemen"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	let copy = '';
+																	change((next) => {
+																		copy = duplicateBlock(next, a.id, b.id);
+																	});
+																	revealBlock(a.id, copy);
+																	setAnnouncement('Elemen diduplikat.');
+																}}
+															>
+																<Copy size={14} />
+															</button>
+															<select
+																className="bd-move-select"
+																aria-label="Pindahkan elemen ke kegiatan"
+																value=""
+																disabled={locked}
+																onClick={(e) => e.stopPropagation()}
+																onChange={(e) => {
+																	const targetId = e.target.value;
+																	change((next) => {
+																		const source =
+																				next.document.activities.find(
+																					(v) => v.id === a.id,
+																				)!,
+																			target = next.document.activities.find(
+																				(v) => v.id === targetId,
+																			)!;
+																		source.blocks = source.blocks.filter(
+																			(v) => v.id !== b.id,
+																		);
+																		target.blocks.push(b);
+																	});
+																	revealBlock(targetId, b.id);
+																	setAnnouncement('Elemen dipindahkan.');
+																}}
+															>
+																<option value="" disabled>
+																	Pindahkan ke…
+																</option>
+																{d.activities
+																	.filter((v) => v.id !== a.id)
+																	.map((v) => (
+																		<option key={v.id} value={v.id}>
+																			{v.title || 'Kegiatan tanpa judul'}
+																		</option>
+																	))}
+															</select>
+															<button
+																className="bd-icon"
+																aria-label="Pengaturan elemen"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	setActive(a.id);
+																	setSelected(b.id);
+																	if (
+																		window.matchMedia('(max-width: 650px)')
+																			.matches
+																	)
+																		setInspectorOpen(true);
+																}}
+															>
+																<Settings2 size={14} />
+															</button>
+															<button
+																type="button"
+																className="bd-icon"
+																aria-label="Naikkan elemen"
+																disabled={j === 0}
+																onClick={() =>
+																	change((next) => {
+																		const blocks =
+																			next.document.activities.find(
+																				(x) => x.id === a.id,
+																			)!.blocks;
+																		[blocks[j - 1], blocks[j]] = [
+																			blocks[j],
+																			blocks[j - 1],
+																		];
+																	})
+																}
+															>
+																<ArrowUp size={14} />
+															</button>
+															<button
+																type="button"
+																className="bd-icon"
+																aria-label="Turunkan elemen"
+																disabled={j === a.blocks.length - 1}
+																onClick={() =>
+																	change((next) => {
+																		const blocks =
+																			next.document.activities.find(
+																				(x) => x.id === a.id,
+																			)!.blocks;
+																		[blocks[j + 1], blocks[j]] = [
+																			blocks[j],
+																			blocks[j + 1],
+																		];
+																	})
+																}
+															>
+																<ArrowDown size={14} />
+															</button>
+															<button
+																type="button"
+																className="bd-icon"
+																aria-label="Hapus elemen"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	change((next) =>
+																		removeBlock(next, a.id, b.id),
+																	);
+																	setAnnouncement(
+																		'Elemen dihapus. Gunakan Urungkan untuk mengembalikannya.',
+																	);
+																	setSelected('');
+																}}
+															>
+																<Trash2 size={14} />
+															</button>
+														</div>
+													</div>
+													<BlockEditor
+														block={b}
+														envelope={draft}
+														onChange={change}
+													/>
+												</article>
+											</Fragment>
+										))}
+										{insertionSlot(a.id)}
+										<button
+											className="bd-add-block"
+											disabled={conflict || Boolean(recovery)}
 											onClick={() => {
-												setActive(a.id);
-												setSelected(b.id);
+												openElements(a.id);
 											}}
 										>
-											<div className="bd-block-heading">
-												<span className="bd-block-title">
-													<button
-														type="button"
-														className="bd-block-grip"
-														draggable={!locked}
-														disabled={locked}
-														aria-label={`Seret ${BLOCK_LABELS[b.type]}`}
-														title="Seret untuk memindahkan elemen"
-														onDragStart={(event) => {
-															event.stopPropagation();
-															dragItem.current = {
-																activityId: a.id,
-																blockId: b.id,
-															};
-															event.dataTransfer.setData(
-																BUILDER_DRAG_TYPE,
-																b.id,
-															);
-															event.dataTransfer.effectAllowed = 'move';
-															setDragging(true);
-														}}
-														onDragEnd={finishDrag}
-													>
-														<GripVertical size={15} />
-													</button>
-													{BLOCK_LABELS[b.type]}
-												</span>
-												<div>
-													<button
-														type="button"
-														className="bd-icon"
-														aria-label="Naikkan elemen"
-														disabled={j === 0}
-														onClick={() =>
-															change((next) => {
-																const blocks = next.document.activities.find(
-																	(x) => x.id === a.id,
-																)!.blocks;
-																[blocks[j - 1], blocks[j]] = [
-																	blocks[j],
-																	blocks[j - 1],
-																];
-															})
-														}
-													>
-														<ArrowUp size={14} />
-													</button>
-													<button
-														type="button"
-														className="bd-icon"
-														aria-label="Turunkan elemen"
-														disabled={j === a.blocks.length - 1}
-														onClick={() =>
-															change((next) => {
-																const blocks = next.document.activities.find(
-																	(x) => x.id === a.id,
-																)!.blocks;
-																[blocks[j + 1], blocks[j]] = [
-																	blocks[j],
-																	blocks[j + 1],
-																];
-															})
-														}
-													>
-														<ArrowDown size={14} />
-													</button>
-													<button
-														type="button"
-														className="bd-icon"
-														aria-label="Hapus elemen"
-														onClick={(e) => {
-															e.stopPropagation();
-															change((next) => removeBlock(next, a.id, b.id));
-															setSelected('');
-														}}
-													>
-														<Trash2 size={14} />
-													</button>
-												</div>
-											</div>
-											<BlockEditor
-												block={b}
-												envelope={draft}
-												onChange={change}
-											/>
-										</article>
-									</Fragment>
-								))}
-								{insertionSlot(a.id)}
-								<button
-									className="bd-add-block"
-									disabled={conflict || Boolean(recovery)}
-									onClick={() => {
-										openElements(a.id);
-									}}
-								>
-									<Plus size={18} />
-									{a.blocks.length
-										? 'Tambah elemen'
-										: 'Tambahkan elemen pertama'}
-								</button>
+											<Plus size={18} />
+											{a.blocks.length
+												? 'Tambah elemen'
+												: 'Tambahkan elemen pertama'}
+										</button>
+									</>
+								)}
 							</section>
 						))}
 					</section>
@@ -1135,10 +1296,81 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					<div className="bd-review-notice">
 						<strong>Draf pribadi</strong>
 						<p>
-							Konten dan pengaturan ini tersimpan untuk Anda. Draf ini belum
-							dibagikan kepada mahasiswa.
+							Draf ini tersimpan privat. Terbitkan salinan versi untuk
+							mahasiswa. Perubahan draf setelah penerbitan tidak mengubah versi
+							yang sudah diterbitkan.
 						</p>
 					</div>
+					<div className="bd-publish-checklist">
+						<h2>Siap diterbitkan?</h2>
+						<ul>
+							<li>
+								{issues.length
+									? `${issues.length} bagian belum lengkap`
+									: 'Konten, kunci, dan jadwal lengkap'}
+							</li>
+							<li>
+								Audiens:{' '}
+								{d.context.sectionIds.length
+									? `${d.context.sectionIds.length} rombel terpilih`
+									: 'Semua mahasiswa terdaftar di mata kuliah'}
+							</li>
+							<li>
+								{d.kind === 'kelas'
+									? 'Check-in dan waktu kegiatan mengikuti jadwal kelas.'
+									: 'Seluruh tugas dikumpulkan dalam satu pengiriman.'}
+							</li>
+							<li>
+								Setiap penerbitan membuat kegiatan baru dengan versi tetap.
+								Gunakan tautan kegiatan yang sesuai untuk mahasiswa.
+							</li>
+						</ul>
+						<button
+							className="bd-primary"
+							disabled={
+								issues.length > 0 || dirty || saving || locked || publishing
+							}
+							onClick={async () => {
+								if (
+									!window.confirm(
+										'Terbitkan versi revisi ' +
+											revision +
+											' untuk mahasiswa terdaftar? Ini membuat kegiatan baru.',
+									)
+								)
+									return;
+								setPublishing(true);
+								setError('');
+								if (publishCommand.current.revision !== revision)
+									publishCommand.current = { revision, id: uid() };
+								try {
+									const result = await deliveryRequest<{ runId: string }>(
+										'publish',
+										{
+											id,
+											baseRevision: revision,
+											commandId: publishCommand.current.id,
+										},
+									);
+									navigate('/app/kegiatan/' + result.runId);
+								} catch (e) {
+									setError((e as Error).message);
+								} finally {
+									setPublishing(false);
+								}
+							}}
+						>
+							{publishing
+								? 'Menerbitkan…'
+								: d.kind === 'kelas'
+									? 'Terbitkan / jadwalkan kelas'
+									: 'Terbitkan tugas'}
+						</button>
+						{(dirty || saving) && (
+							<p>Tunggu draf tersimpan sebelum menerbitkan.</p>
+						)}
+					</div>
+					<BuilderRunList documentId={id} />
 					<h2>
 						{issues.length
 							? `${issues.length} bagian perlu dilengkapi`
@@ -1151,17 +1383,76 @@ export function BuilderWorkspace({ id }: { id: string }) {
 									<button
 										onClick={() => {
 											if (issue.activityId) {
+												setCollapsed((items) =>
+													items.filter((id) => id !== issue.activityId),
+												);
 												setActive(issue.activityId);
 												setSelected(issue.blockId || '');
 												setPanel('content');
+												requestAnimationFrame(() => {
+													const keyIssue = /kunci|pasangan|diterima/.test(
+														issue.message,
+													);
+													const node = document.getElementById(
+														issue.questionId
+															? (keyIssue
+																	? 'builder-key-'
+																	: 'builder-question-') + issue.questionId
+															: issue.blockId
+																? 'builder-block-' + issue.blockId
+																: 'builder-activity-' + issue.activityId,
+													);
+													node?.scrollIntoView({
+														block: 'center',
+														behavior: 'smooth',
+													});
+													node
+														?.querySelector<HTMLElement>(
+															issue.message.includes('alternatif') ? 'input[maxlength="1000"]' : issue.message.includes('pilihan') ? 'input' : keyIssue ? 'select,textarea' : 'textarea,input,select',
+														)
+														?.focus({ preventScroll: true });
+													if (
+														keyIssue &&
+														window.matchMedia('(max-width: 650px)').matches
+													)
+														setInspectorOpen(true);
+												});
+											} else if (issue.message.includes('judul dokumen')) {
+												setPanel('content');
 												requestAnimationFrame(() =>
 													document
-														.getElementById(
-															'builder-activity-' + issue.activityId,
+														.querySelector<HTMLInputElement>(
+															'[aria-label="Judul dokumen"]',
 														)
-														?.scrollIntoView({ block: 'start' }),
+														?.focus(),
 												);
-											} else setPanel('delivery');
+											} else if (issue.message === 'Tambahkan kegiatan.') {
+												setPanel('content');
+												setLeftTab('outline');
+												requestAnimationFrame(() =>
+													document
+														.querySelector<HTMLButtonElement>('.bd-outline-add')
+														?.focus(),
+												);
+											} else {
+												setPanel('delivery');
+												requestAnimationFrame(() => {
+													const field = issue.message.includes('check-in')
+														? 'checkInClosesAt'
+														: issue.message.includes('Tutup pengumpulan')
+															? 'hardCloseAt'
+															: issue.message.includes('tersedia')
+																? 'availableAt'
+																: d.kind === 'tugas'
+																	? 'dueAt'
+																	: issue.message.includes('selesai')
+																		? 'endsAt'
+																		: 'startsAt';
+													document
+														.getElementById('builder-delivery-' + field)
+														?.focus();
+												});
+											}
 										}}
 									>
 										{issue.message}
@@ -1196,6 +1487,68 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						</button>
 					</div>
 				</section>
+			)}
+			{announcement && (
+				<div className="bd-change-notice" role="status">
+					<span>{announcement}</span>
+					{past.current.length > 0 && (
+						<button
+							className="bd-text-button"
+							disabled={locked}
+							onClick={() => {
+								undo();
+								setAnnouncement('Perubahan diurungkan.');
+							}}
+						>
+							Urungkan
+						</button>
+					)}
+					<button
+						className="bd-icon"
+						aria-label="Tutup pemberitahuan"
+						onClick={() => setAnnouncement('')}
+					>
+						×
+					</button>
+				</div>
+			)}
+			{savedItems && (
+				<BuilderSavedItems
+					id={id}
+					revision={revision}
+					activityId={savedItems.activityId}
+					dirty={dirty || saving || locked}
+					onClose={() => setSavedItems(null)}
+					onRestore={(envelope) => {
+						change((next) => {
+							next.document = envelope.document;
+							next.privateKeys = envelope.privateKeys;
+						});
+						setActive(envelope.document.activities[0]?.id || '');
+						setSelected('');
+						setAnnouncement('Snapshot dipulihkan ke draf.');
+					}}
+					onInsert={(envelope) => {
+						if (
+							d.activities.length >= 50 ||
+							Object.keys(d.questionsById).length +
+								Object.keys(envelope.document.questionsById).length >
+								500 ||
+							d.activities.reduce((s, a) => s + a.blocks.length, 0) +
+								envelope.document.activities[0].blocks.length >
+								500
+						) {
+							setError('Batas kegiatan, elemen, atau pertanyaan tercapai.');
+							return;
+						}
+						let inserted = '';
+						change((next) => {
+							inserted = insertActivityTemplate(next, envelope);
+						});
+						selectActivity(inserted);
+						setAnnouncement('Template kegiatan ditambahkan.');
+					}}
+				/>
 			)}
 			<Dialog open={inspectorOpen} onOpenChange={setInspectorOpen}>
 				<DialogContent className="bd-inspector bd-mobile-inspector">
@@ -1249,7 +1602,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							previewMobile ? 'bd-preview-frame is-mobile' : 'bd-preview-frame'
 						}
 					>
-						<BuilderPreview document={d} />
+						<BuilderJourneyPreview document={d} />
 					</div>
 				</DialogContent>
 			</Dialog>
@@ -1314,6 +1667,7 @@ function DeliverySettings({
 			{label} (WIB)
 			<input
 				type="datetime-local"
+				id={'builder-delivery-' + field}
 				value={p[field] ? toWibInput(p[field]) : ''}
 				onChange={(e) =>
 					onChange((next) => {

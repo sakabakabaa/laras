@@ -38,6 +38,19 @@ export type BuilderQuestion = {
 	maxCharacters?: number;
 	rubric?: { criteria: { id: string; label: string; maxPoints: number }[] };
 };
+export type BuilderAsset = {
+	fileId: string;
+	filename: string;
+	version: number;
+	name: string;
+};
+export type BuilderImage = {
+	id: string;
+	asset?: BuilderAsset;
+	url?: string;
+	alt: string;
+	caption: string;
+};
 export type BuilderBlock = {
 	id: string;
 	type: BlockType;
@@ -45,6 +58,9 @@ export type BuilderBlock = {
 	label?: string;
 	url?: string;
 	alt?: string;
+	asset?: BuilderAsset;
+	images?: BuilderImage[];
+	columns?: number;
 	questionIds?: string[];
 	questionId?: string;
 	destinations?: { id: string; label: string; title: string; url?: string }[];
@@ -349,6 +365,37 @@ export function duplicateActivity(draft: BuilderEnvelope, activityId: string) {
 	);
 	return next.id;
 }
+export function duplicateBlock(
+	draft: BuilderEnvelope,
+	activityId: string,
+	blockId: string,
+): string {
+	const original = draft.document.activities.find((a) => a.id === activityId)!;
+	const copyId = duplicateActivity(draft, activityId);
+	const copy = draft.document.activities.find((a) => a.id === copyId)!;
+	const at = original.blocks.findIndex((b) => b.id === blockId);
+	const selected = copy.blocks[at];
+	for (const b of [...copy.blocks])
+		if (b.id !== selected.id) removeBlock(draft, copyId, b.id);
+	draft.document.activities = draft.document.activities.filter(
+		(a) => a.id !== copyId,
+	);
+	original.blocks.splice(at + 1, 0, selected);
+	return selected.id;
+}
+export function activitySummary(
+	draft: BuilderEnvelope,
+	activity: BuilderActivity,
+) {
+	const ids = activity.blocks.flatMap(questionIds);
+	return {
+		questions: ids.length,
+		points: ids.reduce(
+			(sum, id) => sum + (draft.document.questionsById[id]?.points || 0),
+			0,
+		),
+	};
+}
 export function builderIssues({
 	document: d,
 	privateKeys,
@@ -381,10 +428,19 @@ export function builderIssues({
 				add('Tambahkan pertanyaan pada elemen ini.', a.id, b.id);
 			if (b.type === 'instructions' && !plain(b.body).trim())
 				add('Isi teks instruksi.', a.id, b.id);
-			if (['image', 'audio', 'video', 'reference'].includes(b.type) && !b.url)
-				add('Pilih tautan media.', a.id, b.id);
-			if (b.type === 'image' && !b.alt?.trim())
+			if (
+				['image', 'audio', 'video', 'reference'].includes(b.type) &&
+				!b.url &&
+				!b.asset &&
+				!b.images?.length
+			)
+				add('Pilih atau unggah media.', a.id, b.id);
+			if (b.type === 'image' && !b.images?.length && !b.alt?.trim())
 				add('Isi teks alternatif gambar.', a.id, b.id);
+			if (b.images?.some((image) => !image.alt.trim()))
+				add('Isi teks alternatif setiap gambar.', a.id, b.id);
+			if (b.images?.some((image) => !image.asset && !image.url))
+				add('Pilih berkas untuk setiap gambar.', a.id, b.id);
 			if (b.type === 'lesson' && !b.lesson?.scenes.length)
 				add('Tambahkan penjelasan interaktif.', a.id, b.id);
 			for (const id of questionIds(b)) {
@@ -400,6 +456,15 @@ export function builderIssues({
 					continue;
 				}
 				if (!plain(q.prompt).trim()) add('Isi pertanyaan.', a.id, b.id, id);
+				if (q.rubric?.criteria.some((c) => !c.label.trim()))
+					add('Isi nama kriteria rubrik.', a.id, b.id, id);
+				if (
+					q.rubric?.criteria.length &&
+					Math.abs(
+						q.rubric.criteria.reduce((s, c) => s + c.maxPoints, 0) - q.points,
+					) > 0.00001
+				)
+					add('Poin rubrik harus sama dengan poin pertanyaan.', a.id, b.id, id);
 				if (q.options?.some((o) => !o.label.trim()))
 					add('Lengkapi setiap pilihan jawaban.', a.id, b.id, id);
 				if (key.strategy === 'single_choice' && !key.correctOptionId)

@@ -122,6 +122,16 @@ function lesson(v) {
 		}),
 	};
 }
+function asset(value) {
+	const a = obj(value);
+	if (!/^[a-z0-9]{15}$/.test(a.fileId)) fail('ID berkas tidak valid.');
+	return {
+		fileId: a.fileId,
+		filename: str(a.filename, 500),
+		version: num(a.version, 1000000),
+		name: str(a.name, 200),
+	};
+}
 function normalize(body) {
 	const d = obj(body.document),
 		priv = obj(body.privateKeys);
@@ -200,6 +210,27 @@ function normalize(body) {
 			if (b.label !== undefined) out.label = str(b.label, 500);
 			if (b.url !== undefined) out.url = url(b.url);
 			if (b.alt !== undefined) out.alt = str(b.alt, 1000);
+			if (b.asset) {
+				if (!['image', 'audio', 'video'].includes(b.type))
+					fail('Berkas tidak cocok dengan elemen.');
+				out.asset = asset(b.asset);
+			}
+			if (b.images) {
+				if (b.type !== 'image') fail('Galeri hanya untuk gambar.');
+				out.images = list(b.images, 4).map((image) => ({
+					id: unique(image.id),
+					...(image.asset ? { asset: asset(image.asset) } : {}),
+					...(image.url ? { url: url(image.url) } : {}),
+					alt: str(image.alt, 1000),
+					caption: str(image.caption, 500),
+				}));
+				out.columns =
+					b.columns === undefined
+						? Math.max(1, out.images.length)
+						: num(b.columns, 4);
+				if (!Number.isInteger(out.columns) || out.columns < 1)
+					fail('Kolom gambar harus 1–4.');
+			}
 			if (b.questionIds)
 				out.questionIds = list(b.questionIds, 500).map(reference);
 			if (b.questionId) out.questionId = reference(b.questionId);

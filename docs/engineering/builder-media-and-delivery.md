@@ -16,7 +16,7 @@ Published runs appear in Kelas/Tugas indexes and the student dashboard, linking 
 
 - Kelas: server check-in window; scheduled, lecturer-guided or free progression; activity submission locks that activity. A teacher can advance guided activities and close collection.
 - Tugas: availability/due/hard-close/late policies, optional whole-attempt time limit, navigation between activities and whole-task submission.
-- Time limits use server time and persisted attempt start. Saves validate question identity, choices, bounds, open activity, submission state and response revision. The client serializes saves and warns before leaving with unsaved answers; polling does not overwrite local edits. Expired/closed attempts finalize their last server-saved answers when accessed. This is lazy finalization, not a background attendance job.
+- Time limits use server time and persisted attempt start. Saves validate question identity, choices, bounds, open activity, submission state and response revision. The client serializes saves and warns before leaving with unsaved answers; polling does not overwrite local edits. Last-second text rejected after a deadline/activity lock is retained visibly as a copy outside the accepted submission. Expired/closed attempts finalize their last server-saved answers when accessed. This is lazy finalization, not a background attendance job.
 - Student simulation reuses the public renderer with local answers/navigation/timers/submission and never calls student mutation APIs.
 
 ## Review and release

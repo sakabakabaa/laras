@@ -217,9 +217,16 @@
 /* ── 2. App shell ───────────────────────────────────────────────────────── */
 
 .ld-layout {
+	--r-app-background: var(--r-canvas);
 	--body: 'Plus Jakarta Sans', system-ui, sans-serif;
 	color: var(--r-ink);
 	background: var(--r-canvas);
+}
+
+:root:not(.dark) .ld-layout {
+	--r-app-background:
+		radial-gradient(100% 70% at 0% 0%, rgba(179, 38, 30, 0.06), transparent 65%),
+		linear-gradient(135deg, #f0eae5 0%, #edf0f4 55%, #e8edf0 100%);
 }
 
 .ld-mast {
@@ -249,7 +256,7 @@
 }
 
 .ld-main {
-	background: var(--r-canvas);
+	background: var(--r-app-background);
 	scrollbar-color: var(--r-border-strong) transparent;
 }
 
@@ -580,9 +587,9 @@
 
 /* ── 6. Student: keep the adventure, unify execution ────────────────────── */
 
-/* Keep the light student shell clean white; preserve the separate dark treatment. */
+/* Share the softer light app canvas; preserve the separate dark student treatment. */
 .student-adventure-shell .ld-main {
-	background: var(--r-surface);
+	background: var(--r-app-background);
 }
 
 :root.dark .student-adventure-shell .ld-main {

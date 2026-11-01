@@ -396,7 +396,7 @@ function studentList(app, user, now, includePast = false) {
   const courseIds = [...new Set(enrollments.map(item=>item.getString('course')).filter(Boolean))];
   const items=[];
   for (const courseId of courseIds) {
-    const classes=rows(app,'scheduled_classes','course={:c} && status="scheduled"',{c:courseId},'startsAt');
+    const classes=rows(app,'scheduled_classes',includePast?'course={:c} && (status="scheduled" || status="closed" || status="reviewed")':'course={:c} && status="scheduled"',{c:courseId},'startsAt');
     for(const c of classes){
       const endsAt=Date.parse(c.getString('endsAt'));
       if(!Number.isFinite(endsAt)||(!includePast && endsAt<=now))continue;

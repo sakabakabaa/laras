@@ -29,3 +29,7 @@ One page per import; photos must be legible. Limits: 12 activities, 120 question
 ## Operational checks
 
 Type generation/TypeScript, targeted ESLint, and production build are used for deployment preparation. Automated tests are not added or manually run unless requested. Apply the additive PocketBase migration before serving the new web version (the normal deploy script does so).
+
+## Classroom-style preview
+
+Builder student previews use the original scheduled classroom's navigation, activity heading/timer, worksheet renderer, answer footer and styles. Builder option IDs are translated at the rendering boundary and restored on input; private keys are never passed to the student renderer. Writing character limits and textarea sizes remain builder-controlled. A gallery immediately before matching is folded into the destination cards only when every image can be matched uniquely by caption/label; ambiguous galleries remain visible separately. Asset resolution uses the existing protected media hooks. Preview answers remain memory-only and required-answer checks still apply to simulated submission.

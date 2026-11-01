@@ -10,7 +10,7 @@ import {
 	RefreshCw,
 } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
-import type { BuilderImportJob } from '@/lib/builder-import';
+import { builderImportRequest, type BuilderImportJob } from '@/lib/builder-import';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { scheduledRequest } from '@/lib/scheduled-classes';
 import { useCourseSections } from '@/hooks/use-course-sections';
@@ -174,7 +174,7 @@ export function BuilderNew() {
                 form.append('page', pageImage);
                 form.append('settings', JSON.stringify({kind, context, title, goal}));
                 form.append('commandId', command.current);
-                const job = await pb.send<BuilderImportJob>('/api/builder-import', {method:'POST', body:form, requestKey:null});
+                const job = await builderImportRequest<BuilderImportJob>(form);
                 navigate(`/app/builder/impor/${job.id}`);
                 return;
             }
@@ -415,7 +415,7 @@ export function BuilderNew() {
 
 function BuilderImportList({kind}:{kind:BuilderKind}) {
  const [jobs,setJobs]=useState<BuilderImportJob[]>([]);
- useEffect(()=>{let live=true,timer:ReturnType<typeof setTimeout>;const load=async()=>{try{const result=await pb.send<{items:BuilderImportJob[]}>('/api/builder-import',{method:'POST',body:{action:'list'},requestKey:null});if(!live)return;setJobs(result.items.filter(job=>job.settings.kind===kind));if(result.items.some(job=>job.status==='queued'||job.status==='running'))timer=setTimeout(()=>void load(),5000);}catch{/* Normal draft list remains available. */}};void load();return()=>{live=false;clearTimeout(timer);};},[kind]);
+ useEffect(()=>{let live=true,timer:ReturnType<typeof setTimeout>;const load=async()=>{try{const result=await builderImportRequest<{items:BuilderImportJob[]}>({action:'list'});if(!live)return;setJobs(result.items.filter(job=>job.settings.kind===kind));if(result.items.some(job=>job.status==='queued'||job.status==='running'))timer=setTimeout(()=>void load(),5000);}catch{/* Normal draft list remains available. */}};void load();return()=>{live=false;clearTimeout(timer);};},[kind]);
  if(!jobs.length)return null;
  return <details className="bd-import-report"><summary>Impor halaman buku ({jobs.length})</summary><ul>{jobs.map(job=><li key={job.id}><Link to={`/app/builder/impor/${job.id}`}>{job.settings.title||'Halaman buku'} · {job.status==='ready'?'Draf siap':job.status==='failed'?'Perlu dicoba lagi':'Sedang disusun'}</Link></li>)}</ul></details>;
 }

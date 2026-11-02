@@ -1,4 +1,6 @@
 import {createElement} from 'react';
+import {readFileSync} from 'node:fs';
+import postcss from 'postcss';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MemoryRouter} from 'react-router';
 import {beforeEach,afterEach,describe,expect,it,vi} from 'vitest';
@@ -45,6 +47,19 @@ describe('class arrival timing',()=>{
 });
 
 describe('prominent class display window',()=>{
+ it('uses the red hero theme for upcoming classes without live-only status effects',()=>{
+  const css=readFileSync(new URL('../src/styles/student-dashboard-v2.css',import.meta.url),'utf8');
+  const rules=new Map<string,postcss.Rule>();
+  postcss.parse(css).walkRules(rule=>{if(!rule.parent || rule.parent.type!=='atrule')rules.set(rule.selector,rule);});
+  const hero=rules.get('.sd2-live-card:is(.is-live,.is-upcoming)')?.toString();
+  expect(hero).toContain('background:var(--r-action)');
+  expect(hero).toContain('color:var(--r-on-action)');
+  expect(rules.get('.sd2-live-card:is(.is-live,.is-upcoming) .sd2-primary')?.toString()).toContain('background:var(--r-on-action)');
+  postcss.parse(css).walkRules(rule=>{rule.walkDecls('animation',declaration=>{if(declaration.value.includes('sd2-live-pulse'))expect(rule.selector).toBe('.sd2-live-card.is-live .sd2-live-label i');});});
+  const premium=readFileSync(new URL('../src/styles/premium-workspace.css',import.meta.url),'utf8');
+  expect(premium).not.toContain(':not(.sd2-live-card.is-live)');
+  expect(premium).toContain(':not(.sd2-live-card)');
+ });
  const setClass=(changes:Record<string,unknown>)=>{
   const live=mock.data.live as {items:Record<string,unknown>[]};
   Object.assign(live.items[0],changes);
@@ -52,6 +67,9 @@ describe('prominent class display window',()=>{
  it('shows a session at 30 minutes but keeps later sessions only in the calendar',()=>{
   setClass({startsAt:'2026-11-02T07:30:00Z',endsAt:'2026-11-02T09:00:00Z'});
   expect(render()).toContain('Dalam 30 menit');
+  expect(render()).toContain('sd2-live-card is-upcoming');
+  expect(render()).toContain('Lihat kelas');
+  expect(render()).not.toContain('Masuk kelas');
   setClass({startsAt:'2026-11-02T07:30:01Z'});
   const html=render();expect(html).not.toContain('sd2-live-section');expect(html).toContain('Unterricht');expect(html).toContain('/app/courses/c/pertemuan/meeting/terjadwal');
  });

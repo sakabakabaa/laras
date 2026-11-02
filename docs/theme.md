@@ -26,6 +26,8 @@ Primary buttons, including password setup actions, use `--r-action`, `--r-action
 
 The student adventure shell must not override shared button shape, shadow, or pressed states. Its raised effects remain limited to dedicated game controls. Password onboarding and public password recovery/reset fields use the shared `.ld-form-control` class, with one themed focus ring. Onboarding layout stays in `index.css`, but its surfaces, text, and semantic states consume root theme tokens instead of a separate light/dark palette.
 
+Student dashboard class heroes use red action/on-action tokens for both live and imminent upcoming classes (within the existing 30-minute window). Generic workspace card rules exclude these heroes in both phases. Only live classes have the pulsing green indicator; upcoming classes retain their countdown and view-only action.
+
 Remaining legacy and feature-specific hardcoded colors are future migration work. Keep distinct semantic states (success, warning, error) rather than turning every color red. Do not remove `dark-overrides.css` wholesale until its remaining consumers have been migrated.
 
 `theme-ownership.test.ts` checks palette ownership, aliases, and stylesheet order. `shared-components.test.ts` protects extracted ownership and touch/print cascade ordering. `student-shell-theme.test.ts` protects the shared light/dark red gradients. The input-cascade and search-layout tests protect the previous search/chat fixes.

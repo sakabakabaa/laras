@@ -464,9 +464,7 @@
 }
 
 /* Form controls inside the app shell */
-.ld-layout input:not([type='checkbox']):not([type='radio']):not([type='range']),
-.ld-layout select,
-.ld-layout textarea {
+:where(.ld-layout) :where(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
 	background: var(--r-surface);
 	border: 1px solid var(--r-border);
 	border-radius: var(--r-radius-md);
@@ -474,14 +472,11 @@
 	transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
-.ld-layout input::placeholder,
-.ld-layout textarea::placeholder {
+:where(.ld-layout) :where(input, textarea)::placeholder {
 	color: var(--r-ink-3);
 }
 
-.ld-layout input:not([type='checkbox']):not([type='radio']):focus,
-.ld-layout select:focus,
-.ld-layout textarea:focus {
+:where(.ld-layout) :where(input:not([type='checkbox']):not([type='radio']):not([type='range']):focus, select:focus, textarea:focus) {
 	outline: none;
 	border-color: var(--r-red-500);
 	box-shadow: var(--r-focus-ring);
@@ -494,7 +489,8 @@
 	color: var(--r-ink-3);
 }
 
-.ld-search-bar:focus-within {
+.ld-search-bar:focus-within,
+.ms-search:focus-within {
 	background: var(--r-surface);
 	border-color: var(--r-red-500);
 	box-shadow: var(--r-focus-ring);
@@ -502,6 +498,17 @@
 
 .ld-search-bar input {
 	color: var(--r-ink);
+}
+
+.ld-search-bar input:focus,
+.ms-search input:focus,
+.asst-composer-box .asst-input:focus,
+.gs-input input:focus {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	outline: 0;
 }
 
 .ld-search-bar input::placeholder {
@@ -864,14 +871,14 @@
 
 /* Portaled dialogs render outside .ld-layout, so apply the shell control tokens
    to them explicitly; otherwise dialog inputs stay light in dark mode. */
-[role='dialog'] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+:where([role='dialog']) :where(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
 	background: var(--r-surface);
 	border: 1px solid var(--r-border);
 	border-radius: var(--r-radius-md);
 	color: var(--r-ink);
 }
 
-[role='dialog'] :is(input, textarea)::placeholder {
+:where([role='dialog']) :where(input, textarea)::placeholder {
 	color: var(--r-ink-3);
 }
 

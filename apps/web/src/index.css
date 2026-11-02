@@ -5698,10 +5698,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover,input[type="datetime
 :root.dark .ld-activity li{border-bottom-color:#222831}
 :root.dark .ld-coming-block{background:rgba(201,52,43,.1)}
 :root.dark .ld-coming-block p{color:#9AA6B6}
-:root.dark .ld-btn-primary{background:#B3261E;color:#fff;box-shadow:0 8px 18px rgba(179,38,30,.35)}
-:root.dark .ld-btn-primary:hover{background:#9B2118}
-:root.dark .ld-btn-primary:disabled,
-:root.dark .ld-btn-primary:disabled:hover{background:#222831;color:#9AA6B6}
 :root.dark .ld-btn-soft{background:rgba(201,52,43,.16);color:#F07168}
 :root.dark .ld-empty{color:#9AA6B6}
 :root.dark .ld-empty-icon{background:rgba(201,52,43,.16);color:#F07168}

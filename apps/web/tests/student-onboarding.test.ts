@@ -62,5 +62,12 @@ describe('password-only student onboarding', () => {
 		expect(disabled).toContain('color: var(--r-ink-3)');
 		const workspace = readFileSync(new URL('../src/styles/premium-workspace.css', import.meta.url), 'utf8');
 		expect(workspace).not.toContain('.ld-btn-primary');
+		const legacy = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+		postcss.parse(legacy).walkRules((rule) => {
+			if (!rule.selector.split(',').some((selector) => /^(?::root\.dark\s+)?\.ld-btn-primary(?::(?:hover|disabled))*$/.test(selector.trim()))) return;
+			rule.walkDecls(/^background(?:-color|-image)?$/, () => {
+				expect.fail(`Legacy ${rule.selector} overrides the shared button theme`);
+			});
+		});
 	});
 });

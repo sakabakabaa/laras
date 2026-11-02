@@ -172,24 +172,6 @@
 :root.dark .ld-coming-icon{background:rgba(201,52,43,.16)}
 :root.dark .ld-coming-page h2{color:#E8EDF4}
 :root.dark .ld-coming-page p{color:#9AA6B6}
-:root.dark .gs-panel{background:#1A1F26;border:1px solid rgba(37,99,235,.12)}
-:root.dark .gs-input{border:1.5px solid rgba(201,52,43,.28);color:#9AA6B6;background:#1A1F26}
-:root.dark .gs-input input{color:#E8EDF4}
-:root.dark .gs-input input::placeholder{color:#9AA6B6}
-:root.dark .gs-shortcut{background:#222831;color:#9AA6B6}
-:root.dark .gs-shortcut kbd{color:#C5CDD8}
-:root.dark .gs-pills button{background:#222831;color:#C5CDD8}
-:root.dark .gs-pills button:hover{background:#2A3138}
-:root.dark .gs-pills button.active{background:#E8EDF4}
-:root.dark .gs-section-label{color:#C5CDD8}
-:root.dark .gs-group h3{color:#9AA6B6}
-:root.dark .gs-group button.active,:root.dark .gs-group button:hover{background:rgba(37,99,235,.12)}
-:root.dark .gs-row-icon{background:#222831;color:#C5CDD8}
-:root.dark .gs-group strong{color:#E8EDF4}
-:root.dark .gs-group small{color:#9AA6B6}
-:root.dark .gs-chevron{color:#9AA6B6}
-:root.dark .gs-group mark{background:rgba(201,52,43,.16)}
-:root.dark .gs-empty{color:#9AA6B6}
 :root.dark .ld-grading-row:hover{background:#12161C}
 :root.dark .ld-grading-main strong{color:#E8EDF4}
 :root.dark .ld-grading-main small{color:#9AA6B6}
@@ -1787,7 +1769,7 @@
 :root.dark .ld-sidebar button:focus-visible,:root.dark .ld-nav-link:focus-visible{outline-color:#2A3138}
 :root.dark .ld-mast .ld-mast-icon:focus-visible{outline-color:#2A3138}
 :root.dark ::placeholder{color:#9AA6B6}
-:root.dark .gs-input input::placeholder,:root.dark .ld-search-bar input::placeholder,:root.dark .editor-form textarea::placeholder,:root.dark .eval-grade input::placeholder,:root.dark .eval-grade textarea::placeholder,:root.dark .aev-publish-note::placeholder,:root.dark .pdf-session-fields input::placeholder,:root.dark .pdf-session-fields textarea::placeholder,:root.dark .pdf-cpmk-main textarea::placeholder,:root.dark .rps-card.editor-form input::placeholder,:root.dark .rps-card.editor-form textarea::placeholder,:root.dark .ld-document-edit textarea::placeholder{color:#9AA6B6}
+:root.dark .ld-search-bar input::placeholder,:root.dark .editor-form textarea::placeholder,:root.dark .eval-grade input::placeholder,:root.dark .eval-grade textarea::placeholder,:root.dark .aev-publish-note::placeholder,:root.dark .pdf-session-fields input::placeholder,:root.dark .pdf-session-fields textarea::placeholder,:root.dark .pdf-cpmk-main textarea::placeholder,:root.dark .rps-card.editor-form input::placeholder,:root.dark .rps-card.editor-form textarea::placeholder,:root.dark .ld-document-edit textarea::placeholder{color:#9AA6B6}
 :root.dark .eval-note,:root.dark .evx-muted,:root.dark .asg-empty-line,:root.dark .evx-practice>p,:root.dark .evx-stat small,:root.dark .eval-stat span,:root.dark .evx-ann,:root.dark .evx-script-foot,:root.dark .evx-note-meta,:root.dark .evx-muted,:root.dark .tws-transcript-hint,:root.dark .tws-clip-pending,:root.dark .ld-empty p,:root.dark .ld-empty-sm{color:#9AA6B6}
 :root.dark .evx-person.graded{box-shadow:inset 3px 0 0 #34D399}
 :root.dark .evx-person.pending-grade{box-shadow:inset 3px 0 0 #FBBF24}

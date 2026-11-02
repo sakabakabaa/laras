@@ -1,9 +1,8 @@
 /*
  * Global command palette (Ctrl/Cmd+K).
  *
- * Loaded after index.css (see root.tsx) so it supersedes the original .gs-*
- * block; the doubled `.gs-x.gs-x` selectors keep that guarantee even if the
- * bundler reorders stylesheets. The palette itself is portalled to <body> from
+ * Owns palette layout and consumes the global theme. The doubled container
+ * selectors keep shared control defaults below the composite. It portals to <body> from
  * global-search.tsx, because `.ld-mast-search-zone` is a transformed ancestor
  * and would otherwise become the containing block for `position: fixed`.
  */
@@ -35,10 +34,10 @@
 	max-height: min(640px, 80dvh);
 	display: flex;
 	flex-direction: column;
-	background: #fff;
-	border: 1px solid #eaecf0;
-	border-radius: 16px;
-	box-shadow: 0 32px 80px rgba(26, 18, 22, 0.28), 0 4px 14px rgba(26, 18, 22, 0.08);
+	background: var(--r-surface);
+	border: 1px solid var(--r-border);
+	border-radius: var(--r-radius-lg);
+	box-shadow: var(--r-shadow-md);
 	overflow: hidden;
 	padding: 0;
 }
@@ -52,16 +51,16 @@
 	min-height: 58px;
 	padding: 0 14px 0 18px;
 	border: 0;
-	border-bottom: 1px solid #eaecf0;
+	border-bottom: 1px solid var(--r-border);
 	border-radius: 0;
 	box-shadow: none;
-	color: #667085;
-	background: #fff;
+	color: var(--r-ink-3);
+	background: var(--r-surface);
 	transition: box-shadow 0.15s;
 }
 
 .gs-input.gs-input:focus-within {
-	box-shadow: inset 0 -2px 0 var(--red);
+	box-shadow: inset 0 -2px 0 var(--r-red-500);
 }
 
 .gs-input input {
@@ -71,21 +70,21 @@
 	outline: 0;
 	background: transparent;
 	font: 500 16px var(--body);
-	color: #172033;
+	color: var(--r-ink);
 }
 
 .gs-input input::placeholder {
-	color: #667085;
+	color: var(--r-ink-3);
 }
 
 .gs-esc {
 	flex: none;
 	height: 22px;
 	padding: 0 6px;
-	border: 1px solid #e4e7ec;
-	border-radius: 6px;
-	background: #f9fafb;
-	color: #667085;
+	border: 1px solid var(--r-border-strong);
+	border-radius: var(--r-radius-sm);
+	background: var(--r-surface-2);
+	color: var(--r-ink-3);
 	font: 700 11px/20px var(--body);
 }
 
@@ -101,20 +100,20 @@
 	height: 34px;
 	padding: 0 14px;
 	border: 0;
-	border-radius: 999px;
-	background: #f2f4f7;
-	color: #475467;
+	border-radius: var(--r-radius-pill);
+	background: var(--r-surface-2);
+	color: var(--r-ink-2);
 	font: 600 13px var(--body);
 	cursor: pointer;
 	transition: background 0.15s, color 0.15s;
 }
 
 .gs-pills button:hover {
-	background: #e4e7ec;
+	background: var(--r-surface-3);
 }
 
 .gs-pills button.active {
-	background: #172033;
+	background: var(--r-red-700);
 	color: #fff;
 }
 
@@ -140,7 +139,7 @@
 	margin: 8px 8px 2px;
 	font: 600 12px var(--body);
 	letter-spacing: 0.02em;
-	color: #667085;
+	color: var(--r-ink-3);
 }
 
 .gs-group h3 {
@@ -148,7 +147,7 @@
 	font: 700 11.5px var(--body);
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
-	color: #667085;
+	color: var(--r-ink-3);
 }
 
 .gs-group ul {
@@ -168,22 +167,22 @@
 	text-align: left;
 	border: 0;
 	background: transparent;
-	border-radius: 10px;
+	border-radius: var(--r-radius-md);
 	padding: 8px;
 	cursor: pointer;
 }
 
 .gs-group button.active,
 .gs-group button:hover {
-	background: #eff6ff;
+	background: var(--r-red-tint);
 }
 
 .gs-row-icon {
 	width: 40px;
 	height: 40px;
-	border-radius: 12px;
-	background: #f2f4f7;
-	color: #475467;
+	border-radius: var(--r-radius-md);
+	background: var(--r-surface-2);
+	color: var(--r-ink-2);
 	display: grid;
 	place-items: center;
 }
@@ -195,26 +194,26 @@
 .gs-group strong {
 	display: block;
 	font: 600 14px/1.3 var(--body);
-	color: #172033;
+	color: var(--r-ink);
 	overflow-wrap: anywhere;
 }
 
 .gs-group small {
 	display: block;
 	font: 500 13px/1.35 var(--body);
-	color: #667085;
+	color: var(--r-ink-3);
 	margin-top: 1px;
 	overflow-wrap: anywhere;
 }
 
 .gs-chevron {
-	color: #667085;
+	color: var(--r-ink-3);
 }
 
 .gs-group mark {
-	background: #fbe9e7;
-	color: var(--red);
-	border-radius: 3px;
+	background: var(--r-red-tint);
+	color: var(--r-brand-text);
+	border-radius: var(--r-radius-sm);
 	padding: 0 2px;
 }
 
@@ -222,7 +221,7 @@
 	margin: 18px 8px;
 	font-size: 13px;
 	line-height: 1.5;
-	color: #667085;
+	color: var(--r-ink-3);
 }
 
 .gs-foot {
@@ -231,10 +230,10 @@
 	align-items: center;
 	gap: 16px;
 	padding: 9px 16px;
-	border-top: 1px solid #eaecf0;
-	background: #fcfcfd;
+	border-top: 1px solid var(--r-border);
+	background: var(--r-surface-2);
 	font: 600 11.5px/1 var(--body);
-	color: #667085;
+	color: var(--r-ink-3);
 }
 
 .gs-foot span {
@@ -249,10 +248,10 @@
 	min-width: 18px;
 	height: 18px;
 	padding: 0 4px;
-	border: 1px solid #e4e7ec;
-	border-radius: 5px;
-	background: #fff;
-	color: #475467;
+	border: 1px solid var(--r-border-strong);
+	border-radius: var(--r-radius-sm);
+	background: var(--r-surface);
+	color: var(--r-ink-2);
 	font: 700 10.5px/1 var(--body);
 }
 
@@ -262,7 +261,7 @@
 	}
 
 	.gs-panel.gs-panel {
-		border-radius: 14px;
+		border-radius: var(--r-radius-lg);
 	}
 
 	.gs-foot {
@@ -280,93 +279,4 @@
 	.gs-input.gs-input {
 		transition: none;
 	}
-}
-
-/* ── Dark mode ─────────────────────────────────────────────── */
-:root.dark .gs-panel {
-	background: #1a1f26;
-	border-color: #2a3138;
-}
-
-:root.dark .gs-input.gs-input {
-	background: #1a1f26;
-	border-bottom-color: #2a3138;
-	color: #9aa6b6;
-}
-
-:root.dark .gs-input.gs-input:focus-within {
-	box-shadow: inset 0 -2px 0 #c9342b;
-}
-
-:root.dark .gs-input input {
-	color: #e8edf4;
-}
-
-:root.dark .gs-input input::placeholder {
-	color: #9aa6b6;
-}
-
-:root.dark .gs-esc {
-	background: #222831;
-	border-color: #343b45;
-	color: #9aa6b6;
-}
-
-:root.dark .gs-pills button {
-	background: #222831;
-	color: #c5cdd8;
-}
-
-:root.dark .gs-pills button:hover {
-	background: #2a3138;
-}
-
-:root.dark .gs-pills button.active {
-	background: #e8edf4;
-	color: #12161c;
-}
-
-:root.dark .gs-section-label {
-	color: #c5cdd8;
-}
-
-:root.dark .gs-group h3 {
-	color: #9aa6b6;
-}
-
-:root.dark .gs-group button.active,
-:root.dark .gs-group button:hover {
-	background: rgba(37, 99, 235, 0.12);
-}
-
-:root.dark .gs-row-icon {
-	background: #222831;
-	color: #c5cdd8;
-}
-
-:root.dark .gs-group strong {
-	color: #e8edf4;
-}
-
-:root.dark .gs-group small,
-:root.dark .gs-chevron,
-:root.dark .gs-empty {
-	color: #9aa6b6;
-}
-
-:root.dark .gs-group mark {
-	background: rgba(201, 52, 43, 0.16);
-	color: #f07168;
-}
-
-:root.dark .gs-foot {
-	background: #171b21;
-	border-top-color: #2a3138;
-	color: #9aa6b6;
-}
-
-:root.dark .gs-foot kbd {
-	background: #222831;
-	border-color: #343b45;
-	color: #c5cdd8;
 }

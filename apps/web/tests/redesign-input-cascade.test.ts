@@ -3,7 +3,7 @@ import postcss from 'postcss';
 import { describe, expect, it } from 'vitest';
 
 const redesignCss = readFileSync(new URL('../src/styles/redesign-v1.css', import.meta.url), 'utf8');
-const workspaceCss = readFileSync(new URL('../src/styles/premium-workspace.css', import.meta.url), 'utf8');
+const sharedCss = readFileSync(new URL('../src/styles/shared-components.css', import.meta.url), 'utf8');
 const searchCss = readFileSync(new URL('../src/styles/global-search-palette.css', import.meta.url), 'utf8');
 
 function rules(css: string) {
@@ -39,12 +39,12 @@ function specificity(selector: string): [number, number, number] {
 describe('redesign input theme cascade', () => {
 	it('keeps generic shell and portaled dialog input styling below composite control styles', () => {
 		const redesign = rules(redesignCss);
-		const workspace = rules(workspaceCss);
+		const shared = rules(sharedCss);
 		const search = rules(searchCss);
-		const shellControl = [...redesign.keys()].find((selector) => selector.startsWith(':where(.ld-layout) :where(input:not'));
-		const shellFocus = [...redesign.keys()].find((selector) => selector.startsWith(':where(.ld-layout) :where(input:not') && selector.includes(':focus'));
-		const dialogControl = [...redesign.keys()].find((selector) => selector.startsWith(':where([role=\'dialog\']) :where(input:not'));
-		const compositeFocus = redesign.get('.ld-search-bar input:focus,\n.ms-search input:focus,\n.asst-composer-box .asst-input:focus,\n.gs-input input:focus');
+		const shellControl = [...shared.keys()].find((selector) => selector.startsWith(':where(.ld-layout) :where(input:not'));
+		const shellFocus = [...shared.keys()].find((selector) => selector.startsWith(':where(.ld-layout) :where(input:not') && selector.includes(':focus'));
+		const dialogControl = [...shared.keys()].find((selector) => selector.startsWith(':where([role=\'dialog\']) :where(input:not'));
+		const compositeFocus = shared.get('.ld-search-bar input:focus,\n.ms-search input:focus,\n.asst-composer-box .asst-input:focus,\n.gs-input input:focus');
 
 		expect(shellControl).toBeDefined();
 		expect(shellFocus).toBeDefined();
@@ -55,8 +55,8 @@ describe('redesign input theme cascade', () => {
 		expect(specificity('.ld-greet .asst-input')).toEqual([0, 2, 0]);
 		expect(specificity('.ld-search-bar input')).toEqual([0, 1, 1]);
 		expect(specificity('.gs-input input')).toEqual([0, 1, 1]);
-		expect(workspace.has('.ld-greet .asst-input')).toBe(true);
-		expect(redesign.has('.ld-search-bar input')).toBe(true);
+		expect(shared.has('.ld-greet .asst-input,\n.asst-drawer .asst-input')).toBe(true);
+		expect(shared.has('.ld-search-bar input')).toBe(true);
 		expect(search.has('.gs-input input')).toBe(true);
 		expect(compositeFocus?.nodes?.filter((node) => node.type === 'decl').map((node) => (node as postcss.Declaration).prop)).toEqual(
 			expect.arrayContaining(['border', 'box-shadow', 'outline']),
@@ -67,12 +67,14 @@ describe('redesign input theme cascade', () => {
 			expect.objectContaining({ prop: 'outline', value: '0' }),
 		]));
 		expect(specificity('.asst-composer-box .asst-input:focus')).toEqual([0, 3, 0]);
-		expect(redesign.get('.ld-search-bar:focus-within,\n.ms-search:focus-within')?.nodes).toEqual(expect.arrayContaining([
+		expect(shared.get('.ld-search-bar:focus-within,\n.ms-search:focus-within')?.nodes).toEqual(expect.arrayContaining([
 			expect.objectContaining({ prop: 'box-shadow', value: 'var(--r-focus-ring)' }),
 		]));
 
-		expect((redesign.get(shellControl!)!.nodes ?? []).some((node) => node.type === 'decl' && node.prop === 'border')).toBe(true);
-		expect((redesign.get(shellFocus!)!.nodes ?? []).some((node) => node.type === 'decl' && node.prop === 'border-color')).toBe(true);
-		expect((redesign.get(dialogControl!)!.nodes ?? []).some((node) => node.type === 'decl' && node.prop === 'border')).toBe(true);
+		expect((shared.get(shellControl!)!.nodes ?? []).some((node) => node.type === 'decl' && node.prop === 'border')).toBe(true);
+		expect((shared.get(shellFocus!)!.nodes ?? []).some((node) => node.type === 'decl' && node.prop === 'border-color')).toBe(true);
+		expect((shared.get(dialogControl!)!.nodes ?? []).some((node) => node.type === 'decl' && node.prop === 'border')).toBe(true);
+		expect([...redesign.keys()].some((selector) => selector.startsWith(':where(.ld-layout) :where(input:not'))).toBe(false);
+		expect([...redesign.keys()].some((selector) => selector.startsWith(':where([role=\'dialog\']) :where(input:not'))).toBe(false);
 	});
 });

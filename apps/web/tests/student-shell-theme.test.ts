@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const css = readFileSync(new URL('../src/styles/redesign-v1.css', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../src/styles/theme.css', import.meta.url), 'utf8');
+const redesignCss = readFileSync(new URL('../src/styles/redesign-v1.css', import.meta.url), 'utf8');
 const workspaceCss = readFileSync(new URL('../src/styles/premium-workspace.css', import.meta.url), 'utf8');
 
 function shellRule(selector: string) {
@@ -15,8 +16,8 @@ describe('shared app shell theme backgrounds', () => {
 		expect(shellRule('.ld-layout')).toContain('#B3261E');
 		expect(shellRule('.ld-layout')).toContain('#fff');
 		expect(shellRule('.ld-layout')).toContain('at 100% 0%');
-		expect(shellRule('.ld-main')).toMatch(/background:\s*var\(--r-app-background\);/);
-		expect(shellRule('.student-adventure-shell .ld-main')).toMatch(/background:\s*var\(--r-app-background\);/);
+		expect(redesignCss).toMatch(/\.ld-main\s*\{[^}]*background:\s*var\(--r-app-background\);/);
+		expect(redesignCss).toMatch(/\.student-adventure-shell \.ld-main\s*\{[^}]*background:\s*var\(--r-app-background\);/);
 	});
 
 	it('defines the same upper-right red fade to charcoal in dark mode', () => {
@@ -24,7 +25,7 @@ describe('shared app shell theme backgrounds', () => {
 		expect(shellRule(':root.dark .ld-layout')).toContain('#B3261E');
 		expect(shellRule(':root.dark .ld-layout')).toContain('#171b22');
 		expect(shellRule(':root.dark .ld-layout')).toContain('at 100% 0%');
-		expect(shellRule(':root.dark .student-adventure-shell .ld-main')).toBe('');
+		expect(redesignCss).not.toMatch(/:root\.dark \.student-adventure-shell \.ld-main\s*\{/);
 	});
 
 	it('keeps dashboard stat surfaces solid over the gradient', () => {

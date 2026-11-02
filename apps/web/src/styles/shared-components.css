@@ -1,0 +1,286 @@
+/* Shared surface and control rules. Loaded before redesign-v1.css so its
+   touch, typography, and print refinements keep their established cascade. */
+
+/* ── 3. Surfaces ────────────────────────────────────────────────────────── */
+
+.ld-panel,
+.ld-stat,
+.ld-document-side,
+.ld-settings-panel,
+.ld-courses-list-panel,
+.ld-schedule-card,
+.ld-coming-block {
+	background: var(--r-surface);
+	border: 1px solid var(--r-border);
+	border-radius: var(--r-radius-lg);
+	box-shadow: var(--r-shadow-xs);
+}
+
+.ld-panel,
+.ld-stat,
+.ld-document-side,
+.ld-settings-panel {
+	color: var(--r-ink);
+}
+
+.ld-stat {
+	border-radius: var(--r-radius-lg);
+}
+
+.ld-stat:hover {
+	box-shadow: var(--r-shadow-sm);
+}
+
+.ld-stat strong {
+	color: var(--r-ink);
+	font-weight: 800;
+}
+
+.ld-stat small,
+.ld-stat-top > span {
+	color: var(--r-ink-3);
+}
+
+.ld-card-head h2,
+.ld-settings-panel h2,
+.ld-sessions-head h2,
+.ld-structured-head h2 {
+	color: var(--r-ink);
+	letter-spacing: -0.02em;
+}
+
+.ld-stat-ico {
+	border-radius: var(--r-radius-md);
+}
+
+.ld-stat-ico.red {
+	background: var(--r-red-tint);
+	color: var(--r-red-700);
+}
+
+.ld-stat-ico.coral {
+	background: var(--r-red-tint-soft);
+	color: var(--r-red-600);
+}
+
+:root.dark .ld-stat-ico.red,
+:root.dark .ld-stat-ico.coral {
+	color: #ffb4ae;
+}
+
+.ld-stat-ico.blue {
+	background: var(--r-info-tint);
+	color: var(--r-info);
+}
+
+.ld-stat-ico.teal {
+	background: var(--r-success-tint);
+	color: var(--r-success);
+}
+
+/* ── 4. Controls ────────────────────────────────────────────────────────── */
+
+.ld-btn-primary {
+	min-height: 42px;
+	height: auto;
+	padding: 10px 18px;
+	background: var(--r-red-600);
+	border-radius: var(--r-radius-pill);
+	box-shadow: var(--r-shadow-brand);
+	font-weight: 700;
+	letter-spacing: 0.005em;
+}
+
+.ld-btn-primary:hover:not(:disabled) {
+	background: var(--r-red-700);
+}
+
+.ld-btn-primary:focus-visible,
+.ld-outline-action:focus-visible,
+.ld-btn-soft:focus-visible,
+.ld-btn-quiet:focus-visible,
+.ld-text-btn:focus-visible,
+.ld-icon-btn:focus-visible,
+.ld-icon-action:focus-visible {
+	outline: none;
+	box-shadow: var(--r-focus-ring);
+}
+
+.ld-outline-action {
+	background: var(--r-surface);
+	border: 1px solid var(--r-border);
+	color: var(--r-ink-2);
+	min-height: 40px;
+	height: auto;
+	padding: 9px 16px;
+	border-radius: var(--r-radius-pill);
+}
+
+.ld-outline-action:hover:not(:disabled) {
+	background: var(--r-surface-2);
+	border-color: var(--r-border-strong);
+	color: var(--r-ink);
+}
+
+.ld-outline-action.primary {
+	background: var(--r-red-600);
+	border-color: var(--r-red-600);
+	color: #fff;
+}
+
+.ld-outline-action.primary:hover:not(:disabled) {
+	background: var(--r-red-700);
+	border-color: var(--r-red-700);
+	color: #fff;
+}
+
+.ld-btn-soft,
+.ld-btn-quiet {
+	background: var(--r-surface-2);
+	border: 1px solid transparent;
+	color: var(--r-ink-2);
+	border-radius: var(--r-radius-pill);
+}
+
+.ld-btn-soft:hover:not(:disabled),
+.ld-btn-quiet:hover:not(:disabled) {
+	background: var(--r-surface-3);
+	color: var(--r-ink);
+}
+
+.ld-text-btn {
+	color: var(--r-red-600);
+}
+
+.ld-text-btn:hover {
+	color: var(--r-red-900);
+}
+
+:root.dark .ld-text-btn:hover {
+	color: #ffb4ae;
+}
+
+/* Form controls inside the app shell */
+:where(.ld-layout) :where(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+	background: var(--r-surface);
+	border: 1px solid var(--r-border);
+	border-radius: var(--r-radius-md);
+	color: var(--r-ink);
+	transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+:where(.ld-layout) :where(input, textarea)::placeholder {
+	color: var(--r-ink-3);
+}
+
+:where(.ld-layout) :where(input:not([type='checkbox']):not([type='radio']):not([type='range']):focus, select:focus, textarea:focus) {
+	outline: none;
+	border-color: var(--r-red-500);
+	box-shadow: var(--r-focus-ring);
+}
+
+.ld-search-bar {
+	background: var(--r-surface-2);
+	border: 1px solid var(--r-border);
+	border-radius: var(--r-radius-pill);
+	color: var(--r-ink-3);
+}
+
+.ld-search-bar:focus-within,
+.ms-search:focus-within {
+	background: var(--r-surface);
+	border-color: var(--r-red-500);
+	box-shadow: var(--r-focus-ring);
+}
+
+.ld-search-bar input {
+	color: var(--r-ink);
+}
+
+.ld-search-bar input:focus,
+.ms-search input:focus,
+.asst-composer-box .asst-input:focus,
+.gs-input input:focus {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	outline: 0;
+}
+
+.asst-composer-box {
+	display: grid;
+	gap: 6px;
+	padding: 8px 10px;
+	border: 1px solid var(--r-border);
+	border-radius: var(--r-radius-md);
+	background: var(--r-surface);
+	box-shadow: none;
+	transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.asst-composer-box:focus-within {
+	border-color: var(--r-red-500);
+	box-shadow: var(--r-focus-ring);
+}
+
+.asst-input {
+	width: 100%;
+	min-height: 22px;
+	max-height: 160px;
+	padding: 2px 4px;
+	border: 0;
+	border-radius: 0;
+	outline: 0;
+	background: transparent;
+	box-shadow: none;
+	color: var(--r-ink);
+	font: 500 14px/1.4 var(--body);
+	resize: none;
+	overflow-y: auto;
+}
+
+.asst-composer-bar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 36px;
+}
+
+.ld-greet .asst-composer-box,
+.asst-drawer .asst-composer-box {
+	gap: 8px;
+	padding: 9px 10px 7px;
+}
+
+.ld-greet .asst-input,
+.asst-drawer .asst-input {
+	min-height: 38px;
+	padding: 3px 2px;
+	font: 400 13px/1.45 var(--body);
+}
+
+.ld-greet .asst-composer-bar,
+.asst-drawer .asst-composer-bar {
+	min-height: 35px;
+	gap: 5px;
+	padding-top: 7px;
+	border-top: 1px solid var(--r-border);
+}
+
+.asst-input::placeholder,
+.ld-search-bar input::placeholder {
+	color: var(--r-ink-3);
+}
+
+/* Portaled dialogs sit outside .ld-layout; keep their controls theme aware. */
+:where([role='dialog']) :where(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+	background: var(--r-surface);
+	border: 1px solid var(--r-border);
+	border-radius: var(--r-radius-md);
+	color: var(--r-ink);
+}
+
+:where([role='dialog']) :where(input, textarea)::placeholder {
+	color: var(--r-ink-3);
+}

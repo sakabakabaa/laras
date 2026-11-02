@@ -114,7 +114,7 @@
 .ld-sidebar-foot { border-top-color: var(--p-line); }
 .ld-collapse-toggle { color: #6f7988; }
 
-.ld-main { background: #fff; scrollbar-color: rgba(23,34,56,.22) transparent; }
+.ld-main { scrollbar-color: rgba(23,34,56,.22) transparent; }
 .ld-main::-webkit-scrollbar-thumb { background: rgba(23,34,56,.22); }
 .ld-main::-webkit-scrollbar-thumb:hover { background: rgba(23,34,56,.38); }
 .ld-content {
@@ -272,7 +272,7 @@
 }
 
 :root.dark .ld-layout { background:var(--p-canvas); color:var(--p-ink); }
-:root.dark .ld-mast,:root.dark .ld-body,:root.dark .ld-sidebar,:root.dark .ld-main { background:#171b21; border-color:#2a3038; }
+:root.dark .ld-mast,:root.dark .ld-body,:root.dark .ld-sidebar { background:#171b21; border-color:#2a3038; }
 :root.dark .ld-mast,:root.dark .ld-mast-logo-link,:root.dark .ld-mast .ld-mobile-menu { color:#e8edf4; }
 :root.dark .ld-mast .ld-icon-btn { background:#1d2229; border-color:#343b45; color:#c5cdd8; }
 :root.dark .ld-mast .ld-mast-icon { color:#c5cdd8; }

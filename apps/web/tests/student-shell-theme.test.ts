@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import postcss from 'postcss';
 
 const css = readFileSync(new URL('../src/styles/theme.css', import.meta.url), 'utf8');
 const redesignCss = readFileSync(new URL('../src/styles/redesign-v1.css', import.meta.url), 'utf8');
@@ -30,5 +31,21 @@ describe('shared app shell theme backgrounds', () => {
 
 	it('keeps dashboard stat surfaces solid over the gradient', () => {
 		expect(workspaceCss).toMatch(/\.ld-dash \.ld-stat\s*\{[^}]*background:\s*var\(--r-surface\);/);
+	});
+
+	it('does not let legacy main backgrounds override the shared gradient in dark mode', () => {
+		const sources = [
+			workspaceCss,
+			readFileSync(new URL('../src/index.css', import.meta.url), 'utf8'),
+			readFileSync(new URL('../src/styles/dark-overrides.css', import.meta.url), 'utf8'),
+		];
+		for (const source of sources) {
+			postcss.parse(source).walkRules((rule) => {
+				if (!rule.selector.split(',').some((selector) => /(?:^|\s)\.ld-main$/.test(selector.trim()))) return;
+				rule.walkDecls(/^(background|background-image|background-color)$/, (declaration) => {
+					expect.fail(`Legacy ${rule.selector} overrides the shared gradient with ${declaration.value}`);
+				});
+			});
+		}
 	});
 });

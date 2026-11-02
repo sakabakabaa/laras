@@ -2,6 +2,8 @@
 
 `apps/web/src/styles/theme.css` owns the shared light and dark theme tokens, including the `--r-*` scale, legacy and Tailwind aliases, the `--p-*` workspace palette, and the red gradient shell token. The root stylesheet list loads it after the existing legacy styles so the established token cascade remains predictable.
 
+The main shell consumes that gradient in `redesign-v1.css` for both roles. Legacy `.ld-main` backgrounds, including higher-specificity dark-mode backgrounds, have been removed so they cannot mask the token.
+
 Feature stylesheets should own feature layout and component rules. New feature CSS should not define another global token family or theme palette. Shared surfaces and controls now live in `shared-components.css`; it uses the root semantic tokens and is loaded before `redesign-v1.css` so later touch, typography, and print refinements retain their cascade.
 
 The migration remains incremental. `index.css` base tokens and the many legacy component declarations remain in place. Compatibility aliases remain available for existing consumers; unrelated feature sections have not moved.

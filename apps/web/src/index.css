@@ -365,7 +365,7 @@ html:has(.ld-layout),html:has(.ld-layout) body{height:100%;overflow:hidden}
 .ld-sidebar-foot{padding:10px 4px 0;border-top:1px solid #E4E7EC;display:grid;gap:2px;flex:none;margin-top:auto}
 .ld-logout{color:#667085}
 .ld-scrim{display:none}
-.ld-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:#F8F9FB;scrollbar-width:thin;scrollbar-color:rgba(23,32,51,.38) transparent}
+.ld-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(23,32,51,.38) transparent}
 .ld-main::-webkit-scrollbar{width:10px;height:10px;background:transparent}
 .ld-main::-webkit-scrollbar-track,.ld-main::-webkit-scrollbar-track-piece{background:transparent;border:0;box-shadow:none}
 .ld-main::-webkit-scrollbar-thumb{background:rgba(23,32,51,.32);border-radius:999px;border:3px solid transparent;background-clip:padding-box}
@@ -5613,7 +5613,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover,input[type="datetime
 :root.dark .ld-nav-link.active{background:rgba(201,52,43,.16);color:#F07168}
 :root.dark .ld-sidebar-foot{border-top-color:#262C35}
 :root.dark .ld-collapse-toggle{color:#9AA6B6}
-:root.dark .ld-main{background:#0E1218}
 :root.dark .ld-topbar{background:#12161C;border-bottom-color:#262C35}
 :root.dark .ld-search{background:#1A1F26;border-color:transparent;color:#9AA6B6}
 :root.dark .ld-search:focus-within{background:#222831;border-color:rgba(201,52,43,.4);box-shadow:0 0 0 3px rgba(201,52,43,.12)}

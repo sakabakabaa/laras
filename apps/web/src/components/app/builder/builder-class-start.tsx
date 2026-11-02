@@ -5,6 +5,7 @@ import { useCachedQuery } from '@/hooks/use-cached-query';
 import pb from '@/lib/pocketbase-client';
 import { blankBuilder, builderRequest, copyBuilder, copyScheduledToBuilder, uid, type BuilderRecord } from '@/lib/builder-document';
 import { scheduledRequest } from '@/lib/scheduled-classes';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type CourseOption = { id: string; title: string; code: string };
 type MeetingOption = { id: string; title: string; week: number; section: string };
@@ -51,14 +52,14 @@ export function BuilderClassStart() {
 		<div className="bd-new-heading"><span className="bd-kicker">BUAT KELAS</span><h1>Pilih pertemuan</h1><p>Setelah ini, langsung susun kelas. AI, unggah buku, dan elemen tersedia di panel builder.</p></div>
 		<form onSubmit={event => { event.preventDefault(); void create(); }}>
 			<fieldset disabled={busy}>
-				<label>1. Mata kuliah<select autoFocus required value={course} onChange={event => { setCourse(event.target.value); setMeeting(''); setError(''); }}>
-					<option value="">{courses.loading ? 'Memuat mata kuliah…' : 'Pilih mata kuliah'}</option>
-					{courses.data?.map(item => <option key={item.id} value={item.id}>{item.code} · {item.title}</option>)}
-				</select></label>
-				<label>2. Pertemuan<select required disabled={!selectedCourse || meetings.loading} value={meeting} onChange={event => setMeeting(event.target.value)}>
-					<option value="">{meetings.loading ? 'Memuat pertemuan…' : 'Pilih pertemuan'}</option>
-					{meetings.data?.map(item => <option key={item.id} value={item.id}>Pertemuan {item.week} · {item.title}</option>)}
-				</select></label>
+				<div className="bd-start-field"><label htmlFor="class-course">1. Mata kuliah</label><Select name="course" required disabled={busy || courses.loading || Boolean(courses.error)} value={selectedCourse ? course : ''} onValueChange={value => { setCourse(value); setMeeting(''); setError(''); }}>
+					<SelectTrigger id="class-course" autoFocus><SelectValue placeholder={courses.loading ? 'Memuat mata kuliah…' : 'Pilih mata kuliah'} /></SelectTrigger>
+					<SelectContent>{courses.data?.map(item => <SelectItem key={item.id} value={item.id}>{item.code} · {item.title}</SelectItem>)}</SelectContent>
+				</Select></div>
+				<div className="bd-start-field"><label htmlFor="class-meeting">2. Pertemuan</label><Select name="meeting" required disabled={busy || !selectedCourse || meetings.loading || Boolean(meetings.error) || !meetings.data?.length} value={selectedMeeting ? meeting : ''} onValueChange={value => { setMeeting(value); setError(''); }}>
+					<SelectTrigger id="class-meeting"><SelectValue placeholder={meetings.loading ? 'Memuat pertemuan…' : 'Pilih pertemuan'} /></SelectTrigger>
+					<SelectContent>{meetings.data?.map(item => <SelectItem key={item.id} value={item.id}>Pertemuan {item.week} · {item.title}</SelectItem>)}</SelectContent>
+				</Select></div>
 				{selectedCourse && !meetings.loading && !meetings.error && !meetings.data?.length && <p>Belum ada pertemuan. <Link to={`/app/courses/${course}/mata-kuliah`}>Tambahkan pertemuan di mata kuliah.</Link></p>}
 				{(source || sourceSession) && <p>Isi sumber akan disalin ke draf baru. Kelas asal, mahasiswa, jawaban, dan nilai tidak diubah.</p>}
 				{(error || courses.error || meetings.error) && <p className="bd-error" role="alert">{error || courses.error || meetings.error}</p>}

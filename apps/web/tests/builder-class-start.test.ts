@@ -18,10 +18,13 @@ beforeEach(() => { query.fail = false; query.meetings = true; });
 describe('simple class entry', () => {
 	it('shows only course and meeting choices, not title, audience, templates, or AI setup', () => {
 		const html = render();
-		expect(html.match(/<select/g)).toHaveLength(2);
+		expect(html.match(/role="combobox"/g)).toHaveLength(2);
 		expect(html).toContain('1. Mata kuliah'); expect(html).toContain('2. Pertemuan');
 		expect(html).toContain('Buka builder');
-		for (const field of ['<input', '<textarea', 'Semua rombel', 'Atau duplikat', 'bd-template-options']) expect(html).not.toContain(field);
+		for (const field of ['<textarea', 'Semua rombel', 'Atau duplikat', 'bd-template-options']) expect(html).not.toContain(field);
+		expect(html).toContain('laras-select-trigger');
+		expect(html).toContain('for="class-course"');
+		expect(html).toContain('for="class-meeting"');
 		expect(html).toContain('disabled=""');
 	});
 

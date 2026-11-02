@@ -102,9 +102,15 @@
 .bd-workspace textarea:focus-visible,
 .bd-workspace select:focus-visible,
 .bd-new input:focus-visible,
-.bd-new select:focus-visible {
+.bd-new select:focus-visible,
+.bd-new .laras-select-trigger:focus-visible {
 	outline: none;
 	box-shadow: var(--r-focus-ring);
+}
+.bd-start-field {
+	display: grid;
+	gap: 6px;
+	min-width: 0;
 }
 .bd-workspace input[type='checkbox'],
 .bd-workspace input[type='radio'],

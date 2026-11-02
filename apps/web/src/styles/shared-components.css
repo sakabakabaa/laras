@@ -80,6 +80,57 @@
 
 /* ── 4. Controls ────────────────────────────────────────────────────────── */
 
+.laras-select-trigger {
+	min-height: 40px;
+	border: 1px solid var(--r-border);
+	border-radius: var(--r-radius-md);
+	background: var(--r-surface);
+	color: var(--r-ink);
+	box-shadow: var(--r-shadow-xs);
+}
+
+.laras-select-trigger:focus-visible {
+	border-color: var(--r-action);
+	outline: none;
+	box-shadow: var(--r-focus-ring);
+}
+
+.laras-select-trigger[data-placeholder] {
+	color: var(--r-ink-3);
+}
+
+.laras-select-trigger:disabled {
+	background: var(--r-surface-2);
+	color: var(--r-ink-3);
+	cursor: not-allowed;
+}
+
+.laras-select-content {
+	border: 1px solid var(--r-border);
+	border-radius: var(--r-radius-md);
+	background: var(--r-surface);
+	color: var(--r-ink);
+	box-shadow: var(--r-shadow-md);
+}
+
+.laras-select-item {
+	min-height: 36px;
+	border-radius: var(--r-radius-sm);
+}
+
+.laras-select-item[data-state='checked'],
+.laras-select-item[data-highlighted] {
+	background: var(--r-red-tint);
+	color: var(--r-brand-text);
+}
+
+@media (pointer: coarse) {
+	.laras-select-trigger,
+	.laras-select-item {
+		min-height: 44px;
+	}
+}
+
 .ld-form-control {
 	border: 1px solid var(--r-border);
 	border-radius: var(--r-radius-md);

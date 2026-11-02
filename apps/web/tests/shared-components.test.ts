@@ -8,6 +8,22 @@ const redesign = readFileSync(new URL('redesign-v1.css', styles), 'utf8');
 const palette = readFileSync(new URL('global-search-palette.css', styles), 'utf8');
 
 describe('shared component stylesheet ownership and cascade', () => {
+	it('themes shared dropdown triggers and portaled options with root tokens', () => {
+		const component = readFileSync(new URL('../src/components/ui/select.tsx', import.meta.url), 'utf8');
+		const rules = new Map<string, Record<string, string>>();
+		postcss.parse(shared).walkRules(rule => {
+			const declarations: Record<string, string> = {};
+			rule.walkDecls(declaration => { declarations[declaration.prop] = declaration.value; });
+			rules.set(rule.selector, declarations);
+		});
+		for (const name of ['laras-select-trigger', 'laras-select-content', 'laras-select-item']) expect(component).toContain(name);
+		expect(rules.get('.laras-select-trigger')).toMatchObject({ background: 'var(--r-surface)', color: 'var(--r-ink)' });
+		expect(rules.get('.laras-select-content')).toMatchObject({ background: 'var(--r-surface)', color: 'var(--r-ink)', 'box-shadow': 'var(--r-shadow-md)' });
+		expect(rules.get(".laras-select-item[data-state='checked'],\n.laras-select-item[data-highlighted]")).toEqual({ background: 'var(--r-red-tint)', color: 'var(--r-brand-text)' });
+		expect(rules.get('.laras-select-trigger:focus-visible')).toMatchObject({ 'box-shadow': 'var(--r-focus-ring)', outline: 'none' });
+		expect(rules.get('.laras-select-trigger,\n\t.laras-select-item')).toEqual({ 'min-height': '44px' });
+	});
+
 	it('owns the extracted surface, control, and portaled input rules once', () => {
 		const sharedRules = new Set<string>();
 		postcss.parse(shared).walkRules((rule) => {

@@ -15,6 +15,7 @@ The migration remains incremental. `index.css` base tokens and the many legacy c
 - Existing `--r-*` tokens are the shared scale. `--p-*` workspace colors retain their current values during migration; they are not yet identical to the shared scale. Responsive sidebar dimensions remain in the shell stylesheet because they are layout state, not theme colors.
 - The existing `useTheme` hook, saved preference, and pre-paint script remain unchanged.
 - Portalled dialogs and search use the root theme tokens; do not depend on inheriting workspace-only variables outside the shell.
+- Use the shared `components/ui/select` primitives for custom themed dropdowns. Their triggers, portaled menus, checked/highlighted rows, and focus rings use root tokens in `shared-components.css`, including light/dark surfaces and red selection states. Native `<select>` popup menus remain browser-controlled; they must be migrated explicitly rather than relying on option CSS. The class-creation course and meeting selectors use the shared component.
 
 ## Current boundaries and next steps
 

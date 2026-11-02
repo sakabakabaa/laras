@@ -96,6 +96,7 @@ export default function ResetPasswordPage() {
 									<input
 										type={show ? 'text' : 'password'}
 										value={newPassword}
+										className="ld-form-control"
 										autoComplete="new-password"
 										minLength={8}
 										onChange={(e) => setNewPassword(e.target.value)}
@@ -123,6 +124,7 @@ export default function ResetPasswordPage() {
 									<input
 										type={show ? 'text' : 'password'}
 										value={confirmPassword}
+										className="ld-form-control"
 										autoComplete="new-password"
 										minLength={8}
 										onChange={(e) => setConfirmPassword(e.target.value)}

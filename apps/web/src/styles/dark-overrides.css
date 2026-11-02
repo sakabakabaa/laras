@@ -1680,27 +1680,6 @@
 :root.dark .roster-activate-other li{color:#C5CDD8}
 :root.dark .roster-activate-other li span{color:#E8EDF4}
 :root.dark .roster-activate-ack{color:#C5CDD8}
-:root.dark .onboarding-card{background:#1A1F26;border:1px solid #2A3138}
-:root.dark .onboarding-card-head h1{color:#E8EDF4}
-:root.dark .onboarding-card-head p{color:#9AA6B6}
-:root.dark .onboarding-banner{background:#12161C;border:1px solid rgba(180,83,9,.22);color:#FBBF24}
-:root.dark .onboarding-banner svg{color:#FBBF24}
-:root.dark .onboarding-banner strong{color:#FBBF24}
-:root.dark .onboarding-banner span{color:#FBBF24}
-:root.dark .onboarding-section{border-top:1px solid #2A3138}
-:root.dark .onboarding-section-head h2{color:#E8EDF4}
-:root.dark .onboarding-done{color:#34D399;background:rgba(16,185,129,.10)}
-:root.dark .onboarding-success{color:#34D399;background:rgba(16,185,129,.10)}
-:root.dark .onboarding-field{color:#C5CDD8}
-:root.dark .onboarding-input-icon{color:#9AA6B6}
-:root.dark .onboarding-input-wrap input{border:1px solid #2A3138;background:#1A1F26}
-:root.dark .onboarding-input-wrap input::placeholder{color:#9AA6B6}
-:root.dark .onboarding-input-wrap input:disabled{background:#12161C}
-:root.dark .onboarding-eye{color:#9AA6B6}
-:root.dark .onboarding-hint{color:#9AA6B6}
-:root.dark .onboarding-hint.warn{color:#F87171}
-:root.dark .onboarding-foot{border-top:1px solid #2A3138}
-:root.dark .onboarding-foot-note{color:#9AA6B6}
 :root.dark .verify-page{background:linear-gradient(180deg,#12161C 0%,#12161C 100%)}
 :root.dark .verify-card{background:#1A1F26;border:1px solid #2A3138;box-shadow:0 16px 40px rgba(0,0,0,.08)}
 :root.dark .verify-icon.loading{background:#222831;color:#9AA6B6}

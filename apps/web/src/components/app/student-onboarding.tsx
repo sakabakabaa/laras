@@ -141,6 +141,7 @@ export function StudentOnboarding() {
 									<input
 										type={showOld ? 'text' : 'password'}
 										value={oldPassword}
+										className="ld-form-control"
 										autoComplete="current-password"
 										onChange={(e) => setOldPassword(e.target.value)}
 										placeholder="Kata sandi saat ini"
@@ -164,6 +165,7 @@ export function StudentOnboarding() {
 									<input
 										type={showNew ? 'text' : 'password'}
 										value={newPassword}
+										className="ld-form-control"
 										autoComplete="new-password"
 										minLength={8}
 										onChange={(e) => setNewPassword(e.target.value)}
@@ -196,6 +198,7 @@ export function StudentOnboarding() {
 									<input
 										type={showNew ? 'text' : 'password'}
 										value={confirmPassword}
+										className="ld-form-control"
 										autoComplete="new-password"
 										minLength={8}
 										onChange={(e) => setConfirmPassword(e.target.value)}

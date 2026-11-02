@@ -67,9 +67,9 @@
 .student-adventure-shell { --student-cream:#fff5e5; --student-gold:#b68533; --student-leaf:#477559; }
 .student-adventure-shell .ld-content { background:radial-gradient(ellipse at 90% 0%, #f8ecd733, transparent 45%); }
 .student-adventure-shell :is(.ld-panel,.res-group,.asg-card,.sgr-summary-card,.ld-document-paper,.ld-info-card,.ld-session-row,.sas-card) { border:1px solid var(--p-line); border-radius:18px; background:var(--p-surface); box-shadow:0 4px 0 color-mix(in srgb,var(--p-line) 35%,transparent); }
-.student-adventure-shell :is(.ld-btn-primary,.ld-outline-action,.ld-text-btn,.sco-task-cta) { border-radius:12px; }
-.student-adventure-shell :is(.ld-btn-primary,.sd-game-primary) { box-shadow:0 4px 0 color-mix(in srgb,var(--p-wine) 65%,#000); transition:transform .15s,box-shadow .15s; }
-.student-adventure-shell :is(.ld-btn-primary,.sd-game-primary):active { transform:translateY(3px); box-shadow:0 1px 0 var(--p-wine); }
+.student-adventure-shell .sco-task-cta { border-radius:12px; }
+.student-adventure-shell .sd-game-primary { box-shadow:0 4px 0 color-mix(in srgb,var(--p-wine) 65%,#000); transition:transform .15s,box-shadow .15s; }
+.student-adventure-shell .sd-game-primary:active { transform:translateY(3px); box-shadow:0 1px 0 var(--p-wine); }
 .student-adventure-shell :is(.res-ico,.ld-empty-icon,.sco-next-week,.sco-task-cta,.ws-head-mark) { background:var(--student-cream); color:var(--p-wine); border-radius:14px; }
 .student-adventure-shell .ld-course-rail { background:var(--p-surface); }
 .student-adventure-shell .ld-course-rail-head { border:1px solid var(--p-line); border-radius:16px; padding:18px; margin:12px 10px 18px; background:var(--student-cream); }

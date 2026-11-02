@@ -22,6 +22,7 @@ describe('password-only student onboarding', () => {
 	it('renders only the password-change form without recovery email', () => {
 		const html = renderToStaticMarkup(createElement(StudentOnboarding));
 		expect(html.match(/type="password"/g)).toHaveLength(3);
+		expect(html.match(/class="ld-form-control"/g)).toHaveLength(3);
 		expect(html.match(/<form\b/g)).toHaveLength(1);
 		expect(html).toContain('Simpan kata sandi baru');
 		expect(html).not.toMatch(/pemulihan|verifikasi|type="email"/i);
@@ -69,5 +70,42 @@ describe('password-only student onboarding', () => {
 				expect.fail(`Legacy ${rule.selector} overrides the shared button theme`);
 			});
 		});
+	});
+
+	it('keeps student-world effects off shared controls', () => {
+		const student = readFileSync(new URL('../src/styles/student-home.css', import.meta.url), 'utf8');
+		postcss.parse(student).walkRules((rule) => {
+			if (!/\.ld-(?:btn-primary|outline-action|text-btn)\b/.test(rule.selector)) return;
+			rule.walkDecls(/^(?:border-radius|box-shadow|transform)$/, () => {
+				expect.fail(`Student rule ${rule.selector} overrides shared control styling`);
+			});
+		});
+	});
+
+	it('uses shared field styles and theme tokens without separate onboarding palettes', () => {
+		const shared = readFileSync(new URL('../src/styles/shared-components.css', import.meta.url), 'utf8');
+		const rules = new Map<string, postcss.Rule>();
+		postcss.parse(shared).walkRules((rule) => { rules.set(rule.selector, rule); });
+		expect(rules.get('.ld-form-control')?.toString()).toContain('border-radius: var(--r-radius-md)');
+		expect(rules.get('.ld-form-control')?.toString()).toContain('background: var(--r-surface)');
+		const focus = rules.get('.ld-form-control:focus,\n.ld-form-control:focus-visible')?.toString();
+		expect(focus).toContain('box-shadow: var(--r-focus-ring)');
+		expect(focus).toContain('outline: none');
+		const legacy = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+		postcss.parse(legacy).walkRules((rule) => {
+			if (!rule.selector.includes('.onboarding-')) return;
+			rule.walkDecls((declaration) => {
+				expect(declaration.value).not.toMatch(/#[\da-f]{3,8}\b|rgba?\(/i);
+			});
+			if (rule.selector === '.onboarding-input-wrap input') {
+				expect(rule.nodes.every((node) => node.type === 'decl' && ['height', 'width', 'padding'].includes(node.prop))).toBe(true);
+			}
+		});
+		const dark = readFileSync(new URL('../src/styles/dark-overrides.css', import.meta.url), 'utf8');
+		expect(dark).not.toContain('.onboarding-');
+		for (const route of ['reset-password', 'lupa-sandi']) {
+			const source = readFileSync(new URL(`../src/routes/${route}.tsx`, import.meta.url), 'utf8');
+			expect(source.match(/<input\b/g)?.length).toBe(source.match(/className="ld-form-control"/g)?.length);
+		}
 	});
 });

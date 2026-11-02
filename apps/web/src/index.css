@@ -3646,38 +3646,36 @@ html:has(.ld-layout),html:has(.ld-layout) body{height:100%;overflow:hidden}
 
 /* ── Student onboarding (Phase 3) ──────────────────────────── */
 .onboarding-wrap{max-width:680px;margin:0 auto;padding:8px 0 24px}
-.onboarding-card{background:#fff;border:1px solid #E4E7EC;border-radius:20px;padding:28px 28px 24px;display:grid;gap:22px}
-.onboarding-card-head h1{font:700 26px/1.2 var(--body);letter-spacing:-.03em;color:#172033;margin:8px 0 0}
-.onboarding-card-head p{margin:10px 0 0;font-size:13.5px;line-height:1.65;color:#667085;max-width:560px}
-.onboarding-eyebrow{display:inline-flex;align-items:center;gap:7px;font:700 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--red)}
-.onboarding-banner{display:flex;align-items:flex-start;gap:12px;background:#FFFDF2;border:1px solid #FFEB99;border-radius:14px;padding:14px 16px;color:#8A6500}
-.onboarding-banner svg{color:#C49200;flex:none;margin-top:1px}
-.onboarding-banner strong{display:block;font:700 13.5px var(--body);color:#8A6500}
-.onboarding-banner span{display:block;font:500 12.5px var(--body);color:#8A6500;margin-top:2px;line-height:1.5}
-.onboarding-section{border-top:1px solid #F2F4F7;padding-top:22px;display:grid;gap:14px}
+.onboarding-card{background:var(--r-surface);border:1px solid var(--r-border);border-radius:20px;padding:28px 28px 24px;display:grid;gap:22px}
+.onboarding-card-head h1{font:700 26px/1.2 var(--body);letter-spacing:-.03em;color:var(--r-ink);margin:8px 0 0}
+.onboarding-card-head p{margin:10px 0 0;font-size:13.5px;line-height:1.65;color:var(--r-ink-3);max-width:560px}
+.onboarding-eyebrow{display:inline-flex;align-items:center;gap:7px;font:700 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--r-brand-text)}
+.onboarding-banner{display:flex;align-items:flex-start;gap:12px;background:var(--r-warning-tint);border:1px solid var(--r-warning);border-radius:14px;padding:14px 16px;color:var(--r-warning)}
+.onboarding-banner svg{color:var(--r-warning);flex:none;margin-top:1px}
+.onboarding-banner strong{display:block;font:700 13.5px var(--body);color:var(--r-warning)}
+.onboarding-banner span{display:block;font:500 12.5px var(--body);color:var(--r-warning);margin-top:2px;line-height:1.5}
+.onboarding-section{border-top:1px solid var(--r-border);padding-top:22px;display:grid;gap:14px}
 .onboarding-section:first-of-type{border-top:0;padding-top:0}
 .onboarding-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.onboarding-section-head h2{display:flex;align-items:center;gap:8px;font:700 15px var(--body);color:#172033;margin:0}
-.onboarding-section-head h2 svg{color:var(--red)}
-.onboarding-done{display:inline-flex;align-items:center;gap:5px;font:700 12px var(--body);color:#047857;background:#ECFDF5;border-radius:999px;padding:4px 9px}
-.onboarding-success{margin:0;font:600 12.5px var(--body);color:#047857;background:#ECFDF5;border-radius:10px;padding:9px 12px}
+.onboarding-section-head h2{display:flex;align-items:center;gap:8px;font:700 15px var(--body);color:var(--r-ink);margin:0}
+.onboarding-section-head h2 svg{color:var(--r-brand-text)}
+.onboarding-done{display:inline-flex;align-items:center;gap:5px;font:700 12px var(--body);color:var(--r-success);background:var(--r-success-tint);border-radius:999px;padding:4px 9px}
+.onboarding-success{margin:0;font:600 12.5px var(--body);color:var(--r-success);background:var(--r-success-tint);border-radius:10px;padding:9px 12px}
 .onboarding-form{display:grid;gap:14px}
-.onboarding-field{display:flex;flex-direction:column;gap:7px;font:600 12px var(--body);color:#475467}
+.onboarding-field{display:flex;flex-direction:column;gap:7px;font:600 12px var(--body);color:var(--r-ink-2)}
 .onboarding-input-wrap{position:relative}
-.onboarding-input-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#667085;pointer-events:none}
-.onboarding-input-wrap input{height:46px;width:100%;border:1px solid #E4E7EC;border-radius:12px;background:#fff;padding:0 14px 0 40px;font:500 13.5px var(--body);color:var(--ink);outline:0;transition:border-color .15s,box-shadow .15s}
-.onboarding-input-wrap input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(127,29,22,.1)}
-.onboarding-input-wrap input::placeholder{color:#667085}
-.onboarding-input-wrap input:disabled{background:#f8f9fb;opacity:.7}
-.onboarding-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#667085;font:600 12px var(--body);padding:6px 8px;border-radius:8px;cursor:pointer}
-.onboarding-eye:hover{color:var(--red)}
-.onboarding-hint{font:500 13px var(--body);color:#667085;font-style:normal}
-.onboarding-hint.warn{color:#E11D48}
+.onboarding-input-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--r-ink-3);pointer-events:none}
+.onboarding-input-wrap input{height:46px;width:100%;padding:0 14px 0 40px}
+.onboarding-input-wrap:has(.onboarding-eye) input{padding-right:100px}
+.onboarding-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--r-ink-3);font:600 12px var(--body);padding:6px 8px;border-radius:8px;cursor:pointer}
+.onboarding-eye:hover{color:var(--r-brand-text)}
+.onboarding-hint{font:500 13px var(--body);color:var(--r-ink-3);font-style:normal}
+.onboarding-hint.warn{color:var(--r-danger)}
 .onboarding-form .ld-btn-primary{justify-self:start;margin-top:2px}
 .onboarding-form .ld-outline-action{justify-self:start}
-.onboarding-foot{border-top:1px solid #F2F4F7;padding-top:18px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.onboarding-foot{border-top:1px solid var(--r-border);padding-top:18px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .onboarding-foot .ld-btn-primary{width:auto}
-.onboarding-foot-note{font:500 12px var(--body);color:#667085;line-height:1.5}
+.onboarding-foot-note{font:500 12px var(--body);color:var(--r-ink-3);line-height:1.5}
 @media(max-width:560px){.onboarding-card{padding:22px 18px}.onboarding-card-head h1{font-size:22px}.onboarding-form .ld-btn-primary,.onboarding-form .ld-outline-action{width:100%;justify-content:center}}
 
 /* ── Public email verification page (Phase 3) ──────────────── */

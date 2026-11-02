@@ -69,6 +69,7 @@ export default function LupaSandiPage() {
 									<input
 										type="email"
 										value={email}
+										className="ld-form-control"
 										autoComplete="email"
 										onChange={(e) => setEmail(e.target.value)}
 										placeholder="nama@email.com"

@@ -24,6 +24,8 @@ Assistant composer, textarea, and composer-bar styling is shared across full-pag
 
 Primary buttons, including password setup actions, use `--r-action`, `--r-action-hover`, and `--r-on-action` from the theme. Disabled buttons use the shared surface/text ramp rather than a red background with muted text. The old generic primary-button rules in the base and premium stylesheets no longer compete with these states.
 
+The student adventure shell must not override shared button shape, shadow, or pressed states. Its raised effects remain limited to dedicated game controls. Password onboarding and public password recovery/reset fields use the shared `.ld-form-control` class, with one themed focus ring. Onboarding layout stays in `index.css`, but its surfaces, text, and semantic states consume root theme tokens instead of a separate light/dark palette.
+
 Remaining legacy and feature-specific hardcoded colors are future migration work. Keep distinct semantic states (success, warning, error) rather than turning every color red. Do not remove `dark-overrides.css` wholesale until its remaining consumers have been migrated.
 
 `theme-ownership.test.ts` checks palette ownership, aliases, and stylesheet order. `shared-components.test.ts` protects extracted ownership and touch/print cascade ordering. `student-shell-theme.test.ts` protects the shared light/dark red gradients. The input-cascade and search-layout tests protect the previous search/chat fixes.

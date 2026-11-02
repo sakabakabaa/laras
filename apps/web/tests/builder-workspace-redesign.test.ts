@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import postcss from 'postcss';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
@@ -12,6 +13,17 @@ const css = readFileSync(
 	new URL('../src/styles/builder-workspace.css', import.meta.url),
 	'utf8',
 );
+
+function baseDeclarations(selector: string) {
+	const result = new Map<string, string>();
+	postcss.parse(css).walkRules((rule) => {
+		if (rule.selector !== selector || (rule.parent && rule.parent.type === 'atrule')) return;
+		rule.walkDecls((decl) => {
+			result.set(decl.prop, decl.value);
+		});
+	});
+	return result;
+}
 
 describe('content-first builder workspace', () => {
 	it('keeps one review entry and no mode tabs in the workspace', () => {
@@ -28,6 +40,15 @@ describe('content-first builder workspace', () => {
 		expect(source).toContain('className="bd-title-input"');
 		expect(source).toContain('bd-context-line');
 		expect(css).toContain('.bd-workspace .bd-title-group input.bd-title-input');
+	});
+
+	it('keeps the title bar transparent, non-sticky, and free of a divider', () => {
+		const declarations = baseDeclarations('.bd-topbar');
+		expect(declarations.get('position')).toBe('static');
+		expect(declarations.get('background')).toBe('transparent');
+		expect(declarations.has('top')).toBe(false);
+		expect(declarations.has('border')).toBe(false);
+		expect(declarations.has('border-bottom')).toBe(false);
 	});
 
 	it('creates inline text only from typing and never on load', () => {

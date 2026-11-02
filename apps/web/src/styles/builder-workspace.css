@@ -369,16 +369,13 @@
 	padding-bottom: 35px;
 }
 .bd-topbar {
-	position: sticky;
-	top: 0;
-	z-index: 15;
+	position: static;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 20px;
 	padding: 14px 0;
-	background: var(--bd-panel);
-	border-bottom: 1px solid var(--bd-border);
+	background: transparent;
 }
 .bd-title-group {
 	display: flex;
@@ -1035,9 +1032,6 @@
 		width: 100%;
 		justify-content: flex-end;
 	}
-	.bd-topbar {
-		top: 0;
-	}
 	.bd-activity {
 		padding: 14px;
 	}
@@ -1115,9 +1109,6 @@
 	.bd-subbar {
 		flex-direction: column;
 		align-items: flex-start;
-	}
-	.bd-topbar {
-		top: auto;
 	}
 	.bd-toolbar-actions > .bd-primary {
 		margin-left: auto;

@@ -44,10 +44,12 @@
 }
 
 .gs-input.gs-input {
+	flex: none;
 	display: flex;
 	align-items: center;
 	gap: 10px;
 	height: 58px;
+	min-height: 58px;
 	padding: 0 14px 0 18px;
 	border: 0;
 	border-bottom: 1px solid #eaecf0;
@@ -88,6 +90,7 @@
 }
 
 .gs-pills {
+	flex: none;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;

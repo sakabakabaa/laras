@@ -1,27 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-	AlertTriangle,
 	ArrowRight,
 	BadgeCheck,
 	LoaderCircle,
 	Lock,
-	Mail,
-	MailCheck,
 	ShieldCheck,
-	Clock,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import pb from '@/lib/pocketbase-client';
-import { errorMessage, isAbortError } from '@/lib/learning';
-
-type PendingVerification = {
-	id: string;
-	email: string;
-	verified: boolean;
-	expiresAt: string;
-	created: string;
-};
+import { errorMessage } from '@/lib/learning';
 
 export function StudentOnboarding() {
 	const { user } = useAuth();
@@ -29,16 +17,12 @@ export function StudentOnboarding() {
 
 	const authRecord = user as {
 		mustChangePassword?: boolean;
-		recoveryEmail?: string;
-		recoveryEmailVerified?: boolean;
 	} | null;
 	// Fail closed: until the auth record is loaded and actually exposes the
 	// mustChangePassword flag, treat a password change as still required so the
 	// form stays visible and "Lanjut ke dashboard" stays disabled during hydration.
 	const authReady = !!authRecord && typeof authRecord.mustChangePassword !== 'undefined';
 	const mustChangePassword = authReady ? Boolean(authRecord!.mustChangePassword) : true;
-	const recoveryEmail = authRecord?.recoveryEmail ?? '';
-	const recoveryEmailVerified = authRecord?.recoveryEmailVerified ?? false;
 
 	// Password form state
 	const [oldPassword, setOldPassword] = useState('');
@@ -49,36 +33,6 @@ export function StudentOnboarding() {
 	const [pwBusy, setPwBusy] = useState(false);
 	const [pwError, setPwError] = useState('');
 	const [pwSuccess, setPwSuccess] = useState(false);
-
-	// Recovery email state
-	const [emailInput, setEmailInput] = useState('');
-	const [pending, setPending] = useState<PendingVerification | null>(null);
-	const [pendingLoading, setPendingLoading] = useState(true);
-	const [emailBusy, setEmailBusy] = useState(false);
-	const [emailError, setEmailError] = useState('');
-	const [emailSent, setEmailSent] = useState(false);
-
-	const loadPending = useCallback(async () => {
-		setPendingLoading(true);
-		try {
-			const rows = await pb
-				.collection('email_verifications')
-				.getFullList<PendingVerification>({ sort: '-created' });
-			const now = Date.now();
-			const next = rows.find(
-				(r) => !r.verified && new Date(r.expiresAt).getTime() > now,
-			);
-			setPending(next ?? null);
-		} catch (err) {
-			if (!isAbortError(err)) setPending(null);
-		} finally {
-			setPendingLoading(false);
-		}
-	}, []);
-
-	useEffect(() => {
-		void loadPending();
-	}, [loadPending]);
 
 	const passwordsDiffer = newPassword.length > 0 && newPassword !== confirmPassword;
 	const newPasswordTooShort = newPassword.length > 0 && newPassword.length < 8;
@@ -130,44 +84,7 @@ export function StudentOnboarding() {
 		}
 	};
 
-	const submitEmail = async (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		const email = emailInput.trim().toLowerCase();
-		if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-			setEmailError('Format email tidak valid.');
-			return;
-		}
-		setEmailBusy(true);
-		setEmailError('');
-		setEmailSent(false);
-		try {
-			const response = await fetch('/api/recovery-email/request', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${pb.authStore.token}`,
-				},
-				body: JSON.stringify({ email }),
-			});
-			const data = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
-			if (!response.ok) {
-				throw new Error(data?.error || 'Gagal mengirim tautan verifikasi.');
-			}
-			setEmailSent(true);
-			setEmailInput('');
-			void loadPending();
-		} catch (err) {
-			setEmailError(errorMessage(err));
-		} finally {
-			setEmailBusy(false);
-		}
-	};
-
-	const hasVerifiedEmail = recoveryEmailVerified && !!recoveryEmail;
 	const showPasswordSection = authReady ? mustChangePassword || pwSuccess : true;
-	// Continue stays disabled until the record is loaded AND no password change
-	// is required. After a successful change, authRefresh updates the record and
-	// drives mustChangePassword to false, which re-enables this button.
 	const continueDisabled = authReady ? mustChangePassword : true;
 
 	return (
@@ -180,9 +97,7 @@ export function StudentOnboarding() {
 					<h1>Amankan akun Anda</h1>
 					<p>
 						Mengganti kata sandi default dari dosen adalah langkah wajib sebelum Anda
-						dapat mengakses mata kuliah. Menambahkan email pemulihan bersifat opsional.
-						Memverifikasi email pemulihan tidak menyelesaikan onboarding; hanya mengganti
-						kata sandi yang menyelesaikannya.
+						dapat mengakses mata kuliah. Buat kata sandi baru untuk mengamankan akun Anda.
 					</p>
 				</div>
 
@@ -315,101 +230,6 @@ export function StudentOnboarding() {
 						</form>
 					</section>
 				)}
-
-				<section className="onboarding-section">
-					<div className="onboarding-section-head">
-						<h2>
-							<Mail size={16} /> Email pemulihan <span className="onboarding-optional">(opsional)</span>
-						</h2>
-						{hasVerifiedEmail && (
-							<span className="onboarding-done">
-								<BadgeCheck size={14} /> Terverifikasi
-							</span>
-						)}
-					</div>
-
-					{hasVerifiedEmail ? (
-						<div className="onboarding-email-verified">
-							<MailCheck size={18} />
-							<div>
-								<strong>{recoveryEmail}</strong>
-								<span>Email terverifikasi untuk pemulihan & notifikasi.</span>
-							</div>
-						</div>
-					) : pending ? (
-						<div className="onboarding-email-pending">
-							<Clock size={18} />
-							<div>
-								<strong>Menunggu verifikasi: {pending.email}</strong>
-								<span>
-									Cek email Anda (termasuk folder spam) dan klik tautan verifikasi.
-									Tautan kedaluwarsa dalam 24 jam.
-								</span>
-							</div>
-							<button
-								type="button"
-								className="ld-outline-action sm"
-								onClick={() => void loadPending()}
-								disabled={pendingLoading}
-							>
-								Periksa status
-							</button>
-						</div>
-					) : (
-						<p className="onboarding-muted">
-							Tambahkan email pribadi untuk pemulihan akun dan notifikasi. Email harus
-							diverifikasi sebelum digunakan.
-						</p>
-					)}
-
-					{!hasVerifiedEmail && (
-						<form className="onboarding-form onboarding-email-form" onSubmit={submitEmail}>
-							<label className="onboarding-field">
-								<span>Email pemulihan</span>
-								<div className="onboarding-input-wrap">
-									<Mail size={16} className="onboarding-input-icon" aria-hidden="true" />
-									<input
-										type="email"
-										value={emailInput}
-										autoComplete="email"
-										onChange={(e) => setEmailInput(e.target.value)}
-										placeholder="nama@email.com"
-										disabled={emailBusy}
-									/>
-								</div>
-							</label>
-							{emailError && (
-								<p className="form-error" role="alert">
-									{emailError}
-								</p>
-							)}
-							{emailSent && !emailError && (
-								<p className="onboarding-success">
-									<MailCheck size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />
-									Tautan verifikasi telah dikirim. Cek email Anda.
-								</p>
-							)}
-							<button
-								type="submit"
-								className="ld-outline-action"
-								disabled={emailBusy || !emailInput.trim()}
-							>
-								{emailBusy ? (
-									<LoaderCircle size={16} className="spin" />
-								) : (
-									<>
-										<Mail size={16} /> Kirim tautan verifikasi
-									</>
-								)}
-							</button>
-						</form>
-					)}
-
-					<p className="onboarding-note">
-						<AlertTriangle size={13} /> Email NIM ({'<nim>'}@student.upi.edu) tidak dapat
-						digunakan sebagai email pemulihan.
-					</p>
-				</section>
 
 				<div className="onboarding-foot">
 					<button

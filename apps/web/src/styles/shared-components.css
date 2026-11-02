@@ -81,18 +81,36 @@
 /* ── 4. Controls ────────────────────────────────────────────────────────── */
 
 .ld-btn-primary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
 	min-height: 42px;
 	height: auto;
 	padding: 10px 18px;
-	background: var(--r-red-600);
+	border: 0;
+	background: var(--r-action);
+	color: var(--r-on-action);
 	border-radius: var(--r-radius-pill);
 	box-shadow: var(--r-shadow-brand);
+	font: 700 13px var(--body);
 	font-weight: 700;
 	letter-spacing: 0.005em;
+	transition: background .15s, transform .15s;
 }
 
 .ld-btn-primary:hover:not(:disabled) {
-	background: var(--r-red-700);
+	background: var(--r-action-hover);
+}
+
+.ld-btn-primary:disabled,
+.ld-btn-primary:disabled:hover {
+	background: var(--r-surface-3);
+	color: var(--r-ink-3);
+	box-shadow: none;
+	cursor: not-allowed;
+	transform: none;
+	border: 0;
 }
 
 .ld-btn-primary:focus-visible,

@@ -20,6 +20,8 @@ The migration remains incremental. `index.css` base tokens and the many legacy c
 
 Assistant composer, textarea, and composer-bar styling is shared across full-page, greeting, and drawer contexts in `shared-components.css`. Only their size/layout differences remain contextual. The old light/dark composer blocks and the generic premium form overrides have been removed; the shared low-specificity defaults provide standalone field styling while composite inputs stay borderless and their outer wrappers show focus.
 
+Primary buttons, including password setup actions, use `--r-action`, `--r-action-hover`, and `--r-on-action` from the theme. Disabled buttons use the shared surface/text ramp rather than a red background with muted text. The old generic primary-button rules in the base and premium stylesheets no longer compete with these states.
+
 Remaining legacy and feature-specific hardcoded colors are future migration work. Keep distinct semantic states (success, warning, error) rather than turning every color red. Do not remove `dark-overrides.css` wholesale until its remaining consumers have been migrated.
 
 `theme-ownership.test.ts` checks palette ownership, aliases, and stylesheet order. `shared-components.test.ts` protects extracted ownership and touch/print cascade ordering. `student-shell-theme.test.ts` protects the shared light/dark red gradients. The input-cascade and search-layout tests protect the previous search/chat fixes.

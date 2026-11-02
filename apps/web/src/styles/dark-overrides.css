@@ -133,7 +133,6 @@
 :root.dark .cth-preview span{color:#9AA6B6}
 :root.dark .cth-ai-btn{color:#A78BFA;border-color:rgba(124,58,237,.18);background:rgba(124,58,237,.12)}
 :root.dark .cth-ai-btn:hover:not(:disabled){background:rgba(124,58,237,.18);color:#C4B5FD}
-:root.dark .ld-btn-primary:disabled:hover{background:#2A3138;color:#9AA6B6}
 :root.dark .ld-btn-soft:hover{background:rgba(201,52,43,.16)}
 :root.dark .ld-empty-sm{color:#9AA6B6}
 :root.dark .mk-mini-ico.rose{background:rgba(201,52,43,.16)}
@@ -1690,9 +1689,7 @@
 :root.dark .onboarding-banner span{color:#FBBF24}
 :root.dark .onboarding-section{border-top:1px solid #2A3138}
 :root.dark .onboarding-section-head h2{color:#E8EDF4}
-:root.dark .onboarding-optional{color:#9AA6B6}
 :root.dark .onboarding-done{color:#34D399;background:rgba(16,185,129,.10)}
-:root.dark .onboarding-muted{color:#9AA6B6}
 :root.dark .onboarding-success{color:#34D399;background:rgba(16,185,129,.10)}
 :root.dark .onboarding-field{color:#C5CDD8}
 :root.dark .onboarding-input-icon{color:#9AA6B6}
@@ -1702,16 +1699,6 @@
 :root.dark .onboarding-eye{color:#9AA6B6}
 :root.dark .onboarding-hint{color:#9AA6B6}
 :root.dark .onboarding-hint.warn{color:#F87171}
-:root.dark .onboarding-email-verified{background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.28)}
-:root.dark .onboarding-email-verified svg{color:#34D399}
-:root.dark .onboarding-email-verified strong{color:#E8EDF4}
-:root.dark .onboarding-email-verified span{color:#34D399}
-:root.dark .onboarding-email-pending{background:#12161C;border:1px solid rgba(180,83,9,.22)}
-:root.dark .onboarding-email-pending svg{color:#FBBF24}
-:root.dark .onboarding-email-pending strong{color:#FBBF24}
-:root.dark .onboarding-email-pending span{color:#FBBF24}
-:root.dark .onboarding-note{color:#9AA6B6}
-:root.dark .onboarding-note svg{color:#9AA6B6}
 :root.dark .onboarding-foot{border-top:1px solid #2A3138}
 :root.dark .onboarding-foot-note{color:#9AA6B6}
 :root.dark .verify-page{background:linear-gradient(180deg,#12161C 0%,#12161C 100%)}

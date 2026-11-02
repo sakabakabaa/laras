@@ -9,7 +9,7 @@ import { dashboardForRole } from '@/lib/learning';
 export function meta({ matches, location }: Route.MetaArgs) {
 	return seo({ matches, location }, {
 		title: 'Amankan akun | LARAS',
-		description: 'Ubah kata sandi default dan tambahkan email pemulihan untuk akun mahasiswa Anda.',
+		description: 'Ubah kata sandi sementara untuk mengamankan akun mahasiswa Anda.',
 	});
 }
 

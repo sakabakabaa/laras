@@ -157,15 +157,15 @@
 .ld-content :is(.ld-course-row,.ld-grading-row,.ac2-upcoming-row,.srs-row):hover { background: #faf9f8; }
 
 /* Button and field treatment shared by student and lecturer screens. */
-.ld-content :is(.ld-btn-primary,.ld-btn-secondary,.ld-card-cta,.ac2-btn,.eval-btn,.srs-btn,.sas-btn) {
+.ld-content :is(.ld-btn-secondary,.ld-card-cta,.ac2-btn,.eval-btn,.srs-btn,.sas-btn) {
 	border-radius: 7px;
 	box-shadow: none;
 }
-.ld-content :is(.ld-btn-primary,.ld-card-cta,.ac2-btn.primary,.eval-btn.primary,.srs-btn.primary,.sas-btn.primary) {
+.ld-content :is(.ld-card-cta,.ac2-btn.primary,.eval-btn.primary,.srs-btn.primary,.sas-btn.primary) {
 	background: var(--p-cta);
 	border-color: var(--p-cta);
 }
-.ld-content :is(.ld-btn-primary,.ld-card-cta:not(.ghost),.ac2-btn.primary,.eval-btn.primary,.srs-btn.primary,.sas-btn.primary):hover:not(:disabled) {
+.ld-content :is(.ld-card-cta:not(.ghost),.ac2-btn.primary,.eval-btn.primary,.srs-btn.primary,.sas-btn.primary):hover:not(:disabled) {
 	background: var(--p-cta-hover);
 	border-color: var(--p-cta-hover);
 }
@@ -848,18 +848,17 @@
 :root.dark .ld-mast .ld-profile-trigger:hover { background: #352321; }
 :root.dark .ld-mast .ld-avatar.icon { background: transparent; }
 :root.dark button:disabled { box-shadow: none !important; }
-:root.dark .ld-layout .ld-btn-primary { box-shadow: none; }
-:root.dark .ld-layout :is(.ld-btn-primary,.ld-card-cta,.mk-open,.an-open,.ld-outline-action,.ld-pill,.asst-send,.evx-next-btn):disabled:disabled {
+:root.dark .ld-layout :is(.ld-card-cta,.mk-open,.an-open,.ld-outline-action,.ld-pill,.asst-send,.evx-next-btn):disabled:disabled {
 	background: #282e37; border-color: #343b45; color: #9aa6b6; box-shadow: none;
 }
-:root.dark .ld-layout :is(.ld-btn-primary,.ld-card-cta:not(.ghost),.mk-open,.an-open,.ld-outline-action.primary,.ld-pill.red,.asst-send,.evx-next-btn),
+:root.dark .ld-layout :is(.ld-card-cta:not(.ghost),.mk-open,.an-open,.ld-outline-action.primary,.ld-pill.red,.asst-send,.evx-next-btn),
 :root.dark .ld-layout :is(.ld-grading-pending,.cw-student-avatar,.evx-avatar,.gb-student-avatar),
 :root.dark .ld-layout .asst-msg-user .asst-bubble {
 	background: #a53830;
 	border-color: #a53830;
 	color: #fff;
 }
-:root.dark .ld-layout :is(.ld-btn-primary,.ld-card-cta:not(.ghost),.mk-open,.an-open,.ld-outline-action.primary,.ld-pill.red,.asst-send,.evx-next-btn):hover:not(:disabled) { background: #ba453b; border-color: #ba453b; }
+:root.dark .ld-layout :is(.ld-card-cta:not(.ghost),.mk-open,.an-open,.ld-outline-action.primary,.ld-pill.red,.asst-send,.evx-next-btn):hover:not(:disabled) { background: #ba453b; border-color: #ba453b; }
 :root.dark .ld-layout .ld-card-cta.ghost { background: #352321; color: #f7948b; }
 :root.dark .ld-grading-reviewed { color: #c5cdd8; }
 :root.dark .ld-grading-count-label small { color: #9aa6b6; }

@@ -15,6 +15,9 @@
 	--r-red-tint: #fbe9e7;
 	--r-red-tint-soft: #fff5f4;
 	--r-brand-text: var(--r-red-700);
+	--r-action: var(--r-red-600);
+	--r-action-hover: var(--r-red-700);
+	--r-on-action: #fff;
 	--r-success: #067647;
 	--r-success-tint: #ecfdf3;
 	--r-warning: #b54708;
@@ -120,6 +123,8 @@
 	--r-red-tint: rgba(201, 52, 43, 0.18);
 	--r-red-tint-soft: rgba(201, 52, 43, 0.1);
 	--r-brand-text: var(--r-red-500);
+	--r-action: #a53830;
+	--r-action-hover: #ba453b;
 	--r-success: #3dd68c;
 	--r-success-tint: rgba(6, 118, 71, 0.2);
 	--r-warning: #f5a524;

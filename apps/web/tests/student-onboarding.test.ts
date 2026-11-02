@@ -91,6 +91,9 @@ describe('password-only student onboarding', () => {
 		const focus = rules.get('.ld-form-control:focus,\n.ld-form-control:focus-visible')?.toString();
 		expect(focus).toContain('box-shadow: var(--r-focus-ring)');
 		expect(focus).toContain('outline: none');
+		const audit = readFileSync(new URL('../src/styles/ui-audit-improvements.css', import.meta.url), 'utf8');
+		expect(audit).toContain('.ld-content :where(button,a,input,select,textarea,summary):focus-visible');
+		expect(audit).not.toContain('.ld-content :is(button,a,input,select,textarea,summary):focus-visible');
 		const legacy = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
 		postcss.parse(legacy).walkRules((rule) => {
 			if (!rule.selector.includes('.onboarding-')) return;

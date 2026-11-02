@@ -25,7 +25,7 @@
 .sd2-live-card.is-live .sd2-live-label i{width:8px;height:8px;background:#a5f3b7;box-shadow:0 0 0 4px #a5f3b71a;animation:sd2-live-pulse 2s ease-in-out infinite}
 .sd2-live-card:is(.is-live,.is-upcoming) .sd2-time{margin-top:7px;font-variant-numeric:tabular-nums}
 .sd2-live-card:is(.is-live,.is-upcoming) .sd2-primary{min-height:50px;padding:12px 22px;background:var(--r-on-action);color:var(--r-action)!important;box-shadow:var(--r-shadow-xs)}
-.sd2-live-card:is(.is-live,.is-upcoming) .sd2-primary:hover{background:var(--r-red-tint-soft)}
+.sd2-live-card:is(.is-live,.is-upcoming) .sd2-primary:hover{background:color-mix(in srgb,var(--r-on-action) 92%,var(--r-action))}
 .sd2-live-card:is(.is-live,.is-upcoming) .sd2-primary:focus-visible{outline-color:var(--r-on-action);outline-offset:5px}
 @keyframes sd2-live-pulse{0%,100%{opacity:1}50%{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.sd2-live-card.is-live .sd2-live-label i{animation:none}}

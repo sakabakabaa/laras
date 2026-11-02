@@ -12,11 +12,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import pb from '@/lib/pocketbase-client';
+import { isLoginCredentialError, loginErrorMessage } from '@/lib/login-error';
 import { LoginFeaturePreview } from './login-feature-preview';
 import { LarasLockup } from '@/components/brand/laras-lockup';
 import {
 	dashboardForRole,
-	errorMessage,
 	type Role,
 } from '@/lib/learning';
 import '@/styles/login-light.css';
@@ -82,7 +82,7 @@ export function AuthPanel() {
 				// If the student NIM was entered while the lecturer tab was active,
 				// retry with the roster account's canonical email identifier.
 				const studentIdentifier = `${email.trim()}@student.upi.edu`;
-				if (email.includes('@') || studentIdentifier === loginIdentifier) throw firstError;
+				if (!isLoginCredentialError(firstError) || email.includes('@') || studentIdentifier === loginIdentifier) throw firstError;
 				await login(studentIdentifier, password);
 			}
 			// The account record is authoritative. Correct the role picker before
@@ -102,7 +102,7 @@ export function AuthPanel() {
 					: dashboardForRole(accountRole);
 			navigate(dest);
 		} catch (err) {
-			setError(errorMessage(err));
+			setError(loginErrorMessage(err));
 		} finally {
 			setBusy(false);
 		}

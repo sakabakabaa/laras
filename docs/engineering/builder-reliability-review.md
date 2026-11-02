@@ -2,7 +2,7 @@
 
 ## Review boundary
 
-This branch is for local review only. Do not merge or deploy without the user's explicit instruction. No production records, existing published versions, attendance, grades, or deployment configuration are migrated or rewritten.
+This branch was initially prepared for local review only. The user authorized a production build/deployment on November 2, 2026. Deploy the pinned feature-branch commit without merging main. No production records, existing published versions, attendance, grades, or deployment configuration are migrated or rewritten.
 
 ## Implemented
 
@@ -14,6 +14,7 @@ This branch is for local review only. Do not merge or deploy without the user's 
 - AI import stores key evidence and teacher confirmation in the private key envelope. Inferred/unknown keys block publishing until reviewed; printed keys are initially confirmed. Older keys without review metadata retain their behavior. Student documents and previews do not receive this metadata.
 - Builder colors and focus states use shared red-theme tokens. Inputs use one focus indicator; buttons retain keyboard focus; coarse-pointer controls have 44px targets.
 - Preview supports opening, on-time, late check-in, closed check-in, late submission, expiry, submitted, and offline scenarios. Available scenarios depend on class/task mode. Offline allows local editing but not simulated submission. All answers remain in component state, with no student-response requests. Automatic class timing uses the shared absolute session deadline; closed check-in does not lock students who already joined. Assignment late policy and time limits remain distinct.
+- Login replaces the raw authentication failure with a combined NIM/username/email-or-password message. Connection, rate-limit, permission, cancellation, and server failures have separate explanations. Identifier fallback retries only credential failures, not outages or throttling; the UI never claims which individual credential was incorrect.
 
 ## Capability boundaries
 
@@ -42,3 +43,5 @@ PB_TEST_BINARY=/path/to/local/executable/pocketbase node apps/web/scripts/test-s
 The integration script requires loopback and creates synthetic records in a disposable local data directory. It checks ownership/privacy, save replay/conflicts, immutable delivery, grading, attendance, free navigation, deadlines, and backend restart recovery. It must never point at production. Browser/computed-style testing is not included in this branch validation; visual review of light/dark themes, focus, narrow-screen preflight, and scenarios remains a pre-merge checklist.
 
 Validated locally on November 2, 2026: 118 test files / 1,339 tests passed; 472 isolated backend integration checks passed, including restart recovery; web typecheck, changed-file ESLint, production build, and `git diff --check` passed. Building production assets locally does not deploy them.
+
+The login-error follow-up passes 119 test files / 1,347 tests, web typecheck, and targeted ESLint. Production release must build both web and PocketBase images, preserve the data volume, retain image rollback tags, and verify health after restart.

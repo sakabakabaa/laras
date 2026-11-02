@@ -52,6 +52,15 @@ export type BuilderRunItem = {
 	startsAt: string;
 	dueAt: string;
 	courseTitle: string;
+	courseId?: string;
+	courseCode?: string;
+	meetingId?: string;
+	section?: string;
+	created?: string;
+	activityCount?: number;
+	checkedIn?: number;
+	submittedCount?: number;
+	gradedCount?: number;
 	checkInClosesAt?: string;
 	closesAt?: string;
 	startedAt?: string;

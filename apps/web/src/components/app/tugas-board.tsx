@@ -1,4 +1,4 @@
-import { BuilderRunList } from './builder/builder-run';
+import {BuilderAssignmentCard} from './builder/builder-assignment-card';
 import { mergeSubmissionChannels, isCollectedSubmission, isOfficiallyGraded } from '@/lib/submission-state';
 import { useEffect, useMemo, useState } from 'react';
 import {BuilderDraftList} from './builder/builder-entry';
@@ -21,6 +21,9 @@ import {
 	type AssignmentStatus,
 } from '@/lib/assignments';
 import type { Course } from '@/lib/learning';
+import {useCachedQuery} from '@/hooks/use-cached-query';
+import {deliveryRequest,type BuilderRunItem} from '@/lib/builder-delivery';
+import {filterTaskPublications,mergeTaskPublications,taskPublicationTotals} from '@/lib/published-listings';
 
 type Row = {
  linkedSubmission?: string;
@@ -49,6 +52,7 @@ type CheckRow = {
 export function TugasBoard() {
 	const { user } = useAuth();
 	const me = user?.id || '';
+	const publications=useCachedQuery<{items:BuilderRunItem[]}>(me?'builder-publications:tugas':null,()=>deliveryRequest('list',{kind:'tugas'}));
 	const [assignments, setAssignments] = useState<Assignment[]>([]);
 	const [courses, setCourses] = useState<Course[]>([]);
 	const [subs, setSubs] = useState<Row[]>([]);
@@ -124,46 +128,12 @@ export function TugasBoard() {
 		}
 	}, [launchCourse, courses]);
 
-	const visible = useMemo(() => {
-		const q = query.trim().toLowerCase();
-		return assignments.filter((a) => {
-			if (courseId !== 'all' && a.course !== courseId) return false;
-			if (typeFilter !== 'all' && activityTypeOf(a) !== typeFilter) return false;
-			if (!q) return true;
-			const course = courses.find((c) => c.id === a.course);
-			return (
-				a.title.toLowerCase().includes(q) ||
-				(course?.title || '').toLowerCase().includes(q) ||
-				(course?.code || '').toLowerCase().includes(q)
-			);
-		});
-	}, [assignments, courseId, typeFilter, query, courses]);
+	const listings=useMemo(()=>mergeTaskPublications(assignments,publications.data?.items||[],courses),[assignments,publications.data,courses]);
+	const visible=useMemo(()=>filterTaskPublications(listings,{courseId,type:typeFilter,search:query}),[listings,courseId,typeFilter,query]);
 
-	const totals = useMemo(() => {
-		let formal = 0;
-		let formative = 0;
-		let collected = 0;
-		let graded = 0;
-		for (const a of visible) {
-			const isFormative = activityTypeOf(a) === 'formative';
-			if (isFormative) formative += 1;
-			else formal += 1;
-			if (isFormative) continue;
-			const mine = mergeSubmissionChannels(subs, pubs).filter((s) => s.assignment === a.id);
-			const rows = mine.filter(isCollectedSubmission);
-			collected += rows.length;
-			graded += rows.filter(isOfficiallyGraded).length;
-		}
-		return {
-			total: visible.length,
-			formal,
-			formative,
-			collected,
-			waiting: Math.max(collected - graded, 0),
-		};
-	}, [visible, subs, pubs]);
+	const totals=useMemo(()=>taskPublicationTotals(visible,mergeSubmissionChannels(subs,pubs)),[visible,subs,pubs]);
 
-	if (loading) {
+	if (loading || publications.loading) {
 		return (
 			<div className="ld-loading">
 				<LoaderCircle size={22} className="spin" /> Memuat tugas...
@@ -171,7 +141,7 @@ export function TugasBoard() {
 		);
 	}
 
-	const hasTasks = assignments.length > 0;
+	const hasTasks = listings.length > 0;
 
 	return (
 		<div className="eval-board mk-page">
@@ -222,7 +192,8 @@ export function TugasBoard() {
 				</button>
 			</div>
 
-			<BuilderDraftList kind="tugas"/><BuilderRunList kind="tugas"/>
+			<BuilderDraftList kind="tugas"/>
+			{publications.error&&<div className="ld-alert" role="alert">Sebagian daftar tugas belum dapat dimuat: {publications.error} <button type="button" onClick={publications.reload}>Coba lagi</button></div>}
 			{error && (
 				<div className="ld-alert" role="alert">
 					{error}
@@ -230,7 +201,7 @@ export function TugasBoard() {
 			)}
 
 			{!hasTasks ? (
-				<div className="ld-empty ld-empty-lg">
+				!error&&!publications.error&&<div className="ld-empty ld-empty-lg">
 					<div className="ld-empty-icon">
 						<ClipboardList size={28} strokeWidth={1.4} />
 					</div>
@@ -324,7 +295,9 @@ export function TugasBoard() {
 							</div>
 						) : (
 							<ul className="eval-board-list">
-								{visible.map((a) => {
+								{visible.map((item) => {
+									if(item.source==='builder')return <li key={item.key}><BuilderAssignmentCard run={item.run} course={courses.find(course=>course.id===item.courseId)}/></li>;
+									const a=item.assignment;
 									const course = courses.find((c) => c.id === a.course);
 									const formative = activityTypeOf(a) === 'formative';
 									const mine = mergeSubmissionChannels(subs, pubs).filter((s) => s.assignment === a.id);
@@ -333,7 +306,7 @@ export function TugasBoard() {
 									const myChecks = checks.filter((c) => c.assignment === a.id);
 									const checkers = new Set(myChecks.map((c) => c.identityKey)).size;
 									return (
-										<li key={a.id}>
+										<li key={item.key}>
 											<article className={`eval-board-card${formative ? ' formative' : ''}`}>
 												{course ? (
 													<CourseThumb course={course} />

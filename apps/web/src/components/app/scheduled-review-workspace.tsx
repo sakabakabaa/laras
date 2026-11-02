@@ -6,6 +6,9 @@ import {buildAssessmentPayload,buildGradingSettingsPayload,buildPublishPayload,e
 import {ASSESSMENT_LABELS,assessmentStatus,manualActivities} from '@/lib/scheduled-session-workspace';
 import {gradingModeLabel,nextManualTarget,requiresManual,responseVerdicts,reviewTally,verdictTally} from '@/lib/session-review-verdict';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter} from '@/components/ui/dialog';
+import {isExactResponse,ScheduledExactAnswerOverview} from './scheduled-exact-answer-overview';
+import {ScheduledAnswerIdentity,ScheduledWrittenAnswer} from './scheduled-written-answer';
+import '@/styles/scheduled-review-overview.css';
 
 type Selection={student?:string;activity?:string};
 type Props={state:ScheduledClassState;onAction:(action:string,body?:Record<string,unknown>)=>Promise<void>;onDirtyChange?:(dirty:boolean)=>void;initialSelection?:Selection;onSelectionChange?:(selection:Selection)=>void};
@@ -27,6 +30,7 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const [studentKey,setStudentKey]=useState(initialSelection?.student||queue?.student||attempts[0]?.student||personKey(state.report[0]||{student:'',roster:''} as ClassReportRow));
   const [activityId,setActivityId]=useState(initialSelection?.activity||queue?.activity||activities[0]?.id||'');
   const [expandedActivity,setExpandedActivity]=useState<string|null>(initialSelection?.activity||queue?.activity||activities[0]?.id||null);
+  const [exactDetailsOpen,setExactDetailsOpen]=useState(()=>activities.some(a=>a.id===initialSelection?.activity&&!requiresManual(a)));
   const [search,setSearch]=useState(''),[filters,setFilters]=useState<string[]>([]),[filterOpen,setFilterOpen]=useState(false),[sort,setSort]=useState<'roster'|'name'|'pending'>('roster');
   const [draft,setDraft]=useState<GradeDraftState>(emptyGradeDraft),[savedDraft,setSavedDraft]=useState(JSON.stringify(emptyGradeDraft));
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[failed,setFailed]=useState(false);
@@ -35,7 +39,6 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const [criteria,setCriteria]=useState<CriterionDraft[]>([{id:'clarity',label:'Kejelasan',maxPoints:'10'}]);
   const [compact,setCompact]=useState(true);
   const bar=useRef<HTMLDivElement>(null);
-  const cardCache=useRef(new Map<string,ReturnType<typeof responseVerdicts>>());
   const student=state.report.find(r=>personKey(r)===studentKey)||state.report[0];
   const activity=activities.find(a=>a.id===activityId)||activities[0];
   const attempt=attempts.find(a=>a.student===student?.student&&a.activity===activity?.id);
@@ -54,7 +57,7 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const automaticallyScored=!!activity&&(activity.kind==='quiz'||!requiresManual(activity));
   const autoApproved=assessment?.settingsRevision===0&&status==='reviewed';
   const cards=useMemo(()=>activity&&attempt?responseVerdicts(activity,attempt):[],[activity,attempt]);
-  const cardsFor=(a:typeof activities[number],tryItem:typeof attempts[number]|undefined)=>{if(!tryItem)return [];const key=`${a.id}:${tryItem.id}`;if(!cardCache.current.has(key))cardCache.current.set(key,responseVerdicts(a,tryItem));return cardCache.current.get(key)||[];};
+  const cardsFor=(a:typeof activities[number],tryItem:typeof attempts[number]|undefined)=>responseVerdicts(a,tryItem);
   const cardsWithOverrides=(a:typeof activities[number],tryItem:typeof attempts[number]|undefined,graded:typeof assessment)=>cardsFor(a,tryItem).map(card=>{const override=graded?.answerOverrides?.[card.id];return override==='correct'?{...card,verdict:'correct' as const,earned:card.points}:override==='wrong'?{...card,verdict:'wrong' as const,earned:0}:card;});
   const cardTally=useMemo(()=>verdictTally(cards,attempt),[cards,attempt]);
   const loadSettings=()=>{setSettingsMode(settings?.mode||'ungraded');setMaxPoints(String(settings?.maxPoints||10));setCriteria(settings?.criteria.map(c=>({...c,maxPoints:String(c.maxPoints)}))||[{id:'clarity',label:'Kejelasan',maxPoints:'10'}]);setSettingsEdited(false);};
@@ -82,9 +85,9 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const guard=()=>!unsaved||window.confirm('Perubahan penilaian belum disimpan. Buang perubahan dan lanjutkan?');
   const reveal=()=>{requestAnimationFrame(()=>bar.current?.scrollIntoView({block:'start'}));};
   const select=(nextStudent:string,nextActivity=activity?.id||'',afterSave=false)=>{
-    if(nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow)&&nextActivity===activity?.id){setExpandedActivity(nextActivity);return;}
-    if(!afterSave&&!guard())return;
-    loadSettings();const sameStudent=nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow);setStudentKey(nextStudent);setActivityId(nextActivity);setExpandedActivity(nextActivity);setMessage('');if(sameStudent)document.getElementById(`review-activity-${nextActivity}`)?.scrollIntoView({block:'start',behavior:prefersReduced()?'auto':'smooth'});else reveal();onSelectionChange?.({student:nextStudent,activity:nextActivity});
+    if(nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow)&&nextActivity===activity?.id){setExpandedActivity(nextActivity);return true;}
+    if(!afterSave&&!guard())return false;
+    loadSettings();const sameStudent=nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow);setStudentKey(nextStudent);setActivityId(nextActivity);setExpandedActivity(nextActivity);setMessage('');if(sameStudent)requestAnimationFrame(()=>document.getElementById(`review-activity-${nextActivity}`)?.scrollIntoView({block:'start',behavior:prefersReduced()?'auto':'smooth'}));else reveal();onSelectionChange?.({student:nextStudent,activity:nextActivity});return true;
   };
   const showError=(error:unknown)=>{setFailed(true);setMessage((error as Error).message||'Perubahan belum dapat disimpan. Coba lagi.');};
   const criteriaPayload=criteria.map(c=>({id:c.id,label:c.label.trim(),maxPoints:Number(c.maxPoints)}));
@@ -180,17 +183,20 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
       </aside>
       <div className="sr-answer-area">
         {student&&activity?<>
-         {activities.map((a,index)=>{const own=attempts.find(t=>t.student===student?.student&&t.activity===a.id);const ownAssessment=state.assessments?.find(g=>g.attempt===own?.id);const ownStatus=assessmentStatus(ownAssessment);const ownScore=assessmentScore(own,ownAssessment);const ownCards=cardsWithOverrides(a,own,ownAssessment);const sectionSettings=state.gradingSettings?.find(item=>item.activity===a.id);const sectionAuto=a.kind==='quiz'||!requiresManual(a);const sectionApproved=assessmentApproved(ownAssessment);const sectionSelected=activity?.id===a.id;return <section key={a.id} id={'review-activity-'+a.id} data-activity-id={a.id} className={'sr-activity-block'+(sectionSelected?' is-active':'')} aria-labelledby={'review-activity-title-'+a.id}>
+         <ScheduledExactAnswerOverview entries={activities.map((a,index)=>{const own=attempts.find(item=>item.student===student.student&&item.activity===a.id);const graded=state.assessments?.find(item=>item.attempt===own?.id);return {activity:a,index,cards:cardsWithOverrides(a,own,graded),score:assessmentScore(own,graded),submitted:!!own};})} selectedActivity={activity.id} onSelect={id=>{if(select(personKey(student),id))setExactDetailsOpen(true);}}/>
+         {activities.some(a=>responseVerdicts(a,undefined).some(card=>isExactResponse(a,card)))&&<button type="button" className="sr-exact-toggle" aria-expanded={exactDetailsOpen} aria-controls="sr-activity-reviews" onClick={()=>setExactDetailsOpen(open=>!open)}><ChevronDown size={16} aria-hidden="true"/>{exactDetailsOpen?'Tutup jawaban otomatis':'Lihat jawaban / review jawaban'}</button>}
+         <div id="sr-activity-reviews">
+         {activities.map((a,index)=>{const own=attempts.find(t=>t.student===student?.student&&t.activity===a.id);const ownAssessment=state.assessments?.find(g=>g.attempt===own?.id);const ownStatus=assessmentStatus(ownAssessment);const ownScore=assessmentScore(own,ownAssessment);const ownCards=cardsWithOverrides(a,own,ownAssessment);const sectionSettings=state.gradingSettings?.find(item=>item.activity===a.id);const sectionAuto=a.kind==='quiz'||!requiresManual(a);const sectionApproved=assessmentApproved(ownAssessment);const sectionSelected=activity?.id===a.id;return <section key={a.id} id={'review-activity-'+a.id} data-activity-id={a.id} hidden={sectionAuto&&!exactDetailsOpen} className={'sr-activity-block'+(!sectionAuto?' sr-written-activity':'')+(sectionSelected?' is-active':'')} aria-labelledby={'review-activity-title-'+a.id}>
            <header className="sr-activity-head"><h3 id={'review-activity-title-'+a.id}><button type="button" className="sr-activity-select" aria-expanded={expandedActivity===a.id} aria-controls={`review-response-${a.id} review-assessment-${a.id}`} onClick={()=>{if(expandedActivity===a.id)setExpandedActivity(null);else select(personKey(student),a.id);}}><ChevronDown size={16} className="sr-activity-chevron" aria-hidden="true"/><span className="sr-activity-index">{index+1}</span>{a.title}</button></h3><span className="sr-mode-chip">{gradingModeLabel(a)}</span>{own&&typeof ownScore==='number'&&<span className="sr-activity-total">{ownScore} / 100</span>}<span className={'sr-review-status sr-status-'+(own?ownStatus:'missing')}>{own?((a.kind==='quiz'||!requiresManual(a))?(assessmentApproved(ownAssessment)?'Disetujui':'Perlu disetujui'):ASSESSMENT_LABELS[ownStatus]):'Belum mengirim'}</span></header>
            <div id={`review-response-${a.id}`} className="sr-activity-response" hidden={expandedActivity!==a.id}>
            {(activityBookReference(a)||a.worksheet?.sourceLabel)&&<p className="ss-source-label"><BookOpen size={15}/>{activityBookReference(a)||a.worksheet?.sourceLabel}</p>}
-           {own?<ol className={'sr-response-list'+(compact?' is-compact':'')}>{ownCards.map(card=>{const Icon=VERDICT_ICONS[card.verdict];const showKey=card.verdict==='wrong';return <li key={card.id} className={`sr-response-row is-${card.verdict}`}>
-             <span className="sr-row-verdict" title={VERDICT_LABELS[card.verdict]}><Icon size={14}/><span className="sr-sr-only">{VERDICT_LABELS[card.verdict]}</span></span><div className="sr-row-body">
-               <div className="sr-row-head"><span className="sr-row-number">{card.number}</span><p className="sr-row-prompt" lang="de">{card.prompt}</p>{card.points!==undefined&&<span className="sr-row-points">{card.earned||0}/{card.points}</span>}</div><div className="sr-row-answer"><span>Jawaban</span><p className={card.answer?'':'is-empty'}>{card.answer||'Belum dijawab'}</p></div>
+           {own?<>{!sectionAuto&&<ScheduledAnswerIdentity student={student} attempt={own}/>}<ol className={'sr-response-list'+(compact?' is-compact':'')}>{ownCards.map(card=>{const Icon=VERDICT_ICONS[card.verdict];const showKey=card.verdict==='wrong';const exact=isExactResponse(a,card);return <li key={card.id} hidden={exact&&!exactDetailsOpen} className={`sr-response-row is-${card.verdict}${!exact?' is-written':''}`}>
+             {exact&&<span className="sr-row-verdict" title={VERDICT_LABELS[card.verdict]}><Icon size={14}/><span className="sr-sr-only">{VERDICT_LABELS[card.verdict]}</span></span>}<div className="sr-row-body">
+               {exact?<><div className="sr-row-head"><span className="sr-row-number">{card.number}</span><p className="sr-row-prompt" lang="de">{card.prompt}</p>{card.points!==undefined&&<span className="sr-row-points">{card.earned||0}/{card.points}</span>}</div><div className="sr-row-answer"><span>Jawaban</span><p className={card.answer?'':'is-empty'}>{card.answer||'Belum dijawab'}</p></div></>:<ScheduledWrittenAnswer card={card}/>}
                {showKey&&card.accepted?.length?<div className="sr-row-key"><KeyRound size={13}/><span>Diterima</span><p>{card.accepted.join(' / ')}</p></div>:null}
                {(a.kind==='quiz'||!requiresManual(a))&&card.points!==undefined&&card.answer&&<div className="sr-answer-override" aria-label={`Ubah penilaian jawaban ${card.number}`}><span>{ownAssessment?.answerOverrides?.[card.id]?'Penilaian dosen':'Jawaban kunci'}</span><button type="button" className={card.verdict==='correct'?'is-selected':''} disabled={!canGrade||busy||card.verdict==='correct'} onClick={()=>void overrideAutoAnswer(own,ownAssessment,card.id,'correct')}>Tandai benar</button><button type="button" className={card.verdict==='wrong'?'is-selected':''} disabled={!canGrade||busy||card.verdict==='wrong'} onClick={()=>void overrideAutoAnswer(own,ownAssessment,card.id,'wrong')}>Tandai salah</button>{ownAssessment?.answerOverrides?.[card.id]&&<button type="button" disabled={!canGrade||busy} onClick={()=>void overrideAutoAnswer(own,ownAssessment,card.id,null)}>Reset ke kunci</button>}</div>}
                {card.modelAnswer&&<details className="sr-row-reference" open={!compact}><summary><BookOpen size={13}/>Contoh jawaban & rubrik</summary><p className="sr-reference-answer">{card.modelAnswer}</p>{card.rubric&&<p className="sr-reference-rubric">{card.rubric}</p>}{settings&&<button type="button" className="ss-button ss-button-small" disabled={!canGrade||busy} onClick={()=>setDraft(d=>({...d,feedback:[card.rubric,card.modelAnswer?`Contoh jawaban:\n${card.modelAnswer}`:''].filter(Boolean).join('\n\n')}))}>Pakai sebagai umpan balik</button>}</details>}
-             </div></li>;})}</ol>:<p className="sr-activity-empty">Belum ada jawaban untuk kegiatan ini.</p>}
+             </div></li>;})}</ol></>:<p className="sr-activity-empty">Belum ada jawaban untuk kegiatan ini.</p>}
            {a.kind==='exit_ticket'&&typeof own?.answers.feedback==='string'&&own.answers.feedback.trim()&&<section className="sr-exit-feedback"><h4>Masukan untuk pembelajaran</h4><p>{own.answers.feedback}</p><small>Masukan mahasiswa · tidak dinilai</small></section>}
            </div>
            <section id={`review-assessment-${a.id}`} hidden={expandedActivity!==a.id} className={`sr-grading-section sr-activity-assessment${sectionSelected?' is-current':''}`} aria-label={`Penilaian kegiatan ${a.title}`}>
@@ -206,6 +212,7 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
           </>):<button type="button" className="ss-button sr-grade-open" onClick={()=>select(personKey(student||{student:'',roster:''} as ClassReportRow),a.id)}>Buka penilaian manual</button>}
            </section>
          </section>;})}
+         </div>
          </>:<div className="ss-empty"><Users size={30}/><h3>Belum ada jawaban tugas</h3><p>Jawaban tugas dan refleksi akan tampil di sini.</p></div>}
         {message&&<p className={`sr-message${failed?' is-error':''}`} role={failed?'alert':'status'}>{message}</p>}
       </div>

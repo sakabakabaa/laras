@@ -22,3 +22,21 @@ it('shows student feedback separately in lecturer exit-ticket review',()=>{
  const html=renderToStaticMarkup(createElement(ScheduledReviewWorkspace,{state:feedbackState,onAction:async()=>{}}));
  expect(html).toContain('Masukan untuk pembelajaran');expect(html).toContain('More speaking practice, please.');expect(html).toContain('Masukan mahasiswa · tidak dinilai');expect(html).toContain('My reflection');
 });
+it('places donut summaries above the toggle and writing review, hiding exact-answer blocks by default',()=>{
+ const combined={...state,activities:[keyed.activities[0],{...state.activities[0],id:'essay',title:'Email writing'}],attempts:[keyed.attempts[0],{...state.attempts[0],id:'essay-attempt',activity:'essay'}],gradingSettings:[{...state.gradingSettings[0],activity:'essay'}]};
+ const html=renderToStaticMarkup(createElement(ScheduledReviewWorkspace,{state:combined,onAction:async()=>{},initialSelection:{student:'s',activity:'essay'}}));
+ expect(html.indexOf('class="sr-donut-grid"')).toBeLessThan(html.indexOf('class="sr-exact-toggle"'));
+ expect(html.indexOf('class="sr-exact-toggle"')).toBeLessThan(html.indexOf('sr-written-identity'));
+ expect(html).toContain('id="review-activity-a" data-activity-id="a" hidden=""');
+ expect(html).toContain('Lihat jawaban / review jawaban');
+ expect(html).toContain('evx-script sr-written-script');
+ expect(html).toContain('NIM 1');
+ expect(html).toContain('Simpan draf');
+});
+it('opens exact-answer details for a directly linked activity',()=>{
+ const html=renderToStaticMarkup(createElement(ScheduledReviewWorkspace,{state:keyed,onAction:async()=>{},initialSelection:{student:'s',activity:'a'}}));
+ expect(html).toContain('class="sr-exact-toggle" aria-expanded="true"');
+ expect(html).toContain('id="review-activity-a" data-activity-id="a" class=');
+ expect(html).toContain('Setujui nilai otomatis');
+ expect(html).toContain('Tandai benar');
+});

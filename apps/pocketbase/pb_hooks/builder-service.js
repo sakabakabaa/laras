@@ -96,7 +96,7 @@ function handle(app, user, body) {
 			items: app
 				.findRecordsByFilter(
 					'builder_documents',
-					'owner={:u}' + (body.kind ? ' && kind={:k}' : ''),
+					'owner={:u} && deleted=false' + (body.kind ? ' && kind={:k}' : ''),
 					'-updated',
 					100,
 					0,
@@ -141,6 +141,8 @@ function handle(app, user, body) {
 		);
 		if (source.getString('owner') !== user.id)
 			throw new ForbiddenError('Draf tidak tersedia.');
+		if (source.getBool('deleted'))
+			throw new BadRequestError('Draf telah dihapus.');
 		const envelope = view(app, source);
 		authorizeContext(app, user, envelope.document);
 		if (body.action === 'savedList')
@@ -223,13 +225,24 @@ function handle(app, user, body) {
 		return { id: item.id };
 	}
 	let record;
-	if (body.action === 'get' || body.action === 'save') {
+	if (['get', 'save', 'delete'].includes(body.action)) {
 		if (typeof body.id !== 'string' || !/^[a-z0-9]{15}$/.test(body.id))
 			throw new BadRequestError('ID draf tidak valid.');
 		record = app.findRecordById('builder_documents', body.id);
 		if (record.getString('owner') !== user.id)
 			throw new ForbiddenError('Draf tidak tersedia untuk akun ini.');
 		authorizeContext(app, user, json(record, 'document'));
+		if (record.getBool('deleted')) {
+			if (body.action === 'delete') return { id: record.id, deleted: true };
+			throw new BadRequestError('Draf telah dihapus.');
+		}
+		if (body.action === 'delete') {
+			if (!Number.isInteger(body.baseRevision) || body.baseRevision !== record.getInt('revision'))
+				throw new BadRequestError('REVISION_CONFLICT: Draf berubah di tempat lain. Muat ulang daftar sebelum menghapus.');
+			record.set('deleted', true);
+			app.save(record);
+			return { id: record.id, deleted: true };
+		}
 		if (body.action === 'get') return view(app, record);
 	}
 	if (!['create', 'save'].includes(body.action))
@@ -246,6 +259,8 @@ function handle(app, user, body) {
 		});
 		if (record) {
 			authorizeContext(app, user, json(record, 'document'));
+			if (record.getBool('deleted'))
+				throw new BadRequestError('Draf telah dihapus.');
 			return view(app, record);
 		}
 	}

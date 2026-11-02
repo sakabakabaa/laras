@@ -6,7 +6,7 @@ import {
 	useState,
 	type DragEvent,
 } from 'react';
-import { Link, useBlocker, useNavigate } from 'react-router';
+import { Link, useBlocker, useNavigate, useSearchParams } from 'react-router';
 import {
 	ArrowDown,
 	ChevronDown,
@@ -14,14 +14,13 @@ import {
 	History,
 	ArrowLeft,
 	ArrowUp,
-	Check,
 	Copy,
 	Download,
 	Eye,
 	FileCheck2,
 	GripVertical,
-	LayoutGrid,
 	ListTree,
+	MoreHorizontal,
 	Plus,
 	Redo2,
 	Save,
@@ -38,7 +37,14 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import pb from '@/lib/pocketbase-client';
+import { useCachedQuery } from '@/hooks/use-cached-query';
 import { createBuilderSaveQueue } from '@/lib/builder-save';
 import { appendBuilderContent } from '@/lib/builder-authoring';
 import { useBuilderAuthoringTools } from './builder-authoring-tools';
@@ -77,6 +83,8 @@ import {
 } from './builder-element-library';
 
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
+type CourseOption = { id: string; title: string; code: string };
+type MeetingOption = { id: string; title: string; week: number; section: string };
 const encode = encodeBuilderDraft;
 function readRecovery(key: string) {
 	try {
@@ -95,6 +103,7 @@ function readRecovery(key: string) {
 	return null;
 }
 export function BuilderWorkspace({ id }: { id: string }) {
+	const [params] = useSearchParams();
 	const navigate = useNavigate(),
 		[draft, setDraft] = useState<BuilderEnvelope | null>(null),
 		[saved, setSaved] = useState(''),
@@ -108,7 +117,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[selected, setSelected] = useState(''),
 		[panel, setPanel] = useState<'content' | 'delivery' | 'review'>('content'),
 		[picker, setPicker] = useState(false),
-		[leftTab, setLeftTab] = useState<'tools' | 'elements' | 'outline'>('tools'),
+		[activityDrawer, setActivityDrawer] = useState(false),
+		[assistance, setAssistance] = useState(() => ['ai', 'book'].includes(params.get('tool') || '')),
 		[insertion, setInsertion] = useState<{
 			activityId: string;
 			beforeId?: string;
@@ -144,6 +154,32 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	activeId.current = id;
 	const storageKey = `laras-builder:${pb.authStore.record?.id || 'anonymous'}:${id}`;
 	const dirty = Boolean(draft && encode(draft) !== saved);
+	const contextCourseId = draft?.document.context.courseId || '';
+	const contextMeetingId = draft?.document.context.meetingId || '';
+	const contextCourses = useCachedQuery<CourseOption[]>(
+		contextCourseId ? 'builder-course-options' : null,
+		() =>
+			pb.collection('courses').getFullList<CourseOption>({
+				filter: pb.filter('owner={:u}', { u: pb.authStore.record?.id }),
+				fields: 'id,title,code',
+				sort: 'title',
+			}),
+	);
+	const contextMeetings = useCachedQuery<MeetingOption[]>(
+		contextCourseId ? `builder-meetings:${contextCourseId}` : null,
+		() =>
+			pb.collection('class_sessions').getFullList<MeetingOption>({
+				filter: pb.filter('course={:c}', { c: contextCourseId }),
+				fields: 'id,title,week,section',
+				sort: 'week',
+			}),
+	);
+	const contextCourse = contextCourses.data?.find(
+		(item) => item.id === contextCourseId,
+	);
+	const contextMeeting = contextMeetings.data?.find(
+		(item) => item.id === contextMeetingId,
+	);
 	useEffect(() => {
 		const update = () => {
 			setOnline(navigator.onLine);
@@ -228,7 +264,6 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setHistoryVersion((v) => v + 1);
 	};
 	const authoringTools = useBuilderAuthoringTools({ id, draft, disabled: conflict || Boolean(recovery) || !online,
-		onManual: () => setLeftTab('elements'),
 		onApply: (source) => {
 			if (!current.current || conflict || recovery || !online) throw new Error('Draf belum siap menerima tambahan. Selesaikan pemulihan atau konflik terlebih dahulu.');
 			let inserted = '';
@@ -363,6 +398,25 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		issues = builderIssues(draft),
 		questionCount = Object.keys(d.questionsById).length,
 		points = Object.values(d.questionsById).reduce((s, q) => s + q.points, 0);
+	const contextLabel = [
+		contextCourse ? `${contextCourse.code} · ${contextCourse.title}` : '',
+		contextMeeting
+			? `Pertemuan ${contextMeeting.week} · ${contextMeeting.title}`
+			: '',
+	].filter(Boolean).join(' · ');
+	const saveLabel = !online
+		? 'Offline'
+		: conflict
+			? 'Konflik revisi'
+			: recovery
+				? 'Ada pemulihan perangkat'
+				: error
+					? 'Belum tersimpan'
+					: saving
+						? 'Menyimpan…'
+						: dirty
+							? 'Belum tersimpan'
+							: 'Tersimpan';
 	const selectActivity = (activityId: string) => {
 		setCollapsed((items) => items.filter((id) => id !== activityId));
 		setActive(activityId);
@@ -370,6 +424,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setSelected('');
 		setPanel('content');
 		setPicker(false);
+		setActivityDrawer(false);
 		requestAnimationFrame(() =>
 			document
 				.getElementById('builder-activity-' + activityId)
@@ -407,17 +462,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const openElements = (activityId: string, beforeId?: string) => {
 		setActive(activityId);
 		setInsertion({ activityId, beforeId });
-		setLeftTab('elements');
 		setPanel('content');
-		if (window.matchMedia('(max-width: 1100px)').matches) setPicker(true);
-		else
-			requestAnimationFrame(() =>
-				document
-					.querySelector<HTMLInputElement>(
-						'.bd-builder-sidebar input[type="search"]',
-					)
-					?.focus(),
-			);
+		setPicker(true);
 	};
 	const revealBlock = (activityId: string, blockId: string) => {
 		setCollapsed((items) => items.filter((id) => id !== activityId));
@@ -428,6 +474,35 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			const element = document.getElementById('builder-block-' + blockId);
 			element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 			element?.focus({ preventScroll: true });
+		});
+	};
+	const addInlineText = (activityId: string, text: string) => {
+		if (!text.trim() || locked) return;
+		const target = current.current?.document.activities.find(item => item.id === activityId);
+		if (!target || target.blocks.length) return;
+		if (!current.current || current.current.document.activities.reduce((sum, item) => sum + item.blocks.length, 0) >= 500) {
+			setAnnouncement('Batas 500 elemen tercapai. Hapus elemen sebelum menambah lagi.');
+			return;
+		}
+		let blockId = '';
+		change((next) => {
+			blockId = appendBlock(next, activityId, 'instructions');
+			const added = next.document.activities
+				.find((a) => a.id === activityId)!
+				.blocks.find((b) => b.id === blockId)!;
+			added.body = rich(text);
+		});
+		if (!blockId) return;
+		setActive(activityId);
+		setSelected(blockId);
+		setInsertion(null);
+		setAnnouncement('Teks ditambahkan. Anda dapat langsung menyuntingnya.');
+		requestAnimationFrame(() => {
+			const field = document.querySelector<HTMLTextAreaElement>(
+				`#builder-block-${blockId} textarea`,
+			);
+			field?.focus();
+			if (field) field.setSelectionRange(field.value.length, field.value.length);
 		});
 	};
 	const addElement = (
@@ -546,7 +621,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				>
 					<Plus size={14} />
 					<span>
-						{dragging ? 'Letakkan elemen di sini' : 'Sisipkan elemen'}
+						{dragging ? 'Letakkan di sini' : 'Tambah'}
 					</span>
 				</button>
 			</div>
@@ -623,6 +698,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						next.document.activities.push(a);
 					});
 					setPicker(false);
+					setActivityDrawer(false);
 					setActive(a.id);
 					setInsertion(null);
 					setSelected('');
@@ -639,81 +715,6 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const beforeIndex =
 		insertionActivity?.blocks.findIndex((b) => b.id === insertion?.beforeId) ??
 		-1;
-	const sidebarContents = (surface: string) => (
-		<>
-			<div
-				className="bd-sidebar-tabs"
-				role="tablist"
-				aria-label="Panel builder"
-				onKeyDown={(event) => {
-					if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
-						return;
-					event.preventDefault();
-					const tabs = ['tools', 'elements', 'outline'] as const;
-					const index = tabs.indexOf(leftTab);
-					const tab = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[2] : tabs[(index + (event.key === 'ArrowRight' ? 1 : 2)) % 3];
-					setLeftTab(tab);
-					document.getElementById(`builder-${tab}-tab-${surface}`)?.focus();
-				}}
-			>
-				<button type="button" role="tab" tabIndex={leftTab === 'tools' ? 0 : -1} aria-selected={leftTab === 'tools'} aria-controls={`builder-tools-panel-${surface}`} id={`builder-tools-tab-${surface}`} onClick={() => setLeftTab('tools')}><Sparkles size={15} />Mulai</button>
-				<button
-					type="button"
-					role="tab"
-					tabIndex={leftTab === 'elements' ? 0 : -1}
-					aria-selected={leftTab === 'elements'}
-					aria-controls={`builder-elements-panel-${surface}`}
-					id={`builder-elements-tab-${surface}`}
-					onClick={() => setLeftTab('elements')}
-				>
-					<LayoutGrid size={15} /> Elemen
-				</button>
-				<button
-					type="button"
-					role="tab"
-					tabIndex={leftTab === 'outline' ? 0 : -1}
-					aria-selected={leftTab === 'outline'}
-					aria-controls={`builder-outline-panel-${surface}`}
-					id={`builder-outline-tab-${surface}`}
-					onClick={() => setLeftTab('outline')}
-				>
-					<ListTree size={15} /> Outline
-				</button>
-			</div>
-			<div role="tabpanel" id={`builder-tools-panel-${surface}`} aria-labelledby={`builder-tools-tab-${surface}`} hidden={leftTab !== 'tools'}>{authoringTools}</div>
-			<div
-				role="tabpanel"
-				id={`builder-elements-panel-${surface}`}
-				aria-labelledby={`builder-elements-tab-${surface}`}
-				hidden={leftTab !== 'elements'}
-			>
-				<BuilderElementLibrary
-					disabled={locked || !activity}
-					target={
-						insertionActivity
-							? `${insertionActivity.title || 'Kegiatan'} · ${beforeIndex >= 0 ? `sebelum elemen ${beforeIndex + 1}` : 'akhir kegiatan'}`
-							: 'Tambahkan kegiatan terlebih dahulu.'
-					}
-					onAdd={(elementId) => addElement(elementId)}
-					onDragStart={(elementId, event) => {
-						dragItem.current = { elementId };
-						event.dataTransfer.setData(BUILDER_DRAG_TYPE, elementId);
-						event.dataTransfer.effectAllowed = 'copy';
-						setDragging(true);
-					}}
-					onDragEnd={finishDrag}
-				/>
-			</div>
-			<div
-				role="tabpanel"
-				id={`builder-outline-panel-${surface}`}
-				aria-labelledby={`builder-outline-tab-${surface}`}
-				hidden={leftTab !== 'outline'}
-			>
-				{outlineContents}
-			</div>
-		</>
-	);
 	const inspectorContents = (
 		<>
 			<header>
@@ -826,12 +827,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					>
 						<ArrowLeft size={18} />
 					</Link>
-					<div>
+					<div className="bd-title-stack">
 						<span className="bd-kicker">
 							BUILDER · {d.kind === 'kelas' ? 'KELAS' : 'TUGAS'}
 						</span>
 						<input
 							aria-label="Judul dokumen"
+							className="bd-title-input"
 							maxLength={200}
 							value={d.title}
 							onChange={(e) =>
@@ -840,47 +842,47 @@ export function BuilderWorkspace({ id }: { id: string }) {
 								})
 							}
 						/>
+						{contextLabel && (
+							<p className="bd-context-line">{contextLabel}</p>
+						)}
 					</div>
 				</div>
 				<div className="bd-toolbar-actions">
-					<span className="bd-save-status" role="status">
-						{!online ? 'Offline · belum tersimpan di server' : conflict
-							? 'Konflik revisi'
-							: saving
-								? 'Menyimpan…'
-								: error
-									? 'Belum tersimpan'
-									: dirty
-										? 'Perubahan belum tersimpan'
-										: 'Tersimpan'}{' '}
-						{!dirty && !saving && !error && <Check size={13} />}
-					</span>
-					<button
-						type="button"
-						className="bd-icon"
-						disabled={!past.current.length || conflict || Boolean(recovery)}
-						aria-label="Urungkan"
-						onClick={() => undo()}
-					>
-						<Undo2 size={17} />
-					</button>
-					<button
-						type="button"
-						className="bd-icon"
-						disabled={!future.current.length || conflict || Boolean(recovery)}
-						aria-label="Ulangi"
-						onClick={() => undo(true)}
-					>
-						<Redo2 size={17} />
-					</button>
-					<button
-						className="bd-secondary"
-						disabled={saving || !dirty || conflict || Boolean(recovery)}
-						onClick={() => void save()}
-					>
-						<Save size={15} />
-						Simpan
-					</button>
+					{saveLabel && (
+						<span className="bd-save-status" role="status">
+							{saveLabel}
+						</span>
+					)}
+					<div className="bd-history-actions">
+						<button
+							type="button"
+							className="bd-icon"
+							disabled={!past.current.length || conflict || Boolean(recovery)}
+							aria-label="Urungkan"
+							onClick={() => undo()}
+						>
+							<Undo2 size={17} />
+						</button>
+						<button
+							type="button"
+							className="bd-icon"
+							disabled={!future.current.length || conflict || Boolean(recovery)}
+							aria-label="Ulangi"
+							onClick={() => undo(true)}
+						>
+							<Redo2 size={17} />
+						</button>
+					</div>
+					{(dirty || error) && !conflict && !recovery && (
+						<button
+							className="bd-secondary"
+							disabled={saving}
+							onClick={() => void save()}
+						>
+							<Save size={15} />
+							Simpan
+						</button>
+					)}
 					<button
 						className="bd-secondary bd-inspector-toggle"
 						onClick={() => setInspectorOpen(true)}
@@ -888,13 +890,36 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<Settings2 size={15} />
 						Pengaturan
 					</button>
-					<button className="bd-secondary" onClick={() => setSavedItems({})}>
-						<History size={15} /> Riwayat & template
+					<button
+						type="button"
+						className="bd-icon"
+						aria-label="Pratinjau"
+						title={
+							dirty || saving
+								? 'Menunggu perubahan tersimpan…'
+								: 'Buka halaman pratinjau'
+						}
+						disabled={dirty || saving || conflict || Boolean(recovery)}
+						onClick={() => navigate(`/app/builder/${id}/pratinjau`)}
+					>
+						<Eye size={17} />
 					</button>
-					<button className="bd-secondary" disabled={dirty || saving || conflict || Boolean(recovery)} title={dirty || saving ? 'Menunggu perubahan tersimpan…' : 'Buka halaman pratinjau'} onClick={() => navigate(`/app/builder/${id}/pratinjau`)}>
-						<Eye size={15} />
-						Pratinjau
-					</button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<button
+								type="button"
+								className="bd-icon"
+								aria-label="Menu lainnya"
+							>
+								<MoreHorizontal size={17} />
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem onSelect={() => setSavedItems({})}>
+								<History size={15} /> Riwayat & template
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 					<button className="bd-primary" onClick={() => setPanel('review')}>
 						<FileCheck2 size={16} />
 						Tinjau draf
@@ -928,7 +953,6 @@ export function BuilderWorkspace({ id }: { id: string }) {
 								id: 'delivery',
 								label: d.kind === 'kelas' ? 'Jadwal kelas' : 'Pengumpulan',
 							},
-							{ id: 'review', label: 'Tinjau' },
 						] as const
 					).map((t) => (
 						<button
@@ -1002,28 +1026,22 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			{panel === 'content' ? (
 				<div className="bd-layout">
 					<div className="bd-mobile-library-actions">
-						<button className="bd-secondary" onClick={() => { setLeftTab('tools'); setPicker(true); }}><Sparkles size={16} />Bantuan & input</button>
 						<button
 							className="bd-secondary"
-							onClick={() => {
-								setLeftTab('elements');
-								setPicker(true);
-							}}
+							onClick={() => setActivityDrawer(true)}
 						>
-							<LayoutGrid size={16} /> Elemen
+							<ListTree size={16} /> Kegiatan
 						</button>
 						<button
 							className="bd-secondary"
-							onClick={() => {
-								setLeftTab('outline');
-								setPicker(true);
-							}}
+							onClick={() => setAssistance(true)}
 						>
-							<ListTree size={16} /> Outline
+							<Sparkles size={16} /> Bantuan
 						</button>
 					</div>
-					<aside className="bd-builder-sidebar" aria-label="Panel builder">
-						{sidebarContents('desktop')}
+					<aside className="bd-builder-sidebar" aria-label="Daftar kegiatan">
+						{outlineContents}
+						{authoringTools}
 					</aside>
 					<section className="bd-canvas" aria-label="Isi kegiatan">
 						<section className="bd-document-intro">
@@ -1306,6 +1324,29 @@ export function BuilderWorkspace({ id }: { id: string }) {
 												</article>
 											</Fragment>
 										))}
+										{!a.blocks.length && (
+											<div className="bd-empty-activity">
+												<textarea
+													rows={3}
+													maxLength={20000}
+													aria-label={`Tulis pengantar ${a.title || `kegiatan ${i + 1}`}`}
+													placeholder="Tulis pengantar kegiatan di sini…"
+													disabled={locked || d.activities.reduce((sum, item) => sum + item.blocks.length, 0) >= 500}
+													onFocus={() => {
+														setActive(a.id);
+														setSelected('');
+													}}
+													onCompositionEnd={(event) => addInlineText(a.id, event.currentTarget.value)}
+													onChange={(event) => {
+														if (!(event.nativeEvent as InputEvent).isComposing) addInlineText(a.id, event.target.value);
+													}}
+												/>
+												<p className="bd-help">
+													Mulai mengetik untuk menambah teks, atau pilih
+													elemen di bawah.
+												</p>
+											</div>
+										)}
 										{insertionSlot(a.id)}
 										<button
 											className="bd-add-block"
@@ -1444,7 +1485,6 @@ export function BuilderWorkspace({ id }: { id: string }) {
 												);
 											} else if (issue.message === 'Tambahkan kegiatan.') {
 												setPanel('content');
-												setLeftTab('outline');
 												requestAnimationFrame(() =>
 													document
 														.querySelector<HTMLButtonElement>('.bd-outline-add')
@@ -1581,12 +1621,53 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			<Dialog open={picker} onOpenChange={setPicker}>
 				<DialogContent className="bd-picker-dialog bd-library-drawer">
 					<DialogHeader>
-						<DialogTitle>Panel builder</DialogTitle>
+						<DialogTitle>Tambah elemen</DialogTitle>
 						<DialogDescription>
-							Pilih elemen atau kegiatan. Ketuk elemen untuk menambahkannya.
+							{insertionActivity
+								? `Sisipkan ke ${insertionActivity.title || 'kegiatan'}${beforeIndex >= 0 ? ` sebelum elemen ${beforeIndex + 1}` : ' di akhir kegiatan'}.`
+								: 'Tambahkan kegiatan terlebih dahulu.'}
 						</DialogDescription>
 					</DialogHeader>
-					{sidebarContents('drawer')}
+					<BuilderElementLibrary
+						allowDrag={false}
+						disabled={locked || !activity}
+						target={
+							insertionActivity
+								? `${insertionActivity.title || 'Kegiatan'} · ${beforeIndex >= 0 ? `sebelum elemen ${beforeIndex + 1}` : 'akhir kegiatan'}`
+								: 'Tambahkan kegiatan terlebih dahulu.'
+						}
+						onAdd={(elementId) => addElement(elementId)}
+						onDragStart={(elementId, event) => {
+							dragItem.current = { elementId };
+							event.dataTransfer.setData(BUILDER_DRAG_TYPE, elementId);
+							event.dataTransfer.effectAllowed = 'copy';
+							setDragging(true);
+						}}
+						onDragEnd={finishDrag}
+					/>
+				</DialogContent>
+			</Dialog>
+			<Dialog open={activityDrawer} onOpenChange={setActivityDrawer}>
+				<DialogContent className="bd-picker-dialog bd-library-drawer">
+					<DialogHeader>
+						<DialogTitle>Kegiatan</DialogTitle>
+						<DialogDescription>
+							Pilih, tambahkan, atau atur urutan kegiatan.
+						</DialogDescription>
+					</DialogHeader>
+					{outlineContents}
+				</DialogContent>
+			</Dialog>
+			<Dialog open={assistance} onOpenChange={setAssistance}>
+				<DialogContent className="bd-picker-dialog bd-library-drawer bd-assistance-drawer">
+					<DialogHeader>
+						<DialogTitle>Bantuan</DialogTitle>
+						<DialogDescription>
+							Buat dengan AI atau unggah bahan. Hasil ditambahkan ke draf
+							tanpa mengganti isi yang sudah ada.
+						</DialogDescription>
+					</DialogHeader>
+					{authoringTools}
 				</DialogContent>
 			</Dialog>
 			<Dialog

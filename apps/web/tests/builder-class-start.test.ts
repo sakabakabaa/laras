@@ -42,15 +42,18 @@ describe('simple class entry', () => {
 		expect(render('/app/builder/new?kind=kelas&sourceSession=legacy000000001')).toContain('Kelas asal, mahasiswa, jawaban, dan nilai tidak diubah');
 	});
 
-	it('keeps AI and book inputs inside the builder instead of the entry form', () => {
+	it('keeps one focused AI or book tool inside the builder', () => {
 		function Tools() {
 			return useBuilderAuthoringTools({ id: 'builder12345678', draft: blankBuilder('kelas', 'course000000001', 'meeting00000001'), disabled: false, onApply: vi.fn(), onManual: vi.fn() });
 		}
 		const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/app/builder/builder12345678?tool=book'] }, createElement(Tools)));
-		expect(html).toContain('Bantu susun dengan AI');
-		expect(html).toContain('Unggah halaman buku');
-		expect(html).toContain('Tambah teks atau pertanyaan');
+		expect(html).toContain('Buat dengan AI');
+		expect(html).toContain('Unggah bahan');
+		expect(html).toContain('Baca halaman');
+		expect(html).toContain('aria-pressed="true"');
+		expect(html).not.toContain('Tambah teks atau pertanyaan');
+		expect(html).not.toContain('Susun kelas Anda');
+		expect(html).not.toContain('<details open');
 		expect(html).not.toContain('multiple');
-		expect(html).toContain('<details open=""><summary>');
 	});
 });

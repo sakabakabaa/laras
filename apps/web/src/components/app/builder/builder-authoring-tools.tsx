@@ -7,11 +7,14 @@ import { builderImportRequest, type BuilderImportJob } from '@/lib/builder-impor
 import { scheduledAiRequest } from '@/lib/scheduled-class-ai-client';
 import type { ScheduledAcademicContext, ScheduledAiProposal } from '@/lib/scheduled-class-ai';
 
-export function useBuilderAuthoringTools({ id, draft, disabled, onApply, onManual }: {
+type Tool = 'ai' | 'book';
+
+export function useBuilderAuthoringTools({ id, draft, disabled, onApply }: {
 	id: string; draft: BuilderEnvelope | null; disabled: boolean;
-	onApply: (envelope: BuilderEnvelope) => void; onManual: () => void;
+	onApply: (envelope: BuilderEnvelope) => void; onManual?: () => void;
 }) {
 	const [params] = useSearchParams();
+	const [tool, setTool] = useState<Tool | null>(() => params.get('tool') === 'book' ? 'book' : params.get('tool') === 'ai' ? 'ai' : null);
 	const [context, setContext] = useState<ScheduledAcademicContext | null>(null);
 	const [contextError, setContextError] = useState(''), [contextAttempt, setContextAttempt] = useState(0);
 	const [instruction, setInstruction] = useState(''), [minutes, setMinutes] = useState(90);
@@ -88,26 +91,23 @@ export function useBuilderAuthoringTools({ id, draft, disabled, onApply, onManua
 	};
 	if (!draft) return null;
 	const pending = Boolean(job && ['queued', 'running'].includes(job.status));
+	const activeTool = (next: Tool) => ({ 'aria-pressed': tool === next, className: tool === next ? 'bd-secondary is-active' : 'bd-secondary', onClick: () => setTool(tool === next ? null : next) });
 	return <div className="bd-authoring-tools">
-		<h2>Susun kelas Anda</h2>
-		{context && <p className="bd-help"><strong>{context.course.title}</strong><br />{context.session.title}</p>}
-		<p>Mulai menulis sendiri atau minta bantuan. Semua hasil masuk sebagai draf yang bisa diedit.</p>
-		<button type="button" className="bd-secondary" disabled={disabled} onClick={onManual}>Tambah teks atau pertanyaan</button>
-		<details>
-			<summary><Sparkles size={16} />Bantu susun dengan AI</summary>
-			{!meetingId ? <p>Pilih pertemuan agar AI dapat memakai konteks pembelajaran.</p> : contextError ? <p role="alert">{contextError} <button type="button" className="bd-secondary" onClick={() => setContextAttempt(value => value + 1)}>Muat ulang konteks</button></p> : !context ? <p role="status">Memuat konteks pertemuan…</p> : <>
-				<p><strong>{context.course.title}</strong><br />{context.session.topic || context.session.title}</p>
-				<p className="bd-help">AI otomatis memakai topik, indikator, capaian, dan materi pertemuan yang sudah disetujui. Anda tidak perlu memilih ulang konteks.</p>
+		<div className="bd-tool-switch" role="group" aria-label="Pilih bantuan">
+			<button type="button" disabled={disabled} {...activeTool('ai')}><Sparkles size={16} />Buat dengan AI</button>
+			<button type="button" disabled={disabled} {...activeTool('book')}><BookOpen size={16} />Unggah bahan</button>
+		</div>
+		{tool === 'ai' && <section className="bd-tool" aria-label="Buat dengan AI">
+			{!meetingId ? <p className="bd-help">Pilih pertemuan agar AI dapat memakai konteks pembelajaran.</p> : contextError ? <p role="alert">{contextError} <button type="button" className="bd-secondary" onClick={() => setContextAttempt(value => value + 1)}>Muat ulang konteks</button></p> : !context ? <p role="status">Memuat konteks pertemuan…</p> : <>
 				<fieldset disabled={busy || disabled}>
 					<label>Arahan tambahan (opsional)<textarea rows={3} maxLength={1500} value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="Contoh: latihan singkat untuk tingkat A1" /></label>
-					<details><summary>Atur durasi</summary><label>Total durasi (menit)<input type="number" min={10} max={240} value={minutes} onChange={event => setMinutes(Number(event.target.value))} /></label></details>
-					<button type="button" className="bd-primary" onClick={() => void generate()} disabled={minutes < 10 || minutes > 240 || !Number.isInteger(minutes)}>{busy ? 'Menyiapkan…' : 'Susun dari pertemuan'}</button>
+					<details className="bd-tool-advanced"><summary>Pengaturan tambahan</summary><label>Total durasi (menit)<input type="number" min={10} max={240} value={minutes} onChange={event => setMinutes(Number(event.target.value))} /></label></details>
+					<button type="button" className="bd-primary" onClick={() => void generate()} disabled={minutes < 10 || minutes > 240 || !Number.isInteger(minutes)}>{busy ? 'Menyiapkan…' : 'Buat usulan'}</button>
 				</fieldset>
 			</>}
-			{proposal && <section className="bd-tool-proposal" aria-label="Usulan AI"><h3>{proposal.draft.title}</h3><p>{proposal.draft.instructions}</p><ol>{proposal.draft.activities.map((activity, index) => <li key={index}>{activity.title} · {activity.minutes} menit</li>)}</ol>{proposal.draft.notes.map((note, index) => <p key={index} className="bd-help">{note}</p>)}<p className="bd-help">Tambahkan ke draf tanpa mengganti kegiatan yang sudah ada. Kunci AI harus ditinjau sebelum diterbitkan.</p><button type="button" className="bd-primary" disabled={disabled || busy} onClick={() => { if (apply(builderFromAiProposal(proposal, draft.document.context))) setProposal(null); }}>Tambahkan ke kelas</button></section>}
-		</details>
-		<details open={params.get('tool') === 'book' || undefined}>
-			<summary><BookOpen size={16} />Unggah halaman buku</summary>
+			{proposal && <section className="bd-tool-proposal" aria-label="Usulan AI"><h3>{proposal.draft.title}</h3><p>{proposal.draft.instructions}</p><ol>{proposal.draft.activities.map((activity, index) => <li key={index}>{activity.title} · {activity.minutes} menit</li>)}</ol>{proposal.draft.notes.map((note, index) => <p key={index} className="bd-help">{note}</p>)}<p className="bd-help">Tambahkan ke draf tanpa mengganti kegiatan yang sudah ada. Kunci AI harus ditinjau sebelum diterbitkan.</p><button type="button" className="bd-primary" disabled={disabled || busy} onClick={() => { if (apply(builderFromAiProposal(proposal, draft.document.context))) setProposal(null); }}>Tambahkan ke draf</button></section>}
+		</section>}
+		{tool === 'book' && <section className="bd-tool" aria-label="Unggah bahan">
 			<fieldset disabled={busy || disabled || pending}>
 				<label>Gambar halaman buku<input type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { setFile(event.target.files?.[0] || null); command.current = uid(); }} /></label>
 				<p className="bd-help">Satu halaman PNG, JPG, atau WebP, maksimal 8 MB. AI memakai konteks pertemuan tanpa mengarang isi buku atau rekaman audio.</p>
@@ -117,8 +117,9 @@ export function useBuilderAuthoringTools({ id, draft, disabled, onApply, onManua
 			{pending && <p role="status">AI sedang membaca halaman. Anda dapat tetap menyusun kelas.</p>}
 			{job && <Link to={`/app/builder/impor/${job.id}`}>Lihat status dan laporan impor</Link>}
 			{job?.status === 'failed' && <p role="alert">{job.error}</p>}
-			{job?.status === 'ready' && <><p>{job.report.activityCount} kegiatan siap ditinjau. {job.report.missingMedia?.length || 0} media perlu dilengkapi.</p>{job.report.warnings?.map((warning, index) => <p className="bd-help" key={index}>{warning}</p>)}<button type="button" className="bd-primary" disabled={disabled || busy || imported} onClick={() => void applyImport()}>{imported ? 'Sudah ditambahkan' : 'Tambahkan ke kelas'}</button></>}
-		</details>
+			{job?.status === 'ready' && <><p>{job.report.activityCount} kegiatan siap ditinjau. {job.report.missingMedia?.length || 0} media perlu dilengkapi.</p>{job.report.warnings?.map((warning, index) => <p className="bd-help" key={index}>{warning}</p>)}<button type="button" className="bd-primary" disabled={disabled || busy || imported} onClick={() => void applyImport()}>{imported ? 'Sudah ditambahkan' : 'Tambahkan ke draf'}</button></>}
+		</section>}
+		{job && tool !== 'book' && <p className="bd-help" role={job.status === 'failed' ? 'alert' : 'status'}>Impor buku: {pending ? 'sedang diproses' : job.status === 'ready' ? 'siap ditinjau' : job.status === 'failed' ? `gagal. ${job.error}` : 'selesai'}. Buka Unggah bahan untuk detail.</p>}
 		{error && <p role="alert">{error}{pending && <button type="button" className="bd-secondary" onClick={() => setPollAttempt(value => value + 1)}>Muat ulang status</button>}</p>}
 	</div>;
 }

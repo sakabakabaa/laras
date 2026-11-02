@@ -18,6 +18,12 @@ This branch was initially prepared for local review only. The user authorized a 
 
 ## Capability boundaries
 
+### Content-first workspace
+
+The workspace opens directly on editable content. An empty activity creates its first instruction block only when the lecturer types, not on load; composition input is allowed to finish before converting the placeholder. The contextual add dialog starts with text, question, and media groups. Dialog tiles are click-to-add; existing canvas block drag/reorder and keyboard move controls remain available. The activity list and optional AI/upload tools share the desktop sidebar; narrow layouts expose activity and assistance drawers. Tool state survives drawer closure and switching, and explicit AI/book deep links open assistance.
+
+The header shows course/meeting context once, a heading-like editable title, quiet save status, undo/redo, preview, and one review entry. History/templates remain in the secondary menu. Autosave, recovery, revision conflicts, explicit AI/import application, and publication validation remain unchanged.
+
 ### Simple class creation follow-up
 
 New classes use one entry: **Buat kelas → Mata kuliah → Pertemuan → Builder**. The entry asks only for course and meeting; the initial title comes from the meeting and its section is inherited. Scheduling, content, and optional tools remain inside the builder. Existing class records still open their original workspace, and explicit duplication links preserve authored content without copying attempts or schedules. Task creation is unchanged.

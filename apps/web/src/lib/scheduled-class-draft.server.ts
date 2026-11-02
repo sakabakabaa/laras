@@ -14,10 +14,16 @@ const ids=(value:unknown,max=4):string[]=>{
  if(!Array.isArray(value)||value.length>max||value.some(v=>typeof v!=='string'||!/^[a-zA-Z0-9]{15}$/.test(v)))return fail(422,'Pilihan materi atau capaian tidak valid.');
  return [...new Set(value as string[])];
 };
-async function scope(pb:PocketBase,user:AuthedUser,sessionId:string){
+async function scope(pb:PocketBase,user:AuthedUser,sessionId:string,builderId?:unknown){
  if(!/^[a-zA-Z0-9]{15}$/.test(sessionId))fail(422,'Pilih pertemuan.');
  const session=await lessonSession(pb,user,sessionId);
  const course=await pb.collection('courses').getOne<Course>(session.course);
+ if(builderId!==undefined){
+  if(typeof builderId!=='string'||!/^[a-zA-Z0-9]{15}$/.test(builderId))fail(422,'Draf builder tidak valid.');
+  const draft=await pb.send<{document:{context:{courseId:string;meetingId:string}}}>('/api/laras/builder',{method:'POST',body:{action:'get',id:builderId},requestKey:null});
+  if(draft.document.context.courseId!==course.id||draft.document.context.meetingId!==session.id)fail(422,'Konteks draf tidak sesuai pertemuan.');
+  return {session,course};
+ }
  const scheduled=await pb.send<{class:{status:string}|null}>('/api/laras/scheduled-classes',{method:'POST',body:{action:'state',sessionId},requestKey:null});
  if(scheduled.class&&scheduled.class.status!=='draft')fail(422,'AI hanya tersedia pada draf kelas yang belum dijadwalkan.');
  return {session,course};
@@ -36,13 +42,19 @@ async function contextFor(pb:PocketBase,user:AuthedUser,session:ClassSession,cou
  const compact=(o:Cpmk|SubCpmk)=>({id:o.id,code:o.code,description:o.description});
  return {course:{id:course.id,title:course.title},session:{id:session.id,title:session.title,topic:session.topic||'',learningIndicator:session.learningIndicator||'',learningMaterial:session.learningMaterial||'',assessmentMethod:session.assessmentMethod||'',duration:session.duration||'',references:session.references||'',cpmkIds:linkIds(session.cpmks),subCpmkIds:linkIds(session.subCpmks)},cpmks:cpmks.map(compact),subCpmks:subs.map(compact),materials:files.map(f=>({id:f.id,title:f.title,version:f.version||1,access:f.access,sessionIds:linkIds(f.session),...(f.file?{url:'/hcgi/platform/api/files/file_library/'+f.id+'/'+encodeURIComponent(f.file)}:{}),aiReady:extractions.some(e=>e.file===f.id&&(e.version||1)===(f.version||1)&&['ready','review'].includes(e.status))&&sections.some(s=>s.file===f.id&&(s.version||1)===(f.version||1)&&Boolean(s.excerpt?.trim()))})),lessonPlan:plans.items[0]?.plan?{title:plans.items[0].title,objective:plans.items[0].plan.objective,activities:plans.items[0].plan.activities}:null};
 }
-export async function scheduledAcademicContext(pb:PocketBase,user:AuthedUser,sessionId:string){const {session,course}=await scope(pb,user,sessionId);return contextFor(pb,user,session,course);}
+export async function scheduledAcademicContext(pb:PocketBase,user:AuthedUser,sessionId:string,builderId?:unknown){const {session,course}=await scope(pb,user,sessionId,builderId);return contextFor(pb,user,session,course);}
+export async function meetingAcademicContext(pb:PocketBase,user:AuthedUser,sessionId:string){
+ const session=await lessonSession(pb,user,sessionId);
+ const course=await pb.collection('courses').getOne<Course>(session.course);
+ return contextFor(pb,user,session,course);
+}
 
 export async function generateScheduledClassDraft(pb:PocketBase,user:AuthedUser,body:Record<string,unknown>):Promise<ScheduledAiProposal>{
  const sessionId=typeof body.sessionId==='string'?body.sessionId:'';
- const {session,course}=await scope(pb,user,sessionId),context=await contextFor(pb,user,session,course);
+ const {session,course}=await scope(pb,user,sessionId,body.builderId),context=await contextFor(pb,user,session,course);
  const minutes=Number(body.minutes);if(!Number.isInteger(minutes)||minutes<10||minutes>240)fail(422,'Durasi AI harus 10–240 menit.');
- const selected=ids(body.materialIds||[]),cpmkIds=ids(body.cpmkIds||[],20),subCpmkIds=ids(body.subCpmkIds||[],20);
+ const defaults=body.builderId!==undefined;
+ const selected=ids(body.materialIds??(defaults?context.materials.filter(material=>material.aiReady&&material.sessionIds.includes(session.id)).slice(0,4).map(material=>material.id):[])),cpmkIds=ids(body.cpmkIds??(defaults?context.session.cpmkIds:[]),20),subCpmkIds=ids(body.subCpmkIds??(defaults?context.session.subCpmkIds:[]),20);
  if(selected.some(id=>!context.materials.some(m=>m.id===id))||cpmkIds.some(id=>!context.cpmks.some(c=>c.id===id))||subCpmkIds.some(id=>!context.subCpmks.some(c=>c.id===id)))fail(422,'Pemetaan bukan dari mata kuliah ini.');
  const bundle=selected.length?await retrieveContextBundle({feature:'material',scope:{course:course.id,session:session.id},requester:{id:user.id,role:'faculty',label:'Dosen · kelas terjadwal'},ownerLecturerId:user.id,requirePassages:true,fileIds:selected}):null;
  const sources=(bundle?.sources||[]).filter(s=>selected.includes(s.fileId)&&s.text.trim()).map(s=>({id:s.fileId,title:s.title,version:s.version,text:s.text.slice(0,4000)}));

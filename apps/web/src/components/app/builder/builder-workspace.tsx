@@ -26,6 +26,7 @@ import {
 	Redo2,
 	Save,
 	Settings2,
+	Sparkles,
 	Trash2,
 	Undo2,
 } from 'lucide-react';
@@ -39,6 +40,8 @@ import {
 } from '@/components/ui/dialog';
 import pb from '@/lib/pocketbase-client';
 import { createBuilderSaveQueue } from '@/lib/builder-save';
+import { appendBuilderContent } from '@/lib/builder-authoring';
+import { useBuilderAuthoringTools } from './builder-authoring-tools';
 import { BuilderPublishDialog, builderPublishWarnings } from './builder-publish-dialog';
 import { toWibInput, fromWibInput } from '@/lib/scheduled-classes';
 import {
@@ -105,7 +108,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[selected, setSelected] = useState(''),
 		[panel, setPanel] = useState<'content' | 'delivery' | 'review'>('content'),
 		[picker, setPicker] = useState(false),
-		[leftTab, setLeftTab] = useState<'elements' | 'outline'>('elements'),
+		[leftTab, setLeftTab] = useState<'tools' | 'elements' | 'outline'>('tools'),
 		[insertion, setInsertion] = useState<{
 			activityId: string;
 			beforeId?: string;
@@ -224,6 +227,16 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		install(next);
 		setHistoryVersion((v) => v + 1);
 	};
+	const authoringTools = useBuilderAuthoringTools({ id, draft, disabled: conflict || Boolean(recovery) || !online,
+		onManual: () => setLeftTab('elements'),
+		onApply: (source) => {
+			if (!current.current || conflict || recovery || !online) throw new Error('Draf belum siap menerima tambahan. Selesaikan pemulihan atau konflik terlebih dahulu.');
+			let inserted = '';
+			change(next => { inserted = appendBuilderContent(next, source); });
+			if (inserted) { setActive(inserted); setSelected(''); setInsertion(null); }
+			setAnnouncement('Kegiatan ditambahkan ke draf. Jadwal dan isi sebelumnya tetap dipertahankan.');
+		},
+	});
 	const save = useCallback(async () => {
 		if (!current.current || savingRef.current || conflictRef.current) return;
 		if (!navigator.onLine) { setError('Anda sedang offline. Perubahan belum tersimpan di server; coba simpan setelah terhubung.'); return; }
@@ -636,18 +649,14 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
 						return;
 					event.preventDefault();
-					const tab =
-						event.key === 'Home'
-							? 'elements'
-							: event.key === 'End'
-								? 'outline'
-								: leftTab === 'elements'
-									? 'outline'
-									: 'elements';
+					const tabs = ['tools', 'elements', 'outline'] as const;
+					const index = tabs.indexOf(leftTab);
+					const tab = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[2] : tabs[(index + (event.key === 'ArrowRight' ? 1 : 2)) % 3];
 					setLeftTab(tab);
 					document.getElementById(`builder-${tab}-tab-${surface}`)?.focus();
 				}}
 			>
+				<button type="button" role="tab" tabIndex={leftTab === 'tools' ? 0 : -1} aria-selected={leftTab === 'tools'} aria-controls={`builder-tools-panel-${surface}`} id={`builder-tools-tab-${surface}`} onClick={() => setLeftTab('tools')}><Sparkles size={15} />Mulai</button>
 				<button
 					type="button"
 					role="tab"
@@ -671,6 +680,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					<ListTree size={15} /> Outline
 				</button>
 			</div>
+			<div role="tabpanel" id={`builder-tools-panel-${surface}`} aria-labelledby={`builder-tools-tab-${surface}`} hidden={leftTab !== 'tools'}>{authoringTools}</div>
 			<div
 				role="tabpanel"
 				id={`builder-elements-panel-${surface}`}
@@ -992,6 +1002,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			{panel === 'content' ? (
 				<div className="bd-layout">
 					<div className="bd-mobile-library-actions">
+						<button className="bd-secondary" onClick={() => { setLeftTab('tools'); setPicker(true); }}><Sparkles size={16} />Bantuan & input</button>
 						<button
 							className="bd-secondary"
 							onClick={() => {

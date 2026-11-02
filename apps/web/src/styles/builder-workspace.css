@@ -222,6 +222,35 @@
 	padding: 24px;
 	background: var(--bd-panel);
 }
+.bd-class-start {
+	max-width: 640px;
+}
+.bd-authoring-tools {
+	display: grid;
+	gap: 16px;
+	padding: 16px;
+}
+.bd-authoring-tools > details {
+	border-top: 1px solid var(--bd-border);
+	padding-top: 14px;
+}
+.bd-authoring-tools summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+.bd-authoring-tools summary svg {
+	display: inline;
+	vertical-align: middle;
+	margin-right: 6px;
+}
+.bd-authoring-tools details[open] > :not(summary),
+.bd-authoring-tools fieldset > *,
+.bd-tool-proposal > * {
+	margin-top: 12px;
+}
+.bd-authoring-tools .bd-help {
+	font-size: 12px;
+}
 .bd-back {
 	display: inline-flex;
 	align-items: center;

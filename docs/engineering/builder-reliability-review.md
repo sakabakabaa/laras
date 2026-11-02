@@ -18,6 +18,16 @@ This branch was initially prepared for local review only. The user authorized a 
 
 ## Capability boundaries
 
+### Simple class creation follow-up
+
+New classes use one entry: **Buat kelas → Mata kuliah → Pertemuan → Builder**. The entry asks only for course and meeting; the initial title comes from the meeting and its section is inherited. Scheduling, content, and optional tools remain inside the builder. Existing class records still open their original workspace, and explicit duplication links preserve authored content without copying attempts or schedules. Task creation is unchanged.
+
+The builder sidebar starts with optional manual-input, meeting-based AI, and book-page tools. AI uses the selected meeting's RPS fields, outcomes, existing lesson-plan context, and up to four approved, AI-ready files linked to that meeting. It does not silently select unrelated course files. Generating a proposal does not save or publish anything; applying it adds native editable blocks in one undoable change. It does not replace existing activities, instructions, audience, or delivery dates. Only the untouched default empty activity is replaced. AI quiz keys stay private and require teacher confirmation. Missing/insufficient meeting context remains an explicit error, not an invitation to invent facts.
+
+Builder-context AI requests verify the owned builder's course and meeting server-side. This allows a separate new draft for a meeting whose legacy class is already scheduled, without weakening the legacy editor's published-class restriction. Book reconstruction also receives owned meeting context as teaching guidance only; page content remains the source of truth. Its background import still creates a separate recoverable staging draft/report; the lecturer explicitly adds its content to the open builder. No published records or student responses are changed.
+
+Validated locally on November 2, 2026: 121 test files / 1,361 tests passed, along with typecheck, targeted ESLint, production build, and `git diff --check`. The initial concurrent build exceeded available memory; a sequential retry passed. Browser interaction and live AI-provider requests are not covered by these checks.
+
 | Capability | Shared builder | Scheduled-class editor | Legacy AssignmentForm |
 | --- | --- | --- | --- |
 | Save | Autosave, explicit retry, idempotent replay | Manual save, revision checks | Existing manual save |

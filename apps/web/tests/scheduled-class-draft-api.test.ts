@@ -7,6 +7,11 @@ import{action}from'@/routes/api.scheduled-class-draft';
 const call=(body:Record<string,unknown>={sessionId:'session12345678',action:'generate'})=>action({request:new Request('http://localhost/api/scheduled-class-draft',{method:'POST',body:JSON.stringify(body)}),params:{}})as Promise<Response>;
 beforeEach(()=>{vi.resetAllMocks();m.auth.mockResolvedValue({pb:{},user:{id:'faculty12345678',role:'faculty'}});});
 describe('scheduled AI API',()=>{
+ it('passes the builder identity to server-side ownership and meeting validation',async()=>{
+  m.context.mockResolvedValue({course:{id:'course'}});
+  expect((await call({sessionId:'session12345678',action:'context',builderId:'builder12345678'})).status).toBe(200);
+  expect(m.context).toHaveBeenCalledWith({}, {id:'faculty12345678',role:'faculty'}, 'session12345678', 'builder12345678');
+ });
  it('blocks students before loading private context or calling AI',async()=>{m.auth.mockResolvedValue({pb:{},user:{id:'student12345678',role:'student'}});expect((await call()).status).toBe(403);expect(m.context).not.toHaveBeenCalled();expect(m.generate).not.toHaveBeenCalled();});
  it('returns a usable settings instruction for rejected provider credentials',async()=>{m.generate.mockRejectedValue(new Error('Default request failed (HTTP 401)'));const response=await call();expect(response.status).toBe(503);expect((await response.json()).error).toContain('Pengaturan → Model AI');});
  it('preserves authorized context and validation responses',async()=>{m.context.mockResolvedValue({course:{id:'course'}});expect((await(await call({sessionId:'session12345678',action:'context'})).json()).context.course.id).toBe('course');m.generate.mockRejectedValue(Object.assign(new Error('Incomplete context'),{status:422}));expect((await call()).status).toBe(422);});

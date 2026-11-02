@@ -11,6 +11,7 @@ import { verifyOwnedCourse } from './assistant/authorization.server';
 import { capabilityWeight } from './ai-rate-limits';
 import { createRateLimiter } from './rate-limit.server';
 import { commitUsage, enforceAiAccess } from './ai-usage.server';
+import { meetingAcademicContext } from './scheduled-class-draft.server';
 const uploadBudget = createRateLimiter({maxRequests:4,windowSeconds:60});
 const pending = new Map<string, Promise<void>>();
 const command = <T>(pb:PocketBase,body:Record<string,unknown>)=>pb.send<T>('/api/laras/builder-import',{method:'POST',body,requestKey:null});
@@ -62,7 +63,8 @@ async function runImport(pb:PocketBase,userId:string,id:string){
   const metadata=await sharp(bytes,{limitInputPixels:32000000}).metadata();const width=metadata.width!,height=metadata.height!;
   // Reuse the lecturer's vision + JSON-capable evaluation model/provider.
   const model=await resolveModel(userId,'evaluation');
-  const payload=JSON.stringify({kind:job.settings.kind,teacherGoal:job.settings.goal||'',title:job.settings.title||'',imageWidth:width,imageHeight:height});
+  const meeting=job.settings.context.meetingId?await meetingAcademicContext(pb,{id:userId,role:'faculty'},job.settings.context.meetingId):null;
+  const payload=JSON.stringify({kind:job.settings.kind,teacherGoal:job.settings.goal||'',title:job.settings.title||'',meeting:meeting?{course:meeting.course,session:meeting.session,cpmks:meeting.cpmks.filter(outcome=>meeting.session.cpmkIds.includes(outcome.id)),subCpmks:meeting.subCpmks.filter(outcome=>meeting.session.subCpmkIds.includes(outcome.id))}:null,imageWidth:width,imageHeight:height});
   const image='data:image/png;base64,'+bytes.toString('base64');let repair='';let plan:BookPagePlan|undefined;
   const parse=(value:string)=>JSON.parse(value.trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,''));
   for(let attempt=0;attempt<2;attempt++){

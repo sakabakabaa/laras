@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { BuilderClassStart } from './builder-class-start';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import {
 	ArrowLeft,
@@ -111,6 +112,10 @@ export function BuilderDraftList({ kind }: { kind: BuilderKind }) {
 	);
 }
 export function BuilderNew() {
+	const [params] = useSearchParams();
+	return params.get('kind') === 'tugas' ? <BuilderTaskStart /> : <BuilderClassStart />;
+}
+function BuilderTaskStart() {
 	const [params] = useSearchParams(),
 		navigate = useNavigate();
 	const kind: BuilderKind = params.get('kind') === 'tugas' ? 'tugas' : 'kelas';

@@ -19,6 +19,43 @@ beforeEach(()=>{
  mocks.generate.mockResolvedValue({model:'configured',content:JSON.stringify({title:'Study',instructions:'Work independently.',activities:['material','assignment','exit_ticket'].map(kind=>({kind,title:kind,content:'Follow the RPS activity.',minutes:10}))})});
 });
 describe('scheduled draft generation boundary',()=>{
+ it('uses a verified owned builder without touching an already scheduled legacy class',async()=>{
+  status='scheduled';
+  const send=vi.fn(async()=>({document:{context:{courseId:'course123456789',meetingId:sessionId}}}));
+  await generateScheduledClassDraft({...pb,send} as never,user,{sessionId,builderId:'builder12345678',minutes:60});
+  expect(send).toHaveBeenCalledOnce();
+  expect(send.mock.calls[0]).toEqual(['/api/laras/builder',{method:'POST',body:{action:'get',id:'builder12345678'},requestKey:null}]);
+  expect(mocks.generate).toHaveBeenCalledOnce();
+  expect(mocks.generate.mock.calls[0][1].prompt).toContain('German main clauses');
+ });
+ it('rejects a builder whose meeting context differs before AI access',async()=>{
+  const send=vi.fn(async()=>({document:{context:{courseId:'course123456789',meetingId:'other1234567890'}}}));
+  await expect(generateScheduledClassDraft({...pb,send} as never,user,{sessionId,builderId:'builder12345678',minutes:60})).rejects.toMatchObject({status:422});
+  expect(mocks.access).not.toHaveBeenCalled();
+ });
+ it('does not let a client flag bypass builder ownership or ID validation',async()=>{
+  const send=vi.fn().mockRejectedValue(Object.assign(new Error('Forbidden'),{status:403}));
+  await expect(generateScheduledClassDraft({...pb,send} as never,user,{sessionId,builderId:'builder12345678',minutes:60})).rejects.toMatchObject({status:403});
+  await expect(generateScheduledClassDraft({...pb,send} as never,user,{sessionId,builderId:true,minutes:60})).rejects.toMatchObject({status:422});
+  expect(mocks.generate).not.toHaveBeenCalled();
+ });
+ it('automatically selects only approved materials linked to the builder meeting and its outcomes',async()=>{
+  const fileId='material1234567',outcomeId='outcome12345678';
+  mocks.session.mockResolvedValue({id:sessionId,course:'course123456789',title:'Word order',learningMaterial:'German finite verbs appear in the second position in declarative main clauses.',cpmks:[outcomeId],subCpmks:[]});
+  mocks.retrieve.mockResolvedValue({bundleId:'bundle',sources:[{fileId,title:'Meeting source',version:1,text:'The finite verb is in the second position.'}]});
+  const collection=(name:string)=>({...pb.collection(name),getFullList:async()=>{
+   if(name==='file_library')return [{id:fileId,title:'Meeting source',session:[sessionId],version:1,access:'faculty'},{id:'otherfile123456',title:'Other meeting',session:['different123456'],version:1}];
+   if(name==='file_extractions')return [{file:fileId,version:1,status:'ready'},{file:'otherfile123456',version:1,status:'ready'}];
+   if(name==='context_sections')return [{file:fileId,version:1,excerpt:'Approved text'},{file:'otherfile123456',version:1,excerpt:'Other text'}];
+   if(name==='cpmk')return [{id:outcomeId,code:'C1',description:'Use finite verbs'}];
+   return [];
+  }});
+  await generateScheduledClassDraft({...pb,collection,send:async()=>({document:{context:{courseId:'course123456789',meetingId:sessionId}}})} as never,user,{sessionId,builderId:'builder12345678',minutes:60,includeQuiz:false});
+  expect(mocks.retrieve).toHaveBeenCalledWith(expect.objectContaining({fileIds:[fileId],scope:{course:'course123456789',session:sessionId}}));
+  const prompt=JSON.parse(mocks.generate.mock.calls[0][1].prompt);
+  expect(prompt.outcomes.cpmks.map((outcome:{id:string})=>outcome.id)).toEqual([outcomeId]);
+  expect(prompt.sources.map((source:{id:string})=>source.id)).toEqual([fileId]);
+ });
  it('uses the owner model, RPS fallback, and releases quota without publishing',async()=>{
   const draft=await generateScheduledClassDraft(pb as never,user,{sessionId,minutes:60});
   expect(mocks.resolve).toHaveBeenCalledWith(user.id,'lesson_plan');expect(mocks.retrieve).not.toHaveBeenCalled();expect(draft.draft.activities).toHaveLength(3);expect(draft.draft.notes[0]).toContain('RPS');expect(mocks.generate.mock.calls[0][1].prompt).toContain('"includeQuiz":false');expect(mocks.commit).toHaveBeenCalledOnce();expect(mocks.release).toHaveBeenCalledOnce();

@@ -8,7 +8,7 @@ export const action=withApi(async({request})=>{
  const body=await readJsonBody<Record<string,unknown>>(request);
  if(typeof body.sessionId!=='string'||!['context','generate'].includes(String(body.action)))return apiError(422,'Pilih pertemuan dan aksi yang valid.');
  try{
-  if(body.action==='context')return json({context:await scheduledAcademicContext(auth.pb,auth.user,body.sessionId)});
+  if(body.action==='context')return json({context:await scheduledAcademicContext(auth.pb,auth.user,body.sessionId,body.builderId)});
   return json({proposal:await generateScheduledClassDraft(auth.pb,auth.user,body)});
  }catch(error){
   if(error instanceof Response)return error;

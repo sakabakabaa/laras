@@ -105,6 +105,7 @@ export type BuilderDocument = {
 	results: { release: 'manual' };
 };
 export type BuilderKey = {
+	review?: { source: 'printed' | 'inferred' | 'unknown'; confirmed: boolean };
 	strategy:
 		'single_choice' | 'exact_text' | 'matching' | 'rubric' | 'feedback_only';
 	correctOptionId?: string;
@@ -139,6 +140,7 @@ export type BuilderListItem = {
 	courseTitle: string;
 };
 export type BuilderIssue = {
+	field?: keyof BuilderDocument['delivery'];
 	activityId?: string;
 	blockId?: string;
 	questionId?: string;
@@ -399,7 +401,7 @@ export function activitySummary(
 export function builderIssues({
 	document: d,
 	privateKeys,
-}: BuilderEnvelope): BuilderIssue[] {
+}: BuilderEnvelope, now = Date.now()): BuilderIssue[] {
 	const issues: BuilderIssue[] = [];
 	const add = (
 		message: string,
@@ -456,6 +458,8 @@ export function builderIssues({
 					continue;
 				}
 				if (!plain(q.prompt).trim()) add('Isi pertanyaan.', a.id, b.id, id);
+				if (key.review && !key.review.confirmed)
+					add('Tinjau kunci dari sumber AI sebelum menerbitkan.', a.id, b.id, id);
 				if (q.rubric?.criteria.some((c) => !c.label.trim()))
 					add('Isi nama kriteria rubrik.', a.id, b.id, id);
 				if (
@@ -494,6 +498,8 @@ export function builderIssues({
 			add('Isi waktu mulai dan selesai.');
 		else if (Date.parse(d.delivery.endsAt) <= Date.parse(d.delivery.startsAt))
 			add('Waktu selesai harus setelah mulai.');
+		if (d.delivery.endsAt && Date.parse(d.delivery.endsAt) <= now)
+			issues.push({ message: 'Jadwal kelas sudah berakhir.', field: 'endsAt' });
 
 	} else {
 		if (!d.delivery.dueAt) add('Isi batas pengumpulan tugas.');
@@ -511,6 +517,9 @@ export function builderIssues({
 			add(
 				'Tutup pengumpulan harus setelah atau sama dengan batas pengumpulan.',
 			);
+		const cutoff = d.delivery.allowLate ? d.delivery.hardCloseAt || d.delivery.dueAt : d.delivery.dueAt;
+		if (cutoff && Date.parse(cutoff) <= now)
+			issues.push({ message: 'Jadwal tugas sudah berakhir.', field: d.delivery.allowLate && d.delivery.hardCloseAt ? 'hardCloseAt' : 'dueAt' });
 	}
 	return issues;
 }

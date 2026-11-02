@@ -1,5 +1,8 @@
 import type {ScheduledLesson} from '@/lib/scheduled-lesson';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import pb from '@/lib/pocketbase-client';
+import { useUnsavedWork } from '@/hooks/use-unsaved-work';
+import { readAuthoringRecovery, writeAuthoringRecovery, type AuthoringRecovery } from '@/lib/authoring-recovery';
 import { ACTIVITY_LABELS, fromWibInput, scheduledRequest, toWibInput, wibLabel, type ScheduledWorksheet, type ActivityKind, type ScheduledClassState } from '@/lib/scheduled-classes';
 import { DEFAULT_QUIZ_CONFIG, type QuizQuestionEditable } from '@/lib/task-types';
 import { QuizBuilder } from '@/components/app/task-builders/quiz-builder';
@@ -11,6 +14,12 @@ import {ScheduledMaterialPicker} from './scheduled-material-picker';
 
 type DraftActivity = {key: string; kind: ActivityKind; title: string; minutes: number; required: boolean; content: string; url: string; questions: QuizQuestionEditable[];worksheet?:ScheduledWorksheet;lesson?:ScheduledLesson;materialIds:string[];cpmkIds:string[];subCpmkIds:string[]};
 function blankActivity(kind: ActivityKind): DraftActivity {return {key: crypto.randomUUID(), kind, title: ACTIVITY_LABELS[kind], minutes: kind === 'exit_ticket' ? 5 : 15, required: true, content: '', url: '', questions: [],materialIds:[],cpmkIds:[],subCpmkIds:[]};}
+type ScheduledRecovery = { title: string; instructions: string; start: string; joinUntil: string; lateAfterMin: number; section: string; activities: DraftActivity[] };
+function validRecovery(value: unknown): value is ScheduledRecovery {
+  if (!value || typeof value !== 'object') return false;
+  const draft = value as ScheduledRecovery;
+  return ['title','instructions','start','joinUntil','section'].every(field=>typeof draft[field as keyof ScheduledRecovery]==='string') && Number.isFinite(draft.lateAfterMin) && Array.isArray(draft.activities) && draft.activities.length<=30 && draft.activities.every(activity=>activity && typeof activity.key==='string' && typeof activity.title==='string' && Array.isArray(activity.questions) && Array.isArray(activity.materialIds) && Array.isArray(activity.cpmkIds) && Array.isArray(activity.subCpmkIds));
+}
 
 export function ScheduledClassEditor({state, onSaved, focusAi = false}: {state: ScheduledClassState; onSaved: (s: ScheduledClassState) => void; focusAi?: boolean}) {
   const c = state.class;
@@ -27,25 +36,38 @@ export function ScheduledClassEditor({state, onSaved, focusAi = false}: {state: 
   const {sections} = useCourseSections(state.session.course);
   const minutes = activities.reduce((sum, a) => sum + (Number(a.minutes) || 0), 0);
   const remoteChanged = (state.class?.revision || 0) !== revision;
+  const recoveryKey=`laras-authoring:${pb.authStore.record?.id || 'anonymous'}:session:${state.session.id}`;
+  const [recovery,setRecovery]=useState<AuthoringRecovery<ScheduledRecovery>|null>(null),[recoveryReady,setRecoveryReady]=useState(false),[storageWarning,setStorageWarning]=useState('');
+  const saving=useRef(false);
+  useUnsavedWork(dirty);
   useEffect(() => {
-    if (!dirty) return;
-    const warn = (e: BeforeUnloadEvent) => {e.preventDefault(); e.returnValue = '';};
-    window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty]);
+    try { setRecovery(readAuthoringRecovery(localStorage,recoveryKey,validRecovery)); }
+    catch { setStorageWarning('Salinan pemulihan perangkat tidak tersedia. Simpan draf sebelum keluar.'); }
+    setRecoveryReady(true);
+  },[recoveryKey]);
+  useEffect(()=>{
+    if(!dirty || !recoveryReady || recovery)return;
+    try {writeAuthoringRecovery(localStorage,recoveryKey,{title,instructions,start,joinUntil,lateAfterMin,section,activities},String(revision));}
+    catch {setStorageWarning('Salinan pemulihan perangkat tidak tersedia. Simpan draf sebelum keluar.');}
+  },[dirty,recoveryReady,recovery,recoveryKey,title,instructions,start,joinUntil,lateAfterMin,section,activities,revision]);
   const changeActivity = (index: number, patch: Partial<DraftActivity>) => {setActivities(rows => rows.map((a, i) => i === index ? {...a, ...patch} : a)); setDirty(true); setNotice('');};
   const move = (index: number, delta: number) => {setActivities(rows => {const next = [...rows]; [next[index], next[index + delta]] = [next[index + delta], next[index]]; return next;}); setDirty(true);};
   const save = async (publish: boolean) => {
+    if(saving.current || recovery || remoteChanged)return;
     if (publish && !window.confirm('Jadwalkan kelas? Isi kegiatan akan dikunci dan kelas berjalan otomatis sesuai waktu WIB.')) return;
+    saving.current=true;
     setBusy(true); setError(''); setNotice('');
     try {
       const next = await scheduledRequest(state.session.id, publish ? 'schedule' : 'savePlan', {baseRevision: revision, title, instructions, section, startsAt: fromWibInput(start), joinUntil: fromWibInput(joinUntil), lateAfterMin, activities});
-      setRevision(next.class!.revision); setDirty(false); onSaved(next); setNotice('Draf tersimpan.');
-    } catch (e) {setError((e as Error).message);} finally {setBusy(false);}
+      setRevision(next.class!.revision); setDirty(false); try{localStorage.removeItem(recoveryKey);}catch{} onSaved(next); setNotice('Draf tersimpan.');
+    } catch (e) {setError((e as Error).message);} finally {saving.current=false;setBusy(false);}
   };
   return <div className="sc-builder">
+    {storageWarning&&<p role="status">{storageWarning}</p>}
+    {recovery&&<section className="sc-card" role="alert"><h2>Salinan perangkat tersedia</h2><p>Perangkat: {recovery.value.title} · {recovery.value.activities.length} kegiatan · revisi {recovery.baseRevision}. Server: {title} · {activities.length} kegiatan · revisi {revision}. Pemulihan tidak menerbitkan kelas.</p>{recovery.baseRevision!==String(revision)&&<p>Revisi server berbeda. Tinjau dan salin bagian yang diperlukan; pemulihan tidak akan menimpa server otomatis.</p>}<button onClick={()=>{if(recovery.baseRevision!==String(revision)&&!window.confirm('Versi server lebih baru atau berbeda. Pulihkan salinan perangkat ke editor untuk ditinjau?'))return;const value=recovery.value;setTitle(value.title);setInstructions(value.instructions);setStart(value.start);setJoinUntil(value.joinUntil);setLateAfterMin(value.lateAfterMin);setSection(value.section);setActivities(value.activities);setDirty(true);setRecovery(null);}}>Pulihkan ke editor</button><button onClick={()=>{try{localStorage.removeItem(recoveryKey);}catch{}setRecovery(null);}}>Gunakan versi server</button></section>}
     {remoteChanged && <p role="alert" className="sc-alert">Draf berubah di tempat lain. Salin perubahan Anda dan muat ulang halaman sebelum menyimpan.</p>}
     {error && <p role="alert" className="sc-alert">{error}</p>}{notice && <p role="status">{notice}</p>}
-    <fieldset disabled={busy || remoteChanged} className="sc-fields">
+    <fieldset disabled={busy || remoteChanged || Boolean(recovery) || !recoveryReady} className="sc-fields">
       <ScheduledClassAiPanel sessionId={state.session.id} focusOnLoad={focusAi} onContext={setAcademic} onApply={draft=>{if(!window.confirm('Ganti judul, instruksi, dan seluruh kegiatan editor dengan usulan AI? Perubahan yang belum tersimpan akan diganti.'))return;setTitle(draft.title);setInstructions(draft.instructions);setActivities(draft.activities.map(a=>({...a,key:crypto.randomUUID()})));setDirty(true);setNotice('Usulan AI diterapkan. Tinjau lalu simpan draf atau jadwalkan kelas.');}}/>
       <section className="sc-card"><h2>Jadwal kelas</h2><p>Waktu menggunakan WIB. Kelas berjalan otomatis meskipun dosen sedang offline.</p>
         <label>Judul kelas<input value={title} maxLength={200} onChange={e => {setTitle(e.target.value); setDirty(true);}}/></label>

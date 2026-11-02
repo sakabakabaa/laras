@@ -78,7 +78,7 @@ function context(app, user, runId) {
 		keys: data(key, 'keys').answersByQuestionId || {},
 	};
 }
-function publishIssues(d, keys) {
+function publishIssues(d, keys, now = Date.now()) {
 	const errors = [];
 	const add = (m) => errors.push(m);
 	if (!d.title.trim() || !d.activities.length)
@@ -121,6 +121,8 @@ function publishIssues(d, keys) {
 			for (const id of ids(b)) {
 				const q = d.questionsById[id],
 					k = keys[id];
+				if (k.review && !k.review.confirmed)
+					add('Tinjau kunci dari sumber AI sebelum menerbitkan.');
 				if (!plain(q.prompt).trim()) add('Isi pertanyaan.');
 				if (q.options?.some((o) => !o.label.trim())) add('Lengkapi pilihan.');
 				if (
@@ -153,14 +155,14 @@ function publishIssues(d, keys) {
 			Date.parse(t.checkInClosesAt) > Date.parse(t.endsAt)
 		)
 			add('Batas check-in harus dalam waktu kelas.');
-		if (Date.parse(t.endsAt) <= Date.now()) add('Jadwal kelas sudah berakhir.');
+		if (Date.parse(t.endsAt) <= now) add('Jadwal kelas sudah berakhir.');
 	} else {
 		if (!t.dueAt) add('Isi batas pengumpulan.');
 		if (t.availableAt && Date.parse(t.availableAt) >= Date.parse(t.dueAt))
 			add('Waktu tersedia harus sebelum batas pengumpulan.');
 		if (t.hardCloseAt && Date.parse(t.hardCloseAt) < Date.parse(t.dueAt))
 			add('Tutup pengumpulan harus setelah batas pengumpulan.');
-		if (Date.parse(t.hardCloseAt || t.dueAt) <= Date.now())
+		if (Date.parse(t.allowLate ? t.hardCloseAt || t.dueAt : t.dueAt) <= now)
 			add('Jadwal tugas sudah berakhir.');
 	}
 	return Array.from(new Set(errors));

@@ -271,6 +271,11 @@ function normalize(body) {
 		)
 			fail('Strategi penilaian tidak valid.');
 		const out = { strategy: k.strategy };
+		if (k.review !== undefined) {
+			if (!k.review || !['printed', 'inferred', 'unknown'].includes(k.review.source) || typeof k.review.confirmed !== 'boolean')
+				fail('Status tinjauan kunci tidak valid.');
+			out.review = { source: k.review.source, confirmed: k.review.confirmed };
+		}
 		if (k.correctOptionId !== undefined) {
 			out.correctOptionId = k.correctOptionId ? id(k.correctOptionId) : '';
 			if (

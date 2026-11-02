@@ -48,6 +48,7 @@ export async function compileBookPage(plan:BookPagePlan,settings:BuilderImportSe
     const id=appendQuestion(envelope,kind as Parameters<typeof appendQuestion>[1]);qids.push(id);
     const q=envelope.document.questionsById[id],key=envelope.privateKeys.answersByQuestionId[id];q.prompt=rich(it.prompt.replace(/\s*_{2,}\s*$/, ''));q.points=b.type==='reflection'?0:it.points;
     const known=it.keyEvidence!=='unknown'&&!b.requiresAudio;
+    key.review={source:known?it.keyEvidence:'unknown',confirmed:known&&it.keyEvidence==='printed'};
     if(it.keyEvidence==='inferred'&&known)report.inferredKeys.push(a.title+' · '+it.prompt.slice(0,140));
     if(!known&&!['long_writing','reflection'].includes(kind))report.warnings.push(a.title+' · kunci perlu ditinjau: '+it.prompt.slice(0,140));
     key.explanation=rich(it.explanation);key.privateGuidance=rich((known?'Sumber kunci: '+(it.keyEvidence==='printed'?'tercetak pada halaman':'disimpulkan AI; periksa sebelum menerbitkan'):'Kunci belum dapat ditentukan dari halaman ini.')+'\n'+it.explanation);

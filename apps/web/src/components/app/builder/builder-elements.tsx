@@ -556,6 +556,14 @@ export function KeyInspector({
 					<fieldset className="bd-key" key={id} id={'builder-key-' + id}>
 						<legend>Butir {index + 1}</legend>
 						<p>{plain(q.prompt) || 'Pertanyaan belum diisi'}</p>
+						{key.review && (
+							<label className="bd-check">
+								<input type="checkbox" checked={key.review.confirmed} onChange={(event) => change((next) => {
+									next.privateKeys.answersByQuestionId[id].review!.confirmed = event.target.checked;
+								})} />
+								Saya sudah memeriksa kunci {key.review.source === 'inferred' ? 'yang disimpulkan AI' : key.review.source === 'unknown' ? 'yang belum diketahui dari sumber' : 'tercetak'} dengan sumber dan memperbaikinya bila perlu.
+							</label>
+						)}
 						<label className="bd-check">
 							<input
 								type="checkbox"

@@ -38,6 +38,8 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import pb from '@/lib/pocketbase-client';
+import { createBuilderSaveQueue } from '@/lib/builder-save';
+import { BuilderPublishDialog, builderPublishWarnings } from './builder-publish-dialog';
 import { toWibInput, fromWibInput } from '@/lib/scheduled-classes';
 import {
 	appendBlock,
@@ -78,11 +80,12 @@ function readRecovery(key: string) {
 		const saved = JSON.parse(localStorage.getItem(key) || 'null');
 		if (
 			saved &&
+			Number.isFinite(saved.at) && saved.at <= Date.now() &&
 			Date.now() - saved.at < 7 * 86400000 &&
 			saved.envelope?.document?.schemaVersion === 1 &&
 			saved.envelope?.privateKeys?.schemaVersion === 1
 		)
-			return saved.envelope as BuilderEnvelope;
+			return { envelope: saved.envelope as BuilderEnvelope, at: saved.at as number, baseRevision: saved.baseRevision as number | undefined };
 	} catch {
 		/* Storage may be blocked. */
 	}
@@ -117,6 +120,11 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[publishing, setPublishing] = useState(false),
 		[inspectorOpen, setInspectorOpen] = useState(false),
 		[historyVersion, setHistoryVersion] = useState(0);
+	const [online, setOnline] = useState(true);
+	const [storageWarning, setStorageWarning] = useState('');
+	const [recoveryInfo, setRecoveryInfo] = useState<{ at: number; baseRevision?: number } | null>(null);
+	const [publishReview, setPublishReview] = useState(false);
+	const saveQueue = useRef(createBuilderSaveQueue((command) => builderRequest<BuilderRecord>('save', command)));
 	const current = useRef<BuilderEnvelope | null>(null),
 		revisionRef = useRef(0),
 		savingRef = useRef(false),
@@ -133,6 +141,18 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	activeId.current = id;
 	const storageKey = `laras-builder:${pb.authStore.record?.id || 'anonymous'}:${id}`;
 	const dirty = Boolean(draft && encode(draft) !== saved);
+	useEffect(() => {
+		const update = () => {
+			setOnline(navigator.onLine);
+		};
+		update();
+		window.addEventListener('online', update);
+		window.addEventListener('offline', update);
+		return () => {
+			window.removeEventListener('online', update);
+			window.removeEventListener('offline', update);
+		};
+	}, []);
 	useEffect(() => {
 		const owner = pb.authStore.record?.id;
 		return pb.authStore.onChange(() => {
@@ -161,8 +181,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		current.current = null;
 		setError('');
 		setConflict(false);
+		saveQueue.current.reset();
 		conflictRef.current = false;
 		setRecovery(null);
+		setRecoveryInfo(null);
 		past.current = [];
 		future.current = [];
 		builderRequest<BuilderRecord>('get', { id })
@@ -176,7 +198,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				setActive(r.document.activities[0]?.id || '');
 				setSelected('');
 				const local = readRecovery(storageKey);
-				if (local && encode(local) !== encode(envelope)) setRecovery(local);
+				if (local && encode(local.envelope) !== encode(envelope)) {
+					setRecovery(local.envelope);
+					setRecoveryInfo({ at: local.at, baseRevision: local.baseRevision });
+				}
 			})
 			.catch((e) => {
 				if (live) setError(e.message);
@@ -201,20 +226,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	};
 	const save = useCallback(async () => {
 		if (!current.current || savingRef.current || conflictRef.current) return;
-		const savingId = id,
-			snapshot = structuredClone(current.current),
-			hash = encode(snapshot),
-			baseRevision = revisionRef.current;
+		if (!navigator.onLine) { setError('Anda sedang offline. Perubahan belum tersimpan di server; coba simpan setelah terhubung.'); return; }
+		const savingId = id;
 		savingRef.current = true;
 		setSaving(true);
 		setError('');
 		try {
-			const record = await builderRequest<BuilderRecord>('save', {
-				id: savingId,
-				baseRevision,
-				commandId: uid(),
-				...snapshot,
-			});
+			const { record, hash } = await saveQueue.current.save(savingId, revisionRef.current, current.current);
 			if (activeId.current !== savingId) return;
 			revisionRef.current = record.revision;
 			setRevision(record.revision);
@@ -233,10 +251,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		}
 	}, [id]);
 	useEffect(() => {
-		if (!draft || !dirty || saving || recovery || conflict || error) return;
+		if (!draft || !dirty || saving || recovery || conflict || error || !online) return;
 		const timer = window.setTimeout(() => void save(), 1000);
 		return () => window.clearTimeout(timer);
-	}, [draft, dirty, saving, recovery, conflict, error, save]);
+	}, [draft, dirty, saving, recovery, conflict, error, online, save]);
 	useEffect(() => {
 		if (!draft || recovery) return;
 		try {
@@ -251,7 +269,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				);
 			else localStorage.removeItem(storageKey);
 		} catch {
-			/* Server save still works when device storage is unavailable. */
+			setStorageWarning('Salinan pemulihan perangkat tidak tersedia. Simpan di server atau unduh draf sebelum keluar.');
 		}
 	}, [draft, dirty, recovery, storageKey]);
 	useEffect(() => {
@@ -273,10 +291,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		install(next);
 		setHistoryVersion((v) => v + 1);
 	};
-	const download = () => {
-		if (!current.current) return;
+	const downloadEnvelope = (envelope: BuilderEnvelope) => {
 		const url = URL.createObjectURL(
-			new Blob([JSON.stringify(current.current, null, 2)], {
+			new Blob([JSON.stringify(envelope, null, 2)], {
 				type: 'application/json',
 			}),
 		);
@@ -286,6 +303,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		a.click();
 		URL.revokeObjectURL(url);
 	};
+	const download = () => { if (current.current) downloadEnvelope(current.current); };
 	const reload = async () => {
 		if (
 			dirty &&
@@ -302,6 +320,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			revisionRef.current = r.revision;
 			setRevision(r.revision);
 			setConflict(false);
+			saveQueue.current.reset();
 			conflictRef.current = false;
 			past.current = [];
 			future.current = [];
@@ -355,6 +374,18 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			];
 		});
 	const locked = conflict || Boolean(recovery);
+	const publish = async () => {
+		if (dirty || saving || locked || publishing || !online || builderIssues(draft).length) return;
+		setPublishing(true); setError('');
+		if (publishCommand.current.revision !== revision) publishCommand.current = { revision, id: uid() };
+		try {
+			const result = await deliveryRequest<{ runId: string }>('publish', { id, baseRevision: revision, commandId: publishCommand.current.id });
+			navigate('/app/kegiatan/' + result.runId);
+		} catch (failure) {
+			setError((failure as Error).message);
+			setPublishReview(false);
+		} finally { setPublishing(false); }
+	};
 	const finishDrag = () => {
 		dragItem.current = null;
 		setDragging(false);
@@ -803,7 +834,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				</div>
 				<div className="bd-toolbar-actions">
 					<span className="bd-save-status" role="status">
-						{conflict
+						{!online ? 'Offline · belum tersimpan di server' : conflict
 							? 'Konflik revisi'
 							: saving
 								? 'Menyimpan…'
@@ -901,6 +932,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					))}
 				</nav>
 			</div>
+			{storageWarning && <p role="status">{storageWarning}</p>}
 			{error && (
 				<div className="bd-error" role="alert">
 					<p>{error}</p>
@@ -925,10 +957,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					<p>
 						Versi ini berbeda dari server. Pilih versi yang ingin dilanjutkan.
 					</p>
+					{recoveryInfo && <p>Perangkat: revisi {recoveryInfo.baseRevision ?? 'tidak diketahui'} · {new Date(recoveryInfo.at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB. Server: revisi {revision}. Pemulihan hanya memuat editor; penyimpanan membuat revisi baru.</p>}
 					<div className="bd-inline-actions">
+						<button className="bd-secondary" onClick={() => downloadEnvelope(recovery)}>Unduh salinan perangkat</button>
 						<button
 							className="bd-primary"
 							onClick={() => {
+								if (recoveryInfo?.baseRevision !== revision && !window.confirm('Revisi perangkat dan server berbeda. Muat salinan perangkat ke editor untuk ditinjau sebelum menyimpan?')) return;
 								install(recovery);
 								setRecovery(null);
 							}}
@@ -1327,35 +1362,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							disabled={
 								issues.length > 0 || dirty || saving || locked || publishing
 							}
-							onClick={async () => {
-								if (
-									!window.confirm(
-										'Terbitkan versi revisi ' +
-											revision +
-											' untuk mahasiswa terdaftar? Ini membuat kegiatan baru.',
-									)
-								)
-									return;
-								setPublishing(true);
-								setError('');
-								if (publishCommand.current.revision !== revision)
-									publishCommand.current = { revision, id: uid() };
-								try {
-									const result = await deliveryRequest<{ runId: string }>(
-										'publish',
-										{
-											id,
-											baseRevision: revision,
-											commandId: publishCommand.current.id,
-										},
-									);
-									navigate('/app/kegiatan/' + result.runId);
-								} catch (e) {
-									setError((e as Error).message);
-								} finally {
-									setPublishing(false);
-								}
-							}}
+								onClick={() => setPublishReview(true)}
 						>
 							{publishing
 								? 'Menerbitkan…'
@@ -1368,6 +1375,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						)}
 					</div>
 					<BuilderRunList documentId={id} />
+					{builderPublishWarnings(draft).length > 0 && <ul aria-label="Peringatan jadwal">{builderPublishWarnings(draft).map((warning) => <li key={warning}>{warning}</li>)}</ul>}
 					<h2>
 						{issues.length
 							? `${issues.length} bagian perlu dilengkapi`
@@ -1434,7 +1442,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 											} else {
 												setPanel('delivery');
 												requestAnimationFrame(() => {
-													const field = issue.message.includes('check-in')
+													const field = issue.field || (issue.message.includes('check-in')
 														? 'checkInClosesAt'
 														: issue.message.includes('Tutup pengumpulan')
 															? 'hardCloseAt'
@@ -1444,7 +1452,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																	? 'dueAt'
 																	: issue.message.includes('selesai')
 																		? 'endsAt'
-																		: 'startsAt';
+																		: 'startsAt');
 													document
 														.getElementById('builder-delivery-' + field)
 														?.focus();
@@ -1509,6 +1517,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					</button>
 				</div>
 			)}
+			{publishReview && <BuilderPublishDialog id={id} revision={revision} envelope={draft} busy={publishing} blocked={dirty || saving || locked || !online} onClose={() => setPublishReview(false)} onPublish={publish} />}
 			{savedItems && (
 				<BuilderSavedItems
 					id={id}

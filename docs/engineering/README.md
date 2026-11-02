@@ -8,12 +8,13 @@ Reviewed against source commit `a909540` on 12 October 2026. Configuration defau
 
 1. [Architecture](architecture.md): runtime, authentication, directories and naming.
 2. [Feature guide](features.md): where to edit a feature and its data flow.
-3. [Data model](data-model.md): collection groups, ownership and migration history.
-4. [AI and evidence](ai-and-evidence.md): providers, prompts, grounding and review.
-5. [Local development and operations](operations.md): setup, checks, deployment and rollback.
-6. [Source atlas](source-atlas.md): every first-party source module, its imports and database references.
-7. [Routes](routes.md): all registered URL patterns and handler files.
-8. [Configuration](configuration.md): environment-variable reference and consuming files.
+3. [Builder layout](builder-layout.md): sections, containers and compatibility with flat activities.
+4. [Data model](data-model.md): collection groups, ownership and migration history.
+5. [AI and evidence](ai-and-evidence.md): providers, prompts, grounding and review.
+6. [Local development and operations](operations.md): setup, checks, deployment and rollback.
+7. [Source atlas](source-atlas.md): every first-party source module, its imports and database references.
+8. [Routes](routes.md): all registered URL patterns and handler files.
+9. [Configuration](configuration.md): environment-variable reference and consuming files.
 
 See also [production/correction workflow](revision-workflow.md) for historical paper-feedback provenance and the one-time importer.
 

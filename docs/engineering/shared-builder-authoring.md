@@ -23,6 +23,10 @@ The current media path is explicit HTTPS links; library upload/import workflows 
 
 The left panel defaults to a searchable, categorized **Elemen** library, with **Outline** available in a second tab. Icon tiles include descriptions and separate choices for multiple-choice and short-answer questions. Click a tile to append to the active activity; a plus control between blocks selects an exact insertion position. Native desktop dragging supports adding from the library and moving an existing block using its grip, including across activities. Moving preserves question IDs and private keys. Existing arrow controls remain available for keyboard and touch use. Narrow screens use a left drawer with tap-to-add. New insertion and move operations use the existing undo/redo, recovery, and serialized autosave path; no schema or server changes are required.
 
+## Layout sections, containers and structure
+
+Authoring can organize an activity into nested sections/containers while `activity.blocks` remains the flat authoritative content list. The optional layout is versioned separately, and a draft without one keeps the original flat rendering. Preview and student runtime use the same layout renderer as the canvas; blocks missing from the tree appear at the end, so moving, duplicating, importing or deleting content cannot hide it. See [builder-layout.md](builder-layout.md).
+
 ## Persistence and safety
 
 Migration `1793424000_builder_drafts.js` creates `builder_documents` and `builder_private_keys`. All SDK CRUD rules are locked. Authenticated faculty commands through `POST /api/laras/builder` provide `create`, `get`, `list`, and `save`.

@@ -132,6 +132,56 @@ function asset(value) {
 		name: str(a.name, 200),
 	};
 }
+function layout(value, blockIds, unique) {
+	const source = obj(value);
+	if (source.schemaVersion !== 1) fail('Versi tata letak tidak didukung.');
+	const refs = new Set();
+	let groups = 0,
+		nodes = 0;
+	const node = (value, depth) => {
+		obj(value);
+		if (++nodes > 600) fail('Jumlah simpul tata letak melewati batas.');
+		if (value.kind === 'block') {
+			const blockId = id(value.blockId);
+			if (!blockIds.has(blockId) || refs.has(blockId))
+				fail('Referensi elemen tata letak tidak valid.');
+			refs.add(blockId);
+			return { kind: 'block', blockId };
+		}
+		if (!['section', 'container'].includes(value.kind))
+			fail('Jenis bagian tata letak tidak didukung.');
+		if (depth > 3 || ++groups > 40)
+			fail('Kedalaman atau jumlah bagian tata letak melewati batas.');
+		const columns = num(value.columns, 3);
+		if (![1, 2, 3].includes(columns) || !Number.isInteger(columns))
+			fail('Jumlah kolom bagian harus 1–3.');
+		const gap = value.gap === undefined ? 'md' : value.gap;
+		const padding = value.padding === undefined ? 'none' : value.padding;
+		const surface = value.surface === undefined ? 'none' : value.surface;
+		if (!['none', 'sm', 'md', 'lg'].includes(gap))
+			fail('Jarak bagian tidak valid.');
+		if (!['none', 'sm', 'md'].includes(padding))
+			fail('Padding bagian tidak valid.');
+		if (!['none', 'muted', 'accent'].includes(surface))
+			fail('Latar bagian tidak valid.');
+		return {
+			kind: value.kind,
+			id: unique(value.id),
+			title: value.title === undefined ? '' : str(value.title, 200),
+			columns,
+			gap,
+			padding,
+			surface,
+			children: list(value.children, 600).map((child) =>
+				node(child, depth + 1),
+			),
+		};
+	};
+	return {
+		schemaVersion: 1,
+		nodes: list(source.nodes, 600).map((item) => node(item, 1)),
+	};
+}
 function normalize(body) {
 	const d = obj(body.document),
 		priv = obj(body.privateKeys);
@@ -197,15 +247,13 @@ function normalize(body) {
 		locations[value] = (locations[value] || 0) + 1;
 		return value;
 	};
-	const activities = list(d.activities, 50).map((a) => ({
-		id: unique(a.id),
-		title: str(a.title, 200),
-		required: Boolean(a.required),
-		plannedMinutes: num(a.plannedMinutes, 600),
-		blocks: list(a.blocks, 500).map((b) => {
+	const activities = list(d.activities, 50).map((a) => {
+		const blockIds = new Set();
+		const blocks = list(a.blocks, 500).map((b) => {
 			if (++blockCount > 500 || !types.includes(b.type))
 				fail('Jenis/jumlah elemen tidak didukung.');
 			const out = { id: unique(b.id), type: b.type };
+			blockIds.add(out.id);
 			if (b.body !== undefined) out.body = rich(b.body);
 			if (b.label !== undefined) out.label = str(b.label, 500);
 			if (b.url !== undefined) out.url = url(b.url);
@@ -254,8 +302,18 @@ function normalize(body) {
 				}));
 			if (b.lesson) out.lesson = lesson(b.lesson);
 			return out;
-		}),
-	}));
+		});
+		const activity = {
+			id: unique(a.id),
+			title: str(a.title, 200),
+			required: Boolean(a.required),
+			plannedMinutes: num(a.plannedMinutes, 600),
+			blocks,
+		};
+		if (a.layout !== undefined)
+			activity.layout = layout(a.layout, blockIds, unique);
+		return activity;
+	});
 	const answersByQuestionId = {};
 	for (const qid of Object.keys(keys)) {
 		if (!questionsById[qid]) fail('Kunci merujuk pertanyaan yang tidak ada.');

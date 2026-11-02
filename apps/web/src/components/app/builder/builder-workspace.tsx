@@ -1,5 +1,4 @@
 import {
-	Fragment,
 	useCallback,
 	useEffect,
 	useRef,
@@ -81,6 +80,24 @@ import {
 	BUILDER_ELEMENTS,
 	BUILDER_DRAG_TYPE,
 } from './builder-element-library';
+import { BuilderLayoutView } from './builder-layout-view';
+import {
+	BuilderLayoutBreadcrumbs,
+	BuilderLayoutInspector,
+	BuilderLayoutNavigator,
+	addLayoutGroupToActivity,
+	removeLayoutGroupFromActivity,
+} from './builder-layout-panels';
+import {
+	canMoveLayoutItem,
+	findLayoutGroup,
+	insertBlockIntoLayout,
+	moveBlockBefore,
+	moveBlockBetweenActivities,
+	moveBlockInLayout,
+	moveLayoutItem,
+	reparentLayoutItem,
+} from '@/lib/builder-layout';
 
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 type CourseOption = { id: string; title: string; code: string };
@@ -115,6 +132,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[recovery, setRecovery] = useState<BuilderEnvelope | null>(null),
 		[active, setActive] = useState(''),
 		[selected, setSelected] = useState(''),
+		[selectedNode, setSelectedNode] = useState(''),
 		[panel, setPanel] = useState<'content' | 'delivery' | 'review'>('content'),
 		[picker, setPicker] = useState(false),
 		[activityDrawer, setActivityDrawer] = useState(false),
@@ -122,6 +140,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[insertion, setInsertion] = useState<{
 			activityId: string;
 			beforeId?: string;
+			parentId?: string;
 		} | null>(null),
 		[dragging, setDragging] = useState(false),
 		[dropTarget, setDropTarget] = useState(''),
@@ -236,6 +255,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				revisionRef.current = r.revision;
 				setActive(r.document.activities[0]?.id || '');
 				setSelected('');
+				setSelectedNode('');
 				const local = readRecovery(storageKey);
 				if (local && encode(local.envelope) !== encode(envelope)) {
 					setRecovery(local.envelope);
@@ -252,6 +272,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			live = false;
 		};
 	}, [id, storageKey, install]);
+	useEffect(() => {
+		if (selected) setSelectedNode('');
+	}, [selected]);
 	const change: Change = (edit) => {
 		if (!current.current || recovery || conflict) return;
 		const prior = current.current,
@@ -372,6 +395,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			conflictRef.current = false;
 			past.current = [];
 			future.current = [];
+			setSelected('');
+			setSelectedNode('');
 		} catch (e) {
 			setError((e as Error).message);
 		} finally {
@@ -398,6 +423,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		issues = builderIssues(draft),
 		questionCount = Object.keys(d.questionsById).length,
 		points = Object.values(d.questionsById).reduce((s, q) => s + q.points, 0);
+	const selectedGroup =
+		activity?.layout && selectedNode
+			? findLayoutGroup(activity.layout, selectedNode)
+			: null;
 	const contextLabel = [
 		contextCourse ? `${contextCourse.code} · ${contextCourse.title}` : '',
 		contextMeeting
@@ -422,6 +451,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setActive(activityId);
 		setInsertion(null);
 		setSelected('');
+		setSelectedNode('');
 		setPanel('content');
 		setPicker(false);
 		setActivityDrawer(false);
@@ -442,6 +472,92 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			];
 		});
 	const locked = conflict || Boolean(recovery);
+	const selectGroup = (activityId: string, nodeId: string) => {
+		setCollapsed((items) => items.filter((id) => id !== activityId));
+		setActive(activityId);
+		setSelected('');
+		setSelectedNode(nodeId);
+		setInsertion(null);
+		setPicker(false);
+		setActivityDrawer(false);
+		setPanel('content');
+		if (window.matchMedia('(max-width: 650px)').matches) setInspectorOpen(true);
+		requestAnimationFrame(() => {
+			document.querySelector(`[data-layout-node="${nodeId}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+		});
+	};
+	const addGroup = (kind: 'section' | 'container', parentId: string | null = null) => {
+		if (!activity || locked) return;
+		let id = '';
+		change((next) => {
+			id = addLayoutGroupToActivity(next, activity.id, kind, parentId);
+		});
+		if (!id) {
+			setAnnouncement('Batas bagian atau kedalaman tata letak tercapai.');
+			return;
+		}
+		selectGroup(activity.id, id);
+		setAnnouncement(
+			kind === 'section' ? 'Bagian ditambahkan.' : 'Kontainer ditambahkan.',
+		);
+	};
+	const moveStructureItem = (itemId: string, delta: number) => {
+		if (!activity || locked) return;
+		change((next) => {
+			const target = next.document.activities.find((a) => a.id === activity.id);
+			if (!target) return;
+			if (target.layout) {
+				moveLayoutItem(target, itemId, delta);
+				return;
+			}
+			const index = target.blocks.findIndex((b) => b.id === itemId);
+			const to = index + delta;
+			if (index < 0 || to < 0 || to >= target.blocks.length) return;
+			[target.blocks[index], target.blocks[to]] = [
+				target.blocks[to],
+				target.blocks[index],
+			];
+		});
+	};
+	const moveBlockBy = (activityId: string, blockId: string, delta: number) => {
+		if (locked) return;
+		change((next) => {
+			const target = next.document.activities.find((a) => a.id === activityId);
+			if (!target) return;
+			if (target.layout) {
+				moveLayoutItem(target, blockId, delta);
+				return;
+			}
+			const index = target.blocks.findIndex((b) => b.id === blockId);
+			const to = index + delta;
+			if (index < 0 || to < 0 || to >= target.blocks.length) return;
+			[target.blocks[index], target.blocks[to]] = [
+				target.blocks[to],
+				target.blocks[index],
+			];
+		});
+	};
+	const reparentStructureItem = (
+		itemId: string,
+		direction: 'in' | 'out',
+	) => {
+		if (!activity || locked) return;
+		let moved = false;
+		change((next) => {
+			const target = next.document.activities.find((a) => a.id === activity.id);
+			if (target) moved = reparentLayoutItem(target, itemId, direction);
+		});
+		if (!moved)
+			setAnnouncement('Tidak dapat memindahkan bagian ke dalam dirinya sendiri atau melewati batas kedalaman.');
+	};
+	const removeGroup = (groupId: string, activityId = activity?.id) => {
+		if (!activityId || locked) return;
+		change((next) => {
+			removeLayoutGroupFromActivity(next, activityId, groupId);
+		});
+		setSelectedNode('');
+		setAnnouncement('Bagian dihapus. Elemen dan pertanyaan di dalamnya tetap tersimpan.');
+	};
 	const publish = async () => {
 		if (dirty || saving || locked || publishing || !online || builderIssues(draft).length) return;
 		setPublishing(true); setError('');
@@ -459,10 +575,17 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setDragging(false);
 		setDropTarget('');
 	};
-	const openElements = (activityId: string, beforeId?: string) => {
+	const openElements = (
+		activityId: string,
+		beforeId?: string,
+		parentId?: string,
+	) => {
 		setActive(activityId);
-		setInsertion({ activityId, beforeId });
+		setSelectedNode(parentId || '');
+		setInsertion({ activityId, beforeId, parentId });
 		setPanel('content');
+		setActivityDrawer(false);
+		setInspectorOpen(false);
 		setPicker(true);
 	};
 	const revealBlock = (activityId: string, blockId: string) => {
@@ -470,6 +593,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setActive(activityId);
 		setSelected(blockId);
 		setPicker(false);
+		setActivityDrawer(false);
 		requestAnimationFrame(() => {
 			const element = document.getElementById('builder-block-' + blockId);
 			element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -512,7 +636,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			beforeId: undefined as string | undefined,
 		},
 	) => {
-		const { activityId, beforeId } = position;
+		const { activityId, beforeId, parentId } = position;
 		const element = BUILDER_ELEMENTS.find((e) => e.id === elementId);
 		if (!element || !activityId || locked) return;
 		const target = current.current?.document.activities.find(
@@ -547,8 +671,18 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			}
 			const index = beforeId ? blocks.findIndex((b) => b.id === beforeId) : -1;
 			blocks.splice(index < 0 ? blocks.length : index, 0, added);
+			const targetActivity = next.document.activities.find(
+				(a) => a.id === activityId,
+			);
+			if (targetActivity?.layout) {
+				if (parentId)
+					insertBlockIntoLayout(targetActivity, blockId, parentId);
+				else if (beforeId)
+					moveBlockBefore(targetActivity, blockId, beforeId);
+				else insertBlockIntoLayout(targetActivity, blockId);
+			}
 		});
-		setInsertion({ activityId, beforeId });
+		setInsertion({ activityId, beforeId, parentId });
 		setAnnouncement(
 			`${element.label} ditambahkan ke ${target.title || 'kegiatan'}.`,
 		);
@@ -558,13 +692,14 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		event: DragEvent,
 		activityId: string,
 		beforeId?: string,
+		parentId?: string,
 	) => {
 		event.preventDefault();
 		const item = dragItem.current;
 		finishDrag();
 		if (!item || locked) return;
 		if (item.elementId) {
-			addElement(item.elementId, { activityId, beforeId });
+			addElement(item.elementId, { activityId, beforeId, parentId });
 			return;
 		}
 		if (!item.blockId || !item.activityId || item.blockId === beforeId) return;
@@ -578,17 +713,22 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			)!;
 			const to = next.document.activities.find((a) => a.id === activityId);
 			if (!to) return;
+			if (from.id !== to.id) {
+				moveBlockBetweenActivities(from, to, item.blockId!, beforeId, parentId);
+				return;
+			}
 			const index = from.blocks.findIndex((b) => b.id === item.blockId);
 			const [moving] = from.blocks.splice(index, 1);
 			const at = beforeId ? to.blocks.findIndex((b) => b.id === beforeId) : -1;
 			to.blocks.splice(at < 0 ? to.blocks.length : at, 0, moving);
+			if (to.layout) moveBlockBefore(to, item.blockId!, beforeId, parentId);
 		});
 		setInsertion(null);
 		setAnnouncement('Posisi elemen diperbarui.');
 		revealBlock(activityId, item.blockId);
 	};
-	const insertionSlot = (activityId: string, beforeId?: string) => {
-		const key = activityId + ':' + (beforeId || 'end');
+	const insertionSlot = (activityId: string, beforeId?: string, parentId?: string) => {
+		const key = activityId + ':' + (parentId || 'root') + ':' + (beforeId || 'end');
 		return (
 			<div
 				className={
@@ -607,7 +747,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				onDragLeave={() =>
 					setDropTarget((current) => (current === key ? '' : current))
 				}
-				onDrop={(event) => dropElement(event, activityId, beforeId)}
+				onDrop={(event) => dropElement(event, activityId, beforeId, parentId)}
 			>
 				<button
 					type="button"
@@ -617,7 +757,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							? `Sisipkan elemen sebelum ${BLOCK_LABELS[d.activities.find((a) => a.id === activityId)!.blocks.find((b) => b.id === beforeId)!.type]}`
 							: 'Tambah elemen di akhir kegiatan'
 					}
-					onClick={() => openElements(activityId, beforeId)}
+					onClick={() => openElements(activityId, beforeId, parentId)}
 				>
 					<Plus size={14} />
 					<span>
@@ -707,6 +847,18 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				<Plus size={16} />
 				Tambah kegiatan
 			</button>
+			<BuilderLayoutNavigator
+				activity={activity}
+				selectedNodeId={selectedNode}
+				selectedBlockId={selected}
+				disabled={locked}
+				onSelectGroup={(nodeId) => activity && selectGroup(activity.id, nodeId)}
+				onSelectBlock={(blockId) => activity && revealBlock(activity.id, blockId)}
+				onAddGroup={(kind, parentId) => addGroup(kind, parentId)}
+				onMove={moveStructureItem}
+				onReparent={reparentStructureItem}
+				onRemoveGroup={removeGroup}
+			/>
 			<p>Draf pribadi · hanya dosen</p>
 		</div>
 	);
@@ -719,10 +871,32 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		<>
 			<header>
 				<Settings2 size={16} />
-				<h2>{block ? 'Pengaturan elemen' : 'Pengaturan kegiatan'}</h2>
+				<h2>
+					{block
+						? 'Pengaturan elemen'
+						: selectedGroup
+							? selectedGroup.kind === 'section'
+								? 'Pengaturan bagian'
+								: 'Pengaturan kontainer'
+							: 'Pengaturan kegiatan'}
+				</h2>
 			</header>
 			{block ? (
 				<KeyInspector block={block} envelope={draft} onChange={change} />
+			) : selectedGroup && activity ? (
+				<BuilderLayoutInspector
+					activity={activity}
+					group={selectedGroup}
+					disabled={locked}
+					onChange={change}
+					onAddBlock={() => openElements(activity.id, undefined, selectedGroup.id)}
+					onAddGroup={(kind) => addGroup(kind, selectedGroup.id)}
+					onMove={(delta) => moveStructureItem(selectedGroup.id, delta)}
+					onReparent={(direction) =>
+						reparentStructureItem(selectedGroup.id, direction)
+					}
+					onRemove={() => removeGroup(selectedGroup.id)}
+				/>
 			) : activity ? (
 				<div className="bd-fields">
 					<label>
@@ -1044,6 +1218,21 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						{authoringTools}
 					</aside>
 					<section className="bd-canvas" aria-label="Isi kegiatan">
+						<BuilderLayoutBreadcrumbs
+							activity={activity}
+							selectedNodeId={selectedNode}
+							selectedBlockId={selected}
+							onSelectActivity={() => {
+								setSelected('');
+								setSelectedNode('');
+							}}
+							onSelectGroup={(nodeId) =>
+								activity && selectGroup(activity.id, nodeId)
+							}
+							onSelectBlock={(blockId) =>
+								activity && revealBlock(activity.id, blockId)
+							}
+						/>
 						<section className="bd-document-intro">
 							<label>
 								Instruksi umum
@@ -1094,6 +1283,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 										onClick={() => {
 											setActive(a.id);
 											setSelected('');
+											setSelectedNode('');
 										}}
 									>
 										<Settings2 size={17} />
@@ -1134,9 +1324,66 @@ export function BuilderWorkspace({ id }: { id: string }) {
 								</div>
 								{!collapsed.includes(a.id) && (
 									<>
-										{a.blocks.map((b, j) => (
-											<Fragment key={b.id}>
-												{insertionSlot(a.id, b.id)}
+										<BuilderLayoutView
+											activity={a}
+											renderBeforeBlock={(b) =>
+												insertionSlot(a.id, b.id)
+											}
+											renderGroup={(group, children) => (
+												<>
+													<div className="bd-layout-group-head">
+														<button
+															type="button"
+															className="bd-layout-group-select"
+															aria-current={
+																selectedNode === group.id ? 'true' : undefined
+															}
+															onClick={() => selectGroup(a.id, group.id)}
+														>
+															<strong>
+																{group.title ||
+																	(group.kind === 'section'
+																		? 'Bagian'
+																		: 'Kontainer')}
+															</strong>
+															<small>
+																{group.kind === 'section' ? 'Bagian' : 'Kontainer'} ·{' '}
+																{group.columns} kolom
+															</small>
+														</button>
+														<span className="bd-layout-group-actions">
+															<button
+																type="button"
+																className="bd-icon"
+																disabled={locked}
+																aria-label="Tambah elemen ke bagian ini"
+																title="Tambah elemen ke bagian ini"
+																onClick={() =>
+																	openElements(a.id, undefined, group.id)
+																}
+															>
+																<Plus size={13} />
+															</button>
+															<button
+																type="button"
+																className="bd-icon"
+																disabled={locked}
+																aria-label="Hapus bagian, simpan isinya"
+																title="Hapus bagian, simpan isinya"
+															onClick={() => removeGroup(group.id, a.id)}
+															>
+																<Trash2 size={13} />
+															</button>
+														</span>
+													</div>
+													{children}
+													<div className="bd-layout-group-tail">
+														{insertionSlot(a.id, undefined, group.id)}
+													</div>
+												</>
+											)}
+											renderBlock={(b) => {
+												return (
 												<article
 													className={
 														'bd-block' +
@@ -1220,11 +1467,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																				)!,
 																			target = next.document.activities.find(
 																				(v) => v.id === targetId,
-																			)!;
-																		source.blocks = source.blocks.filter(
-																			(v) => v.id !== b.id,
-																		);
-																		target.blocks.push(b);
+																			);
+																		if (target)
+																			moveBlockBetweenActivities(
+																				source,
+																				target,
+																				b.id,
+																			);
 																	});
 																	revealBlock(targetId, b.id);
 																	setAnnouncement('Elemen dipindahkan.');
@@ -1261,19 +1510,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Naikkan elemen"
-																disabled={j === 0}
-																onClick={() =>
-																	change((next) => {
-																		const blocks =
-																			next.document.activities.find(
-																				(x) => x.id === a.id,
-																			)!.blocks;
-																		[blocks[j - 1], blocks[j]] = [
-																			blocks[j],
-																			blocks[j - 1],
-																		];
-																	})
-																}
+															disabled={locked || !canMoveLayoutItem(a, b.id, -1)}
+															onClick={() => moveBlockBy(a.id, b.id, -1)}
 															>
 																<ArrowUp size={14} />
 															</button>
@@ -1281,19 +1519,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Turunkan elemen"
-																disabled={j === a.blocks.length - 1}
-																onClick={() =>
-																	change((next) => {
-																		const blocks =
-																			next.document.activities.find(
-																				(x) => x.id === a.id,
-																			)!.blocks;
-																		[blocks[j + 1], blocks[j]] = [
-																			blocks[j],
-																			blocks[j + 1],
-																		];
-																	})
-																}
+															disabled={locked || !canMoveLayoutItem(a, b.id, 1)}
+															onClick={() => moveBlockBy(a.id, b.id, 1)}
 															>
 																<ArrowDown size={14} />
 															</button>
@@ -1322,8 +1549,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 														onChange={change}
 													/>
 												</article>
-											</Fragment>
-										))}
+												);
+											}}
+										/>
 										{!a.blocks.length && (
 											<div className="bd-empty-activity">
 												<textarea

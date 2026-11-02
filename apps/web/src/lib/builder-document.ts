@@ -1,4 +1,5 @@
 import type { ScheduledLesson } from './scheduled-lesson';
+import { insertBlockIntoLayout, layoutItemLocation, removeBlockFromLayout, type BuilderLayout } from './builder-layout';
 import pb from './pocketbase-client';
 
 export type RichText = {
@@ -78,6 +79,7 @@ export type BuilderActivity = {
 	required: boolean;
 	plannedMinutes: number;
 	blocks: BuilderBlock[];
+	layout?: BuilderLayout;
 };
 export type BuilderDocument = {
 	schemaVersion: 1;
@@ -306,6 +308,7 @@ export function removeBlock(
 		delete draft.privateKeys.answersByQuestionId[id];
 	}
 	a.blocks = a.blocks.filter((b) => b.id !== blockId);
+	removeBlockFromLayout(a, blockId);
 }
 export function duplicateActivity(draft: BuilderEnvelope, activityId: string) {
 	const original = draft.document.activities.find((a) => a.id === activityId)!;
@@ -330,6 +333,7 @@ export function duplicateActivity(draft: BuilderEnvelope, activityId: string) {
 		typeof o === 'string'
 			? [
 					'id',
+					'blockId',
 					'questionId',
 					'questionIds',
 					'criterionIds',
@@ -383,6 +387,8 @@ export function duplicateBlock(
 		(a) => a.id !== copyId,
 	);
 	original.blocks.splice(at + 1, 0, selected);
+	const location = layoutItemLocation(original, blockId);
+	if (location) insertBlockIntoLayout(original, selected.id, location.parent?.id || null, location.index + 1);
 	return selected.id;
 }
 export function activitySummary(
@@ -586,6 +592,7 @@ export function copyBuilder(
 		typeof o === 'string'
 			? [
 					'id',
+					'blockId',
 					'questionId',
 					'questionIds',
 					'criterionIds',

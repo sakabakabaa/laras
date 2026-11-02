@@ -12,6 +12,11 @@ import {
 	type BuilderEnvelope,
 	type BuilderQuestion,
 } from '@/lib/builder-document';
+import {
+	flattenResolvedBlocks,
+	resolveActivityLayout,
+} from '@/lib/builder-layout';
+import { BuilderLayoutView } from './builder-layout-view';
 import type {
 	BilingualText,
 	LessonScene,
@@ -1090,6 +1095,15 @@ export function BuilderPreview({
 		if (readOnly) return;
 		(onAnswersChange || setLocalAnswers)(value);
 	};
+	const orderedBlocks = new Map<string, BuilderBlock[]>();
+	const previousBlock = new Map<string, BuilderBlock | undefined>();
+	for (const activity of d.activities) {
+		const ordered = flattenResolvedBlocks(resolveActivityLayout(activity));
+		orderedBlocks.set(activity.id, ordered);
+		ordered.forEach((block, index) =>
+			previousBlock.set(block.id, ordered[index - 1]),
+		);
+	}
 	const question = (id: string) => {
 		const q = d.questionsById[id];
 		if (!q) return null;
@@ -1167,9 +1181,7 @@ export function BuilderPreview({
 				);
 			case 'matching':
 				if (classroom) {
-                    const activity=d.activities.find(a=>a.blocks.some(block=>block.id===b.id));
-                    const at=activity?.blocks.findIndex(block=>block.id===b.id)??-1;
-                    const prior=activity?.blocks[at-1];
+                    const prior=previousBlock.get(b.id);
                     return <BuilderClassroomMatching key={b.id} block={b} document={d} images={matchingPictures(b,prior?.type==='image'?prior.images:undefined)} answers={answers} onChange={setAnswers}/>;
                 }
 				return b.destinations?.length && b.questionIds?.length ? (
@@ -1228,10 +1240,11 @@ export function BuilderPreview({
 				return classroom ? <BuilderClassroomQuestions ids={questionIds(b)} document={d} answers={answers} onChange={setAnswers}/> : questionIds(b).map(question);
 		}
 	};
-    if (classroom) return <div className="bd-student-preview bd-classroom-content">{d.activities.filter(a=>!activityId||a.id===activityId).map(a=><fieldset className="sc-fields" disabled={readOnly} key={a.id}>{a.blocks.map((b,i)=>{
-        if(b.type==='image'&&a.blocks[i+1]?.type==='matching'&&matchingPictures(a.blocks[i+1],b.images))return null;
-        return <div className={`bd-preview-block bd-classroom-block is-${b.type}`} key={b.id}>{render(b)}</div>;
-    })}</fieldset>)}</div>;
+    if (classroom) return <div className="bd-student-preview bd-classroom-content">{d.activities.filter(a=>!activityId||a.id===activityId).map(a=>{
+        const ordered = orderedBlocks.get(a.id) || [];
+        const hidden = new Set(ordered.filter((block, index) => block.type === 'image' && ordered[index + 1]?.type === 'matching' && matchingPictures(ordered[index + 1], block.images)).map(block => block.id));
+        return <fieldset className="sc-fields" disabled={readOnly} key={a.id}><BuilderLayoutView activity={a} hideBlock={block => hidden.has(block.id)} renderBlock={b => <div className={`bd-preview-block bd-classroom-block is-${b.type}`}>{render(b)}</div>} /></fieldset>;
+    })}</div>;
 	return (
 		<div className="bd-student-preview">
 			{!live && (
@@ -1259,11 +1272,11 @@ export function BuilderPreview({
 								</span>
 								<h2>{a.title}</h2>
 							</header>
-							{a.blocks.map((b) => (
-								<div className="bd-preview-block" key={b.id}>
-									{render(b)}
-								</div>
-							))}
+							<BuilderLayoutView
+								activity={a}
+								blockClassName="bd-preview-block"
+								renderBlock={(b) => render(b)}
+							/>
 						</fieldset>
 					),
 			)}

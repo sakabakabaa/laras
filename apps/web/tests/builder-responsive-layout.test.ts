@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-import { layoutGroupClassName } from '../src/components/app/builder/builder-layout-view';
+import { BuilderLayoutView, layoutGroupClassName } from '../src/components/app/builder/builder-layout-view';
 import {
 	resolveActivityLayout,
 	type BuilderLayoutGroup,
@@ -122,6 +124,8 @@ describe('responsive group layout', () => {
 		const activity = { id: 'a', blocks: [], layout: { schemaVersion: 1 as const, nodes: [{ ...group, width: 'contained' as const, maxWidth: 960, columnWeights: [2, 1, 1] as [number, number, number] }] } } as never;
 		expect(resolveActivityLayout(activity)[0]).toMatchObject({ width: 'contained', maxWidth: 960, columnWeights: [2, 1, 1] });
 		expect(layoutGroupClassName(resolveActivityLayout(activity)[0] as BuilderLayoutGroup)).toContain('bl-width-contained');
+		const html = renderToStaticMarkup(createElement(BuilderLayoutView, { activity, renderBlock: () => null }));
+		expect(html).toContain('style="--bl-max-width:960px;grid-template-columns:2fr 1fr 1fr"');
 	});
 	it('normalizes bounded overrides and rejects unsupported responsive fields', () => {
 		const valid = backend.exports.normalize(

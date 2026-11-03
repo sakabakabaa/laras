@@ -39,6 +39,8 @@ jobs:
         run: npm test --workspace web
       - name: Build production app
         run: npm run build --workspace web
+      - name: Check builder capability HTTP methods against built server
+        run: node apps/web/scripts/test-builder-capability-http.mjs
 
   pocketbase:
     name: PocketBase integration

@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { ScheduledLessonView } from '../scheduled-lesson';
 import { ScheduledCardMatching } from '../scheduled-card-matching';
@@ -29,6 +29,145 @@ import { BuilderMediaEditor, BuilderMediaView } from './builder-media';
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 const safeUrl = (url?: string) =>
 	url && /^https:\/\/[^\s<>"']+$/i.test(url) ? url : '';
+
+export function canvasTextKeyboardAction(
+	key: string,
+	editing: boolean,
+	selected: boolean,
+	blocked = false,
+) {
+	if (blocked) return null;
+	if (editing && key === 'Escape') return 'exit' as const;
+	if (!editing && selected && (key === 'Enter' || key === 'F2'))
+		return 'edit' as const;
+	return null;
+}
+
+/** Plain-text authoring; edits use the same validated RichText draft path. */
+export function BuilderCanvasText({
+	block,
+	selected,
+	disabled = false,
+	onChange,
+}: {
+	block: BuilderBlock;
+	selected: boolean;
+	disabled?: boolean;
+	onChange: (value: string) => void;
+}) {
+	const [editing, setEditing] = useState(false);
+	const [value, setValue] = useState(() => plain(block.body));
+	const editor = useRef<HTMLTextAreaElement>(null);
+	const surface = useRef<HTMLDivElement>(null);
+	const composing = useRef(false);
+	useEffect(() => {
+		if (!composing.current) setValue(plain(block.body));
+	}, [block.id, block.body]);
+	useEffect(() => {
+		if (editing) editor.current?.focus();
+	}, [editing]);
+	useEffect(() => {
+		if (!selected || disabled) setEditing(false);
+	}, [selected, disabled]);
+	const begin = () => {
+		if (selected && !disabled) setEditing(true);
+	};
+	if (editing && selected && !disabled)
+		return (
+			<textarea
+				ref={editor}
+				className="bd-canvas-text-editor"
+				aria-label={
+					block.type === 'instructions'
+						? 'Edit instruksi langsung'
+						: 'Edit teks konfirmasi langsung'
+				}
+				maxLength={20000}
+				rows={Math.min(20, Math.max(2, value.split('\n').length))}
+				value={value}
+				onCompositionStart={() => {
+					composing.current = true;
+				}}
+				onChange={(event) => {
+					setValue(event.target.value);
+					if (
+						!composing.current &&
+						!(event.nativeEvent as InputEvent).isComposing
+					)
+						onChange(event.target.value);
+				}}
+				onCompositionEnd={(event) => {
+					composing.current = false;
+					setValue(event.currentTarget.value);
+					onChange(event.currentTarget.value);
+				}}
+				onKeyDown={(event) => {
+					if (
+						canvasTextKeyboardAction(
+							event.key,
+							true,
+							selected,
+							composing.current || event.nativeEvent.isComposing,
+						) === 'exit'
+					) {
+						event.preventDefault();
+						event.stopPropagation();
+						setEditing(false);
+						requestAnimationFrame(() => surface.current?.focus());
+					}
+				}}
+				onBlur={(event) => {
+					if (composing.current) {
+						composing.current = false;
+						onChange(event.currentTarget.value);
+					}
+					setEditing(false);
+				}}
+			/>
+		);
+	return (
+		<div
+			ref={surface}
+			className="bd-canvas-text"
+			data-selected={selected || undefined}
+			tabIndex={disabled ? -1 : 0}
+			aria-disabled={disabled || undefined}
+			aria-label={
+				block.type === 'instructions' ? 'Instruksi' : 'Teks konfirmasi'
+			}
+			onDoubleClick={begin}
+			onKeyDown={(event) => {
+				if (
+					canvasTextKeyboardAction(
+						event.key,
+						false,
+						selected,
+						disabled || event.nativeEvent.isComposing,
+					) === 'edit'
+				) {
+					event.preventDefault();
+					begin();
+				}
+			}}
+		>
+			<p className="bd-canvas-text-content">
+				{plain(block.body) || (
+					<span className="bd-canvas-text-placeholder">
+						Klik dua kali untuk menulis…
+					</span>
+				)}
+			</p>
+			{selected && !disabled && (
+				<>
+					<small>Klik dua kali atau tekan Enter untuk mengedit</small>
+					<button type="button" className="bd-text-button" onClick={begin}>
+						Edit teks
+					</button>
+				</>
+			)}
+		</div>
+	);
+}
 export function BlockEditor({
 	block,
 	envelope,

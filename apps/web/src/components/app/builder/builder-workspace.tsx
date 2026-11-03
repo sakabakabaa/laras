@@ -68,7 +68,7 @@ import {
 	type BuilderEnvelope,
 	type BuilderRecord,
 } from '@/lib/builder-document';
-import { BlockEditor } from './builder-elements';
+import { BlockEditor, BuilderCanvasText } from './builder-elements';
 import { BuilderElementInspector } from './builder-element-inspector';
 import { BuilderRunList } from './builder-run';
 import { deliveryRequest } from '@/lib/builder-delivery';
@@ -1575,11 +1575,17 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															</button>
 														</div>
 													</div>
-													<BlockEditor
-														block={b}
-														envelope={draft}
-														onChange={change}
-													/>
+															{b.type === 'instructions' || b.type === 'acknowledgement' ? (
+																<BuilderCanvasText
+																	block={b}
+																	selected={selected === b.id}
+																disabled={locked}
+																	onChange={value => change(next => {
+																		const target = next.document.activities.flatMap(activity => activity.blocks).find(item => item.id === b.id);
+																		if (target) target.body = rich(value);
+																	})}
+																/>
+															) : <BlockEditor block={b} envelope={draft} onChange={change} />}
 												</article>
 												);
 											}}

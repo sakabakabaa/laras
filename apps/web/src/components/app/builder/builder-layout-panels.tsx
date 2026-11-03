@@ -1,6 +1,6 @@
 import { BuilderAppearanceControls } from './builder-appearance-controls';
 import { useId, useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import {
 	BLOCK_LABELS,
 	type BuilderActivity,
@@ -62,6 +62,9 @@ function StructureRows({
 	onMove,
 	onReparent,
 	onRemoveGroup,
+	collapsedGroups,
+	setCollapsedGroups,
+	idPrefix,
 	depth = 0,
 }: {
 	nodes: ResolvedLayoutNode[];
@@ -73,6 +76,9 @@ function StructureRows({
 	onMove: (id: string, delta: number) => void;
 	onReparent: (id: string, direction: 'in' | 'out') => void;
 	onRemoveGroup: (id: string) => void;
+	collapsedGroups: string[];
+	setCollapsedGroups: React.Dispatch<React.SetStateAction<string[]>>;
+	idPrefix: string;
 	depth?: number;
 }): ReactNode {
 	return nodes.map((node) => {
@@ -95,18 +101,21 @@ function StructureRows({
 					</button>
 					{selected && (
 						<span className="bd-structure-actions">
-							<Action label="Naikkan" onClick={() => onMove(node.block.id, -1)} />
+							<Action label="Naikkan" onClick={() => onMove(node.block.id, -1)} icon={<ArrowUp size={12} />} />
 							<Action
 								label="Turunkan"
 								onClick={() => onMove(node.block.id, 1)}
+								icon={<ArrowDown size={12} />}
 							/>
 							<Action
 								label="Masukkan ke bagian sebelumnya"
 								onClick={() => onReparent(node.block.id, 'in')}
+								icon={<ArrowRight size={12} />}
 							/>
 							<Action
 								label="Keluarkan dari bagian"
 								onClick={() => onReparent(node.block.id, 'out')}
+								icon={<ArrowLeft size={12} />}
 							/>
 						</span>
 					)}
@@ -114,6 +123,7 @@ function StructureRows({
 			);
 		}
 		const selected = selectedNodeId === node.id;
+		const collapsed = collapsedGroups.includes(node.id);
 		return (
 			<li
 				key={node.id}
@@ -121,6 +131,9 @@ function StructureRows({
 				style={{ paddingLeft: depth * 14 }}
 			>
 				<div className="bd-structure-row">
+					<button type="button" className="bd-structure-toggle" aria-label={`${collapsed ? 'Buka' : 'Ringkas'} ${node.title || (node.kind === 'section' ? 'bagian' : 'kontainer')}`} aria-expanded={!collapsed} aria-controls={`${idPrefix}-${node.id}`} onClick={() => setCollapsedGroups(groups => collapsed ? groups.filter(id => id !== node.id) : [...groups, node.id])}>
+						{collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+					</button>
 					<button
 						type="button"
 						className="bd-structure-select"
@@ -128,36 +141,33 @@ function StructureRows({
 						onClick={() => onSelectGroup(node.id)}
 						onKeyDown={(event) => moveKeys(event, node.id)}
 					>
-						{node.kind === 'section' ? (
-							<ChevronDown size={13} />
-						) : (
-							<ChevronRight size={13} />
-						)}
 						<strong>{node.title || (node.kind === 'section' ? 'Bagian' : 'Kontainer')}</strong>
 						<small>{node.columns} kolom</small>
 					</button>
 					{selected && (
 						<span className="bd-structure-actions">
-							<Action label="Naikkan" onClick={() => onMove(node.id, -1)} />
-							<Action label="Turunkan" onClick={() => onMove(node.id, 1)} />
+							<Action label="Naikkan" onClick={() => onMove(node.id, -1)} icon={<ArrowUp size={12} />} />
+							<Action label="Turunkan" onClick={() => onMove(node.id, 1)} icon={<ArrowDown size={12} />} />
 							<Action
 								label="Masukkan ke bagian sebelumnya"
 								onClick={() => onReparent(node.id, 'in')}
+								icon={<ArrowRight size={12} />}
 							/>
 							<Action
 								label="Keluarkan dari bagian"
 								onClick={() => onReparent(node.id, 'out')}
+								icon={<ArrowLeft size={12} />}
 							/>
 							<Action
 								label="Hapus bagian, simpan isinya"
 								onClick={() => onRemoveGroup(node.id)}
 								danger
+								icon={<Trash2 size={12} />}
 							/>
 						</span>
 					)}
 				</div>
-				{node.children.length > 0 && (
-					<ol className="bd-structure-children">
+				<ol id={`${idPrefix}-${node.id}`} className="bd-structure-children" hidden={collapsed}>
 						<StructureRows
 							nodes={node.children}
 							activity={activity}
@@ -168,10 +178,12 @@ function StructureRows({
 							onMove={onMove}
 							onReparent={onReparent}
 							onRemoveGroup={onRemoveGroup}
+							collapsedGroups={collapsedGroups}
+							setCollapsedGroups={setCollapsedGroups}
+							idPrefix={idPrefix}
 							depth={depth + 1}
 						/>
-					</ol>
-				)}
+				</ol>
 			</li>
 		);
 	});
@@ -199,11 +211,13 @@ function Action({
 	onClick,
 	disabled = false,
 	danger = false,
+	icon,
 }: {
 	label: string;
 	onClick: () => void;
 	disabled?: boolean;
 	danger?: boolean;
+	icon?: ReactNode;
 }) {
 	return (
 		<button
@@ -214,7 +228,7 @@ function Action({
 			disabled={disabled}
 			onClick={onClick}
 		>
-			{danger ? <Trash2 size={12} /> : '•'}
+			{icon || (danger ? <Trash2 size={12} /> : <ArrowUp size={12} />)}
 		</button>
 	);
 }
@@ -242,6 +256,8 @@ export function BuilderLayoutNavigator({
 	onReparent: (id: string, direction: 'in' | 'out') => void;
 	onRemoveGroup: (id: string) => void;
 }) {
+	const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
+	const structureId = useId();
 	if (!activity) return null;
 	const nodes = resolveActivityLayout(activity);
 	const groups = activity.layout ? countLayoutGroups(activity.layout) : 0;
@@ -263,6 +279,9 @@ export function BuilderLayoutNavigator({
 					onMove={onMove}
 					onReparent={onReparent}
 					onRemoveGroup={onRemoveGroup}
+					collapsedGroups={collapsedGroups}
+					setCollapsedGroups={setCollapsedGroups}
+					idPrefix={structureId}
 				/>
 			</ol>
 			<div className="bd-structure-add">

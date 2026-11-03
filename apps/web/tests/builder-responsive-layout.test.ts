@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { parse } from 'postcss';
 import { BuilderLayoutView, layoutGroupClassName } from '../src/components/app/builder/builder-layout-view';
 import {
 	resolveActivityLayout,
@@ -191,12 +192,51 @@ describe('responsive group layout', () => {
 		expect(html).toContain('bl-wrap-no');
 		const css = readFileSync(new URL('../src/styles/builder-responsive.css', import.meta.url), 'utf8');
 		expect(css).toContain('.bl-layout .bl-group.bl-flow-row { flex-direction: row; flex-wrap: wrap; }');
-		expect(css).toContain('.bl-layout .bl-group.bl-flow-row { flex-direction: column; }');
 		for (const [key, value] of [['direction', 'absolute'], ['align', 'baseline'], ['distribute', 'space-evenly'], ['wrap', 'yes']] as const) {
 			const invalid = envelope(undefined); (invalid.document.activities[0].layout.nodes[0] as Record<string, unknown>)[key] = value;
 			expect(() => backend.exports.normalize(invalid)).toThrow();
 		}
 		expect(() => backend.exports.normalize(envelope({ mobile: { direction: 'sideways' } }))).toThrow();
+	});
+	it.each([
+		['inherited tablet row', 'grid', 'row', undefined, 390, 'column'],
+		['phone breakpoint', 'grid', 'row', undefined, 600, 'column'],
+		['tablet above phone breakpoint', 'grid', 'row', undefined, 601, 'row'],
+		['tablet breakpoint', 'grid', 'row', undefined, 900, 'row'],
+		['column base with tablet row', 'column', 'row', undefined, 390, 'column'],
+		['tablet column over base row', 'row', 'column', undefined, 390, 'column'],
+		['explicit phone row', 'grid', 'row', 'row', 390, 'row'],
+		['explicit phone column', 'row', 'row', 'column', 390, 'column'],
+	] as const)('resolves responsive flow for %s', (_label, direction, tablet, mobile, width, expected) => {
+		const classes = new Set([
+			'bl-layout',
+			...layoutGroupClassName({
+				...group,
+				direction,
+				responsive: {
+					tablet: { direction: tablet },
+					...(mobile ? { mobile: { direction: mobile } } : {}),
+				},
+			}).split(/\s+/),
+		]);
+		const stylesheet = parse(readFileSync(new URL('../src/styles/builder-responsive.css', import.meta.url), 'utf8'));
+		let resolvedDirection = 'row';
+		stylesheet.walkDecls('flex-direction', declaration => {
+			const rule = declaration.parent;
+			if (rule?.type !== 'rule') return;
+			let ancestor = rule.parent;
+			while (ancestor) {
+				if (ancestor.type === 'atrule' && ancestor.name === 'container') {
+					const limit = ancestor.params.match(/max-width:\s*(\d+)px/);
+					if (!limit || width > Number(limit[1])) return;
+				}
+				ancestor = ancestor.parent;
+			}
+			if (rule.selectors.some(selector =>
+				(selector.match(/\.[\w-]+/g) ?? []).every(className => classes.has(className.slice(1))),
+			)) resolvedDirection = declaration.value;
+		});
+		expect(resolvedDirection).toBe(expected);
 	});
 	it('updates linked sides together and preserves independent sides when unlinked', () => {
 		const target = { ...group };

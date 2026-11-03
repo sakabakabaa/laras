@@ -127,7 +127,8 @@
 	}
 }
 @container laras-activity (max-width: 600px) {
-	.bl-layout .bl-group.bl-flow-row { flex-direction: column; }
+	.bl-layout .bl-group.bl-flow-row,
+	.bl-layout .bl-group.bl-tablet-flow-row { flex-direction: column; }
 	.bl-layout .bl-group.bl-mobile-flow-grid { display: grid; }
 	.bl-layout .bl-group.bl-mobile-flow-row { display: flex; flex-direction: row; }
 	.bl-layout .bl-group.bl-mobile-flow-column { display: flex; flex-direction: column; }

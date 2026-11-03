@@ -51,13 +51,13 @@
 	text-align: inherit;
 }
 .ba-color-ink {
-	--ba-color: hsl(var(--foreground));
+	--ba-color: var(--r-ink);
 }
 .ba-color-muted {
-	--ba-color: hsl(var(--muted-foreground));
+	--ba-color: var(--r-ink-2);
 }
 .ba-color-accent {
-	--ba-color: hsl(var(--primary));
+	--ba-color: var(--r-action);
 }
 .bl-layout :is(.bl-group, .bl-block)[class*='ba-color-'] :is(p, textarea, .bd-rich) {
 	color: var(--ba-color);
@@ -66,10 +66,10 @@
 	background: transparent;
 }
 .bl-layout .ba-background-muted {
-	background: hsl(var(--muted) / 0.65);
+	background: color-mix(in srgb, var(--r-surface-2) 65%, transparent);
 }
 .bl-layout .ba-background-accent {
-	background: hsl(var(--primary) / 0.08);
+	background: color-mix(in srgb, var(--r-action) 8%, transparent);
 }
 .bl-layout .ba-padding-none {
 	padding: 0;
@@ -87,10 +87,10 @@
 	border: 0;
 }
 .bl-layout .ba-border-subtle {
-	border: 1px solid hsl(var(--border));
+	border: 1px solid var(--r-border);
 }
 .bl-layout .ba-border-accent {
-	border: 1px solid hsl(var(--primary) / 0.5);
+	border: 1px solid color-mix(in srgb, var(--r-action) 50%, transparent);
 }
 .bl-layout .ba-radius-none {
 	border-radius: 0;
@@ -108,10 +108,10 @@
 	box-shadow: none;
 }
 .bl-layout .ba-shadow-sm {
-	box-shadow: 0 2px 8px hsl(var(--foreground) / 0.07);
+	box-shadow: 0 2px 8px color-mix(in srgb, var(--r-ink) 7%, transparent);
 }
 .bl-layout .ba-shadow-md {
-	box-shadow: 0 8px 24px hsl(var(--foreground) / 0.12);
+	box-shadow: 0 8px 24px color-mix(in srgb, var(--r-ink) 12%, transparent);
 }
 /* Preserve selection outlines while allowing the chosen surface to show. */
 .bd-canvas .bl-block[class*='ba-background-'] > .bd-block {

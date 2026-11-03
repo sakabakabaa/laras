@@ -36,7 +36,7 @@ function ResponsiveControls({ group, update }: { group: BuilderLayoutGroup; upda
 		<div className="bd-inline-actions">{(['tablet','mobile'] as const).map(value => <button type="button" key={value} className="bd-secondary" aria-pressed={device===value} onClick={() => setDevice(value)}>{value==='tablet'?'Tablet':'Ponsel'}</button>)}</div>
 		<label>Kolom<select value={values.columns ?? ''} onChange={e=>set('columns',e.target.value)}><option value="">Otomatis mengikuti layar</option><option value="1">1 kolom</option><option value="2">2 kolom</option><option value="3">3 kolom</option></select></label>
 		<label>Jarak<select value={values.gap ?? ''} onChange={e=>set('gap',e.target.value)}><option value="">Ikuti dasar ({group.gap})</option>{(['none','sm','md','lg'] as const).map(x=><option key={x} value={x}>{({none: 'Tanpa jarak', sm: 'Kecil', md: 'Sedang', lg: 'Besar'})[x]}</option>)}</select></label>
-		<label>Padding<select value={values.padding ?? ''} onChange={e=>set('padding',e.target.value)}><option value="">Ikuti dasar ({group.padding})</option>{(['none','sm','md'] as const).map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+		<label>Padding<select value={values.padding ?? ''} onChange={e=>set('padding',e.target.value)}><option value="">Ikuti dasar ({group.padding})</option>{(['none','sm','md'] as const).map(x=><option key={x} value={x}>{({none: 'Tanpa padding', sm: 'Kecil', md: 'Sedang'})[x]}</option>)}</select></label>
 		<button type="button" className="bd-secondary" onClick={()=>update(target=>{if(target.responsive) delete target.responsive[device]; if(target.responsive&&!Object.keys(target.responsive).length) delete target.responsive;})}>Reset perangkat ini</button>
 	</fieldset>;
 }

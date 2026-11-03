@@ -158,6 +158,7 @@ const BUCKETS: { id: BuilderElementBucket; label: string; description: string; i
 export const BUILDER_DRAG_TYPE = 'application/x-laras-builder-element';
 export function BuilderElementLibrary({
 	allowDrag = true,
+	compact = false,
 	onAdd,
 	onDragStart,
 	onDragEnd,
@@ -165,6 +166,7 @@ export function BuilderElementLibrary({
 	target,
 }: {
 	allowDrag?: boolean;
+	compact?: boolean;
 	onAdd: (id: string) => void;
 	onDragStart: (id: string, event: DragEvent<HTMLButtonElement>) => void;
 	onDragEnd: () => void;
@@ -183,10 +185,14 @@ export function BuilderElementLibrary({
 	);
 	const currentBucket = BUCKETS.find((item) => item.id === bucket);
 	return (
-		<div className="bd-element-library">
-			{bucket ? (
+		<div className={'bd-element-library' + (compact ? ' is-compact' : '')}>
+			{compact && <div className="bd-library-filters" role="group" aria-label="Jenis elemen">
+				<button type="button" aria-pressed={!bucket} onClick={() => setBucket(null)}>Semua</button>
+				{BUCKETS.map(item => <button type="button" key={item.id} aria-pressed={bucket === item.id} onClick={() => setBucket(item.id)}>{item.label}</button>)}
+			</div>}
+			{(compact || bucket) ? (
 				<>
-					<div className="bd-library-head">
+					<div className="bd-library-head" hidden={compact}>
 						<button
 							type="button"
 							className="bd-text-button"
@@ -204,10 +210,10 @@ export function BuilderElementLibrary({
 						<input
 							type="search"
 							aria-label="Cari elemen"
-							placeholder={`Cari ${currentBucket?.label.toLocaleLowerCase('id')}…`}
+							placeholder={currentBucket ? `Cari ${currentBucket.label.toLocaleLowerCase('id')}…` : 'Cari semua elemen…'}
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
-							autoFocus
+							autoFocus={!compact}
 						/>
 						{query && (
 							<button

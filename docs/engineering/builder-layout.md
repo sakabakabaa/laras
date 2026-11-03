@@ -31,6 +31,14 @@ The shared `BuilderLayoutView` wraps sections/containers. Columns are 1–3 on w
 
 Group names are editor navigation labels, not student-facing headings. The mobile preview also stacks columns when the preview frame is narrow on a desktop browser.
 
+## Appearance and editor panels
+
+The desktop sidebar opens the searchable element palette immediately, with category filters and a switch to the activity/structure tree. Repeated insertions use the selected container (or the selected block's parent), independently of any previous dialog insertion target. Narrow screens retain the element and structure drawers.
+
+Elements expose Isi, Tampilan and Penilaian controls. Questions open Penilaian first so review links still reach their answer keys. Sections and containers keep their column, gap, padding and surface controls and gain typography, borders, radius and shadows.
+
+Blocks and layout groups may carry an optional `appearance` object. Supported fields are `size`, `weight`, `leading`, `align`, `color`, `background`, `padding`, `border`, `radius` and `shadow`; their allowed presets are defined in `builder-appearance.ts` and checked by the PocketBase normalizer. Colors follow the light/dark theme. No arbitrary CSS or URLs are stored. Missing properties inherit existing styles; reset removes overrides. The shared layout renderer applies the same classes to authoring, preview and published views. Copies retain the overrides while remapping content IDs.
+
 ## Editing rules
 
 - Add a section or container, optionally inside the selected group, bounded to 3 nested group levels and 40 groups.
@@ -47,4 +55,4 @@ Group names are editor navigation labels, not student-facing headings. The mobil
 
 ## Compatibility and deferred work
 
-Layout is additive to the existing `schemaVersion: 1` envelope, so legacy flat documents round-trip unchanged. Published snapshots store the normalized document (including layout) and private keys separately; student runtime receives the layout but never the private keys. Phase 4+ work deliberately deferred here includes responsive visibility controls, reusable container presets, margins/borders/shadows, per-element grid spans, and an element-level sidebar.
+Layout is additive to the existing `schemaVersion: 1` envelope, so legacy flat documents round-trip unchanged. Published snapshots store the normalized document (including layout) and private keys separately; student runtime receives the layout but never the private keys. Phase 4+ work deliberately deferred here includes responsive visibility controls, reusable container presets, margins, custom color values, and per-element grid spans.

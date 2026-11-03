@@ -1,3 +1,4 @@
+import type { BuilderAppearance } from './builder-appearance';
 import type { BuilderActivity, BuilderBlock } from './builder-document';
 
 export type BuilderLayoutGroupKind = 'section' | 'container';
@@ -13,6 +14,7 @@ export type BuilderLayoutGroup = {
 	gap: BuilderLayoutGap;
 	padding: BuilderLayoutPadding;
 	surface: BuilderLayoutSurface;
+	appearance?: BuilderAppearance;
 	children: BuilderLayoutNode[];
 };
 export type BuilderLayoutNode = BuilderLayoutBlock | BuilderLayoutGroup;
@@ -33,6 +35,7 @@ export type ResolvedLayoutGroup = {
 	gap: BuilderLayoutGap;
 	padding: BuilderLayoutPadding;
 	surface: BuilderLayoutSurface;
+	appearance?: BuilderAppearance;
 	children: ResolvedLayoutNode[];
 };
 export type ResolvedLayoutNode = ResolvedLayoutBlock | ResolvedLayoutGroup;
@@ -491,6 +494,7 @@ export function resolveActivityLayout(
 					gap: node.gap,
 					padding: node.padding,
 					surface: node.surface,
+					...(node.appearance ? { appearance: node.appearance } : {}),
 					children: walk(node.children),
 				},
 			];

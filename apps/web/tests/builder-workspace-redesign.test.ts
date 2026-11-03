@@ -26,10 +26,12 @@ function baseDeclarations(selector: string) {
 }
 
 describe('content-first builder workspace', () => {
-	it('keeps one review entry and no mode tabs in the workspace', () => {
+	it('keeps one review entry while exposing the element and structure panels', () => {
 		expect(source).not.toContain('setLeftTab');
 		expect(source).not.toContain("id: 'review', label: 'Tinjau'");
-		expect(source).not.toContain('bd-sidebar-tabs');
+		expect(source).toContain('aria-label="Panel builder"');
+		expect(source).toContain("sidebar === 'elements'");
+		expect(source).toContain("sidebar === 'structure'");
 		expect(source).toContain('outlineContents');
 		expect(source).toContain('Riwayat & template');
 		expect(source).toContain("['ai', 'book'].includes(params.get('tool')");

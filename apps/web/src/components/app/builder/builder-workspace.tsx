@@ -68,7 +68,8 @@ import {
 	type BuilderEnvelope,
 	type BuilderRecord,
 } from '@/lib/builder-document';
-import { BlockEditor, KeyInspector } from './builder-elements';
+import { BlockEditor } from './builder-elements';
+import { BuilderElementInspector } from './builder-element-inspector';
 import { BuilderRunList } from './builder-run';
 import { deliveryRequest } from '@/lib/builder-delivery';
 import {
@@ -92,6 +93,7 @@ import {
 	canMoveLayoutItem,
 	findLayoutGroup,
 	insertBlockIntoLayout,
+	layoutItemLocation,
 	moveBlockBefore,
 	moveBlockBetweenActivities,
 	moveBlockInLayout,
@@ -152,6 +154,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[publishing, setPublishing] = useState(false),
 		[inspectorOpen, setInspectorOpen] = useState(false),
 		[historyVersion, setHistoryVersion] = useState(0);
+	const [sidebar, setSidebar] = useState<'elements' | 'structure'>('elements');
 	const [online, setOnline] = useState(true);
 	const [storageWarning, setStorageWarning] = useState('');
 	const [recoveryInfo, setRecoveryInfo] = useState<{ at: number; baseRevision?: number } | null>(null);
@@ -427,6 +430,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		activity?.layout && selectedNode
 			? findLayoutGroup(activity.layout, selectedNode)
 			: null;
+	const libraryGroup = selectedGroup || (activity && block ? layoutItemLocation(activity, block.id)?.parent : null);
 	const contextLabel = [
 		contextCourse ? `${contextCourse.code} · ${contextCourse.title}` : '',
 		contextMeeting
@@ -882,7 +886,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				</h2>
 			</header>
 			{block ? (
-				<KeyInspector block={block} envelope={draft} onChange={change} />
+				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked} onChange={change} />
 			) : selectedGroup && activity ? (
 				<BuilderLayoutInspector
 					activity={activity}
@@ -1200,6 +1204,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			{panel === 'content' ? (
 				<div className="bd-layout">
 					<div className="bd-mobile-library-actions">
+						<button className="bd-secondary" disabled={locked || !activity} onClick={() => activity && openElements(activity.id, undefined, selectedGroup?.id)}><Plus size={16} /> Elemen</button>
 						<button
 							className="bd-secondary"
 							onClick={() => setActivityDrawer(true)}
@@ -1213,8 +1218,35 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							<Sparkles size={16} /> Bantuan
 						</button>
 					</div>
-					<aside className="bd-builder-sidebar" aria-label="Daftar kegiatan">
-						{outlineContents}
+					<aside className="bd-builder-sidebar" aria-label="Elemen dan struktur">
+						<div className="bd-sidebar-tabs" role="group" aria-label="Panel builder">
+							<button type="button" aria-pressed={sidebar === 'elements'} onClick={() => setSidebar('elements')}>Elemen</button>
+							<button type="button" aria-pressed={sidebar === 'structure'} onClick={() => setSidebar('structure')}>Struktur</button>
+						</div>
+						{sidebar === 'elements' ? <>
+							<label className="bd-library-activity">Kegiatan tujuan
+								<select value={activity?.id || ''} onChange={event => selectActivity(event.target.value)}>
+									{!d.activities.length && <option value="">Tambahkan kegiatan dahulu</option>}
+									{d.activities.map((item, index) => <option key={item.id} value={item.id}>{index + 1}. {item.title || 'Kegiatan'}</option>)}
+								</select>
+							</label>
+							<BuilderElementLibrary compact disabled={locked || !activity}
+								target={libraryGroup ? `Tujuan: ${libraryGroup.title || 'Bagian'}` : `Tujuan: akhir ${activity?.title || 'kegiatan'}`}
+								onAdd={elementId => addElement(elementId, { activityId: activity?.id, beforeId: undefined, parentId: libraryGroup?.id })}
+								onDragStart={(elementId, event) => {
+									dragItem.current = { elementId };
+									event.dataTransfer.setData(BUILDER_DRAG_TYPE, elementId);
+									event.dataTransfer.effectAllowed = 'copy';
+									setDragging(true);
+								}}
+								onDragEnd={finishDrag}
+							/>
+							<div className="bd-library-layout">
+								<strong>Tata letak</strong>
+								<button type="button" className="bd-secondary" disabled={locked || !activity} onClick={() => addGroup('section', libraryGroup?.id || null)}><Plus size={14} /> Bagian</button>
+								<button type="button" className="bd-secondary" disabled={locked || !activity} onClick={() => addGroup('container', libraryGroup?.id || null)}><Plus size={14} /> Kontainer</button>
+							</div>
+						</> : outlineContents}
 						{authoringTools}
 					</aside>
 					<section className="bd-canvas" aria-label="Isi kegiatan">

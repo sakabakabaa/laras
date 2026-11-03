@@ -6,13 +6,13 @@ import {
 	csvEscape,
 	isAuthorizedExporter,
 	isActiveRater,
-	parseResearcherIds,
 	resolveReviewDecision,
 	EXPORT_RESEARCH_SCHEMA_VERSION,
 	RESEARCH_DATASET_VERSION,
 	serializeReviewFindings,
 	serializeSnapshotProvenance,
 } from '@/lib/research-export.server';
+import { parseResearcherIds } from '@/lib/researcher-ids';
 
 describe('research export schema version', () => {
 	it('bumps the dataset and export format when snapshot payload policy changes', () => {

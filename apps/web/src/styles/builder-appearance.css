@@ -29,13 +29,13 @@
 .ba-leading-relaxed {
 	--ba-line-height: 1.9;
 }
-.bl-layout [class*='ba-size-'] :is(p, textarea, .bd-rich) {
+.bl-layout :is(.bl-group, .bl-block)[class*='ba-size-'] :is(p, textarea, .bd-rich) {
 	font-size: var(--ba-font-size);
 }
-.bl-layout [class*='ba-weight-'] :is(p, textarea, .bd-rich) {
+.bl-layout :is(.bl-group, .bl-block)[class*='ba-weight-'] :is(p, textarea, .bd-rich) {
 	font-weight: var(--ba-font-weight);
 }
-.bl-layout [class*='ba-leading-'] :is(p, textarea, .bd-rich) {
+.bl-layout :is(.bl-group, .bl-block)[class*='ba-leading-'] :is(p, textarea, .bd-rich) {
 	line-height: var(--ba-line-height);
 }
 .ba-align-start {
@@ -59,7 +59,7 @@
 .ba-color-accent {
 	--ba-color: hsl(var(--primary));
 }
-.bl-layout [class*='ba-color-'] :is(p, textarea, .bd-rich) {
+.bl-layout :is(.bl-group, .bl-block)[class*='ba-color-'] :is(p, textarea, .bd-rich) {
 	color: var(--ba-color);
 }
 .bl-layout .ba-background-none {

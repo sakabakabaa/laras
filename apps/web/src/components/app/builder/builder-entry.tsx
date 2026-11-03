@@ -14,6 +14,10 @@ import pb from '@/lib/pocketbase-client';
 import { builderImportRequest, type BuilderImportJob } from '@/lib/builder-import';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { scheduledRequest } from '@/lib/scheduled-classes';
+import { invalidate } from '@/lib/local-cache';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { BuilderDraftCard } from './builder-draft-card';
+import '@/styles/builder-draft-list.css';
 import { useCourseSections } from '@/hooks/use-course-sections';
 import {
 	applyTemplate,
@@ -33,6 +37,26 @@ export function BuilderDraftList({ kind }: { kind: BuilderKind }) {
 	const [items, setItems] = useState<BuilderListItem[]>([]),
 		[error, setError] = useState(''),
 		[loading, setLoading] = useState(true);
+	const [deleteTarget, setDeleteTarget] = useState<BuilderListItem | null>(null),
+		[deleting, setDeleting] = useState(false),
+		[deleteError, setDeleteError] = useState(''),
+		[notice, setNotice] = useState('');
+	const removeDraft = async () => {
+		if (!deleteTarget || deleting) return;
+		setDeleting(true);
+		setDeleteError('');
+		try {
+			await builderRequest('delete', { id: deleteTarget.id, baseRevision: deleteTarget.revision });
+			setItems(current => current.filter(item => item.id !== deleteTarget.id));
+			invalidate('builder-all-drafts');
+			setDeleteTarget(null);
+			setNotice('Draf berhasil dihapus.');
+		} catch (failure) {
+			setDeleteError(failure instanceof Error ? failure.message : 'Draf belum dapat dihapus. Coba lagi.');
+		} finally {
+			setDeleting(false);
+		}
+	};
 	const load = () => {
 		setLoading(true);
 		void builderRequest<{ items: BuilderListItem[] }>('list', { kind })
@@ -75,7 +99,7 @@ export function BuilderDraftList({ kind }: { kind: BuilderKind }) {
 				</div>
 				<button
 					className="bd-icon"
-					disabled={loading}
+					disabled={loading || deleting}
 					aria-label="Muat ulang draf builder"
 					onClick={load}
 				>
@@ -83,6 +107,7 @@ export function BuilderDraftList({ kind }: { kind: BuilderKind }) {
 				</button>
 			</header>
 			<BuilderImportList kind={kind} />
+			{notice && <p role="status">{notice}</p>}
 			{loading ? (
 				<p role="status">Memuat draf…</p>
 			) : error ? (
@@ -91,14 +116,8 @@ export function BuilderDraftList({ kind }: { kind: BuilderKind }) {
 				</p>
 			) : items.length ? (
 				<div className="bd-draft-cards">
-					{items.map((d) => (
-						<Link key={d.id} to={`/app/builder/${d.id}`}>
-							<span className="bd-eyebrow">DRAF · {d.courseTitle}</span>
-							<strong>{d.title}</strong>
-							<span>
-								{d.activityCount} kegiatan <ArrowRight size={14} />
-							</span>
-						</Link>
+					{items.map((draft) => (
+						<BuilderDraftCard key={draft.id} draft={draft} disabled={deleting} onDelete={item => { setDeleteTarget(item); setDeleteError(''); setNotice(''); }}/>
 					))}
 				</div>
 			) : (
@@ -108,6 +127,13 @@ export function BuilderDraftList({ kind }: { kind: BuilderKind }) {
 					mulai menyusun.
 				</p>
 			)}
+			<AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open && !deleting) setDeleteTarget(null); }}>
+				<AlertDialogContent>
+					<AlertDialogHeader><AlertDialogTitle>Hapus draf?</AlertDialogTitle><AlertDialogDescription>Draf “{deleteTarget?.title}” akan dihapus dari daftar. Kelas atau tugas yang sudah diterbitkan, jawaban mahasiswa, dan nilai tidak diubah.</AlertDialogDescription></AlertDialogHeader>
+					{deleteError && <p role="alert">{deleteError}</p>}
+					<AlertDialogFooter><AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deleting} onClick={event => { event.preventDefault(); void removeDraft(); }}>{deleting ? 'Menghapus…' : 'Hapus draf'}</AlertDialogAction></AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</section>
 	);
 }

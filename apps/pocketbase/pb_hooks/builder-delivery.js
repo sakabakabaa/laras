@@ -25,6 +25,7 @@ function ownedDraft(app, user, id) {
 	const r = app.findRecordById('builder_documents', String(id || ''));
 	if (user.getString('role') !== 'faculty' || r.getString('owner') !== user.id)
 		throw new ForbiddenError('Draf tidak tersedia.');
+	if (r.getBool('deleted')) throw new BadRequestError('Draf telah dihapus.');
 	const d = data(r, 'document');
 	if (
 		app.findRecordById('courses', d.context.courseId).getString('owner') !==
@@ -420,6 +421,9 @@ function handle(app, user, body) {
 					)
 						return [];
                     const studentResponse = ctx.owner ? null : find(app, 'builder_responses', 'run={:r} && student={:s}', {r:run.id,s:user.id});
+					const course = app.findRecordById('courses', run.getString('course'));
+					const responses = ctx.owner ? rows(app, 'builder_responses', 'run={:r}', {r:run.id}, 10000) : [];
+					const submitted = responses.filter(response => response.getString('submittedAt'));
 					return [
 						{
 							id: run.id,
@@ -427,6 +431,13 @@ function handle(app, user, body) {
 							kind: ctx.d.kind,
 							closed: run.getBool('closed'),
 							revision: ctx.version.getInt('revision'),
+							courseId: course.id,
+							courseCode: course.getString('code'),
+							meetingId: ctx.d.context.meetingId,
+							section: ctx.d.context.sectionIds.flatMap(id => {try {return [app.findRecordById('course_sections', id).getString('name')];} catch (_) {return [];}}).join(', '),
+							created: run.getString('created'),
+							activityCount: ctx.d.activities.length,
+							...(ctx.owner ? {checkedIn: responses.filter(response => response.getString('startedAt')).length, submittedCount: submitted.length, gradedCount: submitted.filter(response => Boolean(data(response, 'released', null)?.at)).length} : {}),
 							startsAt: ctx.d.delivery.startsAt || ctx.d.delivery.availableAt,
 							dueAt: ctx.d.delivery.dueAt || ctx.d.delivery.endsAt,
                             checkInClosesAt: ctx.d.delivery.checkInClosesAt || '',
@@ -434,9 +445,7 @@ function handle(app, user, body) {
                             startedAt: studentResponse?.getString('startedAt') || '',
                             submittedAt: studentResponse?.getString('submittedAt') || '',
                             feedbackReady: Boolean(studentResponse && Object.keys(data(studentResponse,'released',null) || {}).length),
-							courseTitle: app
-								.findRecordById('courses', run.getString('course'))
-								.getString('title'),
+							courseTitle: course.getString('title'),
 						},
 					];
 				} catch (_) {

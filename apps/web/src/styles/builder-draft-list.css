@@ -1,0 +1,51 @@
+.bd-draft-card {
+	position: relative;
+	display: flex;
+	min-width: 0;
+	border: 1px solid var(--bd-border);
+	border-radius: 9px;
+}
+
+.bd-draft-card:has(> a:hover) { border-color: var(--bd-accent); }
+
+.bd-draft-card > a {
+	display: grid;
+	gap: 9px;
+	width: 100%;
+	min-width: 0;
+	padding: 15px;
+	padding-inline-end: 52px;
+	color: var(--bd-text);
+	text-decoration: none;
+	border-radius: inherit;
+}
+
+.bd-draft-card > a > span:last-child {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	color: var(--bd-muted);
+	font-size: 11px;
+}
+
+.bd-draft-card .bd-draft-delete {
+	position: absolute;
+	top: 8px;
+	inset-inline-end: 8px;
+	width: 36px;
+	min-height: 36px;
+	color: var(--bd-muted);
+}
+
+.bd-draft-card .bd-draft-delete:hover:not(:disabled) {
+	color: var(--r-danger);
+	border-color: currentColor;
+}
+
+.bd-draft-card button:disabled { cursor: wait; opacity: .5; }
+.bd-draft-card > a:focus-visible { outline: 2px solid var(--bd-accent); outline-offset: 3px; }
+
+@media (pointer: coarse) {
+	.bd-draft-card .bd-draft-delete { width: 44px; min-height: 44px; }
+	.bd-draft-card > a { padding-inline-end: 60px; }
+}

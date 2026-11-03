@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 type CourseOption = { id: string; title: string; code: string };
 type MeetingOption = { id: string; title: string; week: number; section: string };
 
-export function BuilderClassStart() {
+export function BuilderClassStart({ authoring = true }: { authoring?: boolean } = {}) {
 	const [params] = useSearchParams(), navigate = useNavigate();
 	const [course, setCourse] = useState(params.get('course') || '');
 	const [meeting, setMeeting] = useState(params.get('meeting') || '');
@@ -51,6 +51,7 @@ export function BuilderClassStart() {
 		<Link className="bd-back" to="/app/kelas-terjadwal"><ArrowLeft size={16} />Kembali ke kelas terjadwal</Link>
 		<div className="bd-new-heading"><span className="bd-kicker">BUAT KELAS</span><h1>Pilih pertemuan</h1><p>Setelah ini, langsung susun kelas. AI, unggah buku, dan elemen tersedia di panel builder.</p></div>
 		<form onSubmit={event => { event.preventDefault(); void create(); }}>
+			{!authoring && <fieldset className="bd-capability-locked" disabled><legend>Penyunting lanjutan dinonaktifkan</legend><p role="status">Pembuatan draf baru dinonaktifkan oleh admin karena templat, tata letak, dan tampilan lanjutan tidak tersedia untuk akun ini. Draf yang ada tetap dapat dibuka dan diunduh.</p></fieldset>}
 			<fieldset disabled={busy}>
 				<div className="bd-start-field"><label htmlFor="class-course">1. Mata kuliah</label><Select name="course" required disabled={busy || courses.loading || Boolean(courses.error)} value={selectedCourse ? course : ''} onValueChange={value => { setCourse(value); setMeeting(''); setError(''); }}>
 					<SelectTrigger id="class-course" autoFocus><SelectValue placeholder={courses.loading ? 'Memuat mata kuliah…' : 'Pilih mata kuliah'} /></SelectTrigger>

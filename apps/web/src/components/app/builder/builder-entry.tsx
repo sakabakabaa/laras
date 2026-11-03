@@ -13,6 +13,7 @@ import {
 import pb from '@/lib/pocketbase-client';
 import { builderImportRequest, type BuilderImportJob } from '@/lib/builder-import';
 import { useCachedQuery } from '@/hooks/use-cached-query';
+import { BuilderCapabilityNotice, useBuilderCapability } from './builder-capability-notice';
 import { scheduledRequest } from '@/lib/scheduled-classes';
 import { invalidate } from '@/lib/local-cache';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -139,9 +140,15 @@ export function BuilderDraftList({ kind }: { kind: BuilderKind }) {
 }
 export function BuilderNew() {
 	const [params] = useSearchParams();
-	return params.get('kind') === 'tugas' ? <BuilderTaskStart /> : <BuilderClassStart />;
+	const { capability } = useBuilderCapability();
+	return (
+		<>
+			<BuilderCapabilityNotice capability={capability} />
+			{params.get('kind') === 'tugas' ? <BuilderTaskStart authoring={capability.authoring} /> : <BuilderClassStart authoring={capability.authoring} />}
+		</>
+	);
 }
-function BuilderTaskStart() {
+function BuilderTaskStart({ authoring }: { authoring: boolean }) {
 	const [params] = useSearchParams(),
 		navigate = useNavigate();
 	const kind: BuilderKind = params.get('kind') === 'tugas' ? 'tugas' : 'kelas';
@@ -260,6 +267,7 @@ function BuilderTaskStart() {
 					void create();
 				}}
 			>
+				{!authoring && <fieldset className="bd-capability-locked" disabled><legend>Penyunting lanjutan dinonaktifkan</legend><p role="status">Pembuatan draf baru dinonaktifkan oleh admin karena templat, tata letak, dan tampilan lanjutan tidak tersedia untuk akun ini. Anda tetap dapat membuka dan mengunduh draf yang ada.</p></fieldset>}
 				<fieldset disabled={busy}>
 					<label>
 						Judul

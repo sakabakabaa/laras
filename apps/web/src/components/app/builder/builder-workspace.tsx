@@ -48,6 +48,13 @@ import { createBuilderSaveQueue } from '@/lib/builder-save';
 import { appendBuilderContent } from '@/lib/builder-authoring';
 import { useBuilderAuthoringTools } from './builder-authoring-tools';
 import { BuilderPublishDialog, builderPublishWarnings } from './builder-publish-dialog';
+import {
+	enhancedAuthoringNotice,
+	fetchBuilderCapability,
+	isEnhancedAuthoringDenied,
+	usesEnhancedAuthoring,
+	type BuilderCapabilityPayload,
+} from '@/lib/builder-capability';
 import { toWibInput, fromWibInput } from '@/lib/scheduled-classes';
 import {
 	appendBlock,
@@ -157,6 +164,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const [sidebar, setSidebar] = useState<'elements' | 'structure'>('elements');
 	const [online, setOnline] = useState(true);
 	const [storageWarning, setStorageWarning] = useState('');
+	const [capability, setCapability] = useState<BuilderCapabilityPayload | null>(null);
 	const [recoveryInfo, setRecoveryInfo] = useState<{ at: number; baseRevision?: number } | null>(null);
 	const [publishReview, setPublishReview] = useState(false);
 	const saveQueue = useRef(createBuilderSaveQueue((command) => builderRequest<BuilderRecord>('save', command)));
@@ -164,6 +172,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		revisionRef = useRef(0),
 		savingRef = useRef(false),
 		conflictRef = useRef(false),
+		readOnlyRef = useRef(false),
 		past = useRef<BuilderEnvelope[]>([]),
 		future = useRef<BuilderEnvelope[]>([]),
 		activeId = useRef(id),
@@ -202,6 +211,15 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const contextMeeting = contextMeetings.data?.find(
 		(item) => item.id === contextMeetingId,
 	);
+	useEffect(() => {
+		let live = true;
+		void fetchBuilderCapability(current.current?.document).then((result) => {
+			if (live) setCapability(result);
+		});
+		return () => {
+			live = false;
+		};
+	}, [id]);
 	useEffect(() => {
 		const update = () => {
 			setOnline(navigator.onLine);
@@ -279,7 +297,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		if (selected) setSelectedNode('');
 	}, [selected]);
 	const change: Change = (edit) => {
-		if (!current.current || recovery || conflict) return;
+		if (!current.current || recovery || conflict || readOnlyRef.current) return;
 		const prior = current.current,
 			next = structuredClone(prior);
 		edit(next);
@@ -289,7 +307,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		install(next);
 		setHistoryVersion((v) => v + 1);
 	};
-	const authoringTools = useBuilderAuthoringTools({ id, draft, disabled: conflict || Boolean(recovery) || !online,
+	const authoringTools = useBuilderAuthoringTools({ id, draft, disabled: conflict || Boolean(recovery) || !online || readOnlyRef.current,
 		onApply: (source) => {
 			if (!current.current || conflict || recovery || !online) throw new Error('Draf belum siap menerima tambahan. Selesaikan pemulihan atau konflik terlebih dahulu.');
 			let inserted = '';
@@ -315,7 +333,16 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			if (activeId.current !== savingId) return;
 			const message = (e as Error).message;
 			setError(message);
-			if (message.includes('REVISION_CONFLICT')) {
+			if (isEnhancedAuthoringDenied(e)) {
+				readOnlyRef.current = true;
+				setCapability((prior) => ({
+					authoring: false,
+					readOnlyRendering: true,
+					mode: 'off',
+					reason: 'disabled',
+					notice: prior?.notice || '',
+				}));
+			} else if (message.includes('REVISION_CONFLICT')) {
 				conflictRef.current = true;
 				setConflict(true);
 			}
@@ -325,12 +352,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		}
 	}, [id]);
 	useEffect(() => {
-		if (!draft || !dirty || saving || recovery || conflict || error || !online) return;
+		if (!draft || !dirty || saving || recovery || conflict || error || !online || readOnlyRef.current) return;
 		const timer = window.setTimeout(() => void save(), 1000);
 		return () => window.clearTimeout(timer);
 	}, [draft, dirty, saving, recovery, conflict, error, online, save]);
 	useEffect(() => {
-		if (!draft || recovery) return;
+		if (!draft || recovery || readOnlyRef.current) return;
 		try {
 			if (dirty)
 				localStorage.setItem(
@@ -476,6 +503,24 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			];
 		});
 	const locked = conflict || Boolean(recovery);
+	// Enhanced capability is server-owned; a denied lecturer gets a fully capable
+	// read-only view instead of a reduced editor that would drop layout/appearance.
+	const enhancedDocument = usesEnhancedAuthoring(draft.document);
+	// Enhanced controls are hidden from a denied lecturer, so banner copy must
+	// describe the protection even when this deployment has the flag on.
+	const readOnly = capability ? !capability.authoring : false;
+	readOnlyRef.current = readOnly;
+	const capabilityNotice = capability
+		? enhancedAuthoringNotice(
+				{
+					authoring: false,
+					readOnlyRendering: true,
+					mode: capability.mode,
+					reason: capability.reason === 'ineligible' ? 'ineligible' : 'disabled',
+				},
+				enhancedDocument,
+			)
+		: '';
 	const selectGroup = (activityId: string, nodeId: string) => {
 		setCollapsed((items) => items.filter((id) => id !== activityId));
 		setActive(activityId);
@@ -563,7 +608,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setAnnouncement('Bagian dihapus. Elemen dan pertanyaan di dalamnya tetap tersimpan.');
 	};
 	const publish = async () => {
-		if (dirty || saving || locked || publishing || !online || builderIssues(draft).length) return;
+		if (dirty || saving || locked || publishing || !online || readOnly || builderIssues(draft).length) return;
 		setPublishing(true); setError('');
 		if (publishCommand.current.revision !== revision) publishCommand.current = { revision, id: uid() };
 		try {
@@ -1144,6 +1189,24 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					))}
 				</nav>
 			</div>
+			{capabilityNotice && (
+				<section className="bd-capability-banner" role="status" aria-live="polite" data-read-only={readOnly ? 'true' : 'false'}>
+					<strong>{readOnly ? 'Mode hanya-baca · penyunting lanjutan dinonaktifkan' : 'Penyunting lanjutan dinonaktifkan'}</strong>
+					<p>{capabilityNotice}</p>
+					{readOnly ? <p>Tampilan ini memakai penyaji bersama yang sama dengan mahasiswa, sehingga seluruh kegiatan, tata letak, dan tampilan tetap terlihat utuh. Penyimpanan, pemulihan, dan penerbitan dinonaktifkan agar tidak ada data yang hilang.</p> : <p>Tata letak bagian, tampilan, dan kontrol responsif tidak tersedia. Elemen, isi, penilaian, pemulihan, dan penerbitan tetap berfungsi.</p>}
+					<div className="bd-inline-actions">
+						<button type="button" className="bd-secondary" onClick={download}>
+							<Download size={14} />
+							Unduh salinan pribadi
+						</button>
+						<button type="button" className="bd-secondary" disabled={readOnly} title={readOnly ? 'Buka pratinjau mahasiswa dari panel Tinjau setelah simpan dinonaktifkan' : undefined} onClick={() => navigate(`/app/builder/${id}/pratinjau`)}>
+							<Eye size={14} />
+							Pratinjau mahasiswa
+						</button>
+						<Link className="bd-secondary" to={d.kind === 'kelas' ? '/app/kelas-terjadwal' : '/app/tugas'}>Kembali ke daftar</Link>
+					</div>
+				</section>
+			)}
 			{storageWarning && <p role="status">{storageWarning}</p>}
 			{error && (
 				<div className="bd-error" role="alert">
@@ -1204,7 +1267,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			{panel === 'content' ? (
 				<div className="bd-layout">
 					<div className="bd-mobile-library-actions">
-						<button className="bd-secondary" disabled={locked || !activity} onClick={() => activity && openElements(activity.id, undefined, selectedGroup?.id)}><Plus size={16} /> Elemen</button>
+						<button className="bd-secondary" disabled={locked || readOnly || !activity} onClick={() => activity && openElements(activity.id, undefined, selectedGroup?.id)}><Plus size={16} /> Elemen</button>
 						<button
 							className="bd-secondary"
 							onClick={() => setActivityDrawer(true)}
@@ -1230,7 +1293,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 									{d.activities.map((item, index) => <option key={item.id} value={item.id}>{index + 1}. {item.title || 'Kegiatan'}</option>)}
 								</select>
 							</label>
-							<BuilderElementLibrary compact disabled={locked || !activity}
+							<BuilderElementLibrary compact disabled={locked || readOnly || !activity}
 								target={libraryGroup ? `Tujuan: ${libraryGroup.title || 'Bagian'}` : `Tujuan: akhir ${activity?.title || 'kegiatan'}`}
 								onAdd={elementId => addElement(elementId, { activityId: activity?.id, beforeId: undefined, parentId: libraryGroup?.id })}
 								onDragStart={(elementId, event) => {
@@ -1243,8 +1306,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							/>
 							<div className="bd-library-layout">
 								<strong>Tata letak</strong>
-								<button type="button" className="bd-secondary" disabled={locked || !activity} onClick={() => addGroup('section', libraryGroup?.id || null)}><Plus size={14} /> Bagian</button>
-								<button type="button" className="bd-secondary" disabled={locked || !activity} onClick={() => addGroup('container', libraryGroup?.id || null)}><Plus size={14} /> Kontainer</button>
+								<button type="button" className="bd-secondary" disabled={locked || readOnly || !activity} onClick={() => addGroup('section', libraryGroup?.id || null)}><Plus size={14} /> Bagian</button>
+								<button type="button" className="bd-secondary" disabled={locked || readOnly || !activity} onClick={() => addGroup('container', libraryGroup?.id || null)}><Plus size={14} /> Kontainer</button>
 							</div>
 						</> : outlineContents}
 						{authoringTools}
@@ -1348,7 +1411,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 									</span>
 									<button
 										className="bd-text-button"
-										disabled={locked || dirty || saving}
+										disabled={locked || readOnly || dirty || saving}
 										onClick={() => setSavedItems({ activityId: a.id })}
 									>
 										Simpan template
@@ -1387,7 +1450,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															<button
 																type="button"
 																className="bd-icon"
-																disabled={locked}
+																disabled={locked || readOnly}
 																aria-label="Tambah elemen ke bagian ini"
 																title="Tambah elemen ke bagian ini"
 																onClick={() =>
@@ -1399,7 +1462,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															<button
 																type="button"
 																className="bd-icon"
-																disabled={locked}
+																disabled={locked || readOnly}
 																aria-label="Hapus bagian, simpan isinya"
 																title="Hapus bagian, simpan isinya"
 															onClick={() => removeGroup(group.id, a.id)}
@@ -1437,8 +1500,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															<button
 																type="button"
 																className="bd-block-grip"
-																draggable={!locked}
-																disabled={locked}
+																draggable={!locked && !readOnly}
+																disabled={locked || readOnly}
 																aria-label={`Seret ${BLOCK_LABELS[b.type]}`}
 																title="Seret untuk memindahkan elemen"
 																onDragStart={(event) => {
@@ -1461,10 +1524,11 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															{BLOCK_LABELS[b.type]}
 														</span>
 														<div>
+															{!readOnly && (<>
 															<button
 																className="bd-icon"
 																disabled={
-																	locked ||
+																	locked || readOnly ||
 																	questionCount + questionIds(b).length > 500 ||
 																	d.activities.reduce(
 																		(sum, a) => sum + a.blocks.length,
@@ -1488,7 +1552,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																className="bd-move-select"
 																aria-label="Pindahkan elemen ke kegiatan"
 																value=""
-																disabled={locked}
+																disabled={locked || readOnly}
 																onClick={(e) => e.stopPropagation()}
 																onChange={(e) => {
 																	const targetId = e.target.value;
@@ -1542,7 +1606,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Naikkan elemen"
-															disabled={locked || !canMoveLayoutItem(a, b.id, -1)}
+															disabled={locked || readOnly || !canMoveLayoutItem(a, b.id, -1)}
 															onClick={() => moveBlockBy(a.id, b.id, -1)}
 															>
 																<ArrowUp size={14} />
@@ -1551,7 +1615,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Turunkan elemen"
-															disabled={locked || !canMoveLayoutItem(a, b.id, 1)}
+															disabled={locked || readOnly || !canMoveLayoutItem(a, b.id, 1)}
 															onClick={() => moveBlockBy(a.id, b.id, 1)}
 															>
 																<ArrowDown size={14} />
@@ -1573,13 +1637,14 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															>
 																<Trash2 size={14} />
 															</button>
+																</>)}
 														</div>
 													</div>
 															{b.type === 'instructions' || b.type === 'acknowledgement' ? (
 																<BuilderCanvasText
 																	block={b}
 																	selected={selected === b.id}
-																disabled={locked}
+																disabled={locked || readOnly}
 																	onChange={value => change(next => {
 																		const target = next.document.activities.flatMap(activity => activity.blocks).find(item => item.id === b.id);
 																		if (target) target.body = rich(value);
@@ -1597,7 +1662,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 													maxLength={20000}
 													aria-label={`Tulis pengantar ${a.title || `kegiatan ${i + 1}`}`}
 													placeholder="Tulis pengantar kegiatan di sini…"
-													disabled={locked || d.activities.reduce((sum, item) => sum + item.blocks.length, 0) >= 500}
+													disabled={locked || readOnly || d.activities.reduce((sum, item) => sum + item.blocks.length, 0) >= 500}
 													onFocus={() => {
 														setActive(a.id);
 														setSelected('');
@@ -1678,7 +1743,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<button
 							className="bd-primary"
 							disabled={
-								issues.length > 0 || dirty || saving || locked || publishing
+								issues.length > 0 || dirty || saving || locked || readOnly || publishing
 							}
 								onClick={() => setPublishReview(true)}
 						>
@@ -1816,7 +1881,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					{past.current.length > 0 && (
 						<button
 							className="bd-text-button"
-							disabled={locked}
+							disabled={locked || readOnly}
 							onClick={() => {
 								undo();
 								setAnnouncement('Perubahan diurungkan.');
@@ -1834,13 +1899,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					</button>
 				</div>
 			)}
-			{publishReview && <BuilderPublishDialog id={id} revision={revision} envelope={draft} busy={publishing} blocked={dirty || saving || locked || !online} onClose={() => setPublishReview(false)} onPublish={publish} />}
+			{publishReview && <BuilderPublishDialog id={id} revision={revision} envelope={draft} busy={publishing} blocked={dirty || saving || locked || readOnly || !online} onClose={() => setPublishReview(false)} onPublish={publish} />}
 			{savedItems && (
 				<BuilderSavedItems
 					id={id}
 					revision={revision}
 					activityId={savedItems.activityId}
-					dirty={dirty || saving || locked}
+					dirty={dirty || saving || locked || readOnly}
 					onClose={() => setSavedItems(null)}
 					onRestore={(envelope) => {
 						change((next) => {
@@ -1896,7 +1961,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					</DialogHeader>
 					<BuilderElementLibrary
 						allowDrag={false}
-						disabled={locked || !activity}
+						disabled={locked || readOnly || !activity}
 						target={
 							insertionActivity
 								? `${insertionActivity.title || 'Kegiatan'} · ${beforeIndex >= 0 ? `sebelum elemen ${beforeIndex + 1}` : 'akhir kegiatan'}`

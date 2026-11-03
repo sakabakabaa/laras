@@ -1,4 +1,66 @@
 const domain = require(__hooks + '/builder-domain.js');
+
+// Enhanced (layout + appearance) authoring capability. Server-owned: read from
+// deployment env exactly like the web route /api/builder-capability, because
+// the PocketBase and web containers can read the same environment. Unset means
+// enabled (today's behaviour); only an explicit off disables it.
+const ENHANCED_AUTHORING_OFF = ['off', '0', 'false', 'no', 'disabled'];
+function enhancedAuthoring() {
+	const raw = (
+		typeof process !== 'undefined' && process.env
+			? process.env.BUILDER_ENHANCED_AUTHORING
+			: ''
+	);
+	const mode =
+		raw && ENHANCED_AUTHORING_OFF.includes(String(raw).trim().toLowerCase())
+			? 'off'
+			: 'on';
+	return { mode, allowlist: parseAllowlist() };
+}
+function parseAllowlist() {
+	const raw =
+		typeof process !== 'undefined' && process.env
+			? process.env.BUILDER_ENHANCED_AUTHORING_ALLOWLIST
+			: '';
+	if (!raw) return [];
+	return Array.from(
+		new Set(
+			String(raw)
+				.split(',')
+				.map((id) => id.trim())
+				.filter((id) => id.length > 0),
+		),
+	);
+}
+function authoringAllowed(user, capability) {
+	if (capability.mode === 'on') return true;
+	return capability.allowlist.includes(user.id);
+}
+// A document is "enhanced" when any activity carries layout or any block carries
+// appearance/mixed sections. Never inferred from a merely missing layout.
+function enhancedDocument(d) {
+	if (!d || !Array.isArray(d.activities)) return false;
+	return d.activities.some(
+		(a) =>
+			!!a &&
+			(a.layout !== undefined ||
+				(Array.isArray(a.blocks) &&
+					a.blocks.some(
+						(b) =>
+							!!b &&
+							(b.appearance !== undefined || Array.isArray(b.sections)),
+					))),
+	);
+}
+const ENHANCED_DENIED =
+	'ENHANCED_AUTHORING_DENIED: Penyunting visual lanjutan sedang dinonaktifkan untuk akun ini. Draf memakai tata letak atau tampilan lanjutan, sehingga tidak dapat diubah tanpa menghilangkan data. Unduh salinan, atau minta admin mengaktifkan kembali penyunting lanjutan.';
+// Returns true when the caller has no enhanced capability but the target
+// document already uses enhanced fields. Legacy flat documents stay writable.
+function authoringDenied(allowed, documents) {
+	if (allowed) return false;
+	for (const d of documents) if (enhancedDocument(d)) return true;
+	return false;
+}
 function json(r, f) {
 	return JSON.parse(r.getString(f) || '{}');
 }
@@ -91,6 +153,9 @@ function view(app, r) {
 function handle(app, user, body) {
 	if (user.getString('role') !== 'faculty')
 		throw new ForbiddenError('Builder hanya tersedia untuk dosen.');
+	// Reads (list/get/saved) always work so recovery and export stay reachable.
+	const capability = enhancedAuthoring(),
+		allowed = authoringAllowed(user, capability);
 	if (body.action === 'list')
 		return {
 			items: app
@@ -173,6 +238,16 @@ function handle(app, user, body) {
 			{ u: user.id, k: body.commandId },
 		);
 		if (existing) return { id: existing.id };
+		if (
+			authoringDenied(allowed, [envelope.document]) ||
+			(body.action === 'saveTemplate' &&
+				enhancedDocument({
+					activities: envelope.document.activities.filter(
+						(a) => a.id === body.activityId,
+					),
+				}))
+		)
+			throw new ForbiddenError(ENHANCED_DENIED);
 		if (body.baseRevision !== source.getInt('revision'))
 			throw new BadRequestError('Draf berubah. Simpan dan coba lagi.');
 		const title = String(body.title || '').trim();
@@ -283,6 +358,16 @@ function handle(app, user, body) {
 	} catch (e) {
 		throw new BadRequestError(String(e.message || e));
 	}
+	// Check both sides: the stored draft (existing document) and the submitted
+	// document. A denied lecturer can never overwrite an advanced draft, and can
+	// never introduce enhanced fields that the legacy editor would then drop.
+	if (
+		authoringDenied(allowed, [
+			normalized.document,
+			...(record ? [json(record, 'document')] : []),
+		])
+	)
+		throw new ForbiddenError(ENHANCED_DENIED);
 	authorizeContext(app, user, normalized.document);
 	authorizeAssets(app, user, normalized.document);
 	if (record && normalized.document.kind !== record.getString('kind'))
@@ -316,4 +401,12 @@ function handle(app, user, body) {
 	app.save(key);
 	return view(app, record);
 }
-module.exports = { handle, authorizeAssets, authorizeContext };
+module.exports = {
+	handle,
+	authorizeAssets,
+	authorizeContext,
+	enhancedDocument,
+	authoringAllowed,
+	enhancedAuthoring,
+	ENHANCED_DENIED,
+};

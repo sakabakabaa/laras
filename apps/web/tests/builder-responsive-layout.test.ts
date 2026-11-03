@@ -177,6 +177,27 @@ describe('responsive group layout', () => {
 		expect(html).toContain('--bl-column-gap:20px');
 		expect(html).toContain('--bl-tablet-column-gap:0px');
 	});
+	it('roundtrips bounded flow fields and renders shared responsive classes', () => {
+		const input = envelope({ tablet: { direction: 'column', align: 'center', distribute: 'between', wrap: false }, mobile: { direction: 'row' } });
+		const node = input.document.activities[0].layout.nodes[0] as Record<string, unknown>;
+		Object.assign(node, { direction: 'row', align: 'end', distribute: 'center', wrap: false });
+		const normalized = backend.exports.normalize(input).document.activities[0].layout?.nodes[0];
+		expect(normalized).toMatchObject({ direction: 'row', align: 'end', distribute: 'center', wrap: false, responsive: { tablet: { direction: 'column', align: 'center', distribute: 'between', wrap: false }, mobile: { direction: 'row' } } });
+		const activity = { id: 'a', blocks: [], layout: { schemaVersion: 1 as const, nodes: [normalized as BuilderLayoutGroup] } } as never;
+		const html = renderToStaticMarkup(createElement(BuilderLayoutView, { activity, renderBlock: () => null }));
+		expect(html).toContain('bl-flow-row');
+		expect(html).toContain('bl-tablet-flow-column');
+		expect(html).toContain('bl-mobile-flow-row');
+		expect(html).toContain('bl-wrap-no');
+		const css = readFileSync(new URL('../src/styles/builder-responsive.css', import.meta.url), 'utf8');
+		expect(css).toContain('.bl-layout .bl-group.bl-flow-row { flex-direction: row; flex-wrap: wrap; }');
+		expect(css).toContain('.bl-layout .bl-group.bl-flow-row { flex-direction: column; }');
+		for (const [key, value] of [['direction', 'absolute'], ['align', 'baseline'], ['distribute', 'space-evenly'], ['wrap', 'yes']] as const) {
+			const invalid = envelope(undefined); (invalid.document.activities[0].layout.nodes[0] as Record<string, unknown>)[key] = value;
+			expect(() => backend.exports.normalize(invalid)).toThrow();
+		}
+		expect(() => backend.exports.normalize(envelope({ mobile: { direction: 'sideways' } }))).toThrow();
+	});
 	it('updates linked sides together and preserves independent sides when unlinked', () => {
 		const target = { ...group };
 		setLayoutSide(target, 'paddingSides', 'top', 0, true);

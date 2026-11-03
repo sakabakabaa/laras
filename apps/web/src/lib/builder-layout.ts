@@ -6,9 +6,12 @@ export type BuilderLayoutSurface = 'none' | 'muted' | 'accent';
 export type BuilderLayoutGap = 'none' | 'sm' | 'md' | 'lg';
 export type BuilderLayoutPadding = 'none' | 'sm' | 'md';
 export type BuilderLayoutWidth = 'full' | 'contained';
+export type BuilderLayoutDirection = 'grid' | 'row' | 'column';
+export type BuilderLayoutAlign = 'start' | 'center' | 'end' | 'stretch';
+export type BuilderLayoutDistribute = 'start' | 'center' | 'end' | 'between';
 export type BuilderColumnWeights = [number, number] | [number, number, number];
 export type BuilderSideSpacing = { top?: number; right?: number; bottom?: number; left?: number };
-export type BuilderResponsiveOverride = { columns?: 1 | 2 | 3; gap?: BuilderLayoutGap; padding?: BuilderLayoutPadding; paddingSides?: BuilderSideSpacing; paddingLinked?: boolean; margin?: BuilderSideSpacing; marginLinked?: boolean; rowGap?: number; columnGap?: number };
+export type BuilderResponsiveOverride = { columns?: 1 | 2 | 3; direction?: BuilderLayoutDirection; align?: BuilderLayoutAlign; distribute?: BuilderLayoutDistribute; wrap?: boolean; gap?: BuilderLayoutGap; padding?: BuilderLayoutPadding; paddingSides?: BuilderSideSpacing; paddingLinked?: boolean; margin?: BuilderSideSpacing; marginLinked?: boolean; rowGap?: number; columnGap?: number };
 export type BuilderLayoutBlock = { kind: 'block'; blockId: string };
 export type BuilderLayoutGroup = {
 	kind: BuilderLayoutGroupKind;
@@ -22,6 +25,10 @@ export type BuilderLayoutGroup = {
 	width?: BuilderLayoutWidth;
 	maxWidth?: number;
 	columnWeights?: BuilderColumnWeights;
+	direction?: BuilderLayoutDirection;
+	align?: BuilderLayoutAlign;
+	distribute?: BuilderLayoutDistribute;
+	wrap?: boolean;
 	paddingSides?: BuilderSideSpacing;
 	paddingLinked?: boolean;
 	margin?: BuilderSideSpacing;
@@ -64,6 +71,10 @@ export type ResolvedLayoutGroup = {
 	width?: BuilderLayoutWidth;
 	maxWidth?: number;
 	columnWeights?: BuilderColumnWeights;
+	direction?: BuilderLayoutDirection;
+	align?: BuilderLayoutAlign;
+	distribute?: BuilderLayoutDistribute;
+	wrap?: boolean;
 	paddingSides?: BuilderSideSpacing;
 	margin?: BuilderSideSpacing;
 	rowGap?: number;
@@ -531,6 +542,10 @@ export function resolveActivityLayout(
 					...(node.width ? { width: node.width } : {}),
 					...(node.maxWidth ? { maxWidth: node.maxWidth } : {}),
 					...(node.columnWeights ? { columnWeights: node.columnWeights } : {}),
+					...(node.direction ? { direction: node.direction } : {}),
+					...(node.align ? { align: node.align } : {}),
+					...(node.distribute ? { distribute: node.distribute } : {}),
+					...(node.wrap !== undefined ? { wrap: node.wrap } : {}),
 					...(node.paddingSides ? { paddingSides: node.paddingSides } : {}),
 					...(node.margin ? { margin: node.margin } : {}),
 					...(node.rowGap !== undefined ? { rowGap: node.rowGap } : {}),

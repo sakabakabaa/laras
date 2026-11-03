@@ -110,6 +110,7 @@ describe('builder layout tree', () => {
 		const questionBlock = appendBlock(draft, activity.id, 'question_group') as string;
 		const questionId = activity.blocks.find((block) => block.id === questionBlock)!.questionIds![0];
 		const group = addLayoutGroup(activity, 'section', null, 2);
+		findLayoutGroup(activity.layout!, group)!.responsive = { tablet: { columns: 1 }, mobile: { gap: 'sm' } };
 		insertBlockIntoLayout(activity, first, group);
 		insertBlockIntoLayout(activity, questionBlock, group);
 		const duplicated = duplicateActivity(draft, activity.id);
@@ -118,6 +119,7 @@ describe('builder layout tree', () => {
 		expect(copyRefs).toContain(copy.blocks.find((block) => block.type === 'question_group')!.id);
 		expect(copyRefs).not.toContain(questionBlock);
 		expect(copy.layout!.nodes.some((node) => node.kind !== 'block')).toBe(true);
+		expect(copy.layout!.nodes.find((node) => node.kind !== 'block')).toMatchObject({ responsive: { tablet: { columns: 1 }, mobile: { gap: 'sm' } } });
 		const copyQuestion = copy.blocks.find((block) => block.type === 'question_group')!.questionIds![0];
 		expect(copyQuestion).not.toBe(questionId);
 		expect(() => normalize(draft)).not.toThrow();

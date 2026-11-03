@@ -20,6 +20,27 @@ import {
 
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 
+function ResponsiveControls({ group, update }: { group: BuilderLayoutGroup; update: (edit: (group: BuilderLayoutGroup) => void) => void }) {
+	const [device, setDevice] = useState<'tablet'|'mobile'>('tablet');
+	const values = group.responsive?.[device] ?? {};
+	const set = (key: 'columns'|'gap'|'padding', value: string) => update(target => {
+		const responsive = { ...(target.responsive ?? {}) };
+		const current = { ...(responsive[device] ?? {}) };
+		if (value === '') delete current[key];
+		else (current as Record<string, unknown>)[key] = key === 'columns' ? Number(value) : value;
+		if (Object.keys(current).length) responsive[device] = current;
+		else delete responsive[device];
+		target.responsive = Object.keys(responsive).length ? responsive : undefined;
+	});
+	return <fieldset className="bd-fields"><legend>Tata letak perangkat</legend>
+		<div className="bd-inline-actions">{(['tablet','mobile'] as const).map(value => <button type="button" key={value} className="bd-secondary" aria-pressed={device===value} onClick={() => setDevice(value)}>{value==='tablet'?'Tablet':'Ponsel'}</button>)}</div>
+		<label>Kolom<select value={values.columns ?? ''} onChange={e=>set('columns',e.target.value)}><option value="">Otomatis mengikuti layar</option><option value="1">1 kolom</option><option value="2">2 kolom</option><option value="3">3 kolom</option></select></label>
+		<label>Jarak<select value={values.gap ?? ''} onChange={e=>set('gap',e.target.value)}><option value="">Ikuti dasar ({group.gap})</option>{(['none','sm','md','lg'] as const).map(x=><option key={x} value={x}>{({none: 'Tanpa jarak', sm: 'Kecil', md: 'Sedang', lg: 'Besar'})[x]}</option>)}</select></label>
+		<label>Padding<select value={values.padding ?? ''} onChange={e=>set('padding',e.target.value)}><option value="">Ikuti dasar ({group.padding})</option>{(['none','sm','md'] as const).map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+		<button type="button" className="bd-secondary" onClick={()=>update(target=>{if(target.responsive) delete target.responsive[device]; if(target.responsive&&!Object.keys(target.responsive).length) delete target.responsive;})}>Reset perangkat ini</button>
+	</fieldset>;
+}
+
 function activityIn(draft: BuilderEnvelope, activityId: string) {
 	return draft.document.activities.find((item) => item.id === activityId);
 }
@@ -419,6 +440,7 @@ export function BuilderLayoutInspector({
 			) : tab === 'style' ? (
 				<div className="bd-fields">
 					<BuilderAppearanceControls exclude={['padding', 'background']} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
+					<ResponsiveControls group={group} update={update} />
 					<label>
 						Kolom
 						<select

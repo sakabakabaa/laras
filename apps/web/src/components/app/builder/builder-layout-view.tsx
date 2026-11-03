@@ -1,3 +1,4 @@
+import '@/styles/builder-responsive.css';
 import '@/styles/builder-appearance.css';
 import { appearanceClassName } from '@/lib/builder-appearance';
 import type { ReactNode } from 'react';
@@ -9,6 +10,10 @@ import {
 } from '@/lib/builder-layout';
 
 export function layoutGroupClassName(group: ResolvedLayoutGroup) {
+	const responsiveClasses = (device: 'tablet'|'mobile', value: NonNullable<ResolvedLayoutGroup['responsive']>['tablet']) => value ? [
+		...(value.gap ? [`bl-${device}-gap-${value.gap}`] : []),
+		...(value.padding ? [`bl-${device}-pad-${value.padding}`] : []),
+	] : [];
 	return [
 		'bl-group',
 		appearanceClassName(group.appearance),
@@ -17,6 +22,10 @@ export function layoutGroupClassName(group: ResolvedLayoutGroup) {
 		`bl-gap-${group.gap}`,
 		`bl-pad-${group.padding}`,
 		`bl-surface-${group.surface}`,
+		...(group.responsive?.tablet?.columns ? [`bl-tablet-cols-${group.responsive.tablet.columns}`] : []),
+		...(group.responsive?.mobile?.columns ? [`bl-mobile-cols-${group.responsive.mobile.columns}`] : []),
+		...responsiveClasses('tablet', group.responsive?.tablet),
+		...responsiveClasses('mobile', group.responsive?.mobile),
 	].join(' ');
 }
 

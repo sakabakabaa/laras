@@ -2130,16 +2130,8 @@
 	color: var(--bd-text);
 	border-bottom-color: var(--bd-accent);
 }
-.bd-preview-frame.is-mobile .bl-cols-2,
-.bd-preview-frame.is-mobile .bl-cols-3 {
-	grid-template-columns: minmax(0, 1fr);
-}
-@media (max-width: 900px) {
-	.bl-cols-2,
-	.bl-cols-3 {
-		grid-template-columns: minmax(0, 1fr);
-	}
-}
+.bd-preview-frame.is-tablet { max-width: 820px; margin-inline: auto; }
+.bd-preview-frame.is-mobile { max-width: 390px; margin-inline: auto; }
 
 /* Persistent element palette and contextual inspector. */
 .bd-sidebar-tabs button[aria-pressed='true'] {

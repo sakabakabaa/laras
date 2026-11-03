@@ -1,0 +1,111 @@
+/* Each activity responds to its actual canvas, preview, or student content width. */
+.bl-layout {
+	container: laras-activity / inline-size;
+}
+.bl-layout .bl-group {
+	--bl-tablet-columns: initial;
+	--bl-mobile-columns: initial;
+	--bl-tablet-gap: initial;
+	--bl-mobile-gap: initial;
+	--bl-tablet-padding: initial;
+	--bl-mobile-padding: initial;
+	--bl-appearance-padding: initial;
+}
+.bl-layout .bl-tablet-cols-1 {
+	--bl-tablet-columns: 1;
+}
+.bl-layout .bl-tablet-cols-2 {
+	--bl-tablet-columns: 2;
+}
+.bl-layout .bl-tablet-cols-3 {
+	--bl-tablet-columns: 3;
+}
+.bl-layout .bl-tablet-gap-none {
+	--bl-tablet-gap: 0px;
+}
+.bl-layout .bl-tablet-gap-sm {
+	--bl-tablet-gap: 8px;
+}
+.bl-layout .bl-tablet-gap-md {
+	--bl-tablet-gap: 14px;
+}
+.bl-layout .bl-tablet-gap-lg {
+	--bl-tablet-gap: 24px;
+}
+.bl-layout .bl-tablet-pad-none {
+	--bl-tablet-padding: 0px;
+}
+.bl-layout .bl-tablet-pad-sm {
+	--bl-tablet-padding: 10px;
+}
+.bl-layout .bl-tablet-pad-md {
+	--bl-tablet-padding: 18px;
+}
+.bl-layout .bl-mobile-cols-1 {
+	--bl-mobile-columns: 1;
+}
+.bl-layout .bl-mobile-cols-2 {
+	--bl-mobile-columns: 2;
+}
+.bl-layout .bl-mobile-cols-3 {
+	--bl-mobile-columns: 3;
+}
+.bl-layout .bl-mobile-gap-none {
+	--bl-mobile-gap: 0px;
+}
+.bl-layout .bl-mobile-gap-sm {
+	--bl-mobile-gap: 8px;
+}
+.bl-layout .bl-mobile-gap-md {
+	--bl-mobile-gap: 14px;
+}
+.bl-layout .bl-mobile-gap-lg {
+	--bl-mobile-gap: 24px;
+}
+.bl-layout .bl-mobile-pad-none {
+	--bl-mobile-padding: 0px;
+}
+.bl-layout .bl-mobile-pad-sm {
+	--bl-mobile-padding: 10px;
+}
+.bl-layout .bl-mobile-pad-md {
+	--bl-mobile-padding: 18px;
+}
+.bl-layout .bl-group.ba-padding-none {
+	--bl-appearance-padding: 0px;
+}
+.bl-layout .bl-group.ba-padding-sm {
+	--bl-appearance-padding: 0.75rem;
+}
+.bl-layout .bl-group.ba-padding-md {
+	--bl-appearance-padding: 1.25rem;
+}
+.bl-layout .bl-group.ba-padding-lg {
+	--bl-appearance-padding: 2rem;
+}
+@container laras-activity (max-width: 900px) {
+	.bl-layout .bl-group[class] {
+		grid-template-columns: repeat(var(--bl-tablet-columns, 1), minmax(0, 1fr));
+		gap: var(--bl-tablet-gap, var(--bl-gap, 14px));
+		padding: var(
+			--bl-tablet-padding,
+			var(--bl-appearance-padding, var(--bl-padding, 0px))
+		);
+	}
+}
+@container laras-activity (max-width: 600px) {
+	.bl-layout .bl-group[class] {
+		grid-template-columns: repeat(
+			var(--bl-mobile-columns, var(--bl-tablet-columns, 1)),
+			minmax(0, 1fr)
+		);
+		gap: var(--bl-mobile-gap, var(--bl-tablet-gap, var(--bl-gap, 14px)));
+		padding: var(
+			--bl-mobile-padding,
+			var(
+				--bl-tablet-padding,
+				var(--bl-appearance-padding, var(--bl-padding, 0px))
+			)
+		);
+	}
+}

@@ -15,6 +15,7 @@ activity.layout = {
       gap: 'none' | 'sm' | 'md' | 'lg',
       padding: 'none' | 'sm' | 'md',
       surface: 'none' | 'muted' | 'accent',
+      background?: { mode: 'solid', token: 'surface' | 'surface-2' | 'action' } | { mode: 'gradient', from: themeToken, to: themeToken, angle: 0..360, overlay?: themeToken, opacity?: 0..60 },
       width?: 'full' | 'contained', maxWidth?: 320..1920,
       columnWeights?: [number, number] | [number, number, number],
       paddingSides?: SideSpacing, margin?: SideSpacing, rowGap?: 0..80, columnGap?: 0..80,
@@ -41,7 +42,7 @@ The desktop sidebar opens the searchable element palette immediately, with categ
 
 Elements expose Isi, Tampilan and Penilaian controls. Questions open Penilaian first so review links still reach their answer keys. Sections and containers keep their column, gap, padding and surface controls and gain typography, borders, radius and shadows.
 
-Blocks and layout groups may carry an optional `appearance` object. Supported fields are `size`, `weight`, `leading`, `align`, `color`, `background`, `padding`, `border`, `radius` and `shadow`; their allowed presets are defined in `builder-appearance.ts` and checked by the PocketBase normalizer. The Default, Highlight, Exercise and Note presets apply with one change; reset removes overrides. Colors follow the light/dark theme. No arbitrary CSS or URLs are stored. Missing properties inherit existing styles. The shared layout renderer applies the same classes to authoring, preview and published views. Copies retain the overrides while remapping content IDs.
+Blocks and layout groups may carry an optional `appearance` object. Supported fields are `size`, `weight`, `leading`, `align`, `color`, `background`, `padding`, `border`, `radius` and `shadow`; their allowed presets are defined in `builder-appearance.ts` and checked by the PocketBase normalizer. The Default, Highlight, Exercise and Note presets apply with one change; reset removes overrides. Colors follow the light/dark theme. Groups also support an optional authored background: a theme solid or a two-token linear gradient with integer angle 0–360 degrees and optional theme-token overlay opacity 0–60 percent. Supported background tokens are `surface`, `surface-2` and the red `action` token. Omission/reset preserves the transparent/default behavior. These authored backgrounds currently apply at the base layout only; responsive background overrides are not implemented. No arbitrary CSS, custom colors or URLs are stored. The shared layout renderer applies the same theme values to authoring, preview and published views. Copies retain the overrides while remapping content IDs.
 
 ## Editing rules
 
@@ -57,7 +58,7 @@ Blocks and layout groups may carry an optional `appearance` object. Supported fi
 
 `apps/pocketbase/pb_hooks/builder-domain.js` validates layout after normalizing blocks. It rejects unknown or duplicate block references, duplicate node IDs, invalid node kinds, non-integer/out-of-range columns, unsupported gap/padding/surface/width values, widths outside 320–1920 pixels, mismatched or out-of-range column weights, spacing outside the bounds below, more than 40 groups, more than 600 nodes, and group depth over 3. Only the fields listed above survive normalization.
 
-Contained width sets a bounded maximum while preserving available space. Column weights change visual proportions only; element order and identity stay unchanged. `SideSpacing` has optional integer pixel values for top/right/bottom/left, each 0–120; row and column gaps are integers from 0–80. Zero is a valid override. Linked controls edit all sides to one value, while unlinked controls allow independent values. Responsive values cascade tablet to mobile and reset by removing the device override. Legacy token padding and gap remain fallbacks wherever numeric values are absent. Direction, alignment, wrapping, and media placement remain future work; this slice does not expand element styles or backgrounds.
+Contained width sets a bounded maximum while preserving available space. Column weights change visual proportions only; element order and identity stay unchanged. `SideSpacing` has optional integer pixel values for top/right/bottom/left, each 0–120; row and column gaps are integers from 0–80. Zero is a valid override. Linked controls edit all sides to one value, while unlinked controls allow independent values. Responsive values cascade tablet to mobile and reset by removing the device override. Legacy token padding and gap remain fallbacks wherever numeric values are absent. Direction, alignment, wrapping, and media placement remain future work. Authored section/container image backgrounds, media selection and crop controls remain deferred to a later asset-resolver slice.
 
 ## Compatibility and deferred work
 

@@ -155,6 +155,20 @@ function appearance(value) {
 	}
 	return out;
 }
+function layoutBackground(value) {
+	const source = obj(value), tokens = ['surface', 'surface-2', 'action'];
+	if (source.mode === 'solid') {
+		if (!tokens.includes(source.token)) fail('Warna latar bagian tidak valid.');
+		return { mode: 'solid', token: source.token };
+	}
+	if (source.mode !== 'gradient') fail('Jenis latar bagian tidak valid.');
+	if (!tokens.includes(source.from) || !tokens.includes(source.to)) fail('Warna gradien bagian tidak valid.');
+	if (!Number.isInteger(source.angle) || source.angle < 0 || source.angle > 360) fail('Arah gradien harus 0–360 derajat.');
+	if (source.overlay !== undefined && !tokens.includes(source.overlay)) fail('Lapisan latar tidak valid.');
+	if (source.opacity !== undefined && (!Number.isInteger(source.opacity) || source.opacity < 0 || source.opacity > 60)) fail('Opasitas latar harus 0–60 persen.');
+	if ((source.overlay === undefined) !== (source.opacity === undefined)) fail('Lapisan latar dan opasitas harus diatur bersama.');
+	return { mode: 'gradient', from: source.from, to: source.to, angle: source.angle, ...(source.overlay !== undefined ? { overlay: source.overlay, opacity: source.opacity } : {}) };
+}
 function layout(value, blockIds, unique) {
 	const source = obj(value);
 	if (source.schemaVersion !== 1) fail('Versi tata letak tidak didukung.');
@@ -256,6 +270,7 @@ function layout(value, blockIds, unique) {
 			gap,
 			padding,
 			surface,
+			...(value.background !== undefined ? { background: layoutBackground(value.background) } : {}),
 			...(value.appearance !== undefined ? { appearance: appearance(value.appearance) } : {}),
 			...(value.width !== undefined ? { width } : {}),
 			...(value.maxWidth !== undefined ? { maxWidth: value.maxWidth } : {}),

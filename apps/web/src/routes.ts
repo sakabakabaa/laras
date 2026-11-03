@@ -23,6 +23,7 @@ export default [
 	route('app/kegiatan/:runId', 'routes/app.builder-run.tsx'),
 	route('api/builder-media', 'routes/api.builder-media.ts'),
 	route('api/builder-import', 'routes/api.builder-import.ts'),
+	route('api/builder-capability', 'routes/api.builder-capability.ts'),
 	route('app/builder/impor/:jobId', 'routes/app.builder-import.tsx'),
 	route('app/tugas/buat', 'routes/app.tugas.buat.tsx'),
 	route('app/tugas/insights', 'routes/app.tugas.insights.tsx'),

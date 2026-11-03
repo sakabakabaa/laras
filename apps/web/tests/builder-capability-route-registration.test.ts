@@ -11,7 +11,7 @@ vi.mock('@/lib/api.server', () => ({
 vi.mock('@/lib/context-retrieval.server', () => ({ authenticateUser: auth }));
 
 import routes from '../src/routes';
-import { action } from '../src/routes/api.builder-capability';
+import { action, loader } from '../src/routes/api.builder-capability';
 
 describe('builder capability route registration', () => {
 	beforeEach(() => {
@@ -25,11 +25,14 @@ describe('builder capability route registration', () => {
 		}));
 	});
 
-	it('routes POST requests through method and authentication checks', async () => {
-		const getResponse = await action({ request: new Request('http://localhost/api/builder-capability'), params: {} });
+	it('rejects loader requests with an explicit POST allowance', async () => {
+		const getResponse = await loader({ request: new Request('http://localhost/api/builder-capability'), params: {} });
 		expect(getResponse.status).toBe(405);
+		expect(getResponse.headers.get('Allow')).toBe('POST');
 		expect(auth).not.toHaveBeenCalled();
+	});
 
+	it('routes POST requests through authentication checks', async () => {
 		auth.mockResolvedValue({ error: { status: 401, message: 'Unauthorized' } });
 		const postResponse = await action({
 			request: new Request('http://localhost/api/builder-capability', {

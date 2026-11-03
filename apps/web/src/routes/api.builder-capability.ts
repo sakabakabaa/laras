@@ -15,6 +15,12 @@ import { builderCapabilityPayload, serverEnhancedAuthoring, usesEnhancedAuthorin
 
 type Body = { document?: unknown };
 
+export const loader = withApi(async () => {
+	const response = apiError(405, 'Method not allowed');
+	response.headers.set('Allow', 'POST');
+	return response;
+});
+
 export const action = withApi(async ({ request }) => {
 	if (request.method !== 'POST') return apiError(405, 'Method not allowed');
 	const auth = await authenticateUser(request);

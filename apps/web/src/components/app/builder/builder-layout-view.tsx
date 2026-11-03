@@ -25,8 +25,18 @@ export function layoutGroupClassName(group: ResolvedLayoutGroup) {
 		`bl-surface-${group.surface}`,
 		...(group.responsive?.tablet?.columns ? [`bl-tablet-cols-${group.responsive.tablet.columns}`] : []),
 		...(group.responsive?.mobile?.columns ? [`bl-mobile-cols-${group.responsive.mobile.columns}`] : []),
+		`bl-flow-${group.direction ?? 'grid'}`,
+		...(group.responsive?.tablet?.direction ? [`bl-tablet-flow-${group.responsive.tablet.direction}`] : []),
+		...(group.responsive?.mobile?.direction ? [`bl-mobile-flow-${group.responsive.mobile.direction}`] : []),
 		...responsiveClasses('tablet', group.responsive?.tablet),
 		...responsiveClasses('mobile', group.responsive?.mobile),
+		...(group.align ? [`bl-align-${group.align}`] : []),
+		...(group.distribute ? [`bl-distribute-${group.distribute}`] : []),
+		...(group.wrap !== undefined ? [`bl-wrap-${group.wrap ? 'yes' : 'no'}`] : []),
+		...(['tablet','mobile'] as const).flatMap(device => {
+			const value = group.responsive?.[device];
+			return value ? [ ...(value.align ? [`bl-${device}-align-${value.align}`] : []), ...(value.distribute ? [`bl-${device}-distribute-${value.distribute}`] : []), ...(value.wrap !== undefined ? [`bl-${device}-wrap-${value.wrap ? 'yes' : 'no'}`] : []) ] : [];
+		}),
 	].join(' ');
 }
 

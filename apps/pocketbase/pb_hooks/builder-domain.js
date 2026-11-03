@@ -186,6 +186,8 @@ function layout(value, blockIds, unique) {
 		if (value.maxWidth !== undefined && (!Number.isFinite(value.maxWidth) || !Number.isInteger(value.maxWidth) || value.maxWidth < 320 || value.maxWidth > 1920)) fail('Lebar maksimum bagian tidak valid.');
 		const weights = value.columnWeights;
 		if (weights !== undefined && (!Array.isArray(weights) || weights.length !== columns || weights.some(weight => !Number.isFinite(weight) || weight < 1 || weight > 10))) fail('Rasio kolom tidak valid.');
+		for (const [key, values] of [['direction', ['grid', 'row', 'column']], ['align', ['start', 'center', 'end', 'stretch']], ['distribute', ['start', 'center', 'end', 'between']]]) if (value[key] !== undefined && !values.includes(value[key])) fail('Arah atau perataan bagian tidak valid.');
+		if (value.wrap !== undefined && typeof value.wrap !== 'boolean') fail('Pembungkusan bagian tidak valid.');
 		if (!['none', 'sm', 'md', 'lg'].includes(gap))
 			fail('Jarak bagian tidak valid.');
 		if (!['none', 'sm', 'md'].includes(padding))
@@ -205,7 +207,12 @@ function layout(value, blockIds, unique) {
 		};
 		const spacing = (input, label) => {
 			const source = obj(input), clean = {};
-			if (Object.keys(source).some(key => !['columns', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap'].includes(key))) fail(`${label} tidak valid.`);
+			if (Object.keys(source).some(key => !['columns', 'direction', 'align', 'distribute', 'wrap', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap'].includes(key))) fail(`${label} tidak valid.`);
+			for (const [key, values] of [['direction', ['grid', 'row', 'column']], ['align', ['start', 'center', 'end', 'stretch']], ['distribute', ['start', 'center', 'end', 'between']]]) if (source[key] !== undefined) {
+				if (!values.includes(source[key])) fail(`${label} tidak valid.`);
+				clean[key] = source[key];
+			}
+			if (source.wrap !== undefined) { if (typeof source.wrap !== 'boolean') fail(`${label} tidak valid.`); clean.wrap = source.wrap; }
 			if (source.paddingSides !== undefined) clean.paddingSides = sides(source.paddingSides, label);
 			if (source.margin !== undefined) clean.margin = sides(source.margin, label);
 			for (const key of ['paddingLinked', 'marginLinked']) if (source[key] !== undefined) {
@@ -224,7 +231,7 @@ function layout(value, blockIds, unique) {
 			for (const device of ['tablet', 'mobile']) {
 				if (input[device] === undefined) continue;
 				const override = obj(input[device]), clean = {};
-				if (Object.keys(override).some((key) => !['columns', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap'].includes(key))) fail('Pengaturan perangkat tidak valid.');
+				if (Object.keys(override).some((key) => !['columns', 'direction', 'align', 'distribute', 'wrap', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap'].includes(key))) fail('Pengaturan perangkat tidak valid.');
 				if (override.columns !== undefined) {
 					if (![1, 2, 3].includes(override.columns) || !Number.isInteger(override.columns)) fail('Kolom responsif tidak valid.');
 					clean.columns = override.columns;
@@ -253,6 +260,10 @@ function layout(value, blockIds, unique) {
 			...(value.width !== undefined ? { width } : {}),
 			...(value.maxWidth !== undefined ? { maxWidth: value.maxWidth } : {}),
 			...(weights !== undefined ? { columnWeights: weights } : {}),
+			...(value.direction !== undefined ? { direction: value.direction } : {}),
+			...(value.align !== undefined ? { align: value.align } : {}),
+			...(value.distribute !== undefined ? { distribute: value.distribute } : {}),
+			...(value.wrap !== undefined ? { wrap: value.wrap } : {}),
 			...(value.paddingSides !== undefined ? { paddingSides: sides(value.paddingSides, 'Padding') } : {}),
 			...(value.paddingLinked !== undefined ? { paddingLinked: typeof value.paddingLinked === 'boolean' ? value.paddingLinked : fail('Padding tertaut tidak valid.') } : {}),
 			...(value.margin !== undefined ? { margin: sides(value.margin, 'Margin') } : {}),

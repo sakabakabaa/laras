@@ -11,7 +11,8 @@ import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { authenticateUser } from '@/lib/context-retrieval.server';
 import { extractCefrLevel } from '@/lib/cefr-level';
 import { activityTypeOf, type Assignment } from '@/lib/assignments';
-import { parseResearcherIds, isAuthorizedExporter } from '@/lib/research-export.server';
+import { isAuthorizedExporter } from '@/lib/research-export.server';
+import { parseResearcherIds } from '@/lib/researcher-ids';
 import {
 	computeUptakeAnalytics,
 	hintLevelsBeforeRevision,

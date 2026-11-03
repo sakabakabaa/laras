@@ -31,6 +31,7 @@ import { parseRaterJudgments } from '@/lib/research-rater';
 import { parseFindings, type EvalFinding } from '@/lib/ai-evaluation';
 import { findSourceFindingByFingerprint, findingFingerprint } from '@/lib/research-annotation';
 import { createHash } from 'node:crypto';
+import { parseResearcherIds } from '@/lib/researcher-ids';
 
 const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
 
@@ -134,15 +135,6 @@ export const CSV_HEADERS = [
 export type CsvRow = Record<(typeof CSV_HEADERS)[number], string>;
 
 export type ExportError = { status: number; message: string };
-
-/** Parses the comma-separated `RESEARCHER_USER_IDS` env var into a list. */
-export function parseResearcherIds(value: string | undefined): string[] {
-	if (!value) return [];
-	return value
-		.split(',')
-		.map((id) => id.trim())
-		.filter((id) => id.length > 0);
-}
 
 export type ActiveRaterMembership = { reviewer: string; round: string; active: boolean };
 

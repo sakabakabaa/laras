@@ -58,6 +58,12 @@ Blocks and layout groups may carry an optional `appearance` object. Supported fi
 
 Layout is additive to the existing `schemaVersion: 1` envelope, so legacy flat documents round-trip unchanged. Published snapshots store the normalized document (including layout) and private keys separately; student runtime receives the layout but never the private keys.
 
+## Enhanced authoring capability
+
+`BUILDER_ENHANCED_AUTHORING` is read by both the web capability endpoint and the PocketBase builder service. It defaults to enabled to preserve current behavior; `off`, `0`, `false`, `no` or `disabled` turns off enhanced authoring. `BUILDER_ENHANCED_AUTHORING_ALLOWLIST` accepts comma-separated lecturer record IDs while the flag is off. Students are never granted authoring access by this allowlist.
+
+When disabled, published rendering, lecturer reads, export and recovery remain available. Existing drafts with a layout, block appearance or mixed sections render read-only and cannot be saved, snapshotted, templated or published through the service. The service checks both the stored and submitted documents, so a reduced editor cannot overwrite enhanced data or introduce enhanced fields. Flat drafts remain writable only when they contain none of those enhanced fields; absence of `layout` alone is not sufficient. No records are rewritten and no migration is needed. Configure the same flag and allowlist in the web and PocketBase deployments.
+
 ## Remaining phases
 
 - Phase 5A: instruction and acknowledgement blocks use a selected presentation surface and edit directly on the canvas with Enter or double-click. Content remains plain text in the existing RichText document shape and uses the existing draft change history, autosave, recovery and revision safeguards. Other element editors and assessment controls stay in place.

@@ -38,6 +38,7 @@ runInNewContext(
 	{ module: domain },
 );
 const normalize = domain.exports.normalize;
+const documentAssets = (domain.exports as unknown as { documentAssets: (value: unknown) => { asset: { fileId: string }; kind: string }[] }).documentAssets;
 
 function fixture() {
 	const draft = blankBuilder('kelas', 'course000000001', 'meeting00000001');
@@ -52,6 +53,20 @@ function fixture() {
 }
 
 describe('builder layout tree', () => {
+	it('normalizes nested protected image backgrounds and rejects invalid values', () => {
+		const { draft, activity } = fixture();
+		const group = addLayoutGroup(activity, 'section', null, 1);
+		const node = findLayoutGroup(activity.layout!, group)!;
+		node.background = { mode: 'image', asset: { fileId: '123456789012345', filename: 'cover.png', version: 1, name: 'Cover' }, overlay: 'surface', opacity: 35 };
+		const saved = normalize(draft);
+		const found = documentAssets(saved.document);
+		expect(found).toHaveLength(1);
+		expect(found[0]).toMatchObject({ kind: 'image', asset: { filename: 'cover.png' } });
+		const normalizedGroup = findLayoutGroup(saved.document.activities[0].layout!, group)!;
+		expect(normalizedGroup.background).toMatchObject({ mode: 'image', fit: 'cover', positionX: 50, positionY: 50 });
+		node.background.positionX = 101;
+		expect(() => normalize(draft)).toThrow();
+	});
 	it('keeps legacy documents flat and unchanged until a layout is authored', () => {
 		const { draft, activity } = fixture();
 		expect(activity.layout).toBeUndefined();

@@ -14,20 +14,47 @@ import {
 	layoutPath,
 	removeLayoutGroup,
 	resolveActivityLayout,
+	setLayoutSide,
 	type BuilderLayoutGroup,
+	type BuilderResponsiveOverride,
 	type ResolvedLayoutNode,
 } from '@/lib/builder-layout';
+
+function SideSpacing({ label, value, linked, onLink, onChange }: { label: string; value?: Record<string, number>; linked: boolean; onLink: (linked: boolean) => void; onChange: (side: 'top'|'right'|'bottom'|'left', value: number | undefined, linked: boolean) => void }) {
+	const [isLinked, setIsLinked] = useState(linked);
+	return <fieldset className="bd-fields"><legend>{label}</legend><button type="button" className="bd-secondary" aria-pressed={isLinked} onClick={() => { const next = !isLinked; setIsLinked(next); onLink(next); }}>{isLinked ? 'Tertaut' : 'Tidak tertaut'}</button><div className="bd-inline-actions">{(['top','right','bottom','left'] as const).map(side => <label key={side}>{({top:'Atas',right:'Kanan',bottom:'Bawah',left:'Kiri'})[side]}<input type="number" min={0} max={120} step={1} value={value?.[side] ?? ''} onChange={event => { const raw = event.target.value; const parsed = Number(raw); if (raw !== '' && (!Number.isInteger(parsed) || parsed < 0 || parsed > 120)) return; onChange(side, raw === '' ? undefined : parsed, isLinked); }} /></label>)}</div></fieldset>;
+}
+
+function deviceTarget(target: BuilderLayoutGroup, device: 'tablet'|'mobile') {
+	target.responsive ??= {};
+	target.responsive[device] ??= {};
+	return target.responsive[device]!;
+}
+
+function sideLinked(value?: Record<string, number>) { return new Set(Object.values(value ?? {})).size <= 1; }
+
+function setSideLinked(target: BuilderLayoutGroup | BuilderResponsiveOverride, key: 'paddingLinked'|'marginLinked', linked: boolean) { target[key] = linked; }
+
+function editPx(target: BuilderLayoutGroup, key: 'rowGap'|'columnGap', raw: string) {
+	if (raw === '') { delete target[key]; return; }
+	const value = Number(raw);
+	if (Number.isInteger(value) && value >= 0 && value <= 80) target[key] = value;
+}
 
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 
 function ResponsiveControls({ group, update }: { group: BuilderLayoutGroup; update: (edit: (group: BuilderLayoutGroup) => void) => void }) {
 	const [device, setDevice] = useState<'tablet'|'mobile'>('tablet');
 	const values = group.responsive?.[device] ?? {};
-	const set = (key: 'columns'|'gap'|'padding', value: string) => update(target => {
+	const set = (key: 'columns'|'gap'|'padding'|'rowGap'|'columnGap', value: string) => update(target => {
 		const responsive = { ...(target.responsive ?? {}) };
 		const current = { ...(responsive[device] ?? {}) };
 		if (value === '') delete current[key];
-		else (current as Record<string, unknown>)[key] = key === 'columns' ? Number(value) : value;
+		else {
+			const next = ['columns','rowGap','columnGap'].includes(key) ? Number(value) : value;
+			if (['rowGap','columnGap'].includes(key) && (!Number.isInteger(next) || Number(next) < 0 || Number(next) > 80)) return;
+			(current as Record<string, unknown>)[key] = next;
+		}
 		if (Object.keys(current).length) responsive[device] = current;
 		else delete responsive[device];
 		target.responsive = Object.keys(responsive).length ? responsive : undefined;
@@ -37,6 +64,9 @@ function ResponsiveControls({ group, update }: { group: BuilderLayoutGroup; upda
 		<label>Kolom<select value={values.columns ?? ''} onChange={e=>set('columns',e.target.value)}><option value="">Otomatis mengikuti layar</option><option value="1">1 kolom</option><option value="2">2 kolom</option><option value="3">3 kolom</option></select></label>
 		<label>Jarak<select value={values.gap ?? ''} onChange={e=>set('gap',e.target.value)}><option value="">Ikuti dasar ({group.gap})</option>{(['none','sm','md','lg'] as const).map(x=><option key={x} value={x}>{({none: 'Tanpa jarak', sm: 'Kecil', md: 'Sedang', lg: 'Besar'})[x]}</option>)}</select></label>
 		<label>Padding<select value={values.padding ?? ''} onChange={e=>set('padding',e.target.value)}><option value="">Ikuti dasar ({group.padding})</option>{(['none','sm','md'] as const).map(x=><option key={x} value={x}>{({none: 'Tanpa padding', sm: 'Kecil', md: 'Sedang'})[x]}</option>)}</select></label>
+		<SideSpacing key={`${device}-padding`} label="Padding per sisi (px)" value={values.paddingSides} linked={values.paddingLinked ?? sideLinked(values.paddingSides)} onLink={next=>update(target=>{const deviceGroup=deviceTarget(target,device);setSideLinked(deviceGroup,'paddingLinked',next);if(next){const value=Object.values(values.paddingSides ?? {})[0];setLayoutSide(deviceGroup, 'paddingSides','top',value,true);}})} onChange={(side,value,linked)=>update(target=>setLayoutSide(deviceTarget(target,device), 'paddingSides',side,value,linked))} />
+		<SideSpacing key={`${device}-margin`} label="Margin per sisi (px)" value={values.margin} linked={values.marginLinked ?? sideLinked(values.margin)} onLink={next=>update(target=>{const deviceGroup=deviceTarget(target,device);setSideLinked(deviceGroup,'marginLinked',next);if(next){const value=Object.values(values.margin ?? {})[0];setLayoutSide(deviceGroup, 'margin','top',value,true);}})} onChange={(side,value,linked)=>update(target=>setLayoutSide(deviceTarget(target,device), 'margin',side,value,linked))} />
+		<label>Jarak baris (px)<input type="number" min={0} max={80} value={values.rowGap ?? ''} onChange={e=>set('rowGap',e.target.value)} /></label><label>Jarak kolom (px)<input type="number" min={0} max={80} value={values.columnGap ?? ''} onChange={e=>set('columnGap',e.target.value)} /></label>
 		<button type="button" className="bd-secondary" onClick={()=>update(target=>{if(target.responsive) delete target.responsive[device]; if(target.responsive&&!Object.keys(target.responsive).length) delete target.responsive;})}>Reset perangkat ini</button>
 	</fieldset>;
 }
@@ -460,6 +490,9 @@ export function BuilderLayoutInspector({
 				<div className="bd-fields">
 					<BuilderAppearanceControls exclude={['padding', 'background']} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
 					<ResponsiveControls group={group} update={update} />
+					<SideSpacing label="Padding per sisi (px)" value={group.paddingSides} linked={group.paddingLinked ?? sideLinked(group.paddingSides)} onLink={next=>update(target=>{target.paddingLinked=next;if(next){const value=Object.values(group.paddingSides ?? {})[0];setLayoutSide(target,'paddingSides','top',value,true);}})} onChange={(side,value,linked)=>update(target=>setLayoutSide(target,'paddingSides',side,value,linked))} />
+					<SideSpacing label="Margin per sisi (px)" value={group.margin} linked={group.marginLinked ?? sideLinked(group.margin)} onLink={next=>update(target=>{target.marginLinked=next;if(next){const value=Object.values(group.margin ?? {})[0];setLayoutSide(target,'margin','top',value,true);}})} onChange={(side,value,linked)=>update(target=>setLayoutSide(target,'margin',side,value,linked))} />
+					<label>Jarak baris (px)<input type="number" min={0} max={80} value={group.rowGap ?? ''} onChange={event=>update(target=>editPx(target,'rowGap',event.target.value))} /></label><label>Jarak kolom (px)<input type="number" min={0} max={80} value={group.columnGap ?? ''} onChange={event=>update(target=>editPx(target,'columnGap',event.target.value))} /></label>
 					<label>Lebar bagian<select value={group.width ?? 'full'} onChange={event => update(target => { if (event.target.value === 'full') delete target.width; else target.width = 'contained'; })}><option value="full">Penuh</option><option value="contained">Terbatas</option></select></label>
 					{group.width === 'contained' && <label>Lebar maksimum (px)<input type="number" min={320} max={1920} step={40} value={group.maxWidth ?? 1200} onChange={event => update(target => { const value = Number(event.target.value); if (Number.isFinite(value) && value >= 320 && value <= 1920) target.maxWidth = Math.round(value); else delete target.maxWidth; })} /></label>}
 					{group.columns > 1 && <label>Rasio kolom<select value={group.columnWeights?.join(':') ?? ''} onChange={event => update(target => { const values = event.target.value ? event.target.value.split(':').map(Number) : undefined; if (values) target.columnWeights = values as [number, number] | [number, number, number]; else delete target.columnWeights; })}><option value="">Sama rata</option>{group.columns === 2 ? <><option value="2:1">2 : 1</option><option value="1:2">1 : 2</option><option value="3:2">3 : 2</option></> : <><option value="2:1:1">2 : 1 : 1</option><option value="1:2:1">1 : 2 : 1</option><option value="1:1:2">1 : 1 : 2</option></>}</select></label>}

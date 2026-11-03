@@ -193,13 +193,38 @@ function layout(value, blockIds, unique) {
 		if (!['none', 'muted', 'accent'].includes(surface))
 			fail('Latar bagian tidak valid.');
 		const responsive = {};
+		const sides = (input, label) => {
+			if (input === undefined) return undefined;
+			const source = obj(input), clean = {};
+			if (Object.keys(source).some(key => !['top', 'right', 'bottom', 'left'].includes(key))) fail(`${label} tidak valid.`);
+			for (const side of ['top', 'right', 'bottom', 'left']) if (source[side] !== undefined) {
+				if (!Number.isInteger(source[side]) || source[side] < 0 || source[side] > 120) fail(`${label} tidak valid.`);
+				clean[side] = source[side];
+			}
+			return clean;
+		};
+		const spacing = (input, label) => {
+			const source = obj(input), clean = {};
+			if (Object.keys(source).some(key => !['columns', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap'].includes(key))) fail(`${label} tidak valid.`);
+			if (source.paddingSides !== undefined) clean.paddingSides = sides(source.paddingSides, label);
+			if (source.margin !== undefined) clean.margin = sides(source.margin, label);
+			for (const key of ['paddingLinked', 'marginLinked']) if (source[key] !== undefined) {
+				if (typeof source[key] !== 'boolean') fail(`${label} tidak valid.`);
+				clean[key] = source[key];
+			}
+			for (const key of ['rowGap', 'columnGap']) if (source[key] !== undefined) {
+				if (!Number.isInteger(source[key]) || source[key] < 0 || source[key] > 80) fail(`${label} tidak valid.`);
+				clean[key] = source[key];
+			}
+			return clean;
+		};
 		if (value.responsive !== undefined) {
 			const input = obj(value.responsive);
 			if (Object.keys(input).some((key) => !['tablet', 'mobile'].includes(key))) fail('Pengaturan perangkat tidak valid.');
 			for (const device of ['tablet', 'mobile']) {
 				if (input[device] === undefined) continue;
 				const override = obj(input[device]), clean = {};
-				if (Object.keys(override).some((key) => !['columns', 'gap', 'padding'].includes(key))) fail('Pengaturan perangkat tidak valid.');
+				if (Object.keys(override).some((key) => !['columns', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap'].includes(key))) fail('Pengaturan perangkat tidak valid.');
 				if (override.columns !== undefined) {
 					if (![1, 2, 3].includes(override.columns) || !Number.isInteger(override.columns)) fail('Kolom responsif tidak valid.');
 					clean.columns = override.columns;
@@ -212,6 +237,7 @@ function layout(value, blockIds, unique) {
 					if (!['none', 'sm', 'md'].includes(override.padding)) fail('Padding responsif tidak valid.');
 					clean.padding = override.padding;
 				}
+				Object.assign(clean, spacing(override, 'Jarak perangkat'));
 				responsive[device] = clean;
 			}
 		}
@@ -227,6 +253,12 @@ function layout(value, blockIds, unique) {
 			...(value.width !== undefined ? { width } : {}),
 			...(value.maxWidth !== undefined ? { maxWidth: value.maxWidth } : {}),
 			...(weights !== undefined ? { columnWeights: weights } : {}),
+			...(value.paddingSides !== undefined ? { paddingSides: sides(value.paddingSides, 'Padding') } : {}),
+			...(value.paddingLinked !== undefined ? { paddingLinked: typeof value.paddingLinked === 'boolean' ? value.paddingLinked : fail('Padding tertaut tidak valid.') } : {}),
+			...(value.margin !== undefined ? { margin: sides(value.margin, 'Margin') } : {}),
+			...(value.marginLinked !== undefined ? { marginLinked: typeof value.marginLinked === 'boolean' ? value.marginLinked : fail('Margin tertaut tidak valid.') } : {}),
+			...(value.rowGap !== undefined ? { rowGap: spacing({ rowGap: value.rowGap }, 'Jarak baris').rowGap } : {}),
+			...(value.columnGap !== undefined ? { columnGap: spacing({ columnGap: value.columnGap }, 'Jarak kolom').columnGap } : {}),
 			...(value.responsive !== undefined ? { responsive } : {}),
 			children: list(value.children, 600).map((child) =>
 				node(child, depth + 1),

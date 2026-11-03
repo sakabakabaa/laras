@@ -10,6 +10,10 @@
 	--bl-tablet-padding: initial;
 	--bl-mobile-padding: initial;
 	--bl-appearance-padding: initial;
+	margin: var(--bl-margin-top, 0px) var(--bl-margin-right, 0px) var(--bl-margin-bottom, 0px) var(--bl-margin-left, 0px);
+	padding: var(--bl-pad-top, var(--bl-appearance-padding, var(--bl-padding, 0px))) var(--bl-pad-right, var(--bl-appearance-padding, var(--bl-padding, 0px))) var(--bl-pad-bottom, var(--bl-appearance-padding, var(--bl-padding, 0px))) var(--bl-pad-left, var(--bl-appearance-padding, var(--bl-padding, 0px)));
+	row-gap: var(--bl-row-gap, var(--bl-gap, 14px));
+	column-gap: var(--bl-column-gap, var(--bl-gap, 14px));
 }
 .bl-layout .bl-group.bl-width-contained { width: min(100%, var(--bl-max-width, 1200px)); margin-inline: auto; }
 .bl-layout .bl-tablet-cols-1 {
@@ -87,11 +91,10 @@
 @container laras-activity (max-width: 900px) {
 	.bl-layout .bl-group[class] {
 		grid-template-columns: repeat(var(--bl-tablet-columns, 1), minmax(0, 1fr));
-		gap: var(--bl-tablet-gap, var(--bl-gap, 14px));
-		padding: var(
-			--bl-tablet-padding,
-			var(--bl-appearance-padding, var(--bl-padding, 0px))
-		);
+		row-gap: var(--bl-tablet-row-gap, var(--bl-tablet-gap, var(--bl-row-gap, var(--bl-gap, 14px))));
+		column-gap: var(--bl-tablet-column-gap, var(--bl-tablet-gap, var(--bl-column-gap, var(--bl-gap, 14px))));
+		padding: var(--bl-tablet-pad-top, var(--bl-tablet-padding, var(--bl-pad-top, var(--bl-appearance-padding, var(--bl-padding, 0px))))) var(--bl-tablet-pad-right, var(--bl-tablet-padding, var(--bl-pad-right, var(--bl-appearance-padding, var(--bl-padding, 0px))))) var(--bl-tablet-pad-bottom, var(--bl-tablet-padding, var(--bl-pad-bottom, var(--bl-appearance-padding, var(--bl-padding, 0px))))) var(--bl-tablet-pad-left, var(--bl-tablet-padding, var(--bl-pad-left, var(--bl-appearance-padding, var(--bl-padding, 0px)))));
+		margin: var(--bl-tablet-margin-top, var(--bl-margin-top, 0px)) var(--bl-tablet-margin-right, var(--bl-margin-right, 0px)) var(--bl-tablet-margin-bottom, var(--bl-margin-bottom, 0px)) var(--bl-tablet-margin-left, var(--bl-margin-left, 0px));
 	}
 }
 @container laras-activity (max-width: 600px) {
@@ -100,13 +103,9 @@
 			var(--bl-mobile-columns, var(--bl-tablet-columns, 1)),
 			minmax(0, 1fr)
 		);
-		gap: var(--bl-mobile-gap, var(--bl-tablet-gap, var(--bl-gap, 14px)));
-		padding: var(
-			--bl-mobile-padding,
-			var(
-				--bl-tablet-padding,
-				var(--bl-appearance-padding, var(--bl-padding, 0px))
-			)
-		);
+		row-gap: var(--bl-mobile-row-gap, var(--bl-mobile-gap, var(--bl-tablet-row-gap, var(--bl-tablet-gap, var(--bl-row-gap, var(--bl-gap, 14px))))));
+		column-gap: var(--bl-mobile-column-gap, var(--bl-mobile-gap, var(--bl-tablet-column-gap, var(--bl-tablet-gap, var(--bl-column-gap, var(--bl-gap, 14px))))));
+		padding: var(--bl-mobile-pad-top, var(--bl-mobile-padding, var(--bl-tablet-pad-top, var(--bl-tablet-padding, var(--bl-pad-top, var(--bl-appearance-padding, var(--bl-padding, 0px))))))) var(--bl-mobile-pad-right, var(--bl-mobile-padding, var(--bl-tablet-pad-right, var(--bl-tablet-padding, var(--bl-pad-right, var(--bl-appearance-padding, var(--bl-padding, 0px))))))) var(--bl-mobile-pad-bottom, var(--bl-mobile-padding, var(--bl-tablet-pad-bottom, var(--bl-tablet-padding, var(--bl-pad-bottom, var(--bl-appearance-padding, var(--bl-padding, 0px))))))) var(--bl-mobile-pad-left, var(--bl-mobile-padding, var(--bl-tablet-pad-left, var(--bl-tablet-padding, var(--bl-pad-left, var(--bl-appearance-padding, var(--bl-padding, 0px)))))));
+		margin: var(--bl-mobile-margin-top, var(--bl-tablet-margin-top, var(--bl-margin-top, 0px))) var(--bl-mobile-margin-right, var(--bl-tablet-margin-right, var(--bl-margin-right, 0px))) var(--bl-mobile-margin-bottom, var(--bl-tablet-margin-bottom, var(--bl-margin-bottom, 0px))) var(--bl-mobile-margin-left, var(--bl-tablet-margin-left, var(--bl-margin-left, 0px)));
 	}
 }

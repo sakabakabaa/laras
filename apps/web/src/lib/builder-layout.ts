@@ -7,7 +7,8 @@ export type BuilderLayoutGap = 'none' | 'sm' | 'md' | 'lg';
 export type BuilderLayoutPadding = 'none' | 'sm' | 'md';
 export type BuilderLayoutWidth = 'full' | 'contained';
 export type BuilderColumnWeights = [number, number] | [number, number, number];
-export type BuilderResponsiveOverride = { columns?: 1 | 2 | 3; gap?: BuilderLayoutGap; padding?: BuilderLayoutPadding };
+export type BuilderSideSpacing = { top?: number; right?: number; bottom?: number; left?: number };
+export type BuilderResponsiveOverride = { columns?: 1 | 2 | 3; gap?: BuilderLayoutGap; padding?: BuilderLayoutPadding; paddingSides?: BuilderSideSpacing; paddingLinked?: boolean; margin?: BuilderSideSpacing; marginLinked?: boolean; rowGap?: number; columnGap?: number };
 export type BuilderLayoutBlock = { kind: 'block'; blockId: string };
 export type BuilderLayoutGroup = {
 	kind: BuilderLayoutGroupKind;
@@ -21,11 +22,28 @@ export type BuilderLayoutGroup = {
 	width?: BuilderLayoutWidth;
 	maxWidth?: number;
 	columnWeights?: BuilderColumnWeights;
+	paddingSides?: BuilderSideSpacing;
+	paddingLinked?: boolean;
+	margin?: BuilderSideSpacing;
+	marginLinked?: boolean;
+	rowGap?: number;
+	columnGap?: number;
 	responsive?: { tablet?: BuilderResponsiveOverride; mobile?: BuilderResponsiveOverride };
 	children: BuilderLayoutNode[];
 };
 export type BuilderLayoutNode = BuilderLayoutBlock | BuilderLayoutGroup;
 export type BuilderLayout = { schemaVersion: 1; nodes: BuilderLayoutNode[] };
+
+export function setLayoutSide(target: BuilderLayoutGroup | BuilderResponsiveOverride, key: 'paddingSides' | 'margin', side: 'top' | 'right' | 'bottom' | 'left', value: number | undefined, linked: boolean): void {
+	if (value !== undefined && (!Number.isInteger(value) || value < 0 || value > 120)) return;
+	const next = { ...(target[key] ?? {}) };
+	for (const name of linked ? ['top', 'right', 'bottom', 'left'] as const : [side]) {
+		if (value === undefined) delete next[name];
+		else next[name] = value;
+	}
+	if (Object.keys(next).length) target[key] = next;
+	else delete target[key];
+}
 
 export const LAYOUT_LIMITS = {
 	maxDepth: 3,
@@ -46,6 +64,10 @@ export type ResolvedLayoutGroup = {
 	width?: BuilderLayoutWidth;
 	maxWidth?: number;
 	columnWeights?: BuilderColumnWeights;
+	paddingSides?: BuilderSideSpacing;
+	margin?: BuilderSideSpacing;
+	rowGap?: number;
+	columnGap?: number;
 	responsive?: { tablet?: BuilderResponsiveOverride; mobile?: BuilderResponsiveOverride };
 	children: ResolvedLayoutNode[];
 };
@@ -509,6 +531,10 @@ export function resolveActivityLayout(
 					...(node.width ? { width: node.width } : {}),
 					...(node.maxWidth ? { maxWidth: node.maxWidth } : {}),
 					...(node.columnWeights ? { columnWeights: node.columnWeights } : {}),
+					...(node.paddingSides ? { paddingSides: node.paddingSides } : {}),
+					...(node.margin ? { margin: node.margin } : {}),
+					...(node.rowGap !== undefined ? { rowGap: node.rowGap } : {}),
+					...(node.columnGap !== undefined ? { columnGap: node.columnGap } : {}),
 					...(node.responsive ? { responsive: node.responsive } : {}),
 					children: walk(node.children),
 				},

@@ -66,10 +66,20 @@ export function BuilderLayoutView({
 					{renderAfterBlock?.(node.block)}
 				</div>
 			) : (
+				(() => {
+					const spacing: Record<string, string> = { ...(node.paddingSides ? Object.fromEntries(Object.entries(node.paddingSides).map(([side, value]) => [`--bl-pad-${side}`, `${value}px`])) : {}), ...(node.margin ? Object.fromEntries(Object.entries(node.margin).map(([side, value]) => [`--bl-margin-${side}`, `${value}px`])) : {}), ...(node.rowGap !== undefined ? { '--bl-row-gap': `${node.rowGap}px` } : {}), ...(node.columnGap !== undefined ? { '--bl-column-gap': `${node.columnGap}px` } : {}) };
+					for (const device of ['tablet', 'mobile'] as const) {
+						const override = node.responsive?.[device];
+						for (const [key, sides] of [['paddingSides', override?.paddingSides], ['margin', override?.margin]] as const)
+							if (sides) Object.assign(spacing, Object.fromEntries(Object.entries(sides).map(([side, value]) => [`--bl-${device}-${key === 'paddingSides' ? 'pad' : 'margin'}-${side}`, `${value}px`])));
+						if (override?.rowGap !== undefined) Object.assign(spacing, { [`--bl-${device}-row-gap`]: `${override.rowGap}px` });
+						if (override?.columnGap !== undefined) Object.assign(spacing, { [`--bl-${device}-column-gap`]: `${override.columnGap}px` });
+					}
+					return (
 				<div
 					key={node.id}
 					className={layoutGroupClassName(node)}
-					style={{ ...(node.maxWidth ? { '--bl-max-width': `${node.maxWidth}px` } : {}), ...(node.columnWeights ? { gridTemplateColumns: node.columnWeights.map(weight => `${weight}fr`).join(' ') } : {}) } as CSSProperties}
+					style={{ ...(node.maxWidth ? { '--bl-max-width': `${node.maxWidth}px` } : {}), ...(node.columnWeights ? { gridTemplateColumns: node.columnWeights.map(weight => `${weight}fr`).join(' ') } : {}), ...spacing } as CSSProperties}
 					data-layout-node={node.id}
 					data-layout-kind={node.kind}
 				>
@@ -79,6 +89,8 @@ export function BuilderLayoutView({
 						renderNodes(node.children)
 					)}
 				</div>
+					);
+				})()
 			);
 		});
 	return (

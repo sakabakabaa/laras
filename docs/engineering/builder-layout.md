@@ -15,6 +15,8 @@ activity.layout = {
       gap: 'none' | 'sm' | 'md' | 'lg',
       padding: 'none' | 'sm' | 'md',
       surface: 'none' | 'muted' | 'accent',
+      width?: 'full' | 'contained', maxWidth?: 320..1920,
+      columnWeights?: [number, number] | [number, number, number],
       responsive?: { tablet?: { columns?: 1 | 2 | 3, gap?: 'none' | 'sm' | 'md' | 'lg', padding?: 'none' | 'sm' | 'md' }, mobile?: { columns?: 1 | 2 | 3, gap?: 'none' | 'sm' | 'md' | 'lg', padding?: 'none' | 'sm' | 'md' } },
       children: [...]
     }
@@ -52,7 +54,9 @@ Blocks and layout groups may carry an optional `appearance` object. Supported fi
 
 ## Server validation
 
-`apps/pocketbase/pb_hooks/builder-domain.js` validates layout after normalizing blocks. It rejects unknown or duplicate block references, duplicate node IDs, invalid node kinds, non-integer/out-of-range columns, unsupported gap/padding/surface values, more than 40 groups, more than 600 nodes, and group depth over 3. Only the fields listed above survive normalization.
+`apps/pocketbase/pb_hooks/builder-domain.js` validates layout after normalizing blocks. It rejects unknown or duplicate block references, duplicate node IDs, invalid node kinds, non-integer/out-of-range columns, unsupported gap/padding/surface/width values, widths outside 320–1920 pixels, mismatched or out-of-range column weights, more than 40 groups, more than 600 nodes, and group depth over 3. Only the fields listed above survive normalization.
+
+Contained width sets a bounded maximum while preserving available space. Column weights change visual proportions only; element order and identity stay unchanged. Direction, alignment, wrapping, per-side spacing, backgrounds and media placement remain future work.
 
 ## Compatibility and deferred work
 

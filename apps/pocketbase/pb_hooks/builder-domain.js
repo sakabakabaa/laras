@@ -181,6 +181,11 @@ function layout(value, blockIds, unique) {
 		const gap = value.gap === undefined ? 'md' : value.gap;
 		const padding = value.padding === undefined ? 'none' : value.padding;
 		const surface = value.surface === undefined ? 'none' : value.surface;
+		const width = value.width === undefined ? 'full' : value.width;
+		if (!['full', 'contained'].includes(width)) fail('Lebar bagian tidak valid.');
+		if (value.maxWidth !== undefined && (!Number.isFinite(value.maxWidth) || !Number.isInteger(value.maxWidth) || value.maxWidth < 320 || value.maxWidth > 1920)) fail('Lebar maksimum bagian tidak valid.');
+		const weights = value.columnWeights;
+		if (weights !== undefined && (!Array.isArray(weights) || weights.length !== columns || weights.some(weight => !Number.isFinite(weight) || weight < 1 || weight > 10))) fail('Rasio kolom tidak valid.');
 		if (!['none', 'sm', 'md', 'lg'].includes(gap))
 			fail('Jarak bagian tidak valid.');
 		if (!['none', 'sm', 'md'].includes(padding))
@@ -219,6 +224,9 @@ function layout(value, blockIds, unique) {
 			padding,
 			surface,
 			...(value.appearance !== undefined ? { appearance: appearance(value.appearance) } : {}),
+			...(value.width !== undefined ? { width } : {}),
+			...(value.maxWidth !== undefined ? { maxWidth: value.maxWidth } : {}),
+			...(weights !== undefined ? { columnWeights: weights } : {}),
 			...(value.responsive !== undefined ? { responsive } : {}),
 			children: list(value.children, 600).map((child) =>
 				node(child, depth + 1),

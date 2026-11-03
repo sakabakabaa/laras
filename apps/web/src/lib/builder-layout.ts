@@ -2,6 +2,10 @@ import type { BuilderAppearance } from './builder-appearance';
 import type { BuilderActivity, BuilderBlock } from './builder-document';
 
 export type BuilderLayoutGroupKind = 'section' | 'container';
+export type BuilderThemeBackgroundToken = 'surface' | 'surface-2' | 'action';
+export type BuilderLayoutBackground =
+	| { mode: 'solid'; token: BuilderThemeBackgroundToken }
+	| { mode: 'gradient'; from: BuilderThemeBackgroundToken; to: BuilderThemeBackgroundToken; angle: number; overlay?: BuilderThemeBackgroundToken; opacity?: number };
 export type BuilderLayoutSurface = 'none' | 'muted' | 'accent';
 export type BuilderLayoutGap = 'none' | 'sm' | 'md' | 'lg';
 export type BuilderLayoutPadding = 'none' | 'sm' | 'md';
@@ -21,6 +25,7 @@ export type BuilderLayoutGroup = {
 	gap: BuilderLayoutGap;
 	padding: BuilderLayoutPadding;
 	surface: BuilderLayoutSurface;
+	background?: BuilderLayoutBackground;
 	appearance?: BuilderAppearance;
 	width?: BuilderLayoutWidth;
 	maxWidth?: number;
@@ -67,6 +72,7 @@ export type ResolvedLayoutGroup = {
 	gap: BuilderLayoutGap;
 	padding: BuilderLayoutPadding;
 	surface: BuilderLayoutSurface;
+	background?: BuilderLayoutBackground;
 	appearance?: BuilderAppearance;
 	width?: BuilderLayoutWidth;
 	maxWidth?: number;
@@ -538,6 +544,7 @@ export function resolveActivityLayout(
 					gap: node.gap,
 					padding: node.padding,
 					surface: node.surface,
+					...(node.background ? { background: node.background } : {}),
 					...(node.appearance ? { appearance: node.appearance } : {}),
 					...(node.width ? { width: node.width } : {}),
 					...(node.maxWidth ? { maxWidth: node.maxWidth } : {}),

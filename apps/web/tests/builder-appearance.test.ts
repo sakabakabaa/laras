@@ -111,6 +111,7 @@ describe('builder appearance persistence and rendering', () => {
 		expect(
 			normalize(draft).document.activities[0].blocks[0],
 		).not.toHaveProperty('appearance');
+		expect(findLayoutGroup(normalize(draft).document.activities[0].layout!, group.id)).not.toHaveProperty('background');
 		block.appearance = { size: 'xl', color: 'accent' };
 		group.appearance = { border: 'subtle', radius: 'md' };
 		const html = renderToStaticMarkup(
@@ -119,6 +120,26 @@ describe('builder appearance persistence and rendering', () => {
 		expect(html).toContain('ba-size-xl ba-color-accent');
 		expect(html).toContain('ba-border-subtle ba-radius-md');
 		expect(html).toContain('Materi yang ditata');
+	});
+	it('round-trips bounded authored group backgrounds and renders shared theme CSS values', () => {
+		const { draft, group } = fixture();
+		group.background = { mode: 'gradient', from: 'action', to: 'surface', angle: 135, overlay: 'surface-2', opacity: 20 };
+		const normalized = normalize(draft).document.activities[0];
+		expect(findLayoutGroup(normalized.layout!, group.id)?.background).toEqual(group.background);
+		const html = renderToStaticMarkup(createElement(BuilderPreview, { document: normalize(draft).document }));
+		expect(html).toContain('linear-gradient(color-mix(in srgb, var(--r-surface-2) 20%, transparent), color-mix(in srgb, var(--r-surface-2) 20%, transparent)), linear-gradient(135deg, var(--r-action), var(--r-surface))');
+		expect(html).not.toMatch(/privateKey|answerKey|correctAnswer|privateKeys/);
+	});
+	it('rejects invalid background token, angle, opacity and mode while stripping unknown fields', () => {
+		const { draft, group } = fixture();
+		group.background = { mode: 'gradient', from: 'blue', to: 'action', angle: 90 } as never;
+		expect(() => normalize(draft)).toThrow('Warna gradien');
+		group.background = { mode: 'gradient', from: 'action', to: 'surface', angle: 361 };
+		expect(() => normalize(draft)).toThrow('0–360');
+		group.background = { mode: 'gradient', from: 'action', to: 'surface', angle: 90, overlay: 'action', opacity: 61 };
+		expect(() => normalize(draft)).toThrow('0–60');
+		group.background = { mode: 'solid', token: 'surface-2', css: 'position:fixed' } as never;
+		expect(findLayoutGroup(normalize(draft).document.activities[0].layout!, group.id)?.background).toEqual({ mode: 'solid', token: 'surface-2' });
 	});
 });
 

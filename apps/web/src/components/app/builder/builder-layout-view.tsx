@@ -85,6 +85,16 @@ export function BuilderLayoutView({
 						if (override?.rowGap !== undefined) Object.assign(spacing, { [`--bl-${device}-row-gap`]: `${override.rowGap}px` });
 						if (override?.columnGap !== undefined) Object.assign(spacing, { [`--bl-${device}-column-gap`]: `${override.columnGap}px` });
 					}
+					if (node.background) {
+						const colors = { surface: 'var(--r-surface)', 'surface-2': 'var(--r-surface-2)', action: 'var(--r-action)' };
+						const background = node.background;
+						const gradient = background.mode === 'solid'
+							? colors[background.token]
+							: `linear-gradient(${background.angle}deg, ${colors[background.from]}, ${colors[background.to]})`;
+						spacing.background = background.mode === 'gradient' && background.overlay && background.opacity
+							? `linear-gradient(color-mix(in srgb, ${colors[background.overlay]} ${background.opacity}%, transparent), color-mix(in srgb, ${colors[background.overlay]} ${background.opacity}%, transparent)), ${gradient}`
+							: gradient;
+					}
 					return (
 				<div
 					key={node.id}

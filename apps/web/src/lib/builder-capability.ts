@@ -16,7 +16,7 @@
  * Shared documents (published activities, read-only rendering, submissions)
  * are never gated: students keep seeing the full layout and appearance.
  */
-import { parseResearcherIds } from '@/lib/research-export.server';
+import { parseResearcherIds } from '@/lib/researcher-ids';
 
 export const ENHANCED_AUTHORING_ENV = 'BUILDER_ENHANCED_AUTHORING';
 export const ENHANCED_AUTHORING_ALLOWLIST_ENV = 'BUILDER_ENHANCED_AUTHORING_ALLOWLIST';

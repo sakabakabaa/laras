@@ -33,10 +33,12 @@ export function BlockEditor({
 	block,
 	envelope,
 	onChange,
+	idPrefix = 'builder-question-',
 }: {
 	block: BuilderBlock;
 	envelope: BuilderEnvelope;
 	onChange: Change;
+	idPrefix?: string;
 }) {
 	const [bulk, setBulk] = useState('');
 	const [bulkKind, setBulkKind] = useState<'short_answer' | 'single_choice'>(
@@ -394,7 +396,7 @@ export function BlockEditor({
 					<fieldset
 						className="bd-question-editor"
 						key={id}
-						id={'builder-question-' + id}
+						id={idPrefix + id}
 					>
 						<legend>
 							{block.type === 'matching' ? 'Pernyataan' : 'Pertanyaan'}{' '}

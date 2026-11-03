@@ -1,3 +1,5 @@
+import '@/styles/builder-appearance.css';
+import { appearanceClassName } from '@/lib/builder-appearance';
 import type { ReactNode } from 'react';
 import type { BuilderActivity, BuilderBlock } from '@/lib/builder-document';
 import {
@@ -9,6 +11,7 @@ import {
 export function layoutGroupClassName(group: ResolvedLayoutGroup) {
 	return [
 		'bl-group',
+		appearanceClassName(group.appearance),
 		`bl-${group.kind}`,
 		`bl-cols-${group.columns}`,
 		`bl-gap-${group.gap}`,
@@ -45,7 +48,7 @@ export function BuilderLayoutView({
 			return node.kind === 'block' ? (
 				<div
 					key={'block-' + node.block.id}
-					className={'bl-block' + (blockClassName ? ' ' + blockClassName : '')}
+					className={'bl-block ' + appearanceClassName(node.block.appearance) + (blockClassName ? ' ' + blockClassName : '')}
 					data-block-id={node.block.id}
 				>
 					{renderBeforeBlock?.(node.block)}

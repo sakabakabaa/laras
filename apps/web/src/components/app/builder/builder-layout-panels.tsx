@@ -1,3 +1,4 @@
+import { BuilderAppearanceControls } from './builder-appearance-controls';
 import { useId, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import {
@@ -417,6 +418,7 @@ export function BuilderLayoutInspector({
 				</div>
 			) : tab === 'style' ? (
 				<div className="bd-fields">
+					<BuilderAppearanceControls exclude={['padding', 'background']} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
 					<label>
 						Kolom
 						<select

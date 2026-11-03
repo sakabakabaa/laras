@@ -1,0 +1,124 @@
+/* Shared by the canvas, preview, and published student runtime. */
+.ba-size-sm {
+	--ba-font-size: 0.875rem;
+}
+.ba-size-base {
+	--ba-font-size: 1rem;
+}
+.ba-size-lg {
+	--ba-font-size: 1.25rem;
+}
+.ba-size-xl {
+	--ba-font-size: 1.65rem;
+}
+.ba-weight-regular {
+	--ba-font-weight: 400;
+}
+.ba-weight-medium {
+	--ba-font-weight: 500;
+}
+.ba-weight-bold {
+	--ba-font-weight: 700;
+}
+.ba-leading-compact {
+	--ba-line-height: 1.35;
+}
+.ba-leading-normal {
+	--ba-line-height: 1.6;
+}
+.ba-leading-relaxed {
+	--ba-line-height: 1.9;
+}
+.bl-layout [class*='ba-size-'] :is(p, textarea, .bd-rich) {
+	font-size: var(--ba-font-size);
+}
+.bl-layout [class*='ba-weight-'] :is(p, textarea, .bd-rich) {
+	font-weight: var(--ba-font-weight);
+}
+.bl-layout [class*='ba-leading-'] :is(p, textarea, .bd-rich) {
+	line-height: var(--ba-line-height);
+}
+.ba-align-start {
+	text-align: start;
+}
+.ba-align-center {
+	text-align: center;
+}
+.ba-align-end {
+	text-align: end;
+}
+.bl-layout [class*='ba-align-'] textarea {
+	text-align: inherit;
+}
+.ba-color-ink {
+	--ba-color: hsl(var(--foreground));
+}
+.ba-color-muted {
+	--ba-color: hsl(var(--muted-foreground));
+}
+.ba-color-accent {
+	--ba-color: hsl(var(--primary));
+}
+.bl-layout [class*='ba-color-'] :is(p, textarea, .bd-rich) {
+	color: var(--ba-color);
+}
+.bl-layout .ba-background-none {
+	background: transparent;
+}
+.bl-layout .ba-background-muted {
+	background: hsl(var(--muted) / 0.65);
+}
+.bl-layout .ba-background-accent {
+	background: hsl(var(--primary) / 0.08);
+}
+.bl-layout .ba-padding-none {
+	padding: 0;
+}
+.bl-layout .ba-padding-sm {
+	padding: 0.75rem;
+}
+.bl-layout .ba-padding-md {
+	padding: 1.25rem;
+}
+.bl-layout .ba-padding-lg {
+	padding: 2rem;
+}
+.bl-layout .ba-border-none {
+	border: 0;
+}
+.bl-layout .ba-border-subtle {
+	border: 1px solid hsl(var(--border));
+}
+.bl-layout .ba-border-accent {
+	border: 1px solid hsl(var(--primary) / 0.5);
+}
+.bl-layout .ba-radius-none {
+	border-radius: 0;
+}
+.bl-layout .ba-radius-sm {
+	border-radius: 0.375rem;
+}
+.bl-layout .ba-radius-md {
+	border-radius: 0.75rem;
+}
+.bl-layout .ba-radius-lg {
+	border-radius: 1.5rem;
+}
+.bl-layout .ba-shadow-none {
+	box-shadow: none;
+}
+.bl-layout .ba-shadow-sm {
+	box-shadow: 0 2px 8px hsl(var(--foreground) / 0.07);
+}
+.bl-layout .ba-shadow-md {
+	box-shadow: 0 8px 24px hsl(var(--foreground) / 0.12);
+}
+/* Preserve selection outlines while allowing the chosen surface to show. */
+.bd-canvas .bl-block[class*='ba-background-'] > .bd-block {
+	background: transparent;
+}
+@media (max-width: 600px) {
+	.bl-layout .ba-padding-lg {
+		padding: 1.25rem;
+	}
+}

@@ -1,3 +1,4 @@
+import type { BuilderAppearance } from './builder-appearance';
 import type { ScheduledLesson } from './scheduled-lesson';
 import { insertBlockIntoLayout, layoutItemLocation, removeBlockFromLayout, type BuilderLayout } from './builder-layout';
 import pb from './pocketbase-client';
@@ -53,6 +54,7 @@ export type BuilderImage = {
 	caption: string;
 };
 export type BuilderBlock = {
+	appearance?: BuilderAppearance;
 	id: string;
 	type: BlockType;
 	body?: RichText;

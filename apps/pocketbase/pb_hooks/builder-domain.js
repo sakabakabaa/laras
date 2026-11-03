@@ -132,6 +132,29 @@ function asset(value) {
 		name: str(a.name, 200),
 	};
 }
+function appearance(value) {
+	const source = obj(value),
+		out = {};
+	const options = {
+		size: ['sm', 'base', 'lg', 'xl'],
+		weight: ['regular', 'medium', 'bold'],
+		leading: ['compact', 'normal', 'relaxed'],
+		align: ['start', 'center', 'end'],
+		color: ['ink', 'muted', 'accent'],
+		background: ['none', 'muted', 'accent'],
+		padding: ['none', 'sm', 'md', 'lg'],
+		border: ['none', 'subtle', 'accent'],
+		radius: ['none', 'sm', 'md', 'lg'],
+		shadow: ['none', 'sm', 'md'],
+	};
+	for (const key of Object.keys(options)) {
+		if (source[key] === undefined) continue;
+		if (!options[key].includes(source[key]))
+			fail('Pengaturan tampilan tidak valid: ' + key);
+		out[key] = source[key];
+	}
+	return out;
+}
 function layout(value, blockIds, unique) {
 	const source = obj(value);
 	if (source.schemaVersion !== 1) fail('Versi tata letak tidak didukung.');
@@ -172,6 +195,7 @@ function layout(value, blockIds, unique) {
 			gap,
 			padding,
 			surface,
+			...(value.appearance !== undefined ? { appearance: appearance(value.appearance) } : {}),
 			children: list(value.children, 600).map((child) =>
 				node(child, depth + 1),
 			),
@@ -253,6 +277,7 @@ function normalize(body) {
 			if (++blockCount > 500 || !types.includes(b.type))
 				fail('Jenis/jumlah elemen tidak didukung.');
 			const out = { id: unique(b.id), type: b.type };
+			if (b.appearance !== undefined) out.appearance = appearance(b.appearance);
 			blockIds.add(out.id);
 			if (b.body !== undefined) out.body = rich(b.body);
 			if (b.label !== undefined) out.label = str(b.label, 500);

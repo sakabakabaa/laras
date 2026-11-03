@@ -1,9 +1,10 @@
 import type { BuilderAppearance } from './builder-appearance';
-import type { BuilderActivity, BuilderBlock } from './builder-document';
+import type { BuilderActivity, BuilderAsset, BuilderBlock } from './builder-document';
 
 export type BuilderLayoutGroupKind = 'section' | 'container';
 export type BuilderThemeBackgroundToken = 'surface' | 'surface-2' | 'action';
 export type BuilderLayoutBackground =
+	| { mode: 'image'; asset: BuilderAsset; fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; overlay?: BuilderThemeBackgroundToken; opacity?: number }
 	| { mode: 'solid'; token: BuilderThemeBackgroundToken }
 	| { mode: 'gradient'; from: BuilderThemeBackgroundToken; to: BuilderThemeBackgroundToken; angle: number; overlay?: BuilderThemeBackgroundToken; opacity?: number };
 export type BuilderLayoutSurface = 'none' | 'muted' | 'accent';

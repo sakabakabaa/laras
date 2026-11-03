@@ -393,6 +393,7 @@ export function BuilderLayoutBreadcrumbs({
 
 export function BuilderLayoutInspector({
 	activity,
+	courseId,
 	group,
 	disabled,
 	onChange,
@@ -403,6 +404,7 @@ export function BuilderLayoutInspector({
 	onRemove,
 }: {
 	activity: BuilderActivity;
+	courseId: string;
 	group: BuilderLayoutGroup;
 	disabled: boolean;
 	onChange: Change;
@@ -494,7 +496,7 @@ export function BuilderLayoutInspector({
 			) : tab === 'style' ? (
 				<div className="bd-fields">
 					<BuilderAppearanceControls exclude={['padding', 'background']} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
-					<BuilderGroupBackgroundControls value={group.background} onChange={background => update(target => { if (background) target.background = background; else delete target.background; })} />
+					<BuilderGroupBackgroundControls courseId={courseId} value={group.background} onChange={background => update(target => { if (background) target.background = background; else delete target.background; })} />
 					<ResponsiveControls group={group} update={update} />
 					<label>Arah alur<select value={group.direction ?? 'grid'} onChange={event=>update(target=>{const value=event.target.value as 'grid'|'row'|'column'; if(value==='grid') delete target.direction; else target.direction=value; })}><option value="grid">Grid</option><option value="row">Baris</option><option value="column">Kolom</option></select></label>
 					<label>Perataan silang<select value={group.align ?? ''} onChange={event=>update(target=>{if(event.target.value) target.align=event.target.value as 'start'|'center'|'end'|'stretch'; else delete target.align;})}><option value="">Regangkan (default)</option><option value="start">Awal</option><option value="center">Tengah</option><option value="end">Akhir</option><option value="stretch">Regangkan</option></select></label>

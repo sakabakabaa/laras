@@ -935,6 +935,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			) : selectedGroup && activity ? (
 				<BuilderLayoutInspector
 					activity={activity}
+					courseId={contextCourseId}
 					group={selectedGroup}
 					disabled={locked}
 					onChange={change}

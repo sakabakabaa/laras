@@ -30,7 +30,7 @@ export default function BuilderPreviewRoute() {
 function PreviewPage({ id }: { id: string }) {
 	const [document, setDocument] = useState<BuilderDocument | null>(null);
 	const [error, setError] = useState('');
-	const [mobile, setMobile] = useState(false);
+	const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 	useEffect(() => {
 		let live = true;
 		builderRequest<BuilderRecord>('get', { id }).then(record => {
@@ -44,10 +44,9 @@ function PreviewPage({ id }: { id: string }) {
 
 		</header>
 		{error ? <p role="alert">{error}</p> : !document ? <p role="status">Memuat draf…</p> :
-			<div className={mobile ? 'bd-preview-frame is-classroom is-mobile' : 'bd-preview-frame is-classroom'}>
+			<div className={`bd-preview-frame is-classroom is-${device}`}>
 				<BuilderJourneyPreview document={document} exitTo={`/app/builder/${id}`} tools={<div className="bd-inline-actions">
-				<button className="bd-secondary" aria-pressed={!mobile} onClick={() => setMobile(false)}>Desktop</button>
-				<button className="bd-secondary" aria-pressed={mobile} onClick={() => setMobile(true)}>Ponsel</button>
+				{(['desktop','tablet','mobile'] as const).map(size => <button key={size} className="bd-secondary" aria-pressed={device===size} onClick={() => setDevice(size)}>{size==='mobile'?'Ponsel':size==='tablet'?'Tablet':'Desktop'}</button>)}
 			</div>} />
 			</div>}
 	</div>;

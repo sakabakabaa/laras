@@ -5,6 +5,7 @@ export type BuilderLayoutGroupKind = 'section' | 'container';
 export type BuilderLayoutSurface = 'none' | 'muted' | 'accent';
 export type BuilderLayoutGap = 'none' | 'sm' | 'md' | 'lg';
 export type BuilderLayoutPadding = 'none' | 'sm' | 'md';
+export type BuilderResponsiveOverride = { columns?: 1 | 2 | 3; gap?: BuilderLayoutGap; padding?: BuilderLayoutPadding };
 export type BuilderLayoutBlock = { kind: 'block'; blockId: string };
 export type BuilderLayoutGroup = {
 	kind: BuilderLayoutGroupKind;
@@ -15,6 +16,7 @@ export type BuilderLayoutGroup = {
 	padding: BuilderLayoutPadding;
 	surface: BuilderLayoutSurface;
 	appearance?: BuilderAppearance;
+	responsive?: { tablet?: BuilderResponsiveOverride; mobile?: BuilderResponsiveOverride };
 	children: BuilderLayoutNode[];
 };
 export type BuilderLayoutNode = BuilderLayoutBlock | BuilderLayoutGroup;
@@ -36,6 +38,7 @@ export type ResolvedLayoutGroup = {
 	padding: BuilderLayoutPadding;
 	surface: BuilderLayoutSurface;
 	appearance?: BuilderAppearance;
+	responsive?: { tablet?: BuilderResponsiveOverride; mobile?: BuilderResponsiveOverride };
 	children: ResolvedLayoutNode[];
 };
 export type ResolvedLayoutNode = ResolvedLayoutBlock | ResolvedLayoutGroup;
@@ -495,6 +498,7 @@ export function resolveActivityLayout(
 					padding: node.padding,
 					surface: node.surface,
 					...(node.appearance ? { appearance: node.appearance } : {}),
+					...(node.responsive ? { responsive: node.responsive } : {}),
 					children: walk(node.children),
 				},
 			];

@@ -187,6 +187,29 @@ function layout(value, blockIds, unique) {
 			fail('Padding bagian tidak valid.');
 		if (!['none', 'muted', 'accent'].includes(surface))
 			fail('Latar bagian tidak valid.');
+		const responsive = {};
+		if (value.responsive !== undefined) {
+			const input = obj(value.responsive);
+			if (Object.keys(input).some((key) => !['tablet', 'mobile'].includes(key))) fail('Pengaturan perangkat tidak valid.');
+			for (const device of ['tablet', 'mobile']) {
+				if (input[device] === undefined) continue;
+				const override = obj(input[device]), clean = {};
+				if (Object.keys(override).some((key) => !['columns', 'gap', 'padding'].includes(key))) fail('Pengaturan perangkat tidak valid.');
+				if (override.columns !== undefined) {
+					if (![1, 2, 3].includes(override.columns) || !Number.isInteger(override.columns)) fail('Kolom responsif tidak valid.');
+					clean.columns = override.columns;
+				}
+				if (override.gap !== undefined) {
+					if (!['none', 'sm', 'md', 'lg'].includes(override.gap)) fail('Jarak responsif tidak valid.');
+					clean.gap = override.gap;
+				}
+				if (override.padding !== undefined) {
+					if (!['none', 'sm', 'md'].includes(override.padding)) fail('Padding responsif tidak valid.');
+					clean.padding = override.padding;
+				}
+				responsive[device] = clean;
+			}
+		}
 		return {
 			kind: value.kind,
 			id: unique(value.id),
@@ -196,6 +219,7 @@ function layout(value, blockIds, unique) {
 			padding,
 			surface,
 			...(value.appearance !== undefined ? { appearance: appearance(value.appearance) } : {}),
+			...(value.responsive !== undefined ? { responsive } : {}),
 			children: list(value.children, 600).map((child) =>
 				node(child, depth + 1),
 			),

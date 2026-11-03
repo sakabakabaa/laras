@@ -15,6 +15,7 @@ activity.layout = {
       gap: 'none' | 'sm' | 'md' | 'lg',
       padding: 'none' | 'sm' | 'md',
       surface: 'none' | 'muted' | 'accent',
+      responsive?: { tablet?: { columns?: 1 | 2 | 3, gap?: 'none' | 'sm' | 'md' | 'lg', padding?: 'none' | 'sm' | 'md' }, mobile?: { columns?: 1 | 2 | 3, gap?: 'none' | 'sm' | 'md' | 'lg', padding?: 'none' | 'sm' | 'md' } },
       children: [...]
     }
   ]
@@ -27,7 +28,7 @@ Layout nodes reference block IDs; they do not own questions, keys, responses or 
 
 `resolveActivityLayout` is the single ordering source for authoring, preview and student runtime. It walks the layout tree, drops unknown or duplicate references, and appends every block that is not placed in the tree as a trailing item. Consequently every block renders exactly once, and new blocks created by imports, templates or older edit paths cannot disappear.
 
-The shared `BuilderLayoutView` wraps sections/containers. Columns are 1–3 on wide screens and stack below 900px. Surfaces use the existing theme tokens. No arbitrary CSS, HTML or URLs are accepted; per-device settings cannot hide required content.
+The shared `BuilderLayoutView` wraps sections/containers. Columns are 1–3 on wide screens and stack below 900px unless an authored device override applies. Per-device overrides are optional. Container queries use each activity’s actual content width: desktop above 900px, tablet at 601–900px and mobile at 600px or less. Missing spacing overrides inherit the base; missing mobile overrides inherit tablet overrides. Columns without an authored override stack below 900px. Nested groups reset device variables to prevent a parent’s overrides leaking into their children. Preview frames use desktop, tablet and mobile widths through the same rules as the canvas and student pages. Surfaces use the existing theme tokens. No arbitrary CSS, HTML or URLs are accepted; per-device settings cannot hide required content.
 
 Group names are editor navigation labels, not student-facing headings. The mobile preview also stacks columns when the preview frame is narrow on a desktop browser.
 
@@ -37,7 +38,7 @@ The desktop sidebar opens the searchable element palette immediately, with categ
 
 Elements expose Isi, Tampilan and Penilaian controls. Questions open Penilaian first so review links still reach their answer keys. Sections and containers keep their column, gap, padding and surface controls and gain typography, borders, radius and shadows.
 
-Blocks and layout groups may carry an optional `appearance` object. Supported fields are `size`, `weight`, `leading`, `align`, `color`, `background`, `padding`, `border`, `radius` and `shadow`; their allowed presets are defined in `builder-appearance.ts` and checked by the PocketBase normalizer. Colors follow the light/dark theme. No arbitrary CSS or URLs are stored. Missing properties inherit existing styles; reset removes overrides. The shared layout renderer applies the same classes to authoring, preview and published views. Copies retain the overrides while remapping content IDs.
+Blocks and layout groups may carry an optional `appearance` object. Supported fields are `size`, `weight`, `leading`, `align`, `color`, `background`, `padding`, `border`, `radius` and `shadow`; their allowed presets are defined in `builder-appearance.ts` and checked by the PocketBase normalizer. The Default, Highlight, Exercise and Note presets apply with one change; reset removes overrides. Colors follow the light/dark theme. No arbitrary CSS or URLs are stored. Missing properties inherit existing styles. The shared layout renderer applies the same classes to authoring, preview and published views. Copies retain the overrides while remapping content IDs.
 
 ## Editing rules
 
@@ -55,4 +56,9 @@ Blocks and layout groups may carry an optional `appearance` object. Supported fi
 
 ## Compatibility and deferred work
 
-Layout is additive to the existing `schemaVersion: 1` envelope, so legacy flat documents round-trip unchanged. Published snapshots store the normalized document (including layout) and private keys separately; student runtime receives the layout but never the private keys. Phase 4+ work deliberately deferred here includes responsive visibility controls, reusable container presets, margins, custom color values, and per-element grid spans.
+Layout is additive to the existing `schemaVersion: 1` envelope, so legacy flat documents round-trip unchanged. Published snapshots store the normalized document (including layout) and private keys separately; student runtime receives the layout but never the private keys.
+
+## Remaining phases
+
+- Phase 5: direct canvas text editing and selection/drag improvements; reusable section templates; contextual AI/upload proposals. Existing proposals already support preview, append and undo.
+- Phase 6: accessibility, touch, performance and publishing hardening.

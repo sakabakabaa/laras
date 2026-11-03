@@ -5,6 +5,8 @@ export type BuilderLayoutGroupKind = 'section' | 'container';
 export type BuilderLayoutSurface = 'none' | 'muted' | 'accent';
 export type BuilderLayoutGap = 'none' | 'sm' | 'md' | 'lg';
 export type BuilderLayoutPadding = 'none' | 'sm' | 'md';
+export type BuilderLayoutWidth = 'full' | 'contained';
+export type BuilderColumnWeights = [number, number] | [number, number, number];
 export type BuilderResponsiveOverride = { columns?: 1 | 2 | 3; gap?: BuilderLayoutGap; padding?: BuilderLayoutPadding };
 export type BuilderLayoutBlock = { kind: 'block'; blockId: string };
 export type BuilderLayoutGroup = {
@@ -16,6 +18,9 @@ export type BuilderLayoutGroup = {
 	padding: BuilderLayoutPadding;
 	surface: BuilderLayoutSurface;
 	appearance?: BuilderAppearance;
+	width?: BuilderLayoutWidth;
+	maxWidth?: number;
+	columnWeights?: BuilderColumnWeights;
 	responsive?: { tablet?: BuilderResponsiveOverride; mobile?: BuilderResponsiveOverride };
 	children: BuilderLayoutNode[];
 };
@@ -38,6 +43,9 @@ export type ResolvedLayoutGroup = {
 	padding: BuilderLayoutPadding;
 	surface: BuilderLayoutSurface;
 	appearance?: BuilderAppearance;
+	width?: BuilderLayoutWidth;
+	maxWidth?: number;
+	columnWeights?: BuilderColumnWeights;
 	responsive?: { tablet?: BuilderResponsiveOverride; mobile?: BuilderResponsiveOverride };
 	children: ResolvedLayoutNode[];
 };
@@ -498,6 +506,9 @@ export function resolveActivityLayout(
 					padding: node.padding,
 					surface: node.surface,
 					...(node.appearance ? { appearance: node.appearance } : {}),
+					...(node.width ? { width: node.width } : {}),
+					...(node.maxWidth ? { maxWidth: node.maxWidth } : {}),
+					...(node.columnWeights ? { columnWeights: node.columnWeights } : {}),
 					...(node.responsive ? { responsive: node.responsive } : {}),
 					children: walk(node.children),
 				},

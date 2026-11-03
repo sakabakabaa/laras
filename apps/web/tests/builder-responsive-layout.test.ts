@@ -118,6 +118,11 @@ describe('responsive group layout', () => {
 			'bl-mobile-gap-sm',
 		);
 	});
+	it('renders bounded width and weighted columns through the shared layout resolver', () => {
+		const activity = { id: 'a', blocks: [], layout: { schemaVersion: 1 as const, nodes: [{ ...group, width: 'contained' as const, maxWidth: 960, columnWeights: [2, 1, 1] as [number, number, number] }] } } as never;
+		expect(resolveActivityLayout(activity)[0]).toMatchObject({ width: 'contained', maxWidth: 960, columnWeights: [2, 1, 1] });
+		expect(layoutGroupClassName(resolveActivityLayout(activity)[0] as BuilderLayoutGroup)).toContain('bl-width-contained');
+	});
 	it('normalizes bounded overrides and rejects unsupported responsive fields', () => {
 		const valid = backend.exports.normalize(
 			envelope({ tablet: { columns: 2 }, mobile: { gap: 'sm' } }),
@@ -132,5 +137,15 @@ describe('responsive group layout', () => {
 		expect(() =>
 			backend.exports.normalize(envelope({ mobile: { columns: 4 } })),
 		).toThrow();
+	});
+	it('normalizes valid widths and ratios and rejects unsafe or mismatched values', () => {
+		const input = envelope(undefined);
+		const group = input.document.activities[0].layout.nodes[0] as Record<string, unknown>;
+		group.width = 'contained'; group.maxWidth = 960; group.columnWeights = [2, 1];
+		expect(backend.exports.normalize(input).document.activities[0].layout?.nodes[0]).toMatchObject({ width: 'contained', maxWidth: 960, columnWeights: [2, 1] });
+		for (const [key, value] of [['width', 'wide'], ['maxWidth', 1e9], ['maxWidth', Number.POSITIVE_INFINITY], ['columnWeights', [2, 1, 1]]] as const) {
+			const invalid = envelope(undefined); (invalid.document.activities[0].layout.nodes[0] as Record<string, unknown>)[key] = value;
+			expect(() => backend.exports.normalize(invalid)).toThrow();
+		}
 	});
 });

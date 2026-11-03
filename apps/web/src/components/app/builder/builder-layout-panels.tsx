@@ -460,6 +460,9 @@ export function BuilderLayoutInspector({
 				<div className="bd-fields">
 					<BuilderAppearanceControls exclude={['padding', 'background']} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
 					<ResponsiveControls group={group} update={update} />
+					<label>Lebar bagian<select value={group.width ?? 'full'} onChange={event => update(target => { if (event.target.value === 'full') delete target.width; else target.width = 'contained'; })}><option value="full">Penuh</option><option value="contained">Terbatas</option></select></label>
+					{group.width === 'contained' && <label>Lebar maksimum (px)<input type="number" min={320} max={1920} step={40} value={group.maxWidth ?? 1200} onChange={event => update(target => { const value = Number(event.target.value); if (Number.isFinite(value) && value >= 320 && value <= 1920) target.maxWidth = Math.round(value); else delete target.maxWidth; })} /></label>}
+					{group.columns > 1 && <label>Rasio kolom<select value={group.columnWeights?.join(':') ?? ''} onChange={event => update(target => { const values = event.target.value ? event.target.value.split(':').map(Number) : undefined; if (values) target.columnWeights = values as [number, number] | [number, number, number]; else delete target.columnWeights; })}><option value="">Sama rata</option>{group.columns === 2 ? <><option value="2:1">2 : 1</option><option value="1:2">1 : 2</option><option value="3:2">3 : 2</option></> : <><option value="2:1:1">2 : 1 : 1</option><option value="1:2:1">1 : 2 : 1</option><option value="1:1:2">1 : 1 : 2</option></>}</select></label>}
 					<label>
 						Kolom
 						<select

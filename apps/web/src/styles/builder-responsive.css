@@ -11,6 +11,7 @@
 	--bl-mobile-padding: initial;
 	--bl-appearance-padding: initial;
 }
+.bl-layout .bl-group.bl-width-contained { width: min(100%, var(--bl-max-width, 1200px)); margin-inline: auto; }
 .bl-layout .bl-tablet-cols-1 {
 	--bl-tablet-columns: 1;
 }

@@ -1,7 +1,7 @@
 import '@/styles/builder-responsive.css';
 import '@/styles/builder-appearance.css';
 import { appearanceClassName } from '@/lib/builder-appearance';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { BuilderActivity, BuilderBlock } from '@/lib/builder-document';
 import {
 	resolveActivityLayout,
@@ -18,6 +18,7 @@ export function layoutGroupClassName(group: ResolvedLayoutGroup) {
 		'bl-group',
 		appearanceClassName(group.appearance),
 		`bl-${group.kind}`,
+		`bl-width-${group.width ?? 'full'}`,
 		`bl-cols-${group.columns}`,
 		`bl-gap-${group.gap}`,
 		`bl-pad-${group.padding}`,
@@ -68,6 +69,7 @@ export function BuilderLayoutView({
 				<div
 					key={node.id}
 					className={layoutGroupClassName(node)}
+					style={{ ...(node.maxWidth ? { '--bl-max-width': `${node.maxWidth}px` } : {}), ...(node.columnWeights ? { gridTemplateColumns: node.columnWeights.map(weight => `${weight}fr`).join(' ') } : {}) } as CSSProperties}
 					data-layout-node={node.id}
 					data-layout-kind={node.kind}
 				>

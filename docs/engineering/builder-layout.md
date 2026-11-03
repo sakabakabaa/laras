@@ -60,5 +60,6 @@ Layout is additive to the existing `schemaVersion: 1` envelope, so legacy flat d
 
 ## Remaining phases
 
-- Phase 5: direct canvas text editing and selection/drag improvements; reusable section templates; contextual AI/upload proposals. Existing proposals already support preview, append and undo.
+- Phase 5A: instruction and acknowledgement blocks use a selected presentation surface and edit directly on the canvas with Enter or double-click. Content remains plain text in the existing RichText document shape and uses the existing draft change history, autosave, recovery and revision safeguards. Other element editors and assessment controls stay in place.
+- Phase 5B: reusable section templates and selected-context AI/upload proposals. Existing proposals already support preview, append and undo.
 - Phase 6: accessibility, touch, performance and publishing hardening.

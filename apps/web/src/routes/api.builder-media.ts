@@ -1,14 +1,10 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import PocketBase from 'pocketbase';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
+import { builderMediaTicketKey, openBuilderMediaTicket, sealBuilderMediaTicket } from '@/lib/builder-media-ticket.server';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 const pocketbaseUrl = () =>
 	process.env.POCKETBASE_URL || 'http://localhost:8090';
-// Process-local key: tickets are short-lived and refreshed by the viewer. A restart
-// invalidates old tickets without exposing an account-wide storage credential.
-const secret = randomBytes(32);
-const sign = (payload: string) =>
-	createHmac('sha256', secret).update(payload).digest('base64url');
+type MediaAsset = { fileId: string; filename: string; version: number };
 const failure = (status: number, message: string) =>
 	Response.json(
 		{ message },
@@ -21,6 +17,8 @@ export async function action({ request }: ActionFunctionArgs) {
 		'',
 	);
 	if (!token) return failure(401, 'Masuk terlebih dahulu.');
+	let key: Buffer;
+	try { key = builderMediaTicketKey(); } catch { return failure(503, 'Media sementara tidak tersedia.'); }
 	try {
 		const body = await request.json();
 		const pb = new PocketBase(pocketbaseUrl());
@@ -35,11 +33,11 @@ export async function action({ request }: ActionFunctionArgs) {
 				version: body.version,
 			},
 		});
-		const payload = Buffer.from(
-			JSON.stringify({ asset: result.asset, exp: Date.now() + 20 * 60000 }),
-		).toString('base64url');
+		const exp = Date.now() + 20 * 60000;
+		const ref = { fileId: body.fileId, filename: body.filename, version: body.version };
+		const ticket = sealBuilderMediaTicket({ asset: result.asset, token, exp, runId: body.runId, ref }, key);
 		return Response.json(
-			{ url: '/api/builder-media?ticket=' + payload + '.' + sign(payload) },
+			{ url: '/api/builder-media?ticket=' + ticket },
 			{ headers: { 'Cache-Control': 'no-store' } },
 		);
 	} catch {
@@ -48,26 +46,26 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 export async function loader({ request }: LoaderFunctionArgs) {
 	const ticket = new URL(request.url).searchParams.get('ticket') || '';
-	if (ticket.length > 4000) return failure(403, 'Tautan media tidak valid.');
-	const [payload, signature, extra] = ticket.split('.');
-	if (!payload || !signature || extra)
-		return failure(403, 'Tautan media tidak valid.');
-	const expected = Buffer.from(sign(payload)),
-		actual = Buffer.from(signature);
-	if (expected.length !== actual.length || !timingSafeEqual(expected, actual))
-		return failure(403, 'Tautan media tidak valid.');
+	let key: Buffer;
+	try { key = builderMediaTicketKey(); } catch { return failure(503, 'Media sementara tidak tersedia.'); }
 	try {
-		const { asset, exp } = JSON.parse(
-			Buffer.from(payload, 'base64url').toString(),
-		);
-		if (!Number.isFinite(exp) || exp < Date.now())
-			return failure(403, 'Tautan media kedaluwarsa. Muat ulang kegiatan.');
+		const issued = openBuilderMediaTicket(ticket, key);
+		const pb = new PocketBase(pocketbaseUrl());
+		pb.authStore.save(issued.token, null);
+		const authorization = await pb.send('/api/laras/builder-delivery', {
+			method: 'POST',
+			body: { action: 'media', runId: issued.runId, ...issued.ref },
+		});
+		if (JSON.stringify(authorization.asset) !== JSON.stringify(issued.asset)) {
+			return failure(403, 'Akses media tidak lagi tersedia.');
+		}
+		const asset = issued.asset;
 		const record = await pocketbaseAdmin.getRecord<{
 			file: string;
 			version: number;
 		}>('file_library', asset.fileId);
 		let collection = 'file_library',
-			id = asset.fileId,
+			recordId = asset.fileId,
 			filename = asset.filename;
 		if (record.file !== filename || (record.version || 1) !== asset.version) {
 			const prior = await pocketbaseAdmin.listRecords<{
@@ -82,7 +80,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			if (!version || version.filename !== filename)
 				return failure(404, 'Versi media tidak ditemukan.');
 			collection = 'file_versions';
-			id = version.id;
+			recordId = version.id;
 			filename = version.fileData;
 		}
 		const fileToken = await pocketbaseAdmin.getFileToken();
@@ -90,7 +88,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		const range = request.headers.get('Range');
 		if (range) headers.Range = range;
 		const upstream = await fetch(
-			`${pocketbaseUrl()}/api/files/${collection}/${id}/${encodeURIComponent(filename)}?token=${encodeURIComponent(fileToken)}`,
+			`${pocketbaseUrl()}/api/files/${collection}/${recordId}/${encodeURIComponent(filename)}?token=${encodeURIComponent(fileToken)}`,
 			{ headers, signal: request.signal },
 		);
 		if (![200, 206, 416].includes(upstream.status))

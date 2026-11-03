@@ -11,6 +11,7 @@ Root Compose reads root `.env`. Direct web npm scripts read `apps/web/.env`; bac
 | `BUILDER_MAILER_API_KEY` | [apps/pocketbase/pb_hooks/builder-mailer.pb.js](../../apps/pocketbase/pb_hooks/builder-mailer.pb.js) |
 | `BUILDER_MAILER_API_URL` | [apps/pocketbase/pb_hooks/builder-mailer.pb.js](../../apps/pocketbase/pb_hooks/builder-mailer.pb.js) |
 | `BUILDER_MAILER_SENDER_ADDRESS` | [apps/pocketbase/pb_hooks/builder-mailer.pb.js](../../apps/pocketbase/pb_hooks/builder-mailer.pb.js) |
+| `BUILDER_MEDIA_TICKET_KEY` | [apps/web/src/lib/builder-media-ticket.server.ts](../../apps/web/src/lib/builder-media-ticket.server.ts), [docker-compose.local.yml](../../docker-compose.local.yml), [docker-compose.yml](../../docker-compose.yml) — required stable 32-byte hex key; generate with `openssl rand -hex 32` and share across web replicas. Rotating it invalidates existing media tickets. |
 | `BUILD_ID` | [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts) |
 | `BYNARA_API_KEY` | [apps/web/src/lib/course-thumbnail.server.ts](../../apps/web/src/lib/course-thumbnail.server.ts), [docker-compose.local.yml](../../docker-compose.local.yml), [docker-compose.yml](../../docker-compose.yml) |
 | `BYNARA_IMAGE_MODEL` | [apps/web/src/lib/course-thumbnail.server.ts](../../apps/web/src/lib/course-thumbnail.server.ts) |

@@ -79,6 +79,7 @@ services:
       HROUTER_MODEL: ${HROUTER_MODEL:-gpt-6-luna}
       # Phase 1 — encrypts per-lecturer provider credentials at rest.
       AI_SETTINGS_KEY: ${AI_SETTINGS_KEY:?Set AI_SETTINGS_KEY in the deployment .env}
+      BUILDER_MEDIA_TICKET_KEY: ${BUILDER_MEDIA_TICKET_KEY:?Set BUILDER_MEDIA_TICKET_KEY in the deployment .env}
       HROUTER_CONVERSATION_MODEL: ${HROUTER_CONVERSATION_MODEL:-}
       # Local Whisper sidecar takes precedence for library audio.
       WHISPER_URL: http://whisper:8000

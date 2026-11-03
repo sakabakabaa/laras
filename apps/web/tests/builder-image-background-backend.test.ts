@@ -81,28 +81,35 @@ describe('builder background asset authorization', () => {
 describe('builder delivery media lookup', () => {
 	it('returns the exact published nested background reference as a plain asset', () => {
 		const ref = asset();
-		const file = record(ref.fileId, { owner: 'faculty', file: ref.filename, version: 2 });
+		const file = record(ref.fileId, { owner: 'faculty', course: ['course'], file: ref.filename, version: 2 });
 		const result = deliveryHandle(deliveryFixture(doc(ref), file), owner, { action: 'media', runId: 'run', ...ref }) as { asset: Asset };
 		expect(result).toEqual({ asset: ref });
 		expect(result.asset.fileId).toBe(ref.fileId);
 	});
 	it('denies foreign, unreferenced and filename/version-mismatched media', () => {
 		const ref = asset();
-		const app = deliveryFixture(doc(ref), record(ref.fileId, { owner: 'faculty', file: ref.filename, version: 2 }));
+		const app = deliveryFixture(doc(ref), record(ref.fileId, { owner: 'faculty', course: ['course'], file: ref.filename, version: 2 }));
 		for (const request of [
 			{ ...ref, fileId: 'pqrstuvwxyzabcd1' },
 			{ ...ref, filename: 'other.png' },
 			{ ...ref, version: 3 },
 		]) expect(() => deliveryHandle(app, owner, { action: 'media', runId: 'run', ...request })).toThrow();
 	});
+	it('denies published assets after their course association is removed or changed', () => {
+		const ref = asset();
+		for (const course of [[], ['another-course']]) {
+			const file = record(ref.fileId, { owner: 'faculty', course, file: ref.filename, version: 2 });
+			expect(() => deliveryHandle(deliveryFixture(doc(ref), file), owner, { action: 'media', runId: 'run', ...ref })).toThrow('Media tidak tersedia');
+		}
+	});
 	it('continues to deliver existing block and gallery image assets', () => {
 		const block = asset('bcdefghijklmnop', 'block.png', 1);
 		const gallery = asset('cdefghijklmnopq', 'gallery.jpg', 1);
 		const d = doc(asset());
 		d.activities[0].blocks = [{ type: 'image', asset: block, images: [{ asset: gallery }] }];
-		const app = deliveryFixture(d, record(block.fileId, { owner: 'faculty', file: block.filename, version: 1 }));
+		const app = deliveryFixture(d, record(block.fileId, { owner: 'faculty', course: ['course'], file: block.filename, version: 1 }));
 		expect(deliveryHandle(app, owner, { action: 'media', runId: 'run', ...block })).toEqual({ asset: block });
-		const galleryApp = deliveryFixture(d, record(gallery.fileId, { owner: 'faculty', file: gallery.filename, version: 1 }));
+		const galleryApp = deliveryFixture(d, record(gallery.fileId, { owner: 'faculty', course: ['course'], file: gallery.filename, version: 1 }));
 		expect(deliveryHandle(galleryApp, owner, { action: 'media', runId: 'run', ...gallery })).toEqual({ asset: gallery });
 	});
 });

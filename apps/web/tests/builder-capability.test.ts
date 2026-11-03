@@ -35,6 +35,11 @@ type MockApp = {
 };
 
 const service = { exports: {} as Record<string, unknown> };
+const domainModule = { exports: {} as Record<string, unknown> };
+runInNewContext(
+	readFileSync(new URL('../../pocketbase/pb_hooks/builder-domain.js', import.meta.url), 'utf8'),
+	{ module: domainModule, __hooks: '', require: () => ({}) },
+);
 runInNewContext(
 	readFileSync(new URL('../../pocketbase/pb_hooks/builder-service.js', import.meta.url), 'utf8'),
 	{
@@ -44,6 +49,7 @@ runInNewContext(
 		// before normalization, and these tests exercise the flat/normalized shape.
 		require: () => ({
 			normalize: (value: { document: unknown; privateKeys: unknown }) => value,
+			documentAssets: (domainModule.exports as { documentAssets: (d: unknown) => unknown[] }).documentAssets,
 		}),
 		BadRequestError: class BadRequestError extends Error {},
 		ForbiddenError: class ForbiddenError extends Error {},
@@ -307,6 +313,7 @@ function serviceContext(env: Record<string, string | undefined>, options: { priv
 			// Same contract as builder-domain.js: the returned document is stored; the
 			// PocketBase text column serialization happens at the column boundary.
 			normalize: (envelope: Record<string, unknown>) => envelope,
+			documentAssets: (domainModule.exports as { documentAssets: (d: unknown) => unknown[] }).documentAssets,
 		}),
 		process: { env },
 		// The handler constructs a Record when a private-keys row does not exist.

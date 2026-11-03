@@ -460,9 +460,9 @@ function handle(app, user, body) {
 	if (body.action === 'media') {
 		if (!ctx.owner && !available(ctx.d, now))
 			throw new ForbiddenError('Kegiatan belum tersedia.');
-		const assets = require(__hooks + '/builder-domain.js').documentAssets(ctx.d);
+		const assets = domain.documentAssets(ctx.d).map(({ asset }) => asset);
 		const asset = assets.find(
-			({ asset: a }) =>
+			(a) =>
 				a.fileId === body.fileId &&
 				a.filename === body.filename &&
 				a.version === body.version,

@@ -6,6 +6,7 @@ import { runInNewContext } from 'node:vm';
 import { BuilderLayoutView, layoutGroupClassName } from '../src/components/app/builder/builder-layout-view';
 import {
 	resolveActivityLayout,
+	setLayoutSide,
 	type BuilderLayoutGroup,
 } from '../src/lib/builder-layout';
 
@@ -151,5 +152,38 @@ describe('responsive group layout', () => {
 			const invalid = envelope(undefined); (invalid.document.activities[0].layout.nodes[0] as Record<string, unknown>)[key] = value;
 			expect(() => backend.exports.normalize(invalid)).toThrow();
 		}
+	});
+	it('normalizes linked or independent spacing including zero and rejects unsafe values', () => {
+		const input = envelope({ tablet: { paddingSides: { left: 0, right: 12 }, paddingLinked: false, margin: { top: 4 }, marginLinked: true, rowGap: 0, columnGap: 16 }, mobile: { columnGap: 0 } });
+		const group = input.document.activities[0].layout.nodes[0] as Record<string, unknown>;
+		group.paddingSides = { top: 0, right: 12, bottom: 0, left: 12 }; group.paddingLinked = true;
+		group.margin = { top: 8, right: 0, bottom: 8, left: 0 }; group.marginLinked = false;
+		group.rowGap = 0; group.columnGap = 18;
+		expect(backend.exports.normalize(input).document.activities[0].layout?.nodes[0]).toMatchObject({ paddingSides: { top: 0, right: 12, bottom: 0, left: 12 }, paddingLinked: true, margin: { top: 8, right: 0, bottom: 8, left: 0 }, marginLinked: false, rowGap: 0, columnGap: 18, responsive: { tablet: { paddingSides: { left: 0, right: 12 }, paddingLinked: false, margin: { top: 4 }, marginLinked: true, rowGap: 0, columnGap: 16 }, mobile: { columnGap: 0 } } });
+		for (const [key, value] of [['rowGap', -1], ['columnGap', 81], ['paddingSides', { top: Number.POSITIVE_INFINITY }], ['margin', { inline: 4 }], ['rowGap', 'var(--danger)'], ['paddingLinked', 'yes']] as const) {
+			const invalid = envelope(undefined); (invalid.document.activities[0].layout.nodes[0] as Record<string, unknown>)[key] = value;
+			expect(() => backend.exports.normalize(invalid)).toThrow();
+		}
+	});
+	it('renders per-side spacing and independent gaps as bounded pixel styles', () => {
+		const activity = { id: 'a', blocks: [], layout: { schemaVersion: 1 as const, nodes: [{ ...group, paddingSides: { top: 0, right: 12 }, margin: { left: 6 }, rowGap: 0, columnGap: 20, responsive: { tablet: { paddingSides: { bottom: 8 }, rowGap: 4, columnGap: 0 }, mobile: { margin: { top: 2 } } } }] } } as never;
+		const html = renderToStaticMarkup(createElement(BuilderLayoutView, { activity, renderBlock: () => null }));
+		expect(html).toContain('--bl-pad-top:0px');
+		expect(html).toContain('--bl-pad-right:12px');
+		expect(html).toContain('--bl-tablet-pad-bottom:8px');
+		expect(html).toContain('--bl-margin-left:6px');
+		expect(html).toContain('--bl-mobile-margin-top:2px');
+		expect(html).toContain('--bl-row-gap:0px');
+		expect(html).toContain('--bl-column-gap:20px');
+		expect(html).toContain('--bl-tablet-column-gap:0px');
+	});
+	it('updates linked sides together and preserves independent sides when unlinked', () => {
+		const target = { ...group };
+		setLayoutSide(target, 'paddingSides', 'top', 0, true);
+		expect(target.paddingSides).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });
+		setLayoutSide(target, 'paddingSides', 'right', 12, false);
+		expect(target.paddingSides).toEqual({ top: 0, right: 12, bottom: 0, left: 0 });
+		setLayoutSide(target, 'paddingSides', 'top', undefined, false);
+		expect(target.paddingSides).toEqual({ right: 12, bottom: 0, left: 0 });
 	});
 });

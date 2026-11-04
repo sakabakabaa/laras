@@ -139,7 +139,7 @@ describe('enhanced authoring capability — default (flag unset) preserves produ
 		expect(usesEnhancedAuthoring(advancedEnvelope().document)).toBe(true);
 		expect(builderAuthoringGate({ capability, envelope: advancedEnvelope() })).toEqual({ allowed: true });
 		expect(enhancedAuthoringNotice(capability, false)).toBe('');
-		expect(enhancedAuthoringNotice(capability, true)).toContain('Kontrol tata letak');
+		expect(enhancedAuthoringNotice(capability, true)).toBe('');
 	});
 
 	it('reads env through serverEnhancedAuthoring, defaulting to enabled', () => {

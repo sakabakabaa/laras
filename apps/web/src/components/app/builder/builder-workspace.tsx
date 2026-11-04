@@ -506,18 +506,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	// Enhanced capability is server-owned; a denied lecturer gets a fully capable
 	// read-only view instead of a reduced editor that would drop layout/appearance.
 	const enhancedDocument = usesEnhancedAuthoring(draft.document);
-	// Enhanced controls are hidden from a denied lecturer, so banner copy must
-	// describe the protection even when this deployment has the flag on.
+	// Reflect the server decision so enabled lecturers never see a denial notice.
 	const readOnly = capability ? !capability.authoring : false;
 	readOnlyRef.current = readOnly;
 	const capabilityNotice = capability
 		? enhancedAuthoringNotice(
-				{
-					authoring: false,
-					readOnlyRendering: true,
-					mode: capability.mode,
-					reason: capability.reason === 'ineligible' ? 'ineligible' : 'disabled',
-				},
+				capability,
 				enhancedDocument,
 			)
 		: '';

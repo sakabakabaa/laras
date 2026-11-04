@@ -154,19 +154,12 @@ export function builderAuthoringGate(input: {
 
 /**
  * Message shown in the workspace banner when the capability is denied.
- *
- * When the capability is enabled but this draft already uses enhanced fields,
- * we still tell the lecturer that layout/appearance editing is switched off for
- * now and that the draft is protected — never that the whole editor is gone.
  */
 export function enhancedAuthoringNotice(capability: EnhancedAuthoringCapability, enhancedDocument: boolean): string {
 	if (capability.reason === 'ineligible') {
 		return 'Penyunting visual lanjutan hanya tersedia untuk dosen.';
 	}
-	if (capability.authoring && !enhancedDocument) return '';
-	if (capability.authoring) {
-		return 'Draf ini memakai tata letak atau tampilan lanjutan. Kontrol tata letak, tampilan, dan responsif tidak tersedia di sesi ini sehingga draf ditampilkan tanpa perubahan; elemen, isi, penilaian, pemulihan, dan penerbitan tetap berfungsi.';
-	}
+	if (capability.authoring) return '';
 	if (enhancedDocument) {
 		return 'Penyunting visual lanjutan dinonaktifkan oleh admin. Draf ini memakai tata letak atau tampilan lanjutan sehingga ditampilkan hanya-baca; perubahan, penyimpanan, dan penerbitan diblokir agar tata letak, tampilan, dan kunci jawaban tidak hilang. Anda tetap dapat mengunduh salinan pribadi dan melihat pratinjau mahasiswa.';
 	}
@@ -211,12 +204,14 @@ export async function fetchBuilderCapability(document?: unknown): Promise<Builde
 	};
 	try {
 		const { default: pb } = await import('./pocketbase-client');
-		const result = await pb.send<BuilderCapabilityPayload>('/api/builder-capability', {
+		const response = await fetch('/api/builder-capability', {
 			method: 'POST',
-			body: document === undefined ? {} : { document },
-			requestKey: null,
+			headers: { Authorization: 'Bearer ' + pb.authStore.token, 'Content-Type': 'application/json' },
+			body: JSON.stringify(document === undefined ? {} : { document }),
 			signal: AbortSignal.timeout(10000),
 		});
+		if (!response.ok) return fallback;
+		const result: BuilderCapabilityPayload = await response.json();
 		if (!result || typeof result.authoring !== 'boolean') return fallback;
 		return result;
 	} catch {

@@ -157,6 +157,15 @@ function appearance(value) {
 }
 function layoutBackground(value) {
 	const source = obj(value), tokens = ['surface', 'surface-2', 'action'];
+	if (source.mode === 'image') {
+		if (!source.asset) fail('Pilih berkas gambar untuk latar.');
+		if (source.fit !== undefined && !['cover', 'contain'].includes(source.fit)) fail('Tampilan gambar latar tidak valid.');
+		for (const key of ['positionX', 'positionY']) if (source[key] !== undefined && (!Number.isInteger(source[key]) || source[key] < 0 || source[key] > 100)) fail('Posisi gambar latar harus 0–100.');
+		if (source.overlay !== undefined && !tokens.includes(source.overlay)) fail('Lapisan latar tidak valid.');
+		if (source.opacity !== undefined && (!Number.isInteger(source.opacity) || source.opacity < 0 || source.opacity > 60)) fail('Opasitas latar harus 0–60 persen.');
+		if ((source.overlay === undefined) !== (source.opacity === undefined)) fail('Lapisan latar dan opasitas harus diatur bersama.');
+		return { mode: 'image', asset: asset(source.asset), fit: source.fit || 'cover', positionX: source.positionX === undefined ? 50 : source.positionX, positionY: source.positionY === undefined ? 50 : source.positionY, ...(source.overlay !== undefined ? { overlay: source.overlay, opacity: source.opacity } : {}) };
+	}
 	if (source.mode === 'solid') {
 		if (!tokens.includes(source.token)) fail('Warna latar bagian tidak valid.');
 		return { mode: 'solid', token: source.token };
@@ -168,6 +177,18 @@ function layoutBackground(value) {
 	if (source.opacity !== undefined && (!Number.isInteger(source.opacity) || source.opacity < 0 || source.opacity > 60)) fail('Opasitas latar harus 0–60 persen.');
 	if ((source.overlay === undefined) !== (source.opacity === undefined)) fail('Lapisan latar dan opasitas harus diatur bersama.');
 	return { mode: 'gradient', from: source.from, to: source.to, angle: source.angle, ...(source.overlay !== undefined ? { overlay: source.overlay, opacity: source.opacity } : {}) };
+}
+function documentAssets(document) {
+	const assets = [];
+	for (const activity of document.activities || []) {
+		for (const block of activity.blocks || []) {
+			if (block.asset) assets.push({ asset: block.asset, kind: block.type });
+			for (const image of block.images || []) if (image.asset) assets.push({ asset: image.asset, kind: 'image' });
+		}
+		const visit = (nodes) => { for (const node of nodes || []) { if (node.background && node.background.mode === 'image' && node.background.asset) assets.push({ asset: node.background.asset, kind: 'image' }); visit(node.children); } };
+		visit(activity.layout && activity.layout.nodes);
+	}
+	return assets;
 }
 function layout(value, blockIds, unique) {
 	const source = obj(value);
@@ -571,4 +592,4 @@ function normalize(body) {
 		privateKeys: { schemaVersion: 1, answersByQuestionId },
 	};
 }
-module.exports = { normalize };
+module.exports = { normalize, documentAssets };

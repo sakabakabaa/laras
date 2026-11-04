@@ -129,6 +129,14 @@ describe('responsive group layout', () => {
 		const html = renderToStaticMarkup(createElement(BuilderLayoutView, { activity, renderBlock: () => null }));
 		expect(html).toContain('style="--bl-max-width:960px;grid-template-columns:2fr 1fr 1fr"');
 	});
+	it('keeps image-backed group content and fallback in server rendering without serializing asset references', () => {
+		const activity = { id: 'a', blocks: [], layout: { schemaVersion: 1 as const, nodes: [{ ...group, background: { mode: 'image' as const, asset: { fileId: 'private-id', filename: 'lesson.png', version: 2, name: 'Private image' } } }] } } as never;
+		const html = renderToStaticMarkup(createElement(BuilderLayoutView, { activity, renderBlock: () => null, renderGroup: () => createElement('button', null, 'Lesson control') }));
+		expect(html).toContain('Lesson control');
+		expect(html).toContain('background:var(--r-surface-2)');
+		expect(html).not.toContain('private-id');
+		expect(html).not.toContain('lesson.png');
+	});
 	it('normalizes bounded overrides and rejects unsupported responsive fields', () => {
 		const valid = backend.exports.normalize(
 			envelope({ tablet: { columns: 2 }, mobile: { gap: 'sm' } }),

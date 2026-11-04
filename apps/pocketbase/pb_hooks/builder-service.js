@@ -89,12 +89,8 @@ function authorizeContext(app, user, d) {
 	}
 }
 function authorizeAssets(app, user, d) {
-	for (const activity of d.activities)
-		for (const b of activity.blocks) {
-			for (const asset of [
-				b.asset,
-				...(b.images || []).map((image) => image.asset),
-			].filter(Boolean)) {
+	for (const entry of require(__hooks + '/builder-domain.js').documentAssets(d)) {
+		const { asset, kind } = entry;
 				const file = app.findRecordById('file_library', asset.fileId);
 				if (
 					file.getString('owner') !== user.id ||
@@ -126,15 +122,14 @@ function authorizeAssets(app, user, d) {
 				}
 				const ext = asset.filename.split('.').pop().toLowerCase();
 				const allowed =
-					b.type === 'image'
+					kind === 'image'
 						? ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg']
-						: b.type === 'audio'
+						: kind === 'audio'
 							? ['mp3', 'wav', 'ogg', 'aac', 'm4a']
 							: ['mp4', 'webm', 'mov'];
 				if (!allowed.includes(ext))
 					throw new BadRequestError('Jenis berkas tidak cocok dengan elemen.');
-			}
-		}
+	}
 }
 function view(app, r) {
 	const k = find(app, 'builder_private_keys', 'document={:d}', { d: r.id });

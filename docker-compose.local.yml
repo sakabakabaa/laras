@@ -31,6 +31,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       POCKETBASE_URL: http://pocketbase:8090
+      BUILDER_MEDIA_TICKET_KEY: ${BUILDER_MEDIA_TICKET_KEY:?Set BUILDER_MEDIA_TICKET_KEY in .env}
       # NOTE: app builds file URLs as https://${WEBSITE_DOMAIN}/hcgi/platform.
       # Locally that renders as https://localhost:3000/... which won't resolve
       # over plain HTTP — fine for content/visual work, just don't trust

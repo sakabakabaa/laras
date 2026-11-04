@@ -3,6 +3,8 @@ import '@/styles/builder-appearance.css';
 import { appearanceClassName } from '@/lib/builder-appearance';
 import type { CSSProperties, ReactNode } from 'react';
 import type { BuilderActivity, BuilderBlock } from '@/lib/builder-document';
+import { useState } from 'react';
+import { useBuilderAssetUrl } from './builder-media';
 import {
 	resolveActivityLayout,
 	type ResolvedLayoutGroup,
@@ -85,7 +87,7 @@ export function BuilderLayoutView({
 						if (override?.rowGap !== undefined) Object.assign(spacing, { [`--bl-${device}-row-gap`]: `${override.rowGap}px` });
 						if (override?.columnGap !== undefined) Object.assign(spacing, { [`--bl-${device}-column-gap`]: `${override.columnGap}px` });
 					}
-					if (node.background) {
+					if (node.background?.mode === 'solid' || node.background?.mode === 'gradient') {
 						const colors = { surface: 'var(--r-surface)', 'surface-2': 'var(--r-surface-2)', action: 'var(--r-action)' };
 						const background = node.background;
 						const gradient = background.mode === 'solid'
@@ -94,21 +96,11 @@ export function BuilderLayoutView({
 						spacing.background = background.mode === 'gradient' && background.overlay && background.opacity
 							? `linear-gradient(color-mix(in srgb, ${colors[background.overlay]} ${background.opacity}%, transparent), color-mix(in srgb, ${colors[background.overlay]} ${background.opacity}%, transparent)), ${gradient}`
 							: gradient;
-					}
+					} else if (node.background?.mode === 'image') spacing.background = 'var(--r-surface-2)';
 					return (
-				<div
-					key={node.id}
-					className={layoutGroupClassName(node)}
-					style={{ ...(node.maxWidth ? { '--bl-max-width': `${node.maxWidth}px` } : {}), ...(node.columnWeights ? { gridTemplateColumns: node.columnWeights.map(weight => `${weight}fr`).join(' ') } : {}), ...spacing } as CSSProperties}
-					data-layout-node={node.id}
-					data-layout-kind={node.kind}
-				>
-					{renderGroup ? (
-						renderGroup(node, renderNodes(node.children))
-					) : (
-						renderNodes(node.children)
-					)}
-				</div>
+						<LayoutGroup key={node.id} group={node} spacing={spacing} className={layoutGroupClassName(node)} maxWidth={node.maxWidth} columnWeights={node.columnWeights}>
+						{renderGroup ? renderGroup(node, renderNodes(node.children)) : renderNodes(node.children)}
+						</LayoutGroup>
 					);
 				})()
 			);
@@ -118,4 +110,21 @@ export function BuilderLayoutView({
 			{renderNodes(resolveActivityLayout(activity))}
 		</div>
 	);
+}
+
+function LayoutGroup({group, spacing, className, maxWidth, columnWeights, children}: {group: ResolvedLayoutGroup; spacing: Record<string,string>; className: string; maxWidth?:number; columnWeights?:number[]; children:ReactNode}) {
+	const [failed, setFailed] = useState(false);
+	const asset = group.background?.mode === 'image' ? group.background.asset : undefined;
+	const {url} = useBuilderAssetUrl(asset);
+	const image = group.background?.mode === 'image' ? group.background : undefined;
+	const colors = {surface:'var(--r-surface)','surface-2':'var(--r-surface-2)',action:'var(--r-action)'};
+	const serialized = url.replace(/[\\"\n\r\f]/g, char => `\\${char.codePointAt(0)!.toString(16)} `);
+	const layers = image && url && !failed ? [
+		...(image.overlay && (image.opacity ?? 0) > 0 ? [`linear-gradient(color-mix(in srgb, ${colors[image.overlay]} ${image.opacity ?? 20}%, transparent), color-mix(in srgb, ${colors[image.overlay]} ${image.opacity ?? 20}%, transparent))`] : []),
+		`url("${serialized}")`,
+	].join(', ') : undefined;
+	return <div className={className} style={{...(maxWidth?{'--bl-max-width':`${maxWidth}px`}:{}),...(columnWeights?{gridTemplateColumns:columnWeights.map(weight=>`${weight}fr`).join(' ')}:{}),...spacing,...(layers?{backgroundImage:layers,backgroundSize:image?.fit==='contain'?'contain':'cover',backgroundPosition:`${image?.positionX??50}% ${image?.positionY??50}%`,backgroundRepeat:'no-repeat'}:{})} as CSSProperties} data-layout-node={group.id} data-layout-kind={group.kind}>
+		{asset && url && <img aria-hidden="true" tabIndex={-1} alt="" src={url} onError={()=>setFailed(true)} style={{position:'absolute',width:1,height:1,opacity:0,pointerEvents:'none'}} />}
+		{children}
+	</div>;
 }

@@ -460,11 +460,7 @@ function handle(app, user, body) {
 	if (body.action === 'media') {
 		if (!ctx.owner && !available(ctx.d, now))
 			throw new ForbiddenError('Kegiatan belum tersedia.');
-		const assets = ctx.d.activities.flatMap((a) =>
-			a.blocks.flatMap((b) =>
-				[b.asset, ...(b.images || []).map((i) => i.asset)].filter(Boolean),
-			),
-		);
+		const assets = domain.documentAssets(ctx.d).map(({ asset }) => asset);
 		const asset = assets.find(
 			(a) =>
 				a.fileId === body.fileId &&
@@ -473,7 +469,10 @@ function handle(app, user, body) {
 		);
 		if (!asset) throw new ForbiddenError('Media tidak termasuk versi ini.');
 		const file = app.findRecordById('file_library', asset.fileId);
-		if (file.getString('owner') !== ctx.run.getString('owner'))
+		if (
+			file.getString('owner') !== ctx.run.getString('owner') ||
+			!Array.from(file.getStringSlice('course')).includes(ctx.run.getString('course'))
+		)
 			throw new ForbiddenError('Media tidak tersedia.');
 		if (
 			file.getString('file') !== asset.filename ||

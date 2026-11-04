@@ -35,6 +35,19 @@ The scripts target `/opt/laras-git`. Environment values are in that checkout's p
 
 `deploy.sh` fetches `origin/main`, requires fast-forward progression, tags current images with a timestamp, rebuilds both images, starts containers and probes `/api/health`. It fails rather than auto-rolling back. Read the script before operating it; a docs-only GitHub publication does not require a VPS restart.
 
+The web service requires `BUILDER_MEDIA_TICKET_KEY` in the private root `.env` before Compose can build or start it. Generate one 32-byte hex key once in a secure shell, store it in `/opt/laras-git/.env` with mode `600`, and preserve that same value for every web replica and future release. Do not put it in Git, logs, or chat. For a first setup, the following writes the generated value directly to the private file without printing it:
+
+```sh
+cd /opt/laras-git
+umask 077
+if ! grep -q '^BUILDER_MEDIA_TICKET_KEY=' .env; then
+	openssl rand -hex 32 | awk '{ printf "BUILDER_MEDIA_TICKET_KEY=%s\n", $0 }' >> .env
+fi
+chmod 600 .env
+```
+
+The `deploy.sh` script moves the checkout to `origin/main`, so a feature branch must be merged to main before using this deployment method. Deploy only after the required secret is present; rotating it invalidates all outstanding media tickets.
+
 ```sh
 # On the authorized production host, after reviewing the release:
 cd /opt/laras-git

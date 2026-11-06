@@ -174,6 +174,7 @@ function appearance(value) {
 }
 function layoutBackground(value) {
 	const source = obj(value), tokens = ['surface', 'surface-2', 'action'];
+	if (source.mode === 'transparent') return { mode: 'transparent' };
 	if (source.mode === 'image') {
 		if (!source.asset) fail('Pilih berkas gambar untuk latar.');
 		if (source.fit !== undefined && !['cover', 'contain'].includes(source.fit)) fail('Tampilan gambar latar tidak valid.');
@@ -202,7 +203,7 @@ function documentAssets(document) {
 			if (block.asset) assets.push({ asset: block.asset, kind: block.type });
 			for (const image of block.images || []) if (image.asset) assets.push({ asset: image.asset, kind: 'image' });
 		}
-		const visit = (nodes) => { for (const node of nodes || []) { if (node.background && node.background.mode === 'image' && node.background.asset) assets.push({ asset: node.background.asset, kind: 'image' }); visit(node.children); } };
+		const visit = (nodes) => { for (const node of nodes || []) { if (node.background && node.background.mode === 'image' && node.background.asset) assets.push({ asset: node.background.asset, kind: 'image' }); for (const device of ['tablet', 'mobile']) { const background = node.responsive && node.responsive[device] && node.responsive[device].background; if (background && background.mode === 'image' && background.asset) assets.push({ asset: background.asset, kind: 'image' }); } visit(node.children); } };
 		visit(activity.layout && activity.layout.nodes);
 	}
 	return assets;
@@ -325,7 +326,7 @@ function layout(value, blockIds, unique) {
 		};
 		const spacing = (input, label) => {
 			const source = obj(input), clean = {};
-			if (Object.keys(source).some(key => !['columns', 'direction', 'align', 'distribute', 'wrap', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap'].includes(key))) fail(`${label} tidak valid.`);
+			if (Object.keys(source).some(key => !['columns', 'direction', 'align', 'distribute', 'wrap', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap', 'background'].includes(key))) fail(`${label} tidak valid.`);
 			for (const [key, values] of [['direction', ['grid', 'row', 'column']], ['align', ['start', 'center', 'end', 'stretch']], ['distribute', ['start', 'center', 'end', 'between']]]) if (source[key] !== undefined) {
 				if (!values.includes(source[key])) fail(`${label} tidak valid.`);
 				clean[key] = source[key];
@@ -349,7 +350,8 @@ function layout(value, blockIds, unique) {
 			for (const device of ['tablet', 'mobile']) {
 				if (input[device] === undefined) continue;
 				const override = obj(input[device]), clean = {};
-				if (Object.keys(override).some((key) => !['columns', 'direction', 'align', 'distribute', 'wrap', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap'].includes(key))) fail('Pengaturan perangkat tidak valid.');
+				if (Object.keys(override).some((key) => !['columns', 'direction', 'align', 'distribute', 'wrap', 'gap', 'padding', 'paddingSides', 'paddingLinked', 'margin', 'marginLinked', 'rowGap', 'columnGap', 'background'].includes(key))) fail('Pengaturan perangkat tidak valid.');
+				if (override.background !== undefined) clean.background = layoutBackground(override.background);
 				if (override.columns !== undefined) {
 					if (![1, 2, 3].includes(override.columns) || !Number.isInteger(override.columns)) fail('Kolom responsif tidak valid.');
 					clean.columns = override.columns;

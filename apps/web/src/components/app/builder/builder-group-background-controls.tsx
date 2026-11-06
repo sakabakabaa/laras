@@ -9,22 +9,24 @@ const tokens: { value: BuilderThemeBackgroundToken; label: string }[] = [
 	{ value: 'action', label: 'Merah tema' },
 ];
 
-export function BuilderGroupBackgroundControls({ value, courseId, onChange }: {
+export function BuilderGroupBackgroundControls({ value, courseId, onChange, responsive = false }: {
 	value?: BuilderLayoutBackground;
 	courseId: string;
 	onChange: (value?: BuilderLayoutBackground) => void;
+	responsive?: boolean;
 }) {
 	const [picker, setPicker] = useState(false);
-	const mode = value?.mode ?? '';
+	const mode = value?.mode === 'transparent' ? 'transparent' : value?.mode ?? '';
 	const gradient = value?.mode === 'gradient' ? value : { mode: 'gradient' as const, from: 'action' as const, to: 'surface' as const, angle: 135 };
 	return <fieldset className="bd-fields">
-		<legend>Latar bagian</legend>
+		<legend>{responsive ? 'Latar perangkat' : 'Latar bagian'}</legend>
 		<label>Jenis latar<select aria-label="Jenis latar bagian" value={mode} onChange={event => {
 			if (event.target.value === 'solid') onChange({ mode: 'solid', token: 'surface-2' });
 			else if (event.target.value === 'gradient') onChange(gradient);
 			else if (event.target.value === 'image') { if (value?.mode === 'image') onChange(value); else setPicker(true); }
+			else if (event.target.value === 'transparent') onChange({ mode: 'transparent' });
 			else onChange(undefined);
-		}}><option value="">Transparan / default</option><option value="solid">Warna tema</option><option value="gradient">Gradien tema</option><option value="image">Gambar privat</option></select></label>
+		}}><option value="">{responsive ? 'Ikuti latar sebelumnya' : 'Transparan / default'}</option>{responsive && <option value="transparent">Transparan</option>}<option value="solid">Warna tema</option><option value="gradient">Gradien tema</option><option value="image">Gambar privat</option></select></label>
 		{value?.mode === 'image' && <>
 			<p className="bd-help">{value.asset.name || value.asset.filename}</p>
 			<button type="button" className="bd-secondary" onClick={() => setPicker(true)}>Pilih gambar dari Berkas</button>
@@ -44,6 +46,6 @@ export function BuilderGroupBackgroundControls({ value, courseId, onChange }: {
 		</>}
 		<button type="button" className="bd-secondary" disabled={!value} onClick={() => onChange(undefined)}>Reset latar</button>
 		{picker && <BuilderMediaPicker kind="image" courseId={courseId} onClose={()=>setPicker(false)} onChoose={(assets: BuilderAsset[])=>{const asset=assets[0];if(asset)onChange({mode:'image',asset,fit:value?.mode==='image'?value.fit??'cover':'cover',positionX:value?.mode==='image'?value.positionX??50:50,positionY:value?.mode==='image'?value.positionY??50:50,...(value?.mode==='image'&&value.overlay?{overlay:value.overlay,opacity:value.opacity??20}:{})});setPicker(false);}} />}
-		<p className="bd-help">Warna mengikuti tema. Gambar privat hanya tersedia dalam konteks mata kuliah ini; penyesuaian responsif menyusul.</p>
+		<p className="bd-help">Warna mengikuti tema. Gambar privat hanya tersedia dalam konteks mata kuliah ini.</p>
 	</fieldset>;
 }

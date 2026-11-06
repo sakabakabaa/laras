@@ -4,6 +4,7 @@ import type { BuilderActivity, BuilderAsset, BuilderBlock } from './builder-docu
 export type BuilderLayoutGroupKind = 'section' | 'container';
 export type BuilderThemeBackgroundToken = 'surface' | 'surface-2' | 'action';
 export type BuilderLayoutBackground =
+	| { mode: 'transparent' }
 	| { mode: 'image'; asset: BuilderAsset; fit?: 'cover' | 'contain'; positionX?: number; positionY?: number; overlay?: BuilderThemeBackgroundToken; opacity?: number }
 	| { mode: 'solid'; token: BuilderThemeBackgroundToken }
 	| { mode: 'gradient'; from: BuilderThemeBackgroundToken; to: BuilderThemeBackgroundToken; angle: number; overlay?: BuilderThemeBackgroundToken; opacity?: number };
@@ -16,7 +17,18 @@ export type BuilderLayoutAlign = 'start' | 'center' | 'end' | 'stretch';
 export type BuilderLayoutDistribute = 'start' | 'center' | 'end' | 'between';
 export type BuilderColumnWeights = [number, number] | [number, number, number];
 export type BuilderSideSpacing = { top?: number; right?: number; bottom?: number; left?: number };
-export type BuilderResponsiveOverride = { columns?: 1 | 2 | 3; direction?: BuilderLayoutDirection; align?: BuilderLayoutAlign; distribute?: BuilderLayoutDistribute; wrap?: boolean; gap?: BuilderLayoutGap; padding?: BuilderLayoutPadding; paddingSides?: BuilderSideSpacing; paddingLinked?: boolean; margin?: BuilderSideSpacing; marginLinked?: boolean; rowGap?: number; columnGap?: number };
+export type BuilderResponsiveOverride = { columns?: 1 | 2 | 3; direction?: BuilderLayoutDirection; align?: BuilderLayoutAlign; distribute?: BuilderLayoutDistribute; wrap?: boolean; gap?: BuilderLayoutGap; padding?: BuilderLayoutPadding; paddingSides?: BuilderSideSpacing; paddingLinked?: boolean; margin?: BuilderSideSpacing; marginLinked?: boolean; rowGap?: number; columnGap?: number; background?: BuilderLayoutBackground };
+export function resolveLayoutBackground(group: Pick<BuilderLayoutGroup, 'background' | 'responsive'>, device: 'tablet' | 'mobile'): BuilderLayoutBackground | undefined {
+	if (device === 'mobile' && group.responsive?.mobile?.background !== undefined) return group.responsive.mobile.background;
+	if (group.responsive?.tablet?.background !== undefined) return group.responsive.tablet.background;
+	return group.background;
+}
+export function resetResponsiveOverride(group: BuilderLayoutGroup, device: 'tablet' | 'mobile') {
+	if (group.responsive) {
+		delete group.responsive[device];
+		if (!Object.keys(group.responsive).length) delete group.responsive;
+	}
+}
 export type BuilderLayoutBlock = { kind: 'block'; blockId: string };
 export type BuilderLayoutGroup = {
 	kind: BuilderLayoutGroupKind;

@@ -32,7 +32,8 @@ export function applyBlockFormat(value: RichText | undefined, start: number, end
 		const selected = a === b ? from <= a && a <= to : from < b && to > a;
 		offset = to + 1;
 		const runs = p.content.map(r => ({ ...r, ...(r.marks ? { marks: [...r.marks] } : {}), ...(r.link ? { link: { ...r.link } } : {}) }));
-		if (!selected || format === 'paragraph') return { type: 'paragraph' as const, content: runs };
+		if (!selected) return p.type === 'heading' ? { type: 'heading' as const, level: p.level, content: runs } : p.type === 'list_item' ? { type: 'list_item' as const, list: p.list, content: runs } : { type: 'paragraph' as const, content: runs };
+		if (format === 'paragraph') return { type: 'paragraph' as const, content: runs };
 		if (format.startsWith('heading')) return { type: 'heading' as const, level: Number(format.slice(-1)) as 2 | 3 | 4, content: runs };
 		return { type: 'list_item' as const, list: format as 'bullet' | 'number', content: runs };
 	});

@@ -45,6 +45,15 @@ describe('shared builder identity and private envelope', () => {
 		expect(reverted.content.map(p => p.type)).toEqual(['paragraph', 'paragraph']);
 		expect(plain(reverted)).toBe('one\ntwo');
 	});
+	it('preserves semantic formatting on blocks outside the selection', () => {
+		const value = { type: 'doc' as const, content: [
+			{ type: 'paragraph' as const, content: [{ type: 'text' as const, text: 'one' }] },
+			{ type: 'heading' as const, level: 2 as const, content: [{ type: 'text' as const, text: 'two' }] },
+			{ type: 'list_item' as const, list: 'bullet' as const, content: [{ type: 'text' as const, text: 'three' }] },
+		] };
+		expect(applyBlockFormat(value, 0, 3, 'number').content.map(p => p.type)).toEqual(['list_item', 'heading', 'list_item']);
+		expect(applyBlockFormat(value, 4, 7, 'paragraph').content.map(p => p.type)).toEqual(['paragraph', 'paragraph', 'list_item']);
+	});
 	it('retains heading and list metadata while typing after formatting', () => {
 		const source = { type: 'doc' as const, content: [{ type: 'heading' as const, level: 2 as const, content: [{ type: 'text' as const, text: 'Title', marks: ['bold' as const], link: { href: 'https://example.org' } }] }, { type: 'list_item' as const, list: 'bullet' as const, content: [{ type: 'text' as const, text: 'Item' }] }] };
 		const edited = replaceRichText(source, 'Title!\nItem');

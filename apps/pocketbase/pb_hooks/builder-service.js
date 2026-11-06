@@ -186,13 +186,15 @@ function handle(app, user, body) {
 			);
 			if (item.getString('owner') !== user.id)
 				throw new ForbiddenError('Salinan tidak tersedia.');
-			authorizeContext(app, user, json(item, 'envelope').document);
+			const saved = json(item, 'envelope');
+			authorizeContext(app, user, saved.document);
+			if (item.getString('kind') === 'template') authorizeAssets(app, user, saved.document);
 			return {
 				id: item.id,
 				title: item.getString('title'),
 				kind: item.getString('kind'),
 				documentId: item.getString('document'),
-				envelope: json(item, 'envelope'),
+				envelope: saved,
 			};
 		}
 		const source = app.findRecordById(
@@ -222,6 +224,7 @@ function handle(app, user, body) {
 						kind: r.getString('kind'),
 						revision: r.getInt('revision'),
 						created: r.getString('created'),
+						scope: json(r, 'envelope').scope || 'activity',
 					})),
 			};
 		if (!/^[a-zA-Z0-9_-]{1,80}$/.test(String(body.commandId || '')))
@@ -235,7 +238,7 @@ function handle(app, user, body) {
 		if (existing) return { id: existing.id };
 		if (
 			authoringDenied(allowed, [envelope.document]) ||
-			(body.action === 'saveTemplate' &&
+			(body.action === 'saveTemplate' && body.scope !== 'group' &&
 				enhancedDocument({
 					activities: envelope.document.activities.filter(
 						(a) => a.id === body.activityId,
@@ -253,11 +256,16 @@ function handle(app, user, body) {
 			privateKeys: envelope.privateKeys,
 		};
 		if (body.action === 'saveTemplate') {
-			const activity = stored.document.activities.find(
-				(a) => a.id === body.activityId,
-			);
+			const activity = stored.document.activities.find((a) => a.id === body.activityId);
 			if (!activity) throw new BadRequestError('Kegiatan tidak ditemukan.');
-			stored.document.activities = [activity];
+			const scope = body.scope === 'group' ? 'group' : 'activity';
+			if (scope === 'group') {
+				stored = domain.extractGroupTemplate(stored, body.activityId, body.groupId);
+			} else {
+				stored.document.activities = [activity];
+				stored.scope = 'activity';
+			}
+			authorizeAssets(app, user, stored.document);
 			const references = new Set();
 			for (const b of activity.blocks) {
 				for (const q of b.questionIds || []) references.add(q);
@@ -277,7 +285,9 @@ function handle(app, user, body) {
 				),
 			);
 		}
+		const templateScope = stored.scope;
 		stored = domain.normalize(stored);
+		if (templateScope) stored.scope = templateScope;
 		const item = new Record(
 			app.findCollectionByNameOrId('builder_saved_items'),
 		);

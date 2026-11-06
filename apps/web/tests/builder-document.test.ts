@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { removeLayoutGroup, type BuilderLayoutNode } from '../src/lib/builder-layout';
 import {
 	appendBlock,
 	blankBuilder,
 	copyBuilder,
 	duplicateActivity,
+	insertGroupTemplate,
+	moveBuilderHistory,
 	questionIds,
 	removeBlock,
 	rich,
@@ -17,8 +20,10 @@ import {
 	plain,
 	applyBlockFormat,
 	replaceRichText,
+	savedTemplateScope,
+	type BuilderEnvelope,
 } from '../src/lib/builder-document';
-const mod = { exports: {} } as { exports: { normalize: (v: unknown) => any } };
+const mod = { exports: {} } as { exports: { normalize: (v: unknown) => any; extractGroupTemplate: (v: any, activityId: string, groupId: string) => any } };
 runInNewContext(
 	readFileSync(
 		new URL('../../pocketbase/pb_hooks/builder-domain.js', import.meta.url),
@@ -36,6 +41,94 @@ function fixture() {
 	return d;
 }
 describe('shared builder identity and private envelope', () => {
+	it('keeps legacy activity templates visible when scope metadata is absent', () => {
+		const legacyEnvelope = fixture();
+		// Existing builder_saved_items rows predate the additive scope field.
+		expect(savedTemplateScope((legacyEnvelope as BuilderEnvelope & { scope?: 'activity' | 'group' }).scope)).toBe('activity');
+		expect(savedTemplateScope('group')).toBe('group');
+	});
+	it('makes group-template insertion one undoable and redoable workspace change', () => {
+		const source = fixture();
+		const activity = source.document.activities[0];
+		const block = activity.blocks[0];
+		const group = { kind: 'section' as const, id: 'undo_source', title: 'Bagian', columns: 1 as const, gap: 'md' as const, padding: 'none' as const, surface: 'none' as const, children: [{ kind: 'block' as const, blockId: block.id }] };
+		activity.blocks = [block];
+		activity.layout = { schemaVersion: 1, nodes: [group] };
+		const template = { ...source, scope: 'group' as const };
+		const current = fixture();
+		const targetActivity = current.document.activities[0];
+		const destination = { ...group, id: 'undo_destination', children: [] as BuilderLayoutNode[] };
+		targetActivity.layout = { schemaVersion: 1, nodes: [...targetActivity.blocks.map(item => ({ kind: 'block' as const, blockId: item.id })), destination] };
+		const before = structuredClone(current);
+		insertGroupTemplate(current, targetActivity.id, destination.id, template);
+		const past = [before], future: BuilderEnvelope[] = [];
+		const undone = moveBuilderHistory(past, future, current);
+		expect(undone).toEqual(before);
+		expect(past).toHaveLength(0);
+		expect(future).toHaveLength(1);
+		const redone = moveBuilderHistory(past, future, undone, true);
+		expect(redone).toEqual(current);
+		expect(future).toHaveLength(0);
+		expect(past).toHaveLength(1);
+	});
+	it('inserts a nested group template as an independent identity-remapped copy', () => {
+		const source = fixture();
+		const sourceActivity = source.document.activities[0];
+		const selected = sourceActivity.blocks.find(block => block.type === 'question_group')!;
+		const nested = sourceActivity.blocks.find(block => block.type === 'matching')!;
+		const outside = sourceActivity.blocks.find(block => block.type === 'gap_passage')!;
+		const questionIdsInGroup = [...questionIds(selected), ...questionIds(nested)];
+		const group = { kind: 'section' as const, id: 'group_source', title: 'Isi', columns: 1 as const, gap: 'md' as const, padding: 'none' as const, surface: 'none' as const, responsive: { mobile: { columns: 1 as const } }, children: [{ kind: 'block' as const, blockId: selected.id }, { kind: 'container' as const, id: 'nested_source', title: 'Bersarang', columns: 1 as const, gap: 'md' as const, padding: 'none' as const, surface: 'none' as const, children: [{ kind: 'block' as const, blockId: nested.id }] }] };
+		sourceActivity.layout = { schemaVersion: 1, nodes: [group, { kind: 'block', blockId: outside.id }] };
+		const template = mod.exports.extractGroupTemplate(source, sourceActivity.id, group.id) as BuilderEnvelope & { scope: 'group' };
+		expect(template.scope).toBe('group');
+		expect(template.document.activities[0].blocks.map(block => block.id)).toEqual([selected.id, nested.id]);
+		expect(Object.keys(template.document.questionsById)).toEqual(questionIdsInGroup);
+		expect(Object.keys(template.privateKeys.answersByQuestionId)).toEqual(questionIdsInGroup);
+		expect(template.document.title).toBe('');
+		expect(template.document.context.meetingId).toBe('');
+		expect(template.document.delivery.dueAt).toBe('');
+		expect(normalize(template).document.activities[0].layout?.nodes).toEqual([group]);
+		const target = fixture();
+		const targetActivity = target.document.activities[0];
+		const destination = { ...group, id: 'group_destination', title: 'Tujuan', children: [] as BuilderLayoutNode[] };
+		targetActivity.layout = { schemaVersion: 1, nodes: [...targetActivity.blocks.map(block => ({ kind: 'block' as const, blockId: block.id })), destination] };
+		const priorBlockIds = targetActivity.blocks.map(block => block.id);
+		const priorQuestionIds = Object.keys(target.document.questionsById);
+		const inserted = insertGroupTemplate(target, targetActivity.id, destination.id, template);
+		const copy = destination.children.at(-1)!;
+		expect(copy).toMatchObject({ kind: 'section', title: 'Isi' });
+		expect(copy.kind).toBe('section');
+		if (copy.kind === 'block') throw new Error('Expected copied group.');
+		expect(copy.id).not.toBe(group.id);
+		expect(copy.children[0]).not.toMatchObject({ blockId: selected.id });
+		expect(inserted).toBe(copy.id);
+		const newBlockIds: string[] = [];
+		const collectBlockIds = (nodes: BuilderLayoutNode[]) => { for (const node of nodes) { if (node.kind === 'block') newBlockIds.push(node.blockId); else collectBlockIds(node.children); } };
+		collectBlockIds([copy]);
+		expect(newBlockIds).toHaveLength(2);
+		expect(newBlockIds.every(id => ![selected.id, nested.id].includes(id))).toBe(true);
+		expect(targetActivity.blocks.map(block => block.id)).toEqual([...priorBlockIds, ...newBlockIds]);
+		expect(Object.keys(target.document.questionsById)).toHaveLength(priorQuestionIds.length + questionIdsInGroup.length);
+		expect(Object.keys(target.privateKeys.answersByQuestionId)).toHaveLength(priorQuestionIds.length + questionIdsInGroup.length);
+		expect(template.document.activities[0].layout?.nodes[0]).toEqual(group);
+		const collectReferences = (nodes: BuilderLayoutNode[]): string[] => nodes.flatMap(node => node.kind === 'block' ? [node.blockId] : collectReferences(node.children));
+		expect(collectReferences(targetActivity.layout!.nodes).sort()).toEqual(targetActivity.blocks.map(block => block.id).sort());
+		expect(removeLayoutGroup(targetActivity, inserted)).toBe(true);
+		expect(collectReferences(targetActivity.layout!.nodes).sort()).toEqual(targetActivity.blocks.map(block => block.id).sort());
+	});
+	it('rejects depth and capacity before changing the destination', () => {
+		const source = fixture(), block = source.document.activities[0].blocks[0];
+		const group = { kind: 'section' as const, id: 'group_source', title: 'Isi', columns: 1 as const, gap: 'md' as const, padding: 'none' as const, surface: 'none' as const, children: [{ kind: 'block' as const, blockId: block.id }] };
+		source.document.activities[0].blocks = [block];
+		source.document.activities[0].layout = { schemaVersion: 1, nodes: [group] };
+		const target = fixture(), activity = target.document.activities[0];
+		const parent = { ...group, id: 'deep1', children: [{ ...group, id: 'deep2', children: [{ ...group, id: 'deep3', children: [] }] }] };
+		activity.layout = { schemaVersion: 1, nodes: [...activity.blocks.map(item => ({ kind: 'block' as const, blockId: item.id })), parent] };
+		const before = JSON.stringify(target);
+		expect(() => insertGroupTemplate(target, activity.id, 'deep3', { ...source, scope: 'group' })).toThrow('batas tata letak');
+		expect(JSON.stringify(target)).toBe(before);
+	});
 	it('converts selected blocks and returns them to paragraphs without losing inline runs', () => {
 		const value = { type: 'doc' as const, content: [{ type: 'paragraph' as const, content: [{ type: 'text' as const, text: 'one', marks: ['bold' as const], link: { href: 'https://example.org' } }] }, { type: 'paragraph' as const, content: [{ type: 'text' as const, text: 'two' }] }] };
 		const list = applyBlockFormat(value, 0, 7, 'number');

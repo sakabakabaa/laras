@@ -9,13 +9,17 @@ import {
 import {
 	builderRequest,
 	duplicateActivity,
+	plain,
 	uid,
 	type BuilderEnvelope,
+	type SavedBuilderTemplate,
 } from '@/lib/builder-document';
+import { BuilderLayoutView } from './builder-layout-view';
 export function BuilderSavedItems({
 	id,
 	revision,
 	activityId,
+	groupId,
 	dirty,
 	onRestore,
 	onInsert,
@@ -24,9 +28,10 @@ export function BuilderSavedItems({
 	id: string;
 	revision: number;
 	activityId?: string;
+	groupId?: string;
 	dirty: boolean;
 	onRestore: (envelope: BuilderEnvelope) => void;
-	onInsert: (envelope: BuilderEnvelope) => void;
+	onInsert: (envelope: SavedBuilderTemplate) => void;
 	onClose: () => void;
 }) {
 	const [items, setItems] = useState<
@@ -36,6 +41,7 @@ export function BuilderSavedItems({
 				kind: string;
 				revision: number;
 				created: string;
+				scope?: 'activity' | 'group';
 			}[]
 		>([]),
 		[title, setTitle] = useState(''),
@@ -43,6 +49,7 @@ export function BuilderSavedItems({
 			activityId ? 'template' : 'snapshot',
 		),
 		[busy, setBusy] = useState(false),
+		[preview, setPreview] = useState<SavedBuilderTemplate | null>(null),
 		[error, setError] = useState('');
 	const load = () =>
 		builderRequest<{ items: typeof items }>('savedList', { id }).then((r) =>
@@ -57,7 +64,7 @@ export function BuilderSavedItems({
 		try {
 			await builderRequest(
 				tab === 'snapshot' ? 'saveSnapshot' : 'saveTemplate',
-				{ id, baseRevision: revision, activityId, title, commandId: uid() },
+				{ id, baseRevision: revision, activityId, groupId, scope: groupId ? 'group' : 'activity', title, commandId: uid() },
 			);
 			setTitle('');
 			await load();
@@ -71,7 +78,7 @@ export function BuilderSavedItems({
 		setBusy(true);
 		setError('');
 		try {
-			const r = await builderRequest<{ envelope: BuilderEnvelope }>(
+			const r = await builderRequest<{ envelope: SavedBuilderTemplate }>(
 				'savedGet',
 				{ itemId: item.id },
 			);
@@ -91,6 +98,21 @@ export function BuilderSavedItems({
 			setBusy(false);
 		}
 	};
+	const showPreview = async (item: (typeof items)[number]) => {
+		setBusy(true);
+		setError('');
+		try {
+			const r = await builderRequest<{ envelope: SavedBuilderTemplate }>(
+				'savedGet',
+				{ itemId: item.id },
+			);
+			setPreview(r.envelope);
+		} catch (e) {
+			setError((e as Error).message);
+		} finally {
+			setBusy(false);
+		}
+	};
 	return (
 		<Dialog
 			open
@@ -102,8 +124,7 @@ export function BuilderSavedItems({
 				<DialogHeader>
 					<DialogTitle>Riwayat & template</DialogTitle>
 					<DialogDescription>
-						Salinan privat dengan kunci jawaban. Memulihkan salinan mengubah
-						draf; salinan tersimpan tetap utuh.
+						Template bagian/kegiatan dan snapshot pribadi. Template menyimpan tata letak dan isi yang dipilih; salinan tetap terpisah dari sumber.
 					</DialogDescription>
 				</DialogHeader>
 				<div className="bd-inline-actions">
@@ -125,7 +146,7 @@ export function BuilderSavedItems({
 				{(tab === 'snapshot' || activityId) && (
 					<div className="bd-fields">
 						<label>
-							{tab === 'snapshot' ? 'Nama snapshot' : 'Nama template'}
+							{tab === 'snapshot' ? 'Nama snapshot' : groupId ? 'Nama template bagian' : 'Nama template kegiatan'}
 							<input
 								maxLength={200}
 								value={title}
@@ -138,7 +159,7 @@ export function BuilderSavedItems({
 							onClick={() => void save()}
 						>
 							Simpan{' '}
-							{tab === 'snapshot' ? 'snapshot' : 'kegiatan sebagai template'}
+							{tab === 'snapshot' ? 'snapshot' : groupId ? 'bagian sebagai template' : 'kegiatan sebagai template'}
 						</button>
 						{dirty && (
 							<p className="bd-help">
@@ -156,24 +177,33 @@ export function BuilderSavedItems({
 				{error && <p role="alert">{error}</p>}
 				<div className="bd-saved-list">
 					{items
-						.filter((item) => item.kind === tab)
+						.filter(
+							(item) =>
+								item.kind === tab &&
+								(tab !== 'template' ||
+									(groupId
+										? item.scope === 'group'
+										: item.scope !== 'group')),
+						)
 						.map((item) => (
 							<div key={item.id}>
 								<div>
 									<strong>{item.title}</strong>
 									<small>
-										Revisi {item.revision} ·{' '}
+										{item.scope === 'group' ? 'Bagian' : 'Kegiatan'} · Revisi{' '}
+										{item.revision} ·{' '}
 										{new Date(item.created).toLocaleString('id-ID', {
 											timeZone: 'Asia/Jakarta',
 										})}
 									</small>
 								</div>
+								<button className="bd-secondary" disabled={busy} onClick={() => void showPreview(item)}>Pratinjau</button>
 								<button
 									className="bd-secondary"
 									disabled={busy || dirty}
 									onClick={() => void applyItem(item)}
 								>
-									{tab === 'snapshot' ? 'Pulihkan' : 'Tambahkan'}
+					{tab === 'snapshot' ? 'Pulihkan' : 'Sisipkan salinan'}
 								</button>
 							</div>
 						))}
@@ -183,6 +213,27 @@ export function BuilderSavedItems({
 						</p>
 					)}
 				</div>
+				{preview && (
+					<section
+						aria-label="Pratinjau template"
+						className="bd-template-preview"
+					>
+						<h3>
+							Pratinjau · {preview.scope === 'group' ? 'Bagian' : 'Kegiatan'}
+						</h3>
+						{preview.document.activities[0] && (
+							<BuilderLayoutView
+								activity={preview.document.activities[0]}
+								renderBlock={(block) => (
+									<div className="bd-preview-block">
+										<strong>{block.type}</strong>
+										{block.body && <p>{plain(block.body)}</p>}
+									</div>
+								)}
+							/>
+						)}
+					</section>
+				)}
 			</DialogContent>
 		</Dialog>
 	);

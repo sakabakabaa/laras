@@ -71,6 +71,8 @@ import {
 	replaceRichText,
 	questionIds,
 	removeBlock,
+	insertGroupTemplate,
+	moveBuilderHistory,
 	rich,
 	uid,
 	type BuilderEnvelope,
@@ -156,7 +158,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[dropTarget, setDropTarget] = useState(''),
 		[announcement, setAnnouncement] = useState(''),
 		[collapsed, setCollapsed] = useState<string[]>([]),
-		[savedItems, setSavedItems] = useState<{ activityId?: string } | null>(
+		[savedItems, setSavedItems] = useState<{ activityId?: string; groupId?: string } | null>(
 			null,
 		),
 		[publishing, setPublishing] = useState(false),
@@ -384,12 +386,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		return () => window.removeEventListener('beforeunload', handler);
 	}, [dirty, saving]);
 	const undo = (forward = false) => {
-		const from = forward ? future : past,
-			to = forward ? past : future,
-			next = from.current.at(-1);
-		if (!next || !current.current) return;
-		to.current.push(current.current);
-		from.current = from.current.slice(0, -1);
+		const next = moveBuilderHistory(
+			past.current,
+			future.current,
+			current.current,
+			forward,
+		);
+		if (!next) return;
 		install(next);
 		setHistoryVersion((v) => v + 1);
 	};
@@ -928,20 +931,36 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			{block ? (
 				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked} onChange={change} />
 			) : selectedGroup && activity ? (
-				<BuilderLayoutInspector
-					activity={activity}
-					courseId={contextCourseId}
-					group={selectedGroup}
-					disabled={locked}
-					onChange={change}
-					onAddBlock={() => openElements(activity.id, undefined, selectedGroup.id)}
-					onAddGroup={(kind) => addGroup(kind, selectedGroup.id)}
-					onMove={(delta) => moveStructureItem(selectedGroup.id, delta)}
-					onReparent={(direction) =>
-						reparentStructureItem(selectedGroup.id, direction)
-					}
-					onRemove={() => removeGroup(selectedGroup.id)}
-				/>
+				<>
+					<BuilderLayoutInspector
+						activity={activity}
+						courseId={contextCourseId}
+						group={selectedGroup}
+						disabled={locked}
+						onChange={change}
+						onAddBlock={() =>
+							openElements(activity.id, undefined, selectedGroup.id)
+						}
+						onAddGroup={(kind) => addGroup(kind, selectedGroup.id)}
+						onMove={(delta) => moveStructureItem(selectedGroup.id, delta)}
+						onReparent={(direction) =>
+							reparentStructureItem(selectedGroup.id, direction)
+						}
+						onRemove={() => removeGroup(selectedGroup.id)}
+					/>
+					<button
+						className="bd-secondary"
+						disabled={locked || readOnly || dirty || saving}
+						onClick={() =>
+							setSavedItems({
+								activityId: activity.id,
+								groupId: selectedGroup.id,
+							})
+						}
+					>
+						Simpan template
+					</button>
+				</>
 			) : activity ? (
 				<div className="bd-fields">
 					<label>
@@ -1891,6 +1910,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					id={id}
 					revision={revision}
 					activityId={savedItems.activityId}
+					groupId={savedItems.groupId}
 					dirty={dirty || saving || locked || readOnly}
 					onClose={() => setSavedItems(null)}
 					onRestore={(envelope) => {
@@ -1903,6 +1923,19 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						setAnnouncement('Snapshot dipulihkan ke draf.');
 					}}
 					onInsert={(envelope) => {
+						if (envelope.scope === 'group') {
+							const targetActivity = d.activities.find(item => item.id === active);
+							const targetGroup = savedItems.groupId && targetActivity?.layout ? findLayoutGroup(targetActivity.layout, savedItems.groupId) : null;
+							if (!targetActivity || !targetGroup) { setError('Pilih kegiatan dan bagian tujuan yang masih tersedia.'); return; }
+						let inserted = '';
+						try {
+							change(next => { inserted = insertGroupTemplate(next, targetActivity.id, targetGroup.id, envelope); });
+							setSelectedNode(inserted);
+							setSelected('');
+							setAnnouncement('Template bagian disisipkan sebagai salinan.');
+						} catch (e) { setError((e as Error).message); }
+						return;
+						}
 						if (
 							d.activities.length >= 50 ||
 							Object.keys(d.questionsById).length +

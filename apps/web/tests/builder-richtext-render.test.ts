@@ -15,4 +15,15 @@ describe('builder rich text renderer', () => {
 		expect(markup).toContain('unsafe');
 		expect(markup).not.toContain('javascript:');
 	});
+	it('renders semantic headings and grouped ordered and unordered lists', () => {
+		const markup = renderToStaticMarkup(createElement(BuilderRichTextView, { value: { type: 'doc', content: [
+			{ type: 'heading', level: 2, content: [{ type: 'text', text: 'Title', marks: ['bold'] }] },
+			{ type: 'list_item', list: 'bullet', content: [{ type: 'text', text: 'One' }] },
+			{ type: 'list_item', list: 'bullet', content: [{ type: 'text', text: 'Two' }] },
+			{ type: 'list_item', list: 'number', content: [{ type: 'text', text: 'First' }] },
+		] } }));
+		expect(markup).toContain('<h2><span><strong>Title</strong></span></h2>');
+		expect(markup).toContain('<ul><li><span>One</span></li><li><span>Two</span></li></ul>');
+		expect(markup).toContain('<ol><li><span>First</span></li></ol>');
+	});
 });

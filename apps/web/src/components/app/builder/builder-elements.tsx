@@ -7,6 +7,7 @@ import {
 	plain,
 	applyInlineMark,
 	applyInlineLink,
+	applyBlockFormat,
 	replaceRichText,
 	questionIds,
 	rich,
@@ -60,12 +61,19 @@ function InlineTextEditor({ value, onChange, rows, label, className, onKeyDown, 
 		requestAnimationFrame(()=>{input.focus();input.setSelectionRange(start,end);});
 	};
 	const unlink = () => { const input=ref.current; if(input && input.selectionStart!==input.selectionEnd) onChange(applyInlineLink(value,input.selectionStart,input.selectionEnd,null)); };
+	const block = (format: 'paragraph' | 'heading2' | 'heading3' | 'heading4' | 'bullet' | 'number') => { const input=ref.current; if(!input)return; const next=applyBlockFormat(value,input.selectionStart,input.selectionEnd,format); onChange(next); requestAnimationFrame(()=>{input.focus();input.setSelectionRange(input.selectionStart,input.selectionEnd);}); };
 	return <div className="bd-inline-text-editor">
 		<div role="group" aria-label="Pemformatan teks">
 			<button type="button" aria-label="Tebal" onMouseDown={e => e.preventDefault()} onClick={() => format('bold')}><strong>B</strong></button>
 			<button type="button" aria-label="Miring" onMouseDown={e => e.preventDefault()} onClick={() => format('italic')}><em>I</em></button>
 			<button type="button" aria-label="Tambahkan tautan" onMouseDown={e => e.preventDefault()} onClick={link}>↗</button>
 			<button type="button" aria-label="Hapus tautan" onMouseDown={e => e.preventDefault()} onClick={unlink}>Hapus tautan</button>
+			<button type="button" aria-label="Judul tingkat 2" onMouseDown={e => e.preventDefault()} onClick={() => block('heading2')}>H2</button>
+			<button type="button" aria-label="Judul tingkat 3" onMouseDown={e => e.preventDefault()} onClick={() => block('heading3')}>H3</button>
+			<button type="button" aria-label="Judul tingkat 4" onMouseDown={e => e.preventDefault()} onClick={() => block('heading4')}>H4</button>
+			<button type="button" aria-label="Daftar berpoin" onMouseDown={e => e.preventDefault()} onClick={() => block('bullet')}>• Daftar</button>
+			<button type="button" aria-label="Daftar bernomor" onMouseDown={e => e.preventDefault()} onClick={() => block('number')}>1. Daftar</button>
+			<button type="button" aria-label="Kembali ke paragraf" onMouseDown={e => e.preventDefault()} onClick={() => block('paragraph')}>Paragraf</button>
 		</div>
 		<textarea ref={ref} className={className} rows={rows} maxLength={20000} aria-label={label} value={plain(value)} onKeyDown={onKeyDown} onBlur={onBlur}
 			onCompositionStart={() => { composing.current = true; }}
@@ -154,13 +162,13 @@ export function BuilderCanvasText({
 				}
 			}}
 		>
-			<p className="bd-canvas-text-content">
+			<div className="bd-canvas-text-content">
 				{plain(block.body) ? <BuilderRichTextView value={block.body} preventNavigation /> : (
 					<span className="bd-canvas-text-placeholder">
 						Klik dua kali untuk menulis…
 					</span>
 				)}
-			</p>
+			</div>
 			{selected && !disabled && (
 				<>
 					<small>Klik dua kali atau tekan Enter untuk mengedit</small>
@@ -1278,11 +1286,11 @@ export function BuilderPreview({
 		const url = safeUrl(b.url);
 		switch (b.type) {
 			case 'instructions':
-				if (classroom && d.activities.find(a=>a.blocks.some(block=>block.id===b.id))?.blocks.find(block=>block.type==='instructions')?.id===b.id) return <section className="sc-activity-brief"><h3>Yang perlu Anda lakukan</h3><p className="sc-prose"><BuilderRichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</p></section>;
-				return <p className="bd-prose"><BuilderRichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</p>;
+				if (classroom && d.activities.find(a=>a.blocks.some(block=>block.id===b.id))?.blocks.find(block=>block.type==='instructions')?.id===b.id) return <section className="sc-activity-brief"><h3>Yang perlu Anda lakukan</h3><div className="sc-prose"><BuilderRichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</div></section>;
+				return <div className="bd-prose"><BuilderRichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</div>;
 			case 'acknowledgement':
 				return (
-					<label className="bd-check">
+					<div className="bd-check">
 						<input
 							type="checkbox"
 							checked={answers[b.id] === 'yes'}
@@ -1293,8 +1301,8 @@ export function BuilderPreview({
 								}))
 							}
 						/>
-						<BuilderRichTextView value={b.body} />
-					</label>
+						<div><BuilderRichTextView value={b.body} /></div>
+					</div>
 				);
 			case 'image':
 			case 'audio':
@@ -1391,7 +1399,7 @@ export function BuilderPreview({
 				</div>
 			)}
 			<h1>{d.title}</h1>
-			<p className="bd-prose"><BuilderRichTextView value={d.instructions} /></p>
+			<div className="bd-prose"><BuilderRichTextView value={d.instructions} /></div>
 			{d.activities.map(
 				(a, i) =>
 					(!activityId || a.id === activityId) && (

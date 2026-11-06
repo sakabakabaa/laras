@@ -15,6 +15,7 @@ import {
 	applyInlineLink,
 	safeInlineUrl,
 	plain,
+	applyBlockFormat,
 	replaceRichText,
 } from '../src/lib/builder-document';
 const mod = { exports: {} } as { exports: { normalize: (v: unknown) => any } };
@@ -35,6 +36,41 @@ function fixture() {
 	return d;
 }
 describe('shared builder identity and private envelope', () => {
+	it('converts selected blocks and returns them to paragraphs without losing inline runs', () => {
+		const value = { type: 'doc' as const, content: [{ type: 'paragraph' as const, content: [{ type: 'text' as const, text: 'one', marks: ['bold' as const], link: { href: 'https://example.org' } }] }, { type: 'paragraph' as const, content: [{ type: 'text' as const, text: 'two' }] }] };
+		const list = applyBlockFormat(value, 0, 7, 'number');
+		expect(list.content[0]).toMatchObject({ type: 'list_item', list: 'number' });
+		expect(list.content[0].content[0]).toMatchObject({ marks: ['bold'], link: { href: 'https://example.org' } });
+		const reverted = applyBlockFormat(list, 0, 7, 'paragraph');
+		expect(reverted.content.map(p => p.type)).toEqual(['paragraph', 'paragraph']);
+		expect(plain(reverted)).toBe('one\ntwo');
+	});
+	it('retains heading and list metadata while typing after formatting', () => {
+		const source = { type: 'doc' as const, content: [{ type: 'heading' as const, level: 2 as const, content: [{ type: 'text' as const, text: 'Title', marks: ['bold' as const], link: { href: 'https://example.org' } }] }, { type: 'list_item' as const, list: 'bullet' as const, content: [{ type: 'text' as const, text: 'Item' }] }] };
+		const edited = replaceRichText(source, 'Title!\nItem');
+		expect(edited.content.map(p => p.type)).toEqual(['heading', 'list_item']);
+		expect(edited.content[0].content[0]).toMatchObject({ marks: ['bold'], link: { href: 'https://example.org' } });
+		expect(plain(edited)).toBe('Title!\nItem');
+	});
+	it('round trips semantic blocks and rejects unsupported structures or levels', () => {
+		const d = fixture(), block = d.document.activities[0].blocks.find(b => b.type === 'instructions')!;
+		block.body = { type: 'doc', content: [{ type: 'heading', level: 3, content: [{ type: 'text', text: 'Head', marks: ['italic'] }] }, { type: 'list_item', list: 'bullet', content: [{ type: 'text', text: 'Item' }] }] };
+		const roundtrip = normalize(d).document.activities[0].blocks.find(b => b.type === 'instructions')!.body!;
+		expect(roundtrip).toEqual(block.body);
+		(block.body!.content[0] as any).level = 1;
+		expect(() => normalize(d)).toThrow();
+		(block.body!.content[0] as any).level = 3;
+		(block.body!.content[0] as any).type = 'html';
+		expect(() => normalize(d)).toThrow();
+		(block.body!.content[0] as any).type = 'heading';
+		const question = Object.values(d.document.questionsById)[0];
+		question.prompt = structuredClone(block.body!);
+		expect(() => normalize(d)).toThrow();
+		block.body = { type: 'doc', content: Array.from({ length: 101 }, () => ({ type: 'paragraph', content: [{ type: 'text', text: 'x' }] })) };
+		expect(() => normalize(d)).toThrow();
+		block.body = { type: 'doc', content: [{ type: 'list_item', list: 'bullet', content: [{ type: 'list_item', list: 'number', content: [] } as any] }] } as any;
+		expect(() => normalize(d)).toThrow();
+	});
 	it('round trips bounded inline marks, strips unknown marks, and preserves plain text', () => {
 		const d = fixture();
 		const block = d.document.activities[0].blocks.find(b => b.type === 'instructions')!;

@@ -57,7 +57,10 @@ function rich(v, allowLinks = false) {
 		type: 'doc',
 		content: list(v.content, 100).map((p) => {
 			obj(p);
-			if (p.type !== 'paragraph') fail('Paragraf tidak valid.');
+			if (p.type !== 'paragraph' && p.type !== 'heading' && p.type !== 'list_item') fail('Paragraf tidak valid.');
+			if (!allowLinks && p.type !== 'paragraph') fail('Format blok tidak didukung pada bidang ini.');
+			if (p.type === 'heading' && ![2, 3, 4].includes(p.level)) fail('Judul tidak valid.');
+			if (p.type === 'list_item' && p.list !== 'bullet' && p.list !== 'number') fail('Daftar tidak valid.');
 			const content = [];
 			for (const t of list(p.content, 100)) {
 				obj(t);
@@ -72,10 +75,9 @@ function rich(v, allowLinks = false) {
 				if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(marks) && prior.link?.href === link?.href) prior.text += text;
 				else content.push({ type: 'text', text, ...(marks.length ? { marks } : {}), ...(link ? { link } : {}) });
 			}
-			return {
-				type: 'paragraph',
-				content,
-			};
+			return p.type === 'heading' ? { type: 'heading', level: p.level, content }
+				: p.type === 'list_item' ? { type: 'list_item', list: p.list, content }
+				: { type: 'paragraph', content };
 		}),
 	};
 }

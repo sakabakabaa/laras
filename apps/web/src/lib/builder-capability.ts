@@ -116,8 +116,8 @@ export function usesEnhancedAuthoring(envelope: unknown): boolean {
 		if (!Array.isArray(blocks)) return false;
 		return blocks.some((block) => {
 			if (!block || typeof block !== 'object') return false;
-			const record = block as { appearance?: unknown; sections?: unknown };
-			return record.appearance !== undefined || Array.isArray(record.sections);
+			const record = block as { appearance?: unknown; sections?: unknown; body?: { content?: unknown } };
+			return record.appearance !== undefined || Array.isArray(record.sections) || Boolean(record.body?.content && Array.isArray(record.body.content) && record.body.content.some((node: any) => node?.type === 'heading' || node?.type === 'list_item'));
 		});
 	});
 }

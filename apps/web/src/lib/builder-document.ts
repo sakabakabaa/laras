@@ -5,8 +5,9 @@ import pb from './pocketbase-client';
 
 export type RichText = {
 	type: 'doc';
-	content: { type: 'paragraph'; content: { type: 'text'; text: string; marks?: ('bold' | 'italic')[]; link?: { href: string } }[] }[];
+	content: ({ type: 'paragraph'; content: RichTextRun[] } | { type: 'heading'; level: 2 | 3 | 4; content: RichTextRun[] } | { type: 'list_item'; list: 'bullet' | 'number'; content: RichTextRun[] })[];
 };
+export type RichTextRun = { type: 'text'; text: string; marks?: ('bold' | 'italic')[]; link?: { href: string } };
 export function safeInlineUrl(value: string): string | null {
 	if (!value || /[\u0000-\u0020\u007f\\]/.test(value) || value.startsWith('//')) return null;
 	if (/^#[A-Za-z][A-Za-z0-9_.:-]{0,199}$/.test(value)) return value;
@@ -19,6 +20,24 @@ export const rich = (value: string): RichText => ({
 export const plain = (value?: RichText) =>
 	value?.content.map((p) => p.content.map((t) => t.text).join('')).join('\n') ||
 	'';
+
+export function applyBlockFormat(value: RichText | undefined, start: number, end: number, format: 'paragraph' | 'heading2' | 'heading3' | 'heading4' | 'bullet' | 'number'): RichText {
+	const paragraphs = value?.content || rich(plain(value)).content;
+	const total = plain(value);
+	const a = Math.max(0, Math.min(total.length, start));
+	const b = Math.max(a, Math.min(total.length, end));
+	let offset = 0;
+	const content = paragraphs.map(p => {
+		const from = offset, to = from + p.content.map(r => r.text).join('').length;
+		const selected = a === b ? from <= a && a <= to : from < b && to > a;
+		offset = to + 1;
+		const runs = p.content.map(r => ({ ...r, ...(r.marks ? { marks: [...r.marks] } : {}), ...(r.link ? { link: { ...r.link } } : {}) }));
+		if (!selected || format === 'paragraph') return { type: 'paragraph' as const, content: runs };
+		if (format.startsWith('heading')) return { type: 'heading' as const, level: Number(format.slice(-1)) as 2 | 3 | 4, content: runs };
+		return { type: 'list_item' as const, list: format as 'bullet' | 'number', content: runs };
+	});
+	return { type: 'doc', content };
+}
 
 export function applyInlineMark(value: RichText | undefined, start: number, end: number, mark: 'bold' | 'italic'): RichText {
 	const text = plain(value);
@@ -48,7 +67,7 @@ export function applyInlineMark(value: RichText | undefined, start: number, end:
 			if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(segment.marks) && prior.link?.href === segment.link?.href) prior.text += segment.text;
 			else content.push({ type: 'text', text: segment.text, ...(segment.marks.length ? { marks: segment.marks } : {}), ...(segment.link ? {link:segment.link}:{}) });
 		}
-		paragraphs.push({ type: 'paragraph', content });
+		paragraphs.push(paragraph.type === 'heading' ? { type: 'heading', level: paragraph.level, content } : paragraph.type === 'list_item' ? { type: 'list_item', list: paragraph.list, content } : { type: 'paragraph', content });
 		offset += 1;
 	}
 	return { type: 'doc', content: paragraphs };
@@ -90,7 +109,13 @@ export function replaceRichText(value: RichText | undefined, nextText: string): 
 		if (i) paragraphs.push({ type: 'paragraph', content: [] });
 		if (part) paragraphs.at(-1)!.content.push({ type: 'text', text: part, ...(run.marks.length ? { marks: run.marks } : {}), ...(run.link ? {link:run.link}:{}) });
 	}
-	return { type: 'doc', content: paragraphs };
+	let pi = 0;
+	return { type: 'doc', content: paragraphs.map(p => {
+		const prior = value?.content[Math.min(pi++, (value?.content.length || 1) - 1)];
+		if (prior?.type === 'heading') return { type: 'heading' as const, level: prior.level, content: p.content };
+		if (prior?.type === 'list_item') return { type: 'list_item' as const, list: prior.list, content: p.content };
+		return p;
+	}) };
 }
 
 export function applyInlineLink(value: RichText | undefined, start: number, end: number, href: string | null): RichText {
@@ -114,7 +139,7 @@ export function applyInlineLink(value: RichText | undefined, start: number, end:
 			}
 		}
 		offset++;
-		return {type:'paragraph' as const,content:runs};
+		return paragraph.type === 'heading' ? { type: 'heading' as const, level: paragraph.level, content: runs } : paragraph.type === 'list_item' ? { type: 'list_item' as const, list: paragraph.list, content: runs } : {type:'paragraph' as const,content:runs};
 	});
 	return {type:'doc',content};
 }

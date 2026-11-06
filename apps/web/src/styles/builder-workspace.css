@@ -2226,7 +2226,8 @@
 	cursor: pointer;
 }
 
-.bd-structure .bd-structure-children[hidden] {
+.bd-structure .bd-structure-children[hidden],
+.bd-structure .bd-structure-select[hidden] {
 	display: none;
 }
 .bd-canvas-text:focus-visible,

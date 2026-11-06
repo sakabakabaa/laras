@@ -5,7 +5,7 @@ import pb from './pocketbase-client';
 
 export type RichText = {
 	type: 'doc';
-	content: { type: 'paragraph'; content: { type: 'text'; text: string }[] }[];
+	content: { type: 'paragraph'; content: { type: 'text'; text: string; marks?: ('bold' | 'italic')[] }[] }[];
 };
 export const rich = (value: string): RichText => ({
 	type: 'doc',
@@ -14,6 +14,79 @@ export const rich = (value: string): RichText => ({
 export const plain = (value?: RichText) =>
 	value?.content.map((p) => p.content.map((t) => t.text).join('')).join('\n') ||
 	'';
+
+export function applyInlineMark(value: RichText | undefined, start: number, end: number, mark: 'bold' | 'italic'): RichText {
+	const text = plain(value);
+	const a = Math.max(0, Math.min(text.length, start));
+	const b = Math.max(a, Math.min(text.length, end));
+	if (a === b) return value || rich(text);
+	const paragraphs: RichText['content'] = [];
+	let offset = 0;
+	for (const paragraph of value?.content || []) {
+		const segments: { text: string; marks: ('bold' | 'italic')[] }[] = [];
+		for (const run of paragraph.content) {
+			const runStart = offset;
+			const runEnd = offset + run.text.length;
+			offset = runEnd;
+			const boundaries = [runStart, Math.max(runStart, Math.min(runEnd, a)), Math.max(runStart, Math.min(runEnd, b)), runEnd].sort((x, y) => x - y);
+			for (let i = 0; i < boundaries.length - 1; i++) {
+				const from = boundaries[i], to = boundaries[i + 1];
+				if (from === to) continue;
+				const marks = [...new Set((run.marks || []).filter(m => m === 'bold' || m === 'italic'))];
+				if (from >= a && to <= b) marks.push(mark);
+				segments.push({ text: text.slice(from, to), marks: [...new Set(marks)].sort() });
+			}
+		}
+		const content: RichText['content'][number]['content'] = [];
+		for (const segment of segments) {
+			const prior = content.at(-1);
+			if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(segment.marks)) prior.text += segment.text;
+			else content.push({ type: 'text', text: segment.text, ...(segment.marks.length ? { marks: segment.marks } : {}) });
+		}
+		paragraphs.push({ type: 'paragraph', content });
+		offset += 1;
+	}
+	return { type: 'doc', content: paragraphs };
+}
+
+export function replaceRichText(value: RichText | undefined, nextText: string): RichText {
+	const previous = plain(value);
+	let prefix = 0;
+	while (prefix < previous.length && prefix < nextText.length && previous[prefix] === nextText[prefix]) prefix++;
+	let suffix = 0;
+	while (suffix < previous.length - prefix && suffix < nextText.length - prefix && previous[previous.length - 1 - suffix] === nextText[nextText.length - 1 - suffix]) suffix++;
+	const changedEnd = previous.length - suffix;
+	const source: { text: string; marks: ('bold' | 'italic')[]; start: number }[] = [];
+	let offset = 0;
+	for (let pi = 0; pi < (value?.content.length || 0); pi++) {
+		for (const run of value!.content[pi].content) {
+			source.push({ text: run.text, marks: run.marks || [], start: offset });
+			offset += run.text.length;
+		}
+		if (pi < value!.content.length - 1) {
+			source.push({ text: '\n', marks: [], start: offset });
+			offset++;
+		}
+	}
+	const inherited = source.find(run => run.text.length && run.start <= prefix && run.start + run.text.length >= prefix)?.marks || [];
+	const inserted = nextText.slice(prefix, nextText.length - suffix);
+	const runs: { text: string; marks: ('bold' | 'italic')[] }[] = [];
+	for (const run of source) {
+		const beforeEnd = Math.min(run.start + run.text.length, prefix);
+		if (run.start < beforeEnd) runs.push({ text: run.text.slice(0, beforeEnd - run.start), marks: run.marks });
+	}
+	if (inserted) runs.push({ text: inserted, marks: inherited });
+	for (const run of source) {
+		const afterStart = Math.max(run.start, changedEnd);
+		if (afterStart < run.start + run.text.length) runs.push({ text: run.text.slice(afterStart - run.start), marks: run.marks });
+	}
+	const paragraphs: RichText['content'] = [{ type: 'paragraph', content: [] }];
+	for (const run of runs) for (const [i, part] of run.text.split('\n').entries()) {
+		if (i) paragraphs.push({ type: 'paragraph', content: [] });
+		if (part) paragraphs.at(-1)!.content.push({ type: 'text', text: part, ...(run.marks.length ? { marks: run.marks } : {}) });
+	}
+	return { type: 'doc', content: paragraphs };
+}
 export type BuilderKind = 'kelas' | 'tugas';
 export type BlockType =
 	| 'instructions'

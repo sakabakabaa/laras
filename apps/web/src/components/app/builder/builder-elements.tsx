@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction, type ReactNode } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { ScheduledLessonView } from '../scheduled-lesson';
 import { ScheduledCardMatching } from '../scheduled-card-matching';
 import {
 	appendQuestion,
 	plain,
+	applyInlineMark,
+	replaceRichText,
 	questionIds,
 	rich,
 	uid,
@@ -29,6 +31,40 @@ import { BuilderMediaEditor, BuilderMediaView } from './builder-media';
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 const safeUrl = (url?: string) =>
 	url && /^https:\/\/[^\s<>"']+$/i.test(url) ? url : '';
+
+function RichTextView({ value }: { value?: BuilderBlock['body'] }) {
+	return <>{value?.content.map((paragraph, pi) => <span key={pi}>{pi > 0 && <br />}{paragraph.content.map((run, ri) => {
+		let node: ReactNode = run.text;
+		if (run.marks?.includes('italic')) node = <em>{node}</em>;
+		if (run.marks?.includes('bold')) node = <strong>{node}</strong>;
+		return <span key={ri}>{node}</span>;
+	})}</span>)}</>;
+}
+
+function InlineTextEditor({ value, onChange, rows, label }: { value?: BuilderBlock['body']; onChange: (next: BuilderBlock['body']) => void; rows: number; label: string }) {
+	const ref = useRef<HTMLTextAreaElement>(null);
+	const composing = useRef(false);
+	const format = (mark: 'bold' | 'italic') => {
+		const input = ref.current;
+		if (!input) return;
+		const start = input.selectionStart;
+		const end = input.selectionEnd;
+		if (start === end) return;
+		const next = applyInlineMark(value, start, end, mark);
+		onChange(next);
+		requestAnimationFrame(() => { input.focus(); input.setSelectionRange(start, end); });
+	};
+	return <div className="bd-inline-text-editor">
+		<div role="group" aria-label="Pemformatan teks">
+			<button type="button" aria-label="Tebal" onMouseDown={e => e.preventDefault()} onClick={() => format('bold')}><strong>B</strong></button>
+			<button type="button" aria-label="Miring" onMouseDown={e => e.preventDefault()} onClick={() => format('italic')}><em>I</em></button>
+		</div>
+		<textarea ref={ref} rows={rows} maxLength={20000} aria-label={label} value={plain(value)}
+			onCompositionStart={() => { composing.current = true; }}
+			onChange={e => { if (!composing.current && !(e.nativeEvent as InputEvent).isComposing) onChange(replaceRichText(value, e.target.value)); }}
+			onCompositionEnd={e => { composing.current = false; onChange(replaceRichText(value, e.currentTarget.value)); }} />
+	</div>;
+}
 
 export function canvasTextKeyboardAction(
 	key: string,
@@ -151,7 +187,7 @@ export function BuilderCanvasText({
 			}}
 		>
 			<p className="bd-canvas-text-content">
-				{plain(block.body) || (
+				{plain(block.body) ? <RichTextView value={block.body} /> : (
 					<span className="bd-canvas-text-placeholder">
 						Klik dua kali untuk menulis…
 					</span>
@@ -219,17 +255,7 @@ export function BlockEditor({
 		return (
 			<label>
 				{block.type === 'instructions' ? 'Isi instruksi' : 'Teks konfirmasi'}
-				<textarea
-					rows={block.type === 'instructions' ? 4 : 2}
-					maxLength={20000}
-					placeholder="Tulis langsung di sini…"
-					value={plain(block.body)}
-					onChange={(e) =>
-						update((b) => {
-							b.body = rich(e.target.value);
-						})
-					}
-				/>
+				<InlineTextEditor rows={block.type === 'instructions' ? 4 : 2} label={block.type === 'instructions' ? 'Isi instruksi' : 'Teks konfirmasi'} value={block.body} onChange={next => update(b => { b.body = next; })} />
 			</label>
 		);
 	if (['image', 'audio', 'video'].includes(block.type))
@@ -1284,8 +1310,8 @@ export function BuilderPreview({
 		const url = safeUrl(b.url);
 		switch (b.type) {
 			case 'instructions':
-                if (classroom && d.activities.find(a=>a.blocks.some(block=>block.id===b.id))?.blocks.find(block=>block.type==='instructions')?.id===b.id) return <section className="sc-activity-brief"><h3>Yang perlu Anda lakukan</h3><p className="sc-prose">{plain(b.body)||'Instruksi belum diisi'}</p></section>;
-				return <p className="bd-prose">{plain(b.body) || 'Instruksi belum diisi'}</p>;
+                if (classroom && d.activities.find(a=>a.blocks.some(block=>block.id===b.id))?.blocks.find(block=>block.type==='instructions')?.id===b.id) return <section className="sc-activity-brief"><h3>Yang perlu Anda lakukan</h3><p className="sc-prose"><RichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</p></section>;
+				return <p className="bd-prose"><RichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</p>;
 			case 'acknowledgement':
 				return (
 					<label className="bd-check">
@@ -1299,7 +1325,7 @@ export function BuilderPreview({
 								}))
 							}
 						/>
-						{plain(b.body)}
+						<RichTextView value={b.body} />
 					</label>
 				);
 			case 'image':

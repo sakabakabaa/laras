@@ -68,6 +68,7 @@ import {
 	activitySummary,
 	newActivity,
 	plain,
+	replaceRichText,
 	questionIds,
 	removeBlock,
 	rich,
@@ -1642,7 +1643,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																disabled={locked || readOnly}
 																	onChange={value => change(next => {
 																		const target = next.document.activities.flatMap(activity => activity.blocks).find(item => item.id === b.id);
-																		if (target) target.body = rich(value);
+									if (target) target.body = replaceRichText(target.body, value);
 																	})}
 																/>
 															) : <BlockEditor block={b} envelope={draft} onChange={change} />}

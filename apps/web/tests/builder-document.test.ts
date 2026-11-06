@@ -19,6 +19,8 @@ import {
 	safeInlineUrl,
 	plain,
 	applyBlockFormat,
+	builderImagePresentationStyle,
+	resetBuilderImagePresentation,
 	replaceRichText,
 	savedTemplateScope,
 	type BuilderEnvelope,
@@ -41,6 +43,21 @@ function fixture() {
 	return d;
 }
 describe('shared builder identity and private envelope', () => {
+	it('roundtrips legacy images and validated presentation through normalization and templates', () => {
+		const d = fixture(); const activity=d.document.activities[0]; appendBlock(d,activity.id,'image');
+		activity.blocks.at(-1)!.images=[{id:'photo_1',url:'https://example.org/photo.jpg',alt:'A photo',caption:'Caption'}];
+		const legacy=normalize(d); expect(legacy.document.activities[0].blocks.at(-1)!.images?.[0]).toEqual({id:'photo_1',url:'https://example.org/photo.jpg',alt:'A photo',caption:'Caption'});
+		activity.blocks.at(-1)!.images![0].presentation={fit:'cover',aspect:'16:9',focalX:22,focalY:75};
+		const normalized=normalize(d); expect(normalized.document.activities[0].blocks.at(-1)!.images?.[0].presentation).toEqual({fit:'cover',aspect:'16:9',focalX:22,focalY:75});
+		const copied=copyBuilder(normalized,normalized.document.kind,normalized.document.context); expect(copied.document.activities[0].blocks.at(-1)!.images?.[0].presentation).toEqual(normalized.document.activities[0].blocks.at(-1)!.images?.[0].presentation);
+		for(const presentation of [{focalX:101},{focalY:NaN},{fit:'stretch'},{aspect:'2:1'}]) { activity.blocks.at(-1)!.images![0].presentation=presentation as any; expect(()=>normalize(d)).toThrow(); }
+	});
+	it('uses bounded focal crop styles and natural dimensions by default', () => {
+		expect(builderImagePresentationStyle({})).toEqual({width:'100%',aspectRatio:undefined,objectFit:undefined,objectPosition:'50% 50%'});
+		expect(builderImagePresentationStyle({fit:'cover',aspect:'16:9',focalX:20,focalY:80})).toEqual({width:'100%',aspectRatio:'16 / 9',objectFit:'cover',objectPosition:'20% 80%'});
+		expect(resetBuilderImagePresentation({id:'photo',alt:'Alt',caption:'Caption',presentation:{fit:'cover',focalX:0}})).toEqual({id:'photo',alt:'Alt',caption:'Caption'});
+		for(const value of [{focalX:101},{focalY:NaN},{fit:'stretch'},{aspect:'2:1'}]) expect(()=>builderImagePresentationStyle(value)).toThrow();
+	});
 	it('keeps legacy activity templates visible when scope metadata is absent', () => {
 		const legacyEnvelope = fixture();
 		// Existing builder_saved_items rows predate the additive scope field.

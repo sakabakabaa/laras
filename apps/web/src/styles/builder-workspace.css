@@ -1599,6 +1599,15 @@
 .bd-gallery-item label {
 	font-size: 11px;
 }
+.bd-image-presentation {
+	display: grid;
+	gap: 8px;
+	min-width: 0;
+	border: 1px solid var(--bd-border);
+	border-radius: 7px;
+	padding: 8px;
+}
+.bd-image-presentation legend { padding: 0 4px; font-size: 11px; color: var(--bd-muted); }
 .bd-filename {
 	display: block;
 	color: var(--bd-muted);

@@ -182,7 +182,32 @@ export type BuilderImage = {
 	url?: string;
 	alt: string;
 	caption: string;
+	presentation?: BuilderImagePresentation;
 };
+export type BuilderImagePresentation = { fit?: 'contain' | 'cover'; aspect?: 'natural' | 'square' | '4:3' | '3:2' | '16:9'; focalX?: number; focalY?: number };
+export function resetBuilderImagePresentation(image: BuilderImage): BuilderImage {
+	const retained = { ...image };
+	delete retained.presentation;
+	return retained;
+}
+export function normalizeBuilderImagePresentation(value: unknown): BuilderImagePresentation {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid image presentation');
+	const source = value as Record<string, unknown>;
+	if (Object.keys(source).some(key => !['fit', 'aspect', 'focalX', 'focalY'].includes(key))) throw new Error('Unknown image presentation style');
+	if (source.fit !== undefined && !['contain', 'cover'].includes(source.fit as string)) throw new Error('Invalid image fit');
+	if (source.aspect !== undefined && !['natural', 'square', '4:3', '3:2', '16:9'].includes(source.aspect as string)) throw new Error('Invalid image aspect');
+	for (const key of ['focalX', 'focalY'] as const) if (source[key] !== undefined && (typeof source[key] !== 'number' || !Number.isFinite(source[key]) || source[key] < 0 || source[key] > 100)) throw new Error('Invalid image focal position');
+	return { ...(source.fit ? {fit:source.fit as BuilderImagePresentation['fit']} : {}), ...(source.aspect ? {aspect:source.aspect as BuilderImagePresentation['aspect']} : {}), ...(source.focalX !== undefined ? {focalX:source.focalX as number} : {}), ...(source.focalY !== undefined ? {focalY:source.focalY as number} : {}) };
+}
+export function builderImagePresentationStyle(value: unknown) {
+	const presentation = normalizeBuilderImagePresentation(value);
+	return {
+		width: '100%',
+		aspectRatio: presentation.aspect && presentation.aspect !== 'natural' ? presentation.aspect === 'square' ? '1 / 1' : presentation.aspect.replace(':', ' / ') : undefined,
+		objectFit: presentation.fit || (presentation.aspect && presentation.aspect !== 'natural' ? 'cover' : undefined),
+		objectPosition: `${presentation.focalX ?? 50}% ${presentation.focalY ?? 50}%`,
+	};
+}
 export type BuilderBlock = {
 	appearance?: BuilderAppearance;
 	id: string;

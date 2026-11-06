@@ -30,6 +30,8 @@ import {
 import type { FileLibraryRecord } from '@/lib/learning';
 import {
 	uid,
+	builderImagePresentationStyle,
+	resetBuilderImagePresentation,
 	type BuilderAsset,
 	type BuilderBlock,
 	type BuilderImage,
@@ -124,12 +126,14 @@ function MediaView({
 	url: external,
 	alt = '',
 	caption = '',
+	presentation,
 }: {
 	kind: Kind;
 	asset?: BuilderAsset;
 	url?: string;
 	alt?: string;
 	caption?: string;
+	presentation?: BuilderImage['presentation'];
 }) {
 	const { url, error } = useBuilderAssetUrl(asset, external);
 	const playback = useRef({ time: 0, playing: false });
@@ -166,7 +170,7 @@ function MediaView({
 	return (
 		<figure className="bd-media-view">
 			{kind === 'image' ? (
-				<img src={url} alt={alt} loading="lazy" />
+				<img src={url} alt={alt} loading="lazy" style={presentation && Object.keys(presentation).length ? builderImagePresentationStyle(presentation) as CSSProperties : undefined} />
 			) : kind === 'audio' ? (
 				<audio
 					{...playbackEvents}
@@ -667,6 +671,21 @@ export function BuilderMediaEditor({
 										}
 									/>
 								</label>
+								<fieldset className="bd-image-presentation">
+									<legend>Tampilan gambar {index + 1}</legend>
+									<label>Penyesuaian
+										<select value={image.presentation?.fit || ''} onChange={e => editImages(items => { const value=e.target.value as 'contain'|'cover'|''; items[index].presentation={...items[index].presentation,...(value?{fit:value}:{})}; if(!value) delete items[index].presentation?.fit; if(!Object.keys(items[index].presentation||{}).length) delete items[index].presentation; })}>
+											<option value="">Asli (natural)</option><option value="contain">Tampilkan utuh</option><option value="cover">Potong memenuhi bingkai</option>
+										</select>
+									</label>
+									<label>Rasio bingkai
+										<select value={image.presentation?.aspect || 'natural'} onChange={e => editImages(items => { const value=e.target.value as NonNullable<BuilderImage['presentation']>['aspect']; items[index].presentation={...items[index].presentation,...(value&&value!=='natural'?{aspect:value}:{})}; if(value==='natural') delete items[index].presentation?.aspect; if(!Object.keys(items[index].presentation||{}).length) delete items[index].presentation; })}>
+											<option value="natural">Asli</option><option value="square">Persegi 1:1</option><option value="4:3">4:3</option><option value="3:2">3:2</option><option value="16:9">Lanskap 16:9</option>
+										</select>
+									</label>
+									<div className="bd-inline-actions"><label>Fokus horizontal<input type="range" min="0" max="100" value={image.presentation?.focalX ?? 50} aria-label={`Fokus horizontal gambar ${index+1}`} onChange={e=>editImages(items=>{items[index].presentation={...items[index].presentation,focalX:Number(e.target.value)};})}/></label><label>Fokus vertikal<input type="range" min="0" max="100" value={image.presentation?.focalY ?? 50} aria-label={`Fokus vertikal gambar ${index+1}`} onChange={e=>editImages(items=>{items[index].presentation={...items[index].presentation,focalY:Number(e.target.value)};})}/></label></div>
+									<button type="button" className="bd-text-button" onClick={()=>editImages(items=>{items[index]=resetBuilderImagePresentation(items[index]);})}>Reset tampilan</button>
+								</fieldset>
 							</div>
 						))}
 					</div>

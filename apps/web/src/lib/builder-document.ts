@@ -210,6 +210,7 @@ export function builderImagePresentationStyle(value: unknown) {
 	};
 }
 export type BuilderBlock = {
+	layoutLocked?: boolean;
 	appearance?: BuilderAppearance;
 	id: string;
 	type: BlockType;
@@ -406,6 +407,7 @@ export function insertGroupTemplate(
 	return copiedGroup.id;
 }
 export type BuilderRecord = BuilderEnvelope & {
+	layoutLocks?: boolean;
 	id: string;
 	revision: number;
 	updated: string;
@@ -590,6 +592,17 @@ export function removeBlock(
 	a.blocks = a.blocks.filter((b) => b.id !== blockId);
 	removeBlockFromLayout(a, blockId);
 }
+function clearActivityLayoutLocks(activity: BuilderActivity) {
+	for (const block of activity.blocks) delete block.layoutLocked;
+	const walk = (nodes: import('./builder-layout').BuilderLayoutNode[]) => {
+		for (const node of nodes) {
+			if (node.kind === 'block') continue;
+			delete node.layoutLocked;
+			walk(node.children);
+		}
+	};
+	if (activity.layout) walk(activity.layout.nodes);
+}
 export function duplicateActivity(draft: BuilderEnvelope, activityId: string) {
 	const original = draft.document.activities.find((a) => a.id === activityId)!;
 	const copy = structuredClone(original),
@@ -633,6 +646,7 @@ export function duplicateActivity(draft: BuilderEnvelope, activityId: string) {
 						)
 					: o;
 	const next = remap(copy) as BuilderActivity;
+	clearActivityLayoutLocks(next);
 	next.title = (next.title + ' (salinan)').slice(0, 200);
 	for (const b of original.blocks)
 		for (const qid of questionIds(b)) {
@@ -894,6 +908,7 @@ export function copyBuilder(
 						)
 					: o;
 	const next = remap(source) as BuilderEnvelope;
+	for (const activity of next.document.activities) clearActivityLayoutLocks(activity);
 	next.document.kind = kind;
 	next.document.context = context;
 	next.document.title = (source.document.title + ' (salinan)').slice(0, 200);

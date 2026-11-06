@@ -3,6 +3,7 @@ import { BuilderGroupBackgroundControls } from './builder-group-background-contr
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { BuilderNavigatorTitle } from './builder-navigator-title';
 import { revealNavigatorAncestors } from '@/lib/builder-navigator';
+import { layoutLockState, LAYOUT_LOCK_REASON } from '@/lib/builder-layout-lock';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import {
 	BLOCK_LABELS,
@@ -125,6 +126,7 @@ function StructureRows({
 	depth?: number;
 }): ReactNode {
 	return nodes.map((node) => {
+		const structuralBlocked = disabled || layoutLockState(activity, node.kind === 'block' ? node.block.id : node.id).protectedStructure;
 		if (node.kind === 'block') {
 			const selected = selectedBlockId === node.block.id;
 			return (
@@ -143,19 +145,22 @@ function StructureRows({
 						<span>{BLOCK_LABELS[node.block.type]}</span>
 					</button>
 					{selected && (
-						<span className="bd-structure-actions">
-							<Action label="Naikkan" onClick={() => onMove(node.block.id, -1)} icon={<ArrowUp size={12} />} />
+						<span className="bd-structure-actions" title={structuralBlocked ? LAYOUT_LOCK_REASON : undefined}>
+							<Action disabled={structuralBlocked} label="Naikkan" onClick={() => onMove(node.block.id, -1)} icon={<ArrowUp size={12} />} />
 							<Action
+								disabled={structuralBlocked}
 								label="Turunkan"
 								onClick={() => onMove(node.block.id, 1)}
 								icon={<ArrowDown size={12} />}
 							/>
 							<Action
+								disabled={structuralBlocked}
 								label="Masukkan ke bagian sebelumnya"
 								onClick={() => onReparent(node.block.id, 'in')}
 								icon={<ArrowRight size={12} />}
 							/>
 							<Action
+								disabled={structuralBlocked}
 								label="Keluarkan dari bagian"
 								onClick={() => onReparent(node.block.id, 'out')}
 								icon={<ArrowLeft size={12} />}
@@ -179,20 +184,23 @@ function StructureRows({
 					</button>
 					<BuilderNavigatorTitle key={String(disabled)} title={node.title || (node.kind === 'section' ? 'Bagian' : 'Kontainer')} columns={node.columns} selected={selected} disabled={disabled} onSelect={() => onSelectGroup(node.id)} onMoveKey={event => moveKeys(event, node.id)} onRename={title => onRenameGroup(node.id, title)} />
 					{selected && (
-						<span className="bd-structure-actions">
-							<Action label="Naikkan" onClick={() => onMove(node.id, -1)} icon={<ArrowUp size={12} />} />
-							<Action label="Turunkan" onClick={() => onMove(node.id, 1)} icon={<ArrowDown size={12} />} />
+						<span className="bd-structure-actions" title={structuralBlocked ? LAYOUT_LOCK_REASON : undefined}>
+							<Action disabled={structuralBlocked} label="Naikkan" onClick={() => onMove(node.id, -1)} icon={<ArrowUp size={12} />} />
+							<Action disabled={structuralBlocked} label="Turunkan" onClick={() => onMove(node.id, 1)} icon={<ArrowDown size={12} />} />
 							<Action
+								disabled={structuralBlocked}
 								label="Masukkan ke bagian sebelumnya"
 								onClick={() => onReparent(node.id, 'in')}
 								icon={<ArrowRight size={12} />}
 							/>
 							<Action
+								disabled={structuralBlocked}
 								label="Keluarkan dari bagian"
 								onClick={() => onReparent(node.id, 'out')}
 								icon={<ArrowLeft size={12} />}
 							/>
 							<Action
+								disabled={structuralBlocked}
 								label="Hapus bagian, simpan isinya"
 								onClick={() => onRemoveGroup(node.id)}
 								danger
@@ -226,6 +234,7 @@ function StructureRows({
 
 	function moveKeys(event: React.KeyboardEvent, id: string) {
 		if (!event.altKey) return;
+		if (disabled || layoutLockState(activity, id).protectedStructure) { event.preventDefault(); return; }
 		if (event.key === 'ArrowUp') {
 			event.preventDefault();
 			onMove(id, -1);
@@ -260,7 +269,7 @@ function Action({
 			type="button"
 			className={'bd-structure-action' + (danger ? ' is-danger' : '')}
 			aria-label={label}
-			title={label}
+			title={disabled ? `${label} · Periksa kunci tata letak, mode hanya-baca, konflik atau pemulihan.` : label}
 			disabled={disabled}
 			onClick={onClick}
 		>
@@ -307,6 +316,7 @@ export function BuilderLayoutNavigator({
 	const nodes = resolveActivityLayout(activity);
 	const groups = activity.layout ? countLayoutGroups(activity.layout) : 0;
 	const total = count(nodes);
+	const destinationLocked = selectedNodeId ? layoutLockState(activity, selectedNodeId).own || Boolean(layoutLockState(activity, selectedNodeId).inheritedFrom) : false;
 	return (
 		<section className="bd-structure" aria-label="Struktur kegiatan">
 			<header>
@@ -331,17 +341,17 @@ export function BuilderLayoutNavigator({
 					idPrefix={structureId}
 				/>
 			</ol>
-			<div className="bd-structure-add">
+			<div className="bd-structure-add" title={destinationLocked ? LAYOUT_LOCK_REASON : undefined}>
 				<button
 					type="button"
-					disabled={disabled || groups >= LAYOUT_LIMITS.maxGroups}
+					disabled={disabled || destinationLocked || groups >= LAYOUT_LIMITS.maxGroups}
 					onClick={() => onAddGroup('section', selectedNodeId || null)}
 				>
 					<Plus size={14} /> Bagian
 				</button>
 				<button
 					type="button"
-					disabled={disabled || groups >= LAYOUT_LIMITS.maxGroups}
+					disabled={disabled || destinationLocked || groups >= LAYOUT_LIMITS.maxGroups}
 					onClick={() => onAddGroup('container', selectedNodeId || null)}
 				>
 					<Plus size={14} /> Kontainer
@@ -428,6 +438,9 @@ export function BuilderLayoutInspector({
 }) {
 	const [tab, setTab] = useState<'content' | 'style' | 'advanced'>('content');
 	const tabId = useId();
+	const lockState = layoutLockState(activity, group.id);
+	const destinationBlocked = disabled || lockState.own || Boolean(lockState.inheritedFrom);
+	const structureBlocked = disabled || lockState.protectedStructure;
 	const update = (edit: (target: BuilderLayoutGroup) => void) =>
 		onChange((draft) => {
 			const target = activityIn(draft, activity.id);
@@ -485,20 +498,20 @@ export function BuilderLayoutInspector({
 						Elemen baru dari pustaka akan masuk ke bagian ini. Urutan elemen
 						yang belum ditempatkan tetap tampil di akhir kegiatan.
 					</p>
-					<button className="bd-secondary" disabled={disabled} onClick={onAddBlock}>
+					<button className="bd-secondary" disabled={destinationBlocked} title={destinationBlocked ? LAYOUT_LOCK_REASON : undefined} onClick={onAddBlock}>
 						<Plus size={15} /> Tambah elemen ke bagian ini
 					</button>
-					<div className="bd-inline-actions">
+					<div className="bd-inline-actions" title={destinationBlocked ? LAYOUT_LOCK_REASON : undefined}>
 						<button
 							className="bd-secondary"
-							disabled={disabled}
+							disabled={destinationBlocked}
 							onClick={() => onAddGroup('section')}
 						>
 							<Plus size={14} /> Bagian dalam
 						</button>
 						<button
 							className="bd-secondary"
-							disabled={disabled}
+							disabled={destinationBlocked}
 							onClick={() => onAddGroup('container')}
 						>
 							<Plus size={14} /> Kontainer dalam
@@ -597,21 +610,21 @@ export function BuilderLayoutInspector({
 					<p className="bd-help">
 						Gunakan tombol atau Alt+panah saat fokus di navigator struktur.
 					</p>
-					<div className="bd-inline-actions">
-						<button className="bd-secondary" disabled={disabled} onClick={() => onMove(-1)}>
+					<div className="bd-inline-actions" title={structureBlocked ? LAYOUT_LOCK_REASON : undefined}>
+						<button className="bd-secondary" disabled={structureBlocked} onClick={() => onMove(-1)}>
 							Naikkan
 						</button>
-						<button className="bd-secondary" disabled={disabled} onClick={() => onMove(1)}>
+						<button className="bd-secondary" disabled={structureBlocked} onClick={() => onMove(1)}>
 							Turunkan
 						</button>
-						<button className="bd-secondary" disabled={disabled} onClick={() => onReparent('in')}>
+						<button className="bd-secondary" disabled={structureBlocked} onClick={() => onReparent('in')}>
 							Masukkan
 						</button>
-						<button className="bd-secondary" disabled={disabled} onClick={() => onReparent('out')}>
+						<button className="bd-secondary" disabled={structureBlocked} onClick={() => onReparent('out')}>
 							Keluarkan
 						</button>
 					</div>
-					<button className="bd-text-button" disabled={disabled} onClick={onRemove}>
+					<button className="bd-text-button" disabled={structureBlocked} title={structureBlocked ? LAYOUT_LOCK_REASON : undefined} onClick={onRemove}>
 						Hapus bagian, simpan isinya
 					</button>
 				</div>

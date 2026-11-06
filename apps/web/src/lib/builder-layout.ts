@@ -31,6 +31,7 @@ export function resetResponsiveOverride(group: BuilderLayoutGroup, device: 'tabl
 }
 export type BuilderLayoutBlock = { kind: 'block'; blockId: string };
 export type BuilderLayoutGroup = {
+	layoutLocked?: boolean;
 	kind: BuilderLayoutGroupKind;
 	id: string;
 	title: string;

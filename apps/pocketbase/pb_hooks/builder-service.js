@@ -48,7 +48,7 @@ function enhancedDocument(d) {
 					a.blocks.some(
 						(b) =>
 							!!b &&
-							(b.appearance !== undefined || Array.isArray(b.sections) || b.transcript !== undefined || b.playback !== undefined || (b.body && Array.isArray(b.body.content) && b.body.content.some((node) => node && (node.type === 'heading' || node.type === 'list_item')))),
+							(b.layoutLocked !== undefined || b.appearance !== undefined || Array.isArray(b.sections) || b.transcript !== undefined || b.playback !== undefined || (b.body && Array.isArray(b.body.content) && b.body.content.some((node) => node && (node.type === 'heading' || node.type === 'list_item')))),
 					))),
 	);
 }
@@ -137,6 +137,7 @@ function view(app, r) {
 		throw new BadRequestError('Pengaturan penilaian draf tidak ditemukan.');
 	return {
 		id: r.id,
+		layoutLocks: true,
 		title: r.getString('title'),
 		kind: r.getString('kind'),
 		revision: r.getInt('revision'),

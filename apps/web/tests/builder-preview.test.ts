@@ -34,4 +34,17 @@ describe('builder isolated content preview', () => {
 		expect(html).toContain('Kelompok B');
 		expect(html).not.toContain('src=""');
 	});
+	it('renders authored media transcript as escaped plain text in an accessible disclosure', () => {
+		const d = blankBuilder('kelas', 'course000000001');
+		const activity = d.document.activities[0];
+		const id = appendBlock(d, activity.id, 'audio');
+		const block = activity.blocks.find(item => item.id === id)!;
+		block.transcript = '<script>alert(1)</script>\nsecond line';
+		block.playback = { loop: true, muted: true };
+		const html = renderToStaticMarkup(createElement(BuilderPreview, { document: d.document }));
+		expect(html).toContain('<summary>Transkrip teks</summary>');
+		expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+		expect(html).not.toContain('<script>');
+		expect(html).toContain('Media belum dipilih.');
+	});
 });

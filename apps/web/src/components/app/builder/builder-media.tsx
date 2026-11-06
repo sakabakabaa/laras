@@ -30,8 +30,10 @@ import {
 import type { FileLibraryRecord } from '@/lib/learning';
 import {
 	uid,
+	BUILDER_TRANSCRIPT_MAX_LENGTH,
 	builderImagePresentationStyle,
 	resetBuilderImagePresentation,
+	resetBuilderPlayback,
 	type BuilderAsset,
 	type BuilderBlock,
 	type BuilderImage,
@@ -127,6 +129,8 @@ function MediaView({
 	alt = '',
 	caption = '',
 	presentation,
+	transcript = '',
+	playback,
 }: {
 	kind: Kind;
 	asset?: BuilderAsset;
@@ -134,42 +138,34 @@ function MediaView({
 	alt?: string;
 	caption?: string;
 	presentation?: BuilderImage['presentation'];
+	transcript?: string;
+	playback?: { loop?: true; muted?: true };
 }) {
 	const { url, error } = useBuilderAssetUrl(asset, external);
-	const playback = useRef({ time: 0, playing: false });
+	const playbackState = useRef({ time: 0, playing: false });
 	const playbackEvents = {
 		onTimeUpdate: (event: React.SyntheticEvent<HTMLMediaElement>) => {
 			if (event.currentTarget.readyState > 0)
-				playback.current.time = event.currentTarget.currentTime;
+			playbackState.current.time = event.currentTarget.currentTime;
 		},
 		onPlay: () => {
-			playback.current.playing = true;
+			playbackState.current.playing = true;
 		},
 		onPause: (event: React.SyntheticEvent<HTMLMediaElement>) => {
-			if (event.currentTarget.readyState > 0) playback.current.playing = false;
+			if (event.currentTarget.readyState > 0) playbackState.current.playing = false;
 		},
 		onLoadedMetadata: (event: React.SyntheticEvent<HTMLMediaElement>) => {
 			const media = event.currentTarget;
-			if (playback.current.time > 0 && playback.current.time < media.duration)
-				media.currentTime = playback.current.time;
-			if (playback.current.playing) void media.play().catch(() => {});
+			if (playbackState.current.time > 0 && playbackState.current.time < media.duration)
+				media.currentTime = playbackState.current.time;
+			if (playbackState.current.playing) void media.play().catch(() => {});
 		},
 	};
-	if (error)
-		return (
-			<p role="alert" className="bd-media-error">
-				{error}
-			</p>
-		);
-	if (!url)
-		return (
-			<p className="bd-help">
-				{asset ? 'Memuat berkas…' : 'Media belum dipilih.'}
-			</p>
-		);
 	return (
 		<figure className="bd-media-view">
-			{kind === 'image' ? (
+			{error ? <p role="alert" className="bd-media-error">{error}</p> : !url ? (
+				<p className="bd-help">{asset ? 'Memuat berkas…' : 'Media belum dipilih.'}</p>
+			) : kind === 'image' ? (
 				<img src={url} alt={alt} loading="lazy" style={presentation && Object.keys(presentation).length ? builderImagePresentationStyle(presentation) as CSSProperties : undefined} />
 			) : kind === 'audio' ? (
 				<audio
@@ -177,6 +173,8 @@ function MediaView({
 					src={url}
 					controls
 					preload="metadata"
+					loop={playback?.loop === true}
+					muted={playback?.muted === true}
 					aria-label={caption || asset?.name || 'Audio'}
 				/>
 			) : (
@@ -185,10 +183,13 @@ function MediaView({
 					src={url}
 					controls
 					preload="metadata"
+					loop={playback?.loop === true}
+					muted={playback?.muted === true}
 					aria-label={caption || asset?.name || 'Video'}
 				/>
 			)}
 			{caption && <figcaption>{caption}</figcaption>}
+			{transcript?.trim() && <details className="bd-media-transcript"><summary>Transkrip teks</summary><div className="bd-prose">{transcript}</div></details>}
 		</figure>
 	);
 }
@@ -230,6 +231,8 @@ export function BuilderMediaView({ block }: { block: BuilderBlock }) {
 			asset={block.asset}
 			url={block.url}
 			caption={block.label}
+			transcript={block.transcript}
+			playback={block.playback}
 		/>
 	);
 }
@@ -723,6 +726,19 @@ export function BuilderMediaEditor({
 							}
 						/>
 					</label>
+					{(block.type === 'audio' || block.type === 'video') && (
+						<>
+							<label>Transkrip teks
+								<textarea maxLength={BUILDER_TRANSCRIPT_MAX_LENGTH} rows={6} value={block.transcript || ''} onChange={e => onUpdate(b => { const value=e.target.value; if(value) b.transcript=value; else delete b.transcript; })} />
+							</label>
+							<fieldset className="bd-image-presentation">
+								<legend>Pemutaran</legend>
+								<label><input type="checkbox" checked={block.playback?.loop === true} onChange={e => onUpdate(b => { const playback={...b.playback}; if(e.target.checked) playback.loop=true; else delete playback.loop; if(Object.keys(playback).length) b.playback=playback; else delete b.playback; })} /> Ulangi pemutaran</label>
+								<label><input type="checkbox" checked={block.playback?.muted === true} onChange={e => onUpdate(b => { const playback={...b.playback}; if(e.target.checked) playback.muted=true; else delete playback.muted; if(Object.keys(playback).length) b.playback=playback; else delete b.playback; })} /> Mulai tanpa suara</label>
+								<button type="button" className="bd-text-button" onClick={() => onUpdate(b => { resetBuilderPlayback(b); })}>Reset pemutaran</button>
+							</fieldset>
+						</>
+					)}
 				</>
 			)}
 			<div className="bd-inline-actions">

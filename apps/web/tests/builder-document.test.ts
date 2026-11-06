@@ -18,6 +18,8 @@ import {
 	applyInlineLink,
 	safeInlineUrl,
 	plain,
+	resetBuilderPlayback,
+	BUILDER_TRANSCRIPT_MAX_LENGTH,
 	applyBlockFormat,
 	builderImagePresentationStyle,
 	resetBuilderImagePresentation,
@@ -43,6 +45,56 @@ function fixture() {
 	return d;
 }
 describe('shared builder identity and private envelope', () => {
+	it('roundtrips bounded audio and video transcript and playback settings through copies', () => {
+		expect(BUILDER_TRANSCRIPT_MAX_LENGTH).toBe(20000);
+		const d = fixture();
+		const activity = d.document.activities[0];
+		appendBlock(d, activity.id, 'audio');
+		expect(normalize(d).document.activities[0].blocks.at(-1)).toMatchObject({ type: 'audio', url: '', label: '', alt: '' });
+		expect(normalize(d).document.activities[0].blocks.at(-1)).not.toHaveProperty('playback');
+		for (const type of ['audio', 'video'] as const) {
+			appendBlock(d, activity.id, type);
+			const block = activity.blocks.at(-1)!;
+			block.transcript = 'Line one\n<script>alert(1)</script>';
+			block.playback = { loop: true, muted: true };
+		}
+		const saved = normalize(d);
+		const reset = resetBuilderPlayback(structuredClone(saved.document.activities[0].blocks.at(-1)!));
+		expect(reset).not.toHaveProperty('playback');
+		expect(reset).toMatchObject({ transcript: 'Line one\n<script>alert(1)</script>' });
+		expect(saved.document.questionsById).toEqual(d.document.questionsById);
+		expect(saved.privateKeys.answersByQuestionId).toEqual(d.privateKeys.answersByQuestionId);
+		expect(saved.document.activities[0].blocks.slice(-2).map(block => [block.transcript, block.playback])).toEqual([
+			['Line one\n<script>alert(1)</script>', { loop: true, muted: true }],
+			['Line one\n<script>alert(1)</script>', { loop: true, muted: true }],
+		]);
+		const copied = copyBuilder(saved, saved.document.kind, saved.document.context);
+		expect(copied.document.activities[0].blocks.slice(-2).map(block => [block.transcript, block.playback])).toEqual(saved.document.activities[0].blocks.slice(-2).map(block => [block.transcript, block.playback]));
+		const duplicated = structuredClone(saved);
+		duplicateActivity(duplicated, activity.id);
+		expect(duplicated.document.activities[1].blocks.slice(-2).map(block => [block.transcript, block.playback])).toEqual(saved.document.activities[0].blocks.slice(-2).map(block => [block.transcript, block.playback]));
+		const activityWithMedia = structuredClone(d);
+		const mediaActivity = activityWithMedia.document.activities[0];
+		const media = mediaActivity.blocks.at(-1)!;
+		media.type = 'video';
+		media.transcript = 'Template transcript';
+		media.playback = { loop: true };
+		const group = { kind: 'section' as const, id: 'media_group', title: 'Media', columns: 1 as const, gap: 'md' as const, padding: 'none' as const, surface: 'none' as const, children: [{ kind: 'block' as const, blockId: media.id }] };
+		mediaActivity.layout = { schemaVersion: 1, nodes: [group] };
+		const template = mod.exports.extractGroupTemplate(activityWithMedia, mediaActivity.id, group.id) as BuilderEnvelope & { scope: 'group' };
+		expect(template.document.activities[0].blocks[0]).toMatchObject({ transcript: 'Template transcript', playback: { loop: true } });
+		for (const invalid of [
+			{ type: 'reference', transcript: 'no' },
+			{ type: 'audio', transcript: 'x'.repeat(20001) },
+			{ type: 'video', playback: { autoplay: true } },
+			{ type: 'video', playback: { loop: false } },
+		]) {
+			const bad = structuredClone(d);
+			const target = bad.document.activities[0].blocks.at(-1)!;
+			Object.assign(target, invalid);
+			expect(() => normalize(bad)).toThrow();
+		}
+	});
 	it('roundtrips legacy images and validated presentation through normalization and templates', () => {
 		const d = fixture(); const activity=d.document.activities[0]; appendBlock(d,activity.id,'image');
 		activity.blocks.at(-1)!.images=[{id:'photo_1',url:'https://example.org/photo.jpg',alt:'A photo',caption:'Caption'}];

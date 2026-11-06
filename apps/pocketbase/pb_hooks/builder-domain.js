@@ -497,6 +497,18 @@ function normalize(body) {
 			if (b.label !== undefined) out.label = str(b.label, 500);
 			if (b.url !== undefined) out.url = url(b.url);
 			if (b.alt !== undefined) out.alt = str(b.alt, 1000);
+			if (b.transcript !== undefined) {
+				if (!['audio', 'video'].includes(b.type)) fail('Transkrip hanya untuk audio atau video.');
+				out.transcript = str(b.transcript, 20000);
+			}
+			if (b.playback !== undefined) {
+				if (!['audio', 'video'].includes(b.type)) fail('Pemutaran hanya untuk audio atau video.');
+				const playback = obj(b.playback);
+				if (Object.keys(playback).some((key) => !['loop', 'muted'].includes(key))) fail('Pengaturan pemutaran tidak dikenal.');
+				if (playback.loop !== undefined && playback.loop !== true) fail('Pengaturan ulang pemutaran tidak valid.');
+				if (playback.muted !== undefined && playback.muted !== true) fail('Pengaturan audio awal tidak valid.');
+				out.playback = { ...(playback.loop ? { loop: true } : {}), ...(playback.muted ? { muted: true } : {}) };
+			}
 			if (b.asset) {
 				if (!['image', 'audio', 'video'].includes(b.type))
 					fail('Berkas tidak cocok dengan elemen.');

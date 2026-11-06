@@ -60,6 +60,7 @@ export type ProposalOperation = 'append' | 'insert' | 'replace';
 
 /** Applies reviewed content to one draft copy; callers install it as one history change. */
 export function applyBuilderProposal(target: BuilderEnvelope, source: BuilderEnvelope, operation: ProposalOperation, targetActivityId?: string): string {
+	if (operation === 'replace' && source.document.activities.length !== 1) throw new Error('REPLACE memerlukan tepat satu kegiatan dalam usulan. Gunakan APPEND atau INSERT untuk usulan dengan beberapa kegiatan.');
 	const copied = copyBuilder(source, target.document.kind, target.document.context);
 	const activities = target.document.activities;
 	const targetIndex = targetActivityId ? activities.findIndex(activity => activity.id === targetActivityId) : -1;

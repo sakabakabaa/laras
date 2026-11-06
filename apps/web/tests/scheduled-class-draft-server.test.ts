@@ -39,6 +39,21 @@ describe('scheduled draft generation boundary',()=>{
   await expect(generateScheduledClassDraft({...pb,send} as never,user,{sessionId,builderId:true,minutes:60})).rejects.toMatchObject({status:422});
   expect(mocks.generate).not.toHaveBeenCalled();
  });
+ it('uses only selected owned block content and excludes private answer data from AI context',async()=>{
+  const activityId='activity1234567',blockId='block1234567890',outsideId='outside12345678',groupId='group1234567890';
+  const send=vi.fn().mockResolvedValueOnce({document:{context:{courseId:'course123456789',meetingId:sessionId}}}).mockResolvedValueOnce({document:{context:{courseId:'course123456789',meetingId:sessionId},activities:[{id:activityId,title:'Selected lesson',blocks:[{id:blockId,type:'instructions',body:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'Visible lesson prompt'}]}]}},{id:outsideId,type:'instructions',body:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'Outside selected group'}]}]}}],layout:{nodes:[{kind:'section',id:groupId,title:'Chosen group',children:[{kind:'block',blockId}]}]}}],questionsById:{},privateKeys:{answersByQuestionId:{secret:{accepted:['private answer']}}}}});
+  await generateScheduledClassDraft({...pb,send} as never,user,{sessionId,builderId:'builder12345678',minutes:60,selection:{activityId,blockIds:[],groupId}});
+  const prompt=mocks.generate.mock.calls[0][1].prompt;
+  expect(prompt).toContain('Visible lesson prompt');expect(prompt).toContain('Chosen group');expect(prompt).not.toContain('Outside selected group');expect(prompt).not.toContain('private answer');expect(prompt).not.toContain('answersByQuestionId');
+ });
+ it('rejects foreign selected block IDs and oversized selected content before AI access',async()=>{
+  const activityId='activity1234567',blockId='block1234567890';
+  const send=vi.fn().mockResolvedValueOnce({document:{context:{courseId:'course123456789',meetingId:sessionId}}}).mockResolvedValueOnce({document:{activities:[{id:activityId,title:'Selected lesson',blocks:[{id:blockId,body:'x'.repeat(8100)}]}],questionsById:{}}});
+  await expect(generateScheduledClassDraft({...pb,send} as never,user,{sessionId,builderId:'builder12345678',minutes:60,selection:{activityId,blockIds:['foreign12345678']}})).rejects.toMatchObject({status:422});
+  const oversizeSend=vi.fn().mockResolvedValueOnce({document:{context:{courseId:'course123456789',meetingId:sessionId}}}).mockResolvedValueOnce({document:{activities:[{id:activityId,title:'Selected lesson',blocks:[{id:blockId,body:'x'.repeat(8100)}]}],questionsById:{}}});
+  await expect(generateScheduledClassDraft({...pb,send:oversizeSend} as never,user,{sessionId,builderId:'builder12345678',minutes:60,selection:{activityId,blockIds:[blockId]}})).rejects.toMatchObject({status:422});
+  expect(mocks.generate).not.toHaveBeenCalled();
+ });
  it('automatically selects only approved materials linked to the builder meeting and its outcomes',async()=>{
   const fileId='material1234567',outcomeId='outcome12345678';
   mocks.session.mockResolvedValue({id:sessionId,course:'course123456789',title:'Word order',learningMaterial:'German finite verbs appear in the second position in declarative main clauses.',cpmks:[outcomeId],subCpmks:[]});

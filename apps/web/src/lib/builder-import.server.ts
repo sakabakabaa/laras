@@ -11,7 +11,7 @@ import { verifyOwnedCourse } from './assistant/authorization.server';
 import { capabilityWeight } from './ai-rate-limits';
 import { createRateLimiter } from './rate-limit.server';
 import { commitUsage, enforceAiAccess } from './ai-usage.server';
-import { meetingAcademicContext } from './scheduled-class-draft.server';
+import { meetingAcademicContext, selectedBuilderContext } from './scheduled-class-draft.server';
 const uploadBudget = createRateLimiter({maxRequests:4,windowSeconds:60});
 const pending = new Map<string, Promise<void>>();
 const command = <T>(pb:PocketBase,body:Record<string,unknown>)=>pb.send<T>('/api/laras/builder-import',{method:'POST',body,requestKey:null});
@@ -21,6 +21,14 @@ async function validateSettings(pb:PocketBase,userId:string,s:BuilderImportSetti
  if(s.kind==='kelas'&&!s.context.meetingId)fail('Pilih pertemuan untuk kelas terjadwal.');
  if(s.context.meetingId){const meeting=await pb.collection('class_sessions').getOne<{course:string;section?:string}>(s.context.meetingId);if(meeting.course!==s.context.courseId)fail('Pertemuan bukan dari mata kuliah ini.');if(meeting.section&&(s.context.sectionIds.length!==1||s.context.sectionIds[0]!==meeting.section))fail('Rombel tidak sesuai pertemuan.');}
  for(const id of s.context.sectionIds){const section=await pb.collection('course_sections').getOne<{course:string}>(id);if(section.course!==s.context.courseId)fail('Rombel bukan dari mata kuliah ini.');}
+ const suppliedSelectionContext=s.selectionContext;
+ delete s.selectionContext;
+ if(s.selection){
+  if(!s.builderId)fail('Draf pilihan tidak tersedia.');
+  const selected=await selectedBuilderContext(pb,s.builderId,s.selection.activityId,s.selection.blockIds,s.selection.groupId);
+  if(selected.courseId!==s.context.courseId||selected.meetingId!==s.context.meetingId)fail('Pilihan tidak sesuai konteks draf unggahan.');
+  s.selectionContext={title:selected.title,content:selected.content};
+ }else if(suppliedSelectionContext)fail('Konteks pilihan harus diverifikasi dari draf.');
 }
 async function storeImage(pb:PocketBase,userId:string,courseId:string,bytes:Buffer,name:string):Promise<BuilderAsset>{
  const form=new FormData();for(const [k,v] of Object.entries({title:name.slice(0,200),owner:userId,course:courseId,access:'faculty',restrictDownload:'true',status:'ready',version:'1',size:String(bytes.length),kind:'image'}))form.append(k,v);
@@ -64,7 +72,7 @@ async function runImport(pb:PocketBase,userId:string,id:string){
   // Reuse the lecturer's vision + JSON-capable evaluation model/provider.
   const model=await resolveModel(userId,'evaluation');
   const meeting=job.settings.context.meetingId?await meetingAcademicContext(pb,{id:userId,role:'faculty'},job.settings.context.meetingId):null;
-  const payload=JSON.stringify({kind:job.settings.kind,teacherGoal:job.settings.goal||'',title:job.settings.title||'',meeting:meeting?{course:meeting.course,session:meeting.session,cpmks:meeting.cpmks.filter(outcome=>meeting.session.cpmkIds.includes(outcome.id)),subCpmks:meeting.subCpmks.filter(outcome=>meeting.session.subCpmkIds.includes(outcome.id))}:null,imageWidth:width,imageHeight:height});
+  const payload=JSON.stringify({kind:job.settings.kind,teacherGoal:job.settings.goal||'',title:job.settings.title||'',meeting:meeting?{course:meeting.course,session:meeting.session,cpmks:meeting.cpmks.filter(outcome=>meeting.session.cpmkIds.includes(outcome.id)),subCpmks:meeting.subCpmks.filter(outcome=>meeting.session.subCpmkIds.includes(outcome.id))}:null,selectedActivity:job.settings.selectionContext||null,imageWidth:width,imageHeight:height});
   const image='data:image/png;base64,'+bytes.toString('base64');let repair='';let plan:BookPagePlan|undefined;
   const parse=(value:string)=>JSON.parse(value.trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,''));
   for(let attempt=0;attempt<2;attempt++){

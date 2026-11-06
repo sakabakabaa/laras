@@ -45,7 +45,7 @@ import {
 import pb from '@/lib/pocketbase-client';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { createBuilderSaveQueue } from '@/lib/builder-save';
-import { appendBuilderContent } from '@/lib/builder-authoring';
+import { type ProposalOperation } from '@/lib/builder-authoring';
 import { useBuilderAuthoringTools } from './builder-authoring-tools';
 import { BuilderPublishDialog, builderPublishWarnings } from './builder-publish-dialog';
 import {
@@ -310,13 +310,15 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		install(next);
 		setHistoryVersion((v) => v + 1);
 	};
-	const authoringTools = useBuilderAuthoringTools({ id, draft, disabled: conflict || Boolean(recovery) || !online || readOnlyRef.current,
-		onApply: (source) => {
+	const authoringTools = useBuilderAuthoringTools({ id, draft, disabled: conflict || Boolean(recovery) || !online || readOnlyRef.current, selectedActivityId: active, selectedBlockId: selected, selectedGroupId: selectedNode,
+		onApply: (source, operation: ProposalOperation, targetActivityId) => {
 			if (!current.current || conflict || recovery || !online) throw new Error('Draf belum siap menerima tambahan. Selesaikan pemulihan atau konflik terlebih dahulu.');
-			let inserted = '';
-			change(next => { inserted = appendBuilderContent(next, source); });
-			if (inserted) { setActive(inserted); setSelected(''); setInsertion(null); }
-			setAnnouncement('Kegiatan ditambahkan ke draf. Jadwal dan isi sebelumnya tetap dipertahankan.');
+			change(next => { Object.assign(next, structuredClone(source)); });
+			if (operation === 'replace') setActive(targetActivityId);
+			else if (operation === 'insert') setActive(targetActivityId);
+			else setActive(source.document.activities[0]?.id || active);
+			setSelected(''); setInsertion(null);
+			setAnnouncement(`Usulan ${operation.toUpperCase()} diterapkan sebagai satu perubahan. Jadwal draf tetap dipertahankan.`);
 		},
 	});
 	const save = useCallback(async () => {

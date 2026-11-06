@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { appendBuilderContent, builderFromAiProposal } from '../src/lib/builder-authoring';
+import { appendBuilderContent, applyBuilderProposal, builderFromAiProposal } from '../src/lib/builder-authoring';
 import { appendBlock, blankBuilder, builderIssues, plain, questionIds, rich } from '../src/lib/builder-document';
 import type { ScheduledAiProposal } from '../src/lib/scheduled-class-ai';
 
@@ -77,5 +77,63 @@ describe('in-builder authoring additions', () => {
 		appendBuilderContent(target, builderFromAiProposal(proposal, context));
 		expect(target.document.activities).toHaveLength(5);
 		expect(target.document.activities[0].title).toBe('My planned activity');
+	});
+
+	it('inserts before the stable activity target with remapped question and option IDs', () => {
+		const target = blankBuilder('kelas', context.courseId, context.meetingId);
+		const targetId = target.document.activities[0].id;
+		const source = builderFromAiProposal(proposal, context);
+		const sourceIds = Object.keys(source.document.questionsById);
+		applyBuilderProposal(target, source, 'insert', targetId);
+		expect(target.document.activities[4].id).toBe(targetId);
+		expect(target.document.activities.slice(0, 4).map(a => a.title)).toEqual(proposal.draft.activities.map(a => a.title));
+		expect(sourceIds.every(id => !target.document.questionsById[id])).toBe(true);
+		expect(domain.exports.normalize(target)).toEqual(target);
+	});
+
+	it('replaces only the chosen activity content and prunes its orphaned private keys', () => {
+		const target = blankBuilder('kelas', context.courseId, context.meetingId);
+		const id = target.document.activities[0].id;
+		appendBlock(target, id, 'question_group');
+		const oldQuestions = questionIds(target.document.activities[0].blocks[0]);
+		const replacement = builderFromAiProposal({ ...proposal, draft: { ...proposal.draft, activities: [proposal.draft.activities[0]] } }, context);
+		const title = target.document.title, delivery = structuredClone(target.document.delivery);
+		applyBuilderProposal(target, replacement, 'replace', id);
+		expect(target.document.activities).toHaveLength(1);
+		expect(target.document.activities[0].id).toBe(id);
+		expect(target.document.activities[0].blocks).toHaveLength(replacement.document.activities[0].blocks.length);
+		expect(oldQuestions.every(qid => !target.document.questionsById[qid] && !target.privateKeys.answersByQuestionId[qid])).toBe(true);
+		expect(target.document.title).toBe(title);
+		expect(target.document.delivery).toEqual(delivery);
+		expect(domain.exports.normalize(target)).toEqual(target);
+	});
+
+	it('rejects multi-activity and empty replacements without discarding content or private keys', () => {
+		const target = blankBuilder('kelas', context.courseId, context.meetingId);
+		const id = target.document.activities[0].id;
+		appendBlock(target, id, 'question_group');
+		const source = builderFromAiProposal(proposal, context);
+		const before = structuredClone(target);
+		const sourceBefore = structuredClone(source);
+		expect(() => applyBuilderProposal(target, source, 'replace', id)).toThrow('tepat satu kegiatan');
+		expect(target).toEqual(before);
+		expect(source).toEqual(sourceBefore);
+		const empty = blankBuilder('kelas', context.courseId, context.meetingId);
+		empty.document.activities = [];
+		expect(() => applyBuilderProposal(target, empty, 'replace', id)).toThrow('tepat satu kegiatan');
+		expect(target).toEqual(before);
+	});
+
+	it('rejects stale replacement targets and capacity overflow without changing the draft', () => {
+		const target = blankBuilder('kelas', context.courseId, context.meetingId);
+		const source = builderFromAiProposal(proposal, context);
+		const replacement = builderFromAiProposal({ ...proposal, draft: { ...proposal.draft, activities: [proposal.draft.activities[0]] } }, context);
+		const beforeStale = structuredClone(target);
+		expect(() => applyBuilderProposal(target, replacement, 'replace', 'removed-target')).toThrow('Target usulan sudah berubah');
+		expect(target).toEqual(beforeStale);
+		target.document.activities = Array.from({ length: 50 }, (_, index) => ({ ...target.document.activities[0], id: `existing-${index}` }));
+		const beforeFull = structuredClone(target);
+		expect(() => applyBuilderProposal(target, source, 'append')).toThrow('batas');
+		expect(target).toEqual(beforeFull);
 	});
 });

@@ -259,6 +259,25 @@ export type BuilderEnvelope = {
 };
 export type SavedBuilderTemplate = BuilderEnvelope & { scope?: 'activity' | 'group' };
 
+export function savedTemplateScope(scope: SavedBuilderTemplate['scope']): 'activity' | 'group' {
+	return scope === 'group' ? 'group' : 'activity';
+}
+
+export function moveBuilderHistory(
+	past: BuilderEnvelope[],
+	future: BuilderEnvelope[],
+	current: BuilderEnvelope | null,
+	forward = false,
+): BuilderEnvelope | null {
+	const from = forward ? future : past;
+	const to = forward ? past : future;
+	const next = from.at(-1);
+	if (!next || !current) return null;
+	to.push(current);
+	from.pop();
+	return next;
+}
+
 export function insertGroupTemplate(
 	target: BuilderEnvelope,
 	activityId: string,

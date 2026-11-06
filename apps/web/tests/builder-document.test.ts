@@ -8,6 +8,7 @@ import {
 	copyBuilder,
 	duplicateActivity,
 	insertGroupTemplate,
+	moveBuilderHistory,
 	questionIds,
 	removeBlock,
 	rich,
@@ -19,6 +20,7 @@ import {
 	plain,
 	applyBlockFormat,
 	replaceRichText,
+	savedTemplateScope,
 	type BuilderEnvelope,
 } from '../src/lib/builder-document';
 const mod = { exports: {} } as { exports: { normalize: (v: unknown) => any; extractGroupTemplate: (v: any, activityId: string, groupId: string) => any } };
@@ -39,6 +41,36 @@ function fixture() {
 	return d;
 }
 describe('shared builder identity and private envelope', () => {
+	it('keeps legacy activity templates visible when scope metadata is absent', () => {
+		const legacyEnvelope = fixture();
+		// Existing builder_saved_items rows predate the additive scope field.
+		expect(savedTemplateScope((legacyEnvelope as BuilderEnvelope & { scope?: 'activity' | 'group' }).scope)).toBe('activity');
+		expect(savedTemplateScope('group')).toBe('group');
+	});
+	it('makes group-template insertion one undoable and redoable workspace change', () => {
+		const source = fixture();
+		const activity = source.document.activities[0];
+		const block = activity.blocks[0];
+		const group = { kind: 'section' as const, id: 'undo_source', title: 'Bagian', columns: 1 as const, gap: 'md' as const, padding: 'none' as const, surface: 'none' as const, children: [{ kind: 'block' as const, blockId: block.id }] };
+		activity.blocks = [block];
+		activity.layout = { schemaVersion: 1, nodes: [group] };
+		const template = { ...source, scope: 'group' as const };
+		const current = fixture();
+		const targetActivity = current.document.activities[0];
+		const destination = { ...group, id: 'undo_destination', children: [] as BuilderLayoutNode[] };
+		targetActivity.layout = { schemaVersion: 1, nodes: [...targetActivity.blocks.map(item => ({ kind: 'block' as const, blockId: item.id })), destination] };
+		const before = structuredClone(current);
+		insertGroupTemplate(current, targetActivity.id, destination.id, template);
+		const past = [before], future: BuilderEnvelope[] = [];
+		const undone = moveBuilderHistory(past, future, current);
+		expect(undone).toEqual(before);
+		expect(past).toHaveLength(0);
+		expect(future).toHaveLength(1);
+		const redone = moveBuilderHistory(past, future, undone, true);
+		expect(redone).toEqual(current);
+		expect(future).toHaveLength(0);
+		expect(past).toHaveLength(1);
+	});
 	it('inserts a nested group template as an independent identity-remapped copy', () => {
 		const source = fixture();
 		const sourceActivity = source.document.activities[0];

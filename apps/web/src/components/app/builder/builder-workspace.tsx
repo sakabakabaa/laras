@@ -72,6 +72,7 @@ import {
 	questionIds,
 	removeBlock,
 	insertGroupTemplate,
+	moveBuilderHistory,
 	rich,
 	uid,
 	type BuilderEnvelope,
@@ -385,12 +386,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		return () => window.removeEventListener('beforeunload', handler);
 	}, [dirty, saving]);
 	const undo = (forward = false) => {
-		const from = forward ? future : past,
-			to = forward ? past : future,
-			next = from.current.at(-1);
-		if (!next || !current.current) return;
-		to.current.push(current.current);
-		from.current = from.current.slice(0, -1);
+		const next = moveBuilderHistory(
+			past.current,
+			future.current,
+			current.current,
+			forward,
+		);
+		if (!next) return;
 		install(next);
 		setHistoryVersion((v) => v + 1);
 	};

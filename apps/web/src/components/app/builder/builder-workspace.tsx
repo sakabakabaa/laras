@@ -6,6 +6,8 @@ import {
 	type DragEvent,
 } from 'react';
 import { Link, useBlocker, useNavigate, useSearchParams } from 'react-router';
+import { canPasteBuilderStyle, copyBuilderStyle, pasteBuilderStyle, type BuilderStyleClipboard, type BuilderStyleSelection } from '@/lib/builder-style-clipboard';
+import { BuilderStyleActions } from './builder-style-actions';
 import {
 	ArrowDown,
 	ChevronDown,
@@ -145,6 +147,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[active, setActive] = useState(''),
 		[selected, setSelected] = useState(''),
 		[selectedNode, setSelectedNode] = useState(''),
+		[styleClipboard, setStyleClipboard] = useState<BuilderStyleClipboard | null>(null),
+		[styleStatus, setStyleStatus] = useState(''),
 		[panel, setPanel] = useState<'content' | 'delivery' | 'review'>('content'),
 		[picker, setPicker] = useState(false),
 		[activityDrawer, setActivityDrawer] = useState(false),
@@ -261,6 +265,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setLoading(true);
 		setDraft(null);
 		current.current = null;
+		setStyleClipboard(null);
+		setStyleStatus('');
 		setError('');
 		setConflict(false);
 		saveQueue.current.reset();
@@ -930,6 +936,20 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							: 'Pengaturan kegiatan'}
 				</h2>
 			</header>
+			{activity && (block || selectedGroup) && (() => {
+				const selection: BuilderStyleSelection = { activityId: activity.id, ...(block ? { blockId: block.id } : { groupId: selectedGroup!.id }) };
+				const blocked = locked || readOnly;
+				return <BuilderStyleActions disabled={blocked} canPaste={canPasteBuilderStyle(draft, selection, styleClipboard, blocked)} status={styleStatus}
+						onCopy={() => {
+							const copied = current.current && copyBuilderStyle(current.current, selection, locked || readOnlyRef.current);
+							if (copied) { setStyleClipboard(copied); setStyleStatus('Gaya disalin. Pilih target sejenis untuk menempel.'); }
+						}}
+						onPaste={() => {
+							change(next => {
+								if (pasteBuilderStyle(next, selection, styleClipboard, locked || readOnlyRef.current)) setStyleStatus('Gaya ditempel. Gunakan Urungkan untuk membatalkan.');
+							});
+						}} />;
+			})()}
 			{block ? (
 				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked} onChange={change} />
 			) : selectedGroup && activity ? (

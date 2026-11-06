@@ -48,7 +48,7 @@ function enhancedDocument(d) {
 					a.blocks.some(
 						(b) =>
 							!!b &&
-							(b.appearance !== undefined || Array.isArray(b.sections)),
+							(b.appearance !== undefined || Array.isArray(b.sections) || (b.body && Array.isArray(b.body.content) && b.body.content.some((node) => node && (node.type === 'heading' || node.type === 'list_item')))),
 					))),
 	);
 }

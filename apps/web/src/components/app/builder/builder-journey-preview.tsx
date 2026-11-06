@@ -37,7 +37,7 @@ export function BuilderJourneyPreview({document,exitTo,tools}:{document:BuilderD
   {toolbar&&<section id="bd-preview-tools" className="sc-card sc-fields bd-classroom-preview-controls">
    {tools}<h2>Alat dosen</h2><p>Simulasi tampilan mahasiswa. Jawaban hanya disimpan selama pratinjau ini dan tidak menjadi kiriman mahasiswa.</p>
    {navigation()}<label>Lihat kegiatan<select aria-label="Lihat kegiatan" value={index} onChange={e=>go(Number(e.target.value))}>{document.activities.map((a,i)=><option key={a.id} value={i}>{i+1}. {a.title}</option>)}</select></label>
-   {plain(document.instructions)&&<details className="sc-student-instructions"><summary>Instruksi umum</summary><p className="sc-prose"><BuilderRichTextView value={document.instructions}/></p></details>}
+   {plain(document.instructions)&&<details className="sc-student-instructions"><summary>Instruksi umum</summary><div className="sc-prose"><BuilderRichTextView value={document.instructions}/></div></details>}
    <details className="bd-preview-simulation">
     <summary>Pengaturan simulasi waktu</summary>
     <label>Keadaan simulasi<select aria-label="Keadaan simulasi" value={scenario} onChange={e=>{setScenario(e.target.value as BuilderPreviewScenario);setStarted(0);setNotice('');}}>

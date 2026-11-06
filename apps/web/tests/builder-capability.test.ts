@@ -166,6 +166,15 @@ describe('enhanced authoring capability — explicitly off', () => {
 		expect(usesEnhancedAuthoring(facultyEnvelope().document)).toBe(false);
 		expect(builderAuthoringGate({ capability, envelope: facultyEnvelope() })).toEqual({ allowed: true });
 	});
+	it('treats semantic rich text as enhanced so fallback editors cannot discard it', () => {
+		const envelope = facultyEnvelope();
+		const blockId = appendBlock(envelope, envelope.document.activities[0].id, 'instructions');
+		const block = envelope.document.activities[0].blocks.find((item: any) => item.id === blockId)! as any;
+		block.body = { type: 'doc', content: [{ type: 'heading', level: 2, content: [{ type: 'text', text: 'Keep me' }] }] };
+		expect(usesEnhancedAuthoring(envelope.document)).toBe(true);
+		expect(enhancedDocumentJs(envelope.document)).toBe(true);
+		expect(builderAuthoringGate({ capability: resolveEnhancedAuthoring({ userId: 'student', role: 'student', mode: 'off', allowlist: [] }), envelope }).allowed).toBe(false);
+	});
 
 	it('does not infer flat compatibility when enhanced fields exist', () => {
 		const capability = resolveEnhancedAuthoring({ userId: 'u1', role: 'faculty', mode: 'off', allowlist: [] });

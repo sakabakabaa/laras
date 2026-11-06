@@ -1327,17 +1327,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<section className="bd-document-intro">
 							<label>
 								Instruksi umum
-								<textarea
-									rows={3}
-									maxLength={20000}
-									placeholder="Apa yang perlu diketahui mahasiswa?"
-									value={plain(d.instructions)}
-									onChange={(e) =>
-										change((next) => {
-											next.document.instructions = rich(e.target.value);
-										})
-									}
-								/>
+								<BuilderCanvasText block={{id:'general-instructions',type:'instructions',body:d.instructions}} selected onChange={value=>change(next=>{next.document.instructions=value})} />
 							</label>
 						</section>
 						{d.activities.map((a, i) => (
@@ -1643,7 +1633,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																disabled={locked || readOnly}
 																	onChange={value => change(next => {
 																		const target = next.document.activities.flatMap(activity => activity.blocks).find(item => item.id === b.id);
-									if (target) target.body = replaceRichText(target.body, value);
+											if (target) target.body = value;
 																	})}
 																/>
 															) : <BlockEditor block={b} envelope={draft} onChange={change} />}

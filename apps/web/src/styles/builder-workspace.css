@@ -2194,6 +2194,11 @@
 	font: inherit;
 	line-height: 1.6;
 }
+.bd-inline-text-editor { display: grid; gap: 8px; }
+.bd-inline-text-editor [role="group"] { display: flex; flex-wrap: wrap; gap: 6px; }
+.bd-inline-text-editor [role="group"] button { min-height: 34px; padding: 5px 10px; border: 1px solid var(--r-border); border-radius: 6px; background: var(--r-surface); color: var(--r-ink); cursor: pointer; }
+.bd-inline-text-editor [role="group"] button:focus-visible,
+.bd-inline-text-editor textarea:focus-visible { outline: 3px solid var(--r-red-600); outline-offset: 2px; }
 .bd-structure-toggle {
 	display: inline-flex;
 	align-items: center;

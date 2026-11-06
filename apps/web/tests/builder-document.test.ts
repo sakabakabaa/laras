@@ -11,6 +11,9 @@ import {
 	rich,
 	copyScheduledToBuilder,
 	encodeBuilderDraft,
+	applyInlineMark,
+	plain,
+	replaceRichText,
 } from '../src/lib/builder-document';
 const mod = { exports: {} } as { exports: { normalize: (v: unknown) => any } };
 runInNewContext(
@@ -26,9 +29,62 @@ function fixture() {
 	appendBlock(d, d.document.activities[0].id, 'question_group');
 	appendBlock(d, d.document.activities[0].id, 'matching');
 	appendBlock(d, d.document.activities[0].id, 'gap_passage');
+	appendBlock(d, d.document.activities[0].id, 'instructions');
 	return d;
 }
 describe('shared builder identity and private envelope', () => {
+	it('round trips bounded inline marks, strips unknown marks, and preserves plain text', () => {
+		const d = fixture();
+		const block = d.document.activities[0].blocks.find(b => b.type === 'instructions')!;
+		block.body = { type: 'doc', content: [{ type: 'paragraph', content: [
+			{ type: 'text', text: 'Keep ' }, { type: 'text', text: 'this', marks: ['bold', 'italic'] },
+		] }] };
+		const result = normalize(d);
+		expect(plain(result.document.activities[0].blocks.find(b => b.type === 'instructions')!.body)).toBe('Keep this');
+		expect(result.document.activities[0].blocks.find(b => b.type === 'instructions')!.body).toEqual(block.body);
+		(block.body!.content[0].content[1] as any).marks.push('link');
+		expect(normalize(d).document.activities[0].blocks.find(b => b.type === 'instructions')!.body!.content[0].content[1].marks).toEqual(['bold', 'italic']);
+	});
+	it('applies inline marks to a selection and merges adjacent runs without losing marks', () => {
+		const marked = applyInlineMark({ type: 'doc', content: [{ type: 'paragraph', content: [
+			{ type: 'text', text: 'ab', marks: ['italic'] }, { type: 'text', text: 'cd', marks: ['italic'] },
+		] }] }, 1, 3, 'bold');
+		expect(plain(marked)).toBe('abcd');
+		expect(marked.content[0].content).toEqual([
+			{ type: 'text', text: 'a', marks: ['italic'] },
+			{ type: 'text', text: 'bc', marks: ['bold', 'italic'] },
+			{ type: 'text', text: 'd', marks: ['italic'] },
+		]);
+	});
+	it('reconciles edits with run offsets while retaining untouched formatting', () => {
+		const value = { type: 'doc' as const, content: [{ type: 'paragraph' as const, content: [
+			{ type: 'text' as const, text: 'before ' },
+			{ type: 'text' as const, text: 'marked', marks: ['bold' as const] },
+			{ type: 'text' as const, text: ' after', marks: ['italic' as const] },
+		] }] };
+		const edited = replaceRichText(value, 'before X marked after');
+		expect(plain(edited)).toBe('before X marked after');
+		expect(edited.content[0].content).toEqual([
+			{ type: 'text', text: 'before ' },
+			{ type: 'text', text: 'X ' },
+			{ type: 'text', text: 'marked', marks: ['bold'] },
+			{ type: 'text', text: ' after', marks: ['italic'] },
+		]);
+	});
+	it('normalizes adjacent marked runs and keeps legacy unmarked rich text shape', () => {
+		const d = fixture();
+		const block = d.document.activities[0].blocks.find(b => b.type === 'instructions')!;
+		block.body = { type: 'doc', content: [{ type: 'paragraph', content: [
+			{ type: 'text', text: 'legacy' },
+			{ type: 'text', text: ' bold', marks: ['bold', 'bold', 'unknown'] as any },
+			{ type: 'text', text: ' text', marks: ['bold'] },
+		] }] };
+		const body = normalize(d).document.activities[0].blocks.find(b => b.type === 'instructions')!.body!;
+		expect(body.content[0].content).toEqual([
+			{ type: 'text', text: 'legacy' },
+			{ type: 'text', text: ' bold text', marks: ['bold'] },
+		]);
+	});
 	it('does not mistake normalized media field order for unsaved recovery edits', () => {
 		const d = fixture();
 		appendBlock(d, d.document.activities[0].id, 'image');

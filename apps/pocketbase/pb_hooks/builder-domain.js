@@ -53,13 +53,21 @@ function rich(v) {
 		content: list(v.content, 100).map((p) => {
 			obj(p);
 			if (p.type !== 'paragraph') fail('Paragraf tidak valid.');
+			const content = [];
+			for (const t of list(p.content, 100)) {
+				obj(t);
+				if (t.type !== 'text') fail('Teks tidak valid.');
+				const marks = Array.isArray(t.marks)
+					? [...new Set(t.marks.filter((mark) => mark === 'bold' || mark === 'italic'))].sort()
+					: [];
+				const prior = content[content.length - 1];
+				const text = str(t.text, 20000);
+				if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(marks)) prior.text += text;
+				else content.push({ type: 'text', text, ...(marks.length ? { marks } : {}) });
+			}
 			return {
 				type: 'paragraph',
-				content: list(p.content, 100).map((t) => {
-					obj(t);
-					if (t.type !== 'text') fail('Teks tidak valid.');
-					return { type: 'text', text: str(t.text, 20000) };
-				}),
+				content,
 			};
 		}),
 	};

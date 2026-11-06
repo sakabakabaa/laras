@@ -36,6 +36,19 @@ Baseline reconciled to `origin/main` at `0aa443cf5f467260de8b37e49e5ab2e22177d50
 | Missing | Navigation locks/rename/scroll, persistent per-node drag/layout locks, reliable drag, broader theme/selection scope/registry/hardening remain separate open slices. |
 | Unverified | Browser/assistive-technology/touch interaction, workspace event-driven undo acceptance, production runtime, deployment and CI review. Pure history and server-normalization coverage does not substitute for those checks. Local validation: 81 tests across clipboard, appearance, document, layout and responsive-layout suites; TypeScript, changed-file ESLint and diff check pass. No PocketBase code touched. |
 
+## Navigator rename and select-scroll slice (2026-11-06)
+
+Baseline: deployed/main PR108 `ccac41adb2dd694e134850b6934c23543aa42f69`; the assigned clean worktree was fast-forwarded from its stale parent without changing other worktrees. Existing structure selection, breadcrumbs, collapse and move controls were inspected and reused, not replaced.
+
+| Status | Evidence / scope |
+|---|---|
+| Done (implementation) | SECTION/CONTAINER navigator labels have an explicit native rename button and F2 on the row selection button. Enter validates a trimmed nonblank title up to the existing server bound of 200 UTF-16 code units, then calls one existing workspace `change()`; unchanged, stale, blank and oversized edits are no-ops. Escape and blur cancel without mutation; Enter/Escape return focus to the row, blur does not steal focus. IME composition is ignored by commit/cancel keys. Block labels remain type labels and cannot edit educational content. Conflict/recovery/read-only capability controls and the existing mutation guard are reused; no layout-lock state was added. |
+| Done (implementation) | Explicit group/block selection opens the activity and navigator ancestors, preserving unrelated collapse. Manual collapse is not reset by unrelated draft/inspector updates. A consumed post-render request uses stable canvas DOM IDs and `getElementById`, not interpolated selectors; reduced motion uses instant scrolling. Desktop selection does not move focus out of text authoring. Mobile navigator selection closes the drawer without opening the inspector; drawer close suppresses trigger-focus restoration and focuses the selected canvas button/block. No scrolling effect depends on draft/inspector rerenders. |
+| Done (local evidence) | 104 tests across navigator, layout, authoring, style clipboard, responsive layout and document suites pass. Navigator coverage is pure helper/tree/history, existing server-normalizer execution, mocked DOM scroll/focus, static React markup and source-wiring assertions. Includes commit/cancel/blank/bounds/blocked/stale edits, content preservation, ancestor reveal, exact target IDs, motion preference and one undo/redo via the existing history helper. Full web TypeScript, scoped ESLint and `git diff --check` pass. |
+| Partial | Source wiring and pure history are not mounted workspace event-driven rename/undo/redo acceptance. Mocked scroll/focus and static markup are not browser layout, mobile focus-trap, keyboard, IME or assistive-technology runtime evidence. |
+| Missing | Per-node navigation/layout locks, reliable drag rewrite, broader theme/selection scope/registry, performance and recovery/publishing hardening remain open. |
+| Unverified | Real desktop/mobile scrolling, drawer closing/focus timing, reduced-motion behavior in a browser, touch, screen reader and workspace event-driven undo/redo; production, deployment, CI and reviews were not checked here. No merge, deploy, browser, CI polling/watch, timers or nested agents were used. |
+
 ## Missing
 
 | Scope | Evidence / status |
@@ -44,7 +57,7 @@ Baseline reconciled to `origin/main` at `0aa443cf5f467260de8b37e49e5ab2e22177d50
 | Nested template validation | Subtree extraction/insertion pure helper tests pass. Backend owner/media authorization, old-template read/apply fixtures, and workspace undo integration still need focused coverage. |
 | Theme controls | No complete theme contrast controls, theme preset registry, or safe reset workflow identified in the builder appearance surface. |
 | Image/audio/video media | Image crop/fit and focal controls are implemented only for image blocks. Audio/video have plain-text transcript and loop/initial-muted controls; synchronized captions, full playback range/speed, and remaining accessibility acceptance are outstanding. |
-| Builder interaction parity | Bounded explicit copy-style is implemented above; drag/layout locks, navigator locks/rename/scroll, reliable drag and narrower proposal scopes remain outstanding. |
+| Builder interaction parity | Bounded explicit copy-style and navigator rename/select-scroll are implemented above with limited local evidence; drag/layout and navigator locks, reliable drag, runtime navigator acceptance and narrower proposal scopes remain outstanding. |
 | Theme detail | Theme presets, contrast, reset workflow, detailed borders, and effects remain outstanding. |
 | Registry and commands | Full element registry and command coverage remain outstanding. |
 | Compatibility | Explicitly test older published lesson variants remain readable without destructive normalization. |

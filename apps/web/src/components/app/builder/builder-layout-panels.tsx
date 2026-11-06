@@ -1,6 +1,8 @@
 import { BuilderAppearanceControls } from './builder-appearance-controls';
 import { BuilderGroupBackgroundControls } from './builder-group-background-controls';
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { BuilderNavigatorTitle } from './builder-navigator-title';
+import { revealNavigatorAncestors } from '@/lib/builder-navigator';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import {
 	BLOCK_LABELS,
@@ -90,6 +92,8 @@ function count(nodes: ResolvedLayoutNode[]): number {
 }
 
 function StructureRows({
+	disabled,
+	onRenameGroup,
 	nodes,
 	activity,
 	selectedNodeId,
@@ -104,6 +108,8 @@ function StructureRows({
 	idPrefix,
 	depth = 0,
 }: {
+	disabled: boolean;
+	onRenameGroup: (id: string, title: string) => void;
 	nodes: ResolvedLayoutNode[];
 	activity: BuilderActivity;
 	selectedNodeId: string;
@@ -171,16 +177,7 @@ function StructureRows({
 					<button type="button" className="bd-structure-toggle" aria-label={`${collapsed ? 'Buka' : 'Ringkas'} ${node.title || (node.kind === 'section' ? 'bagian' : 'kontainer')}`} aria-expanded={!collapsed} aria-controls={`${idPrefix}-${node.id}`} onClick={() => setCollapsedGroups(groups => collapsed ? groups.filter(id => id !== node.id) : [...groups, node.id])}>
 						{collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
 					</button>
-					<button
-						type="button"
-						className="bd-structure-select"
-						aria-current={selected ? 'true' : undefined}
-						onClick={() => onSelectGroup(node.id)}
-						onKeyDown={(event) => moveKeys(event, node.id)}
-					>
-						<strong>{node.title || (node.kind === 'section' ? 'Bagian' : 'Kontainer')}</strong>
-						<small>{node.columns} kolom</small>
-					</button>
+					<BuilderNavigatorTitle key={String(disabled)} title={node.title || (node.kind === 'section' ? 'Bagian' : 'Kontainer')} columns={node.columns} selected={selected} disabled={disabled} onSelect={() => onSelectGroup(node.id)} onMoveKey={event => moveKeys(event, node.id)} onRename={title => onRenameGroup(node.id, title)} />
 					{selected && (
 						<span className="bd-structure-actions">
 							<Action label="Naikkan" onClick={() => onMove(node.id, -1)} icon={<ArrowUp size={12} />} />
@@ -206,6 +203,8 @@ function StructureRows({
 				</div>
 				<ol id={`${idPrefix}-${node.id}`} className="bd-structure-children" hidden={collapsed}>
 						<StructureRows
+							disabled={disabled}
+							onRenameGroup={onRenameGroup}
 							nodes={node.children}
 							activity={activity}
 							selectedNodeId={selectedNodeId}
@@ -271,6 +270,7 @@ function Action({
 }
 
 export function BuilderLayoutNavigator({
+	onRenameGroup,
 	activity,
 	selectedNodeId,
 	selectedBlockId,
@@ -282,6 +282,7 @@ export function BuilderLayoutNavigator({
 	onReparent,
 	onRemoveGroup,
 }: {
+	onRenameGroup: (id: string, title: string) => void;
 	activity: BuilderActivity | undefined;
 	selectedNodeId: string;
 	selectedBlockId: string;
@@ -295,6 +296,13 @@ export function BuilderLayoutNavigator({
 }) {
 	const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
 	const structureId = useId();
+	const revealedSelection = useRef('');
+	useEffect(() => {
+		const selection = JSON.stringify([activity?.id, selectedBlockId, selectedNodeId]);
+		if (revealedSelection.current === selection) return;
+		revealedSelection.current = selection;
+		if (activity) setCollapsedGroups(groups => revealNavigatorAncestors(activity, selectedBlockId || selectedNodeId, groups));
+	}, [activity, selectedBlockId, selectedNodeId]);
 	if (!activity) return null;
 	const nodes = resolveActivityLayout(activity);
 	const groups = activity.layout ? countLayoutGroups(activity.layout) : 0;
@@ -307,6 +315,8 @@ export function BuilderLayoutNavigator({
 			</header>
 			<ol className="bd-structure-root">
 				<StructureRows
+					disabled={disabled}
+					onRenameGroup={onRenameGroup}
 					nodes={nodes}
 					activity={activity}
 					selectedNodeId={selectedNodeId}

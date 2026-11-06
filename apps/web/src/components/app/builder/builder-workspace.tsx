@@ -8,6 +8,7 @@ import {
 import { Link, useBlocker, useNavigate, useSearchParams } from 'react-router';
 import { canPasteBuilderStyle, copyBuilderStyle, pasteBuilderStyle, type BuilderStyleClipboard, type BuilderStyleSelection } from '@/lib/builder-style-clipboard';
 import { BuilderStyleActions } from './builder-style-actions';
+import { renameNavigatorGroup, revealNavigatorCanvas, type NavigatorReveal } from '@/lib/builder-navigator';
 import {
 	ArrowDown,
 	ChevronDown,
@@ -169,6 +170,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[inspectorOpen, setInspectorOpen] = useState(false),
 		[historyVersion, setHistoryVersion] = useState(0);
 	const [sidebar, setSidebar] = useState<'elements' | 'structure'>('elements');
+	const [canvasReveal, setCanvasReveal] = useState<NavigatorReveal | null>(null);
+	const drawerReveal = useRef<NavigatorReveal | null>(null);
+	useEffect(() => {
+		if (!canvasReveal || activityDrawer) return;
+		revealNavigatorCanvas({ ...canvasReveal, focus: false }, document, window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+		setCanvasReveal(null);
+	}, [canvasReveal, activityDrawer]);
 	const [online, setOnline] = useState(true);
 	const [storageWarning, setStorageWarning] = useState('');
 	const [capability, setCapability] = useState<BuilderCapabilityPayload | null>(null);
@@ -527,7 +535,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				enhancedDocument,
 			)
 		: '';
-	const selectGroup = (activityId: string, nodeId: string) => {
+	const requestCanvasReveal = (kind: 'group' | 'block', itemId: string) => {
+		const request = { kind, id: itemId, focus: activityDrawer };
+		if (activityDrawer) drawerReveal.current = request;
+		setCanvasReveal(request);
+	};
+	const selectGroup = (activityId: string, nodeId: string, fromNavigator = false) => {
 		setCollapsed((items) => items.filter((id) => id !== activityId));
 		setActive(activityId);
 		setSelected('');
@@ -536,10 +549,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setPicker(false);
 		setActivityDrawer(false);
 		setPanel('content');
-		if (window.matchMedia('(max-width: 650px)').matches) setInspectorOpen(true);
-		requestAnimationFrame(() => {
-			document.querySelector(`[data-layout-node="${nodeId}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-		});
+		if (!fromNavigator && window.matchMedia('(max-width: 650px)').matches) setInspectorOpen(true);
+		requestCanvasReveal('group', nodeId);
 	};
 	const addGroup = (kind: 'section' | 'container', parentId: string | null = null) => {
 		if (!activity || locked) return;
@@ -647,13 +658,11 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setCollapsed((items) => items.filter((id) => id !== activityId));
 		setActive(activityId);
 		setSelected(blockId);
+		setSelectedNode('');
+		setPanel('content');
 		setPicker(false);
 		setActivityDrawer(false);
-		requestAnimationFrame(() => {
-			const element = document.getElementById('builder-block-' + blockId);
-			element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-			element?.focus({ preventScroll: true });
-		});
+		requestCanvasReveal('block', blockId);
 	};
 	const addInlineText = (activityId: string, text: string) => {
 		if (!text.trim() || locked) return;
@@ -906,8 +915,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				activity={activity}
 				selectedNodeId={selectedNode}
 				selectedBlockId={selected}
-				disabled={locked}
-				onSelectGroup={(nodeId) => activity && selectGroup(activity.id, nodeId)}
+				disabled={locked || readOnly}
+				onRenameGroup={(nodeId, title) => {
+					if (!activity || locked || readOnly) return;
+					change(next => { renameNavigatorGroup(next, activity.id, nodeId, title, locked || readOnlyRef.current); });
+				}}
+				onSelectGroup={(nodeId) => activity && selectGroup(activity.id, nodeId, true)}
 				onSelectBlock={(blockId) => activity && revealBlock(activity.id, blockId)}
 				onAddGroup={(kind, parentId) => addGroup(kind, parentId)}
 				onMove={moveStructureItem}
@@ -1456,7 +1469,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 													<div className="bd-layout-group-head">
 														<button
 															type="button"
-															className="bd-layout-group-select"
+														className="bd-layout-group-select"
+														id={'builder-group-' + group.id}
 															aria-current={
 																selectedNode === group.id ? 'true' : undefined
 															}
@@ -2020,7 +2034,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				</DialogContent>
 			</Dialog>
 			<Dialog open={activityDrawer} onOpenChange={setActivityDrawer}>
-				<DialogContent className="bd-picker-dialog bd-library-drawer">
+				<DialogContent className="bd-picker-dialog bd-library-drawer" onCloseAutoFocus={event => {
+					const request = drawerReveal.current;
+					if (!request) return;
+					event.preventDefault();
+					drawerReveal.current = null;
+					document.getElementById(`builder-${request.kind}-${request.id}`)?.focus({ preventScroll: true });
+				}}>
 					<DialogHeader>
 						<DialogTitle>Kegiatan</DialogTitle>
 						<DialogDescription>

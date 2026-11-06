@@ -45,6 +45,24 @@ function num(v, max = 100000) {
 		fail('Nilai angka draf tidak valid.');
 	return v;
 }
+function imagePresentation(source) {
+	obj(source);
+	const out = {};
+	if (source.fit !== undefined) {
+		if (!['contain', 'cover'].includes(source.fit)) fail('Penyesuaian gambar tidak valid.');
+		out.fit = source.fit;
+	}
+	if (source.aspect !== undefined) {
+		if (!['natural', 'square', '4:3', '3:2', '16:9'].includes(source.aspect)) fail('Rasio gambar tidak valid.');
+		out.aspect = source.aspect;
+	}
+	for (const key of ['focalX', 'focalY']) if (source[key] !== undefined) {
+		if (typeof source[key] !== 'number' || !Number.isFinite(source[key]) || source[key] < 0 || source[key] > 100) fail('Fokus gambar tidak valid.');
+		out[key] = source[key];
+	}
+	if (Object.keys(source).some((key) => !['fit', 'aspect', 'focalX', 'focalY'].includes(key))) fail('Gaya gambar tidak dikenal.');
+	return out;
+}
 function inlineLink(v) {
 	if (typeof v !== 'string' || !v || /[\u0000-\u0020\u007f\\]/.test(v) || v.startsWith('//')) return null;
 	if (/^#[A-Za-z][A-Za-z0-9_.:-]{0,199}$/.test(v)) return v;
@@ -492,6 +510,7 @@ function normalize(body) {
 					...(image.url ? { url: url(image.url) } : {}),
 					alt: str(image.alt, 1000),
 					caption: str(image.caption, 500),
+					...(image.presentation !== undefined ? { presentation: imagePresentation(image.presentation) } : {}),
 				}));
 			}
 			if (b.columns !== undefined) {

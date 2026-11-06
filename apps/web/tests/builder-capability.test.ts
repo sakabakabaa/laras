@@ -175,6 +175,13 @@ describe('enhanced authoring capability — explicitly off', () => {
 		expect(enhancedDocumentJs(envelope.document)).toBe(true);
 		expect(builderAuthoringGate({ capability: resolveEnhancedAuthoring({ userId: 'student', role: 'student', mode: 'off', allowlist: [] }), envelope }).allowed).toBe(false);
 	});
+	it('keeps image presentation documents out of fallback editors', () => {
+		const envelope = facultyEnvelope();
+		const blockId = appendBlock(envelope, envelope.document.activities[0].id, 'image');
+		const block = envelope.document.activities[0].blocks.find((item: any) => item.id === blockId)! as any;
+		block.images = [{id:'photo_1',url:'https://example.org/photo.jpg',alt:'Photo',caption:'',presentation:{fit:'cover',aspect:'16:9',focalX:30,focalY:60}}];
+		expect(usesEnhancedAuthoring(envelope.document)).toBe(true);
+	});
 
 	it('does not infer flat compatibility when enhanced fields exist', () => {
 		const capability = resolveEnhancedAuthoring({ userId: 'u1', role: 'faculty', mode: 'off', allowlist: [] });

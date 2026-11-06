@@ -184,6 +184,7 @@ export type BuilderImage = {
 	caption: string;
 	presentation?: BuilderImagePresentation;
 };
+export const BUILDER_TRANSCRIPT_MAX_LENGTH = 20000;
 export type BuilderImagePresentation = { fit?: 'contain' | 'cover'; aspect?: 'natural' | 'square' | '4:3' | '3:2' | '16:9'; focalX?: number; focalY?: number };
 export function resetBuilderImagePresentation(image: BuilderImage): BuilderImage {
 	const retained = { ...image };
@@ -217,6 +218,8 @@ export type BuilderBlock = {
 	url?: string;
 	alt?: string;
 	asset?: BuilderAsset;
+	transcript?: string;
+	playback?: { loop?: true; muted?: true };
 	images?: BuilderImage[];
 	columns?: number;
 	questionIds?: string[];
@@ -230,6 +233,10 @@ export type BuilderBlock = {
 	}[];
 	lesson?: ScheduledLesson;
 };
+export function resetBuilderPlayback(block: BuilderBlock): BuilderBlock {
+	delete block.playback;
+	return block;
+}
 export type BuilderActivity = {
 	id: string;
 	title: string;

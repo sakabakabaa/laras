@@ -182,6 +182,17 @@ describe('enhanced authoring capability — explicitly off', () => {
 		block.images = [{id:'photo_1',url:'https://example.org/photo.jpg',alt:'Photo',caption:'',presentation:{fit:'cover',aspect:'16:9',focalX:30,focalY:60}}];
 		expect(usesEnhancedAuthoring(envelope.document)).toBe(true);
 	});
+	it('blocks fallback authoring for media transcripts and playback settings', () => {
+		const envelope = facultyEnvelope();
+		const blockId = appendBlock(envelope, envelope.document.activities[0].id, 'audio');
+		const block = envelope.document.activities[0].blocks.find((item: any) => item.id === blockId)! as any;
+		block.transcript = 'Preserve me';
+		expect(usesEnhancedAuthoring(envelope.document)).toBe(true);
+		expect(enhancedDocumentJs(envelope.document)).toBe(true);
+		delete block.transcript;
+		block.playback = { loop: true };
+		expect(builderAuthoringGate({ capability: resolveEnhancedAuthoring({ userId: 'u1', role: 'faculty', mode: 'off', allowlist: [] }), envelope }).allowed).toBe(false);
+	});
 
 	it('does not infer flat compatibility when enhanced fields exist', () => {
 		const capability = resolveEnhancedAuthoring({ userId: 'u1', role: 'faculty', mode: 'off', allowlist: [] });

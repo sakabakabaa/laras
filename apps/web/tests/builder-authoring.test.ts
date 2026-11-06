@@ -18,6 +18,23 @@ const proposal: ScheduledAiProposal = {
 };
 
 describe('in-builder authoring additions', () => {
+	it('preserves media options and existing assessment identities and keys when applying a proposal', () => {
+		const source = builderFromAiProposal(proposal, context);
+		const sourceActivity = source.document.activities[0];
+		const mediaId = appendBlock(source, sourceActivity.id, 'video');
+		const media = sourceActivity.blocks.find(block => block.id === mediaId)!;
+		media.transcript = 'Proposal transcript';
+		media.playback = { loop: true, muted: true };
+		const target = blankBuilder('kelas', context.courseId, context.meetingId, context.sectionIds);
+		const existingId = appendBlock(target, target.document.activities[0].id, 'question_group');
+		const existingQuestionId = target.document.activities[0].blocks.find(block => block.id === existingId)!.questionIds![0];
+		const existingQuestion = structuredClone(target.document.questionsById[existingQuestionId]);
+		const existingKey = structuredClone(target.privateKeys.answersByQuestionId[existingQuestionId]);
+		applyBuilderProposal(target, source, 'append');
+		expect(target.document.questionsById[existingQuestionId]).toEqual(existingQuestion);
+		expect(target.privateKeys.answersByQuestionId[existingQuestionId]).toEqual(existingKey);
+		expect(target.document.activities.flatMap(activity => activity.blocks).find(block => block.transcript === 'Proposal transcript')).toMatchObject({ transcript: 'Proposal transcript', playback: { loop: true, muted: true } });
+	});
 	it('converts each AI activity to editable native blocks and keeps key evidence private', () => {
 		const envelope = builderFromAiProposal(proposal, context);
 		expect(domain.exports.normalize(envelope)).toEqual(envelope);

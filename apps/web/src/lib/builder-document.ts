@@ -1,6 +1,6 @@
 import type { BuilderAppearance } from './builder-appearance';
 import type { ScheduledLesson } from './scheduled-lesson';
-import { insertBlockIntoLayout, layoutItemLocation, removeBlockFromLayout, type BuilderLayout } from './builder-layout';
+import { findLayoutGroup, insertBlockIntoLayout, layoutItemLocation, removeBlockFromLayout, type BuilderLayout, type BuilderLayoutGroup, LAYOUT_LIMITS, countLayoutGroups, countLayoutNodes, layoutGroupDepth } from './builder-layout';
 import pb from './pocketbase-client';
 
 export type RichText = {
@@ -257,6 +257,103 @@ export type BuilderEnvelope = {
 		answersByQuestionId: Record<string, BuilderKey>;
 	};
 };
+export type SavedBuilderTemplate = BuilderEnvelope & { scope?: 'activity' | 'group' };
+
+export function insertGroupTemplate(
+	target: BuilderEnvelope,
+	activityId: string,
+	parentId: string,
+	source: SavedBuilderTemplate,
+): string {
+	const activity = target.document.activities.find(
+		(item) => item.id === activityId,
+	);
+	const sourceActivity = source.document.activities[0];
+	if (
+		!activity ||
+		!activity.layout ||
+		!sourceActivity?.layout ||
+		source.scope !== 'group'
+	)
+		throw new Error('Template bagian tidak valid.');
+	const templateGroup = sourceActivity.layout.nodes[0];
+	if (!templateGroup || templateGroup.kind === 'block')
+		throw new Error('Template bagian tidak valid.');
+	const parent = findLayoutGroup(activity.layout, parentId);
+	if (!parent) throw new Error('Pilih bagian tujuan yang masih tersedia.');
+	const groups = (node: BuilderLayoutGroup): number =>
+		1 +
+		node.children.reduce(
+			(count, child) =>
+				count + (child.kind === 'block' ? 0 : groups(child)),
+			0,
+		);
+	const nodes = (node: BuilderLayoutGroup): number =>
+		1 +
+		node.children.reduce(
+			(count, child) =>
+				count + (child.kind === 'block' ? 1 : nodes(child)),
+			0,
+		);
+	const depth = (node: BuilderLayoutGroup): number =>
+		1 +
+		Math.max(
+			0,
+			...node.children
+				.filter(
+					(child): child is BuilderLayoutGroup => child.kind !== 'block',
+				)
+				.map(depth),
+		);
+	if (
+		countLayoutGroups(activity.layout) + groups(templateGroup) >
+			LAYOUT_LIMITS.maxGroups ||
+		countLayoutNodes(activity.layout) + nodes(templateGroup) >
+			LAYOUT_LIMITS.maxNodes ||
+		layoutGroupDepth(activity.layout, parentId) + depth(templateGroup) >
+			LAYOUT_LIMITS.maxDepth
+	)
+		throw new Error(
+			'Bagian ini melewati batas tata letak. Hapus atau pindahkan bagian lain sebelum menyisipkan template.',
+		);
+	const sourceCopy = structuredClone(source);
+	const copiedActivityId = duplicateActivity(sourceCopy, sourceActivity.id);
+	const copiedActivity = sourceCopy.document.activities.find(
+		(item) => item.id === copiedActivityId,
+	)!;
+	const copiedGroup = copiedActivity.layout!.nodes[0] as BuilderLayoutGroup;
+	const blockIds = new Set<string>();
+	const collect = (group: BuilderLayoutGroup) => {
+		for (const child of group.children) {
+			if (child.kind === 'block') blockIds.add(child.blockId);
+			else collect(child);
+		}
+	};
+	collect(copiedGroup);
+	const copiedBlocks = copiedActivity.blocks.filter((block) =>
+		blockIds.has(block.id),
+	);
+	const copiedQuestions = [...new Set(copiedBlocks.flatMap(questionIds))];
+	const totalBlocks = target.document.activities.reduce(
+		(count, item) => count + item.blocks.length,
+		0,
+	);
+	if (
+		totalBlocks + copiedBlocks.length > 500 ||
+		Object.keys(target.document.questionsById).length + copiedQuestions.length >
+			500
+	)
+		throw new Error(
+			'Batas elemen atau pertanyaan tercapai. Hapus isi lain sebelum menyisipkan template.',
+		);
+	activity.blocks.push(...copiedBlocks);
+	for (const id of copiedQuestions) {
+		target.document.questionsById[id] = sourceCopy.document.questionsById[id];
+		target.privateKeys.answersByQuestionId[id] = sourceCopy.privateKeys.answersByQuestionId[id];
+	}
+	parent.children.push(copiedGroup);
+	return copiedGroup.id;
+}
 export type BuilderRecord = BuilderEnvelope & {
 	id: string;
 	revision: number;

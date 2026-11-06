@@ -207,6 +207,72 @@ function documentAssets(document) {
 	}
 	return assets;
 }
+function extractGroupTemplate(envelope, activityId, groupId) {
+	if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/.test(String(groupId || '')))
+		fail('Bagian yang dipilih tidak valid.');
+	const document = obj(envelope.document),
+		activity = list(document.activities, 50).find((item) => item.id === activityId);
+	if (!activity || !activity.layout)
+		fail('Bagian yang dipilih tidak ditemukan.');
+	const locate = (nodes) => {
+		for (const node of nodes || []) {
+			if (node.kind === 'block') continue;
+			if (node.id === groupId) return node;
+			const found = locate(node.children);
+			if (found) return found;
+		}
+		return null;
+	};
+	const group = locate(activity.layout.nodes);
+	if (!group || group.kind === 'block')
+		fail('Bagian yang dipilih tidak ditemukan.');
+	const blockIds = new Set();
+	const collect = (nodes) => {
+		for (const node of nodes || []) {
+			if (node.kind === 'block') blockIds.add(node.blockId);
+			else collect(node.children);
+		}
+	};
+	collect([group]);
+	const blocks = list(activity.blocks, 500).filter((block) => blockIds.has(block.id));
+	if (blocks.length !== blockIds.size) fail('Referensi elemen bagian tidak valid.');
+	const questions = new Set();
+	for (const block of blocks) {
+		for (const id of block.questionIds || []) questions.add(id);
+		if (block.questionId) questions.add(block.questionId);
+		for (const section of block.sections || [])
+			for (const segment of section.segments || [])
+				if (segment.type === 'gap') questions.add(segment.questionId);
+	}
+	activity.blocks = blocks;
+	activity.layout = { schemaVersion: 1, nodes: [group] };
+	activity.title = '';
+	activity.required = false;
+	activity.plannedMinutes = 1;
+	document.activities = [activity];
+	document.title = '';
+	document.instructions = { type: 'doc', content: [] };
+	document.context.meetingId = '';
+	document.context.sectionIds = [];
+	document.delivery = {
+		kind: document.kind,
+		progression: 'guided',
+		timeZone: 'Asia/Jakarta',
+		startsAt: '',
+		endsAt: '',
+		checkInClosesAt: '',
+		lateAfterMinutes: 0,
+		availableAt: '',
+		dueAt: '',
+		hardCloseAt: '',
+		allowLate: false,
+		timeLimitMinutes: 0,
+	};
+	document.questionsById = Object.fromEntries(Object.entries(obj(document.questionsById)).filter(([id]) => questions.has(id)));
+	envelope.privateKeys.answersByQuestionId = Object.fromEntries(Object.entries(obj(envelope.privateKeys.answersByQuestionId)).filter(([id]) => questions.has(id)));
+	envelope.scope = 'group';
+	return envelope;
+}
 function layout(value, blockIds, unique) {
 	const source = obj(value);
 	if (source.schemaVersion !== 1) fail('Versi tata letak tidak didukung.');
@@ -609,4 +675,4 @@ function normalize(body) {
 		privateKeys: { schemaVersion: 1, answersByQuestionId },
 	};
 }
-module.exports = { normalize, documentAssets };
+module.exports = { normalize, documentAssets, extractGroupTemplate };

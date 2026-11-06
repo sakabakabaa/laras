@@ -26,6 +26,7 @@ runInNewContext(readFileSync(new URL('builder-service.js', hooks), 'utf8'), {
 	ForbiddenError: class ForbiddenError extends Error {}, BadRequestError: class BadRequestError extends Error {},
 });
 const authorizeAssets = service.exports.authorizeAssets as (app: unknown, user: { id: string }, d: unknown) => void;
+const handleBuilder = service.exports.handle as (app: unknown, user: { id: string; getString: (name: string) => string }, body: Record<string, unknown>) => unknown;
 const faculty = { id: 'faculty', getString: () => 'faculty' };
 function authorizationApp(file: Row, prior?: Row) {
 	return {
@@ -51,6 +52,23 @@ function deliveryFixture(d: ReturnType<typeof doc>, file: Row, prior?: Row) {
 const owner = { id: 'faculty', getString: (name: string) => name === 'role' ? 'faculty' : 'faculty' };
 
 describe('builder background asset authorization', () => {
+	it('authorizes template reads by owner and protected media ownership', () => {
+		const ref = asset();
+		const envelope = { document: doc(ref), privateKeys: { schemaVersion: 1, answersByQuestionId: {} }, scope: 'group' };
+		const item = record('saved', { owner: 'faculty', kind: 'template', document: 'draft', envelope: JSON.stringify(envelope) });
+		const file = record(ref.fileId, { owner: 'faculty', course: ['course'], file: ref.filename, version: 2 });
+		const app = {
+			findRecordById: (collection: string, id: string) => collection === 'builder_saved_items' ? item : collection === 'courses' ? record(id, { owner: 'faculty' }) : id === file.id ? file : record(id, {}),
+			findRecordsByFilter: () => [],
+		};
+		expect(handleBuilder(app, owner, { action: 'savedGet', itemId: 'saved' })).toMatchObject({ envelope: { scope: 'group' } });
+		const foreign = record(ref.fileId, { owner: 'other', course: ['course'], file: ref.filename, version: 2 });
+		const foreignApp = { ...app, findRecordById: (collection: string, id: string) => collection === 'builder_saved_items' ? item : collection === 'courses' ? record(id, { owner: 'faculty' }) : id === foreign.id ? foreign : record(id, {}) };
+		expect(() => handleBuilder(foreignApp, owner, { action: 'savedGet', itemId: 'saved' })).toThrow();
+		const foreignItem = record('saved', { owner: 'another-faculty', kind: 'template', document: 'draft', envelope: JSON.stringify(envelope) });
+		const foreignOwnerApp = { ...app, findRecordById: (collection: string, id: string) => collection === 'builder_saved_items' ? foreignItem : collection === 'courses' ? record(id, { owner: 'faculty' }) : id === file.id ? file : record(id, {}) };
+		expect(() => handleBuilder(foreignOwnerApp, owner, { action: 'savedGet', itemId: 'saved' })).toThrow('Salinan tidak tersedia');
+	});
 	it('authorizes nested background images from current and retained prior versions', () => {
 		const current = asset();
 		expect(documentAssets(doc(current)).map((entry) => entry.kind)).toEqual(['image', 'image']);

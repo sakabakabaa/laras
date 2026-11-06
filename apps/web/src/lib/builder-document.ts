@@ -5,8 +5,13 @@ import pb from './pocketbase-client';
 
 export type RichText = {
 	type: 'doc';
-	content: { type: 'paragraph'; content: { type: 'text'; text: string; marks?: ('bold' | 'italic')[] }[] }[];
+	content: { type: 'paragraph'; content: { type: 'text'; text: string; marks?: ('bold' | 'italic')[]; link?: { href: string } }[] }[];
 };
+export function safeInlineUrl(value: string): string | null {
+	if (!value || /[\u0000-\u0020\u007f\\]/.test(value) || value.startsWith('//')) return null;
+	if (/^#[A-Za-z][A-Za-z0-9_.:-]{0,199}$/.test(value)) return value;
+	return /^https?:\/\/(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)(?::[0-9]{1,5})?(?:[/?#][^\s<>"']*)?$/i.test(value) && !value.includes('..') ? value : null;
+}
 export const rich = (value: string): RichText => ({
 	type: 'doc',
 	content: [{ type: 'paragraph', content: [{ type: 'text', text: value }] }],
@@ -23,7 +28,7 @@ export function applyInlineMark(value: RichText | undefined, start: number, end:
 	const paragraphs: RichText['content'] = [];
 	let offset = 0;
 	for (const paragraph of value?.content || []) {
-		const segments: { text: string; marks: ('bold' | 'italic')[] }[] = [];
+		const segments: { text: string; marks: ('bold' | 'italic')[]; link?: {href:string} }[] = [];
 		for (const run of paragraph.content) {
 			const runStart = offset;
 			const runEnd = offset + run.text.length;
@@ -34,14 +39,14 @@ export function applyInlineMark(value: RichText | undefined, start: number, end:
 				if (from === to) continue;
 				const marks = [...new Set((run.marks || []).filter(m => m === 'bold' || m === 'italic'))];
 				if (from >= a && to <= b) marks.push(mark);
-				segments.push({ text: text.slice(from, to), marks: [...new Set(marks)].sort() });
+				segments.push({ text: text.slice(from, to), marks: [...new Set(marks)].sort(), link: run.link });
 			}
 		}
 		const content: RichText['content'][number]['content'] = [];
 		for (const segment of segments) {
 			const prior = content.at(-1);
-			if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(segment.marks)) prior.text += segment.text;
-			else content.push({ type: 'text', text: segment.text, ...(segment.marks.length ? { marks: segment.marks } : {}) });
+			if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(segment.marks) && prior.link?.href === segment.link?.href) prior.text += segment.text;
+			else content.push({ type: 'text', text: segment.text, ...(segment.marks.length ? { marks: segment.marks } : {}), ...(segment.link ? {link:segment.link}:{}) });
 		}
 		paragraphs.push({ type: 'paragraph', content });
 		offset += 1;
@@ -56,11 +61,11 @@ export function replaceRichText(value: RichText | undefined, nextText: string): 
 	let suffix = 0;
 	while (suffix < previous.length - prefix && suffix < nextText.length - prefix && previous[previous.length - 1 - suffix] === nextText[nextText.length - 1 - suffix]) suffix++;
 	const changedEnd = previous.length - suffix;
-	const source: { text: string; marks: ('bold' | 'italic')[]; start: number }[] = [];
+	const source: { text: string; marks: ('bold' | 'italic')[]; link?: {href:string}; start: number }[] = [];
 	let offset = 0;
 	for (let pi = 0; pi < (value?.content.length || 0); pi++) {
 		for (const run of value!.content[pi].content) {
-			source.push({ text: run.text, marks: run.marks || [], start: offset });
+			source.push({ text: run.text, marks: run.marks || [], link: run.link, start: offset });
 			offset += run.text.length;
 		}
 		if (pi < value!.content.length - 1) {
@@ -70,22 +75,48 @@ export function replaceRichText(value: RichText | undefined, nextText: string): 
 	}
 	const inherited = source.find(run => run.text.length && run.start <= prefix && run.start + run.text.length >= prefix)?.marks || [];
 	const inserted = nextText.slice(prefix, nextText.length - suffix);
-	const runs: { text: string; marks: ('bold' | 'italic')[] }[] = [];
+	const runs: { text: string; marks: ('bold' | 'italic')[]; link?: {href:string} }[] = [];
 	for (const run of source) {
 		const beforeEnd = Math.min(run.start + run.text.length, prefix);
-		if (run.start < beforeEnd) runs.push({ text: run.text.slice(0, beforeEnd - run.start), marks: run.marks });
+		if (run.start < beforeEnd) runs.push({ text: run.text.slice(0, beforeEnd - run.start), marks: run.marks, link: run.link });
 	}
-	if (inserted) runs.push({ text: inserted, marks: inherited });
+		if (inserted) runs.push({ text: inserted, marks: inherited, link: source.find(run => run.text.length && run.start <= prefix && run.start + run.text.length >= prefix)?.link });
 	for (const run of source) {
 		const afterStart = Math.max(run.start, changedEnd);
-		if (afterStart < run.start + run.text.length) runs.push({ text: run.text.slice(afterStart - run.start), marks: run.marks });
+		if (afterStart < run.start + run.text.length) runs.push({ text: run.text.slice(afterStart - run.start), marks: run.marks, link: run.link });
 	}
 	const paragraphs: RichText['content'] = [{ type: 'paragraph', content: [] }];
 	for (const run of runs) for (const [i, part] of run.text.split('\n').entries()) {
 		if (i) paragraphs.push({ type: 'paragraph', content: [] });
-		if (part) paragraphs.at(-1)!.content.push({ type: 'text', text: part, ...(run.marks.length ? { marks: run.marks } : {}) });
+		if (part) paragraphs.at(-1)!.content.push({ type: 'text', text: part, ...(run.marks.length ? { marks: run.marks } : {}), ...(run.link ? {link:run.link}:{}) });
 	}
 	return { type: 'doc', content: paragraphs };
+}
+
+export function applyInlineLink(value: RichText | undefined, start: number, end: number, href: string | null): RichText {
+	const safe = href === null ? null : safeInlineUrl(href);
+	if (href !== null && !safe) return value || rich(plain(value));
+	const text = plain(value), a = Math.max(0, Math.min(text.length, start)), b = Math.max(a, Math.min(text.length, end));
+	if (a === b) return value || rich(text);
+	let offset = 0;
+	const content = (value?.content || rich(text).content).map(paragraph => {
+		const runs: typeof paragraph.content = [];
+		for (const run of paragraph.content) {
+			const from = offset, to = from + run.text.length; offset = to;
+			const cuts = [...new Set([from, Math.max(from, Math.min(to, a)), Math.max(from, Math.min(to, b)), to])].sort((x,y)=>x-y);
+			for (let i=0;i<cuts.length-1;i++) {
+				const x=cuts[i], y=cuts[i+1]; if(x===y) continue;
+				const marks=run.marks;
+				const link = x >= a && y <= b ? (safe ? { href: safe } : undefined) : run.link;
+				const prior=runs.at(-1);
+				if(prior && JSON.stringify(prior.marks||[])===JSON.stringify(marks||[]) && prior.link?.href===link?.href) prior.text+=text.slice(x,y);
+				else runs.push({type:'text',text:text.slice(x,y),...(marks?.length?{marks}:{}),...(link?{link}:{})});
+			}
+		}
+		offset++;
+		return {type:'paragraph' as const,content:runs};
+	});
+	return {type:'doc',content};
 }
 export type BuilderKind = 'kelas' | 'tugas';
 export type BlockType =

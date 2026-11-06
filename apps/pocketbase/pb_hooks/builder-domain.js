@@ -45,7 +45,12 @@ function num(v, max = 100000) {
 		fail('Nilai angka draf tidak valid.');
 	return v;
 }
-function rich(v) {
+function inlineLink(v) {
+	if (typeof v !== 'string' || !v || /[\u0000-\u0020\u007f\\]/.test(v) || v.startsWith('//')) return null;
+	if (/^#[A-Za-z][A-Za-z0-9_.:-]{0,199}$/.test(v)) return v;
+	return /^https?:\/\/(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)(?::[0-9]{1,5})?(?:[/?#][^\s<>"']*)?$/i.test(v) && !v.includes('..') ? v : null;
+}
+function rich(v, allowLinks = false) {
 	obj(v);
 	if (v.type !== 'doc') fail('Format teks tidak didukung.');
 	return {
@@ -60,10 +65,12 @@ function rich(v) {
 				const marks = Array.isArray(t.marks)
 					? [...new Set(t.marks.filter((mark) => mark === 'bold' || mark === 'italic'))].sort()
 					: [];
+				const href = allowLinks && t.link && typeof t.link === 'object' ? inlineLink(t.link.href) : null;
+				const link = href ? { href } : undefined;
 				const prior = content[content.length - 1];
 				const text = str(t.text, 20000);
-				if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(marks)) prior.text += text;
-				else content.push({ type: 'text', text, ...(marks.length ? { marks } : {}) });
+				if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(marks) && prior.link?.href === link?.href) prior.text += text;
+				else content.push({ type: 'text', text, ...(marks.length ? { marks } : {}), ...(link ? { link } : {}) });
 			}
 			return {
 				type: 'paragraph',
@@ -398,7 +405,7 @@ function normalize(body) {
 			const out = { id: unique(b.id), type: b.type };
 			if (b.appearance !== undefined) out.appearance = appearance(b.appearance);
 			blockIds.add(out.id);
-			if (b.body !== undefined) out.body = rich(b.body);
+			if (b.body !== undefined) out.body = rich(b.body, b.type === 'instructions' || b.type === 'acknowledgement');
 			if (b.label !== undefined) out.label = str(b.label, 500);
 			if (b.url !== undefined) out.url = url(b.url);
 			if (b.alt !== undefined) out.alt = str(b.alt, 1000);
@@ -590,7 +597,7 @@ function normalize(body) {
 				sectionIds: list(context.sectionIds, 30).map(id),
 			},
 			title: str(d.title, 200),
-			instructions: rich(d.instructions),
+			instructions: rich(d.instructions, true),
 			activities,
 			questionsById,
 			delivery: deliveryOut,

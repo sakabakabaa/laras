@@ -6,6 +6,7 @@ import {
 	appendQuestion,
 	plain,
 	applyInlineMark,
+	applyInlineLink,
 	replaceRichText,
 	questionIds,
 	rich,
@@ -14,6 +15,8 @@ import {
 	type BuilderEnvelope,
 	type BuilderQuestion,
 } from '@/lib/builder-document';
+import { BuilderRichTextView } from './builder-richtext-view';
+export { BuilderRichTextView } from './builder-richtext-view';
 import {
 	flattenResolvedBlocks,
 	resolveActivityLayout,
@@ -32,18 +35,10 @@ type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 const safeUrl = (url?: string) =>
 	url && /^https:\/\/[^\s<>"']+$/i.test(url) ? url : '';
 
-function RichTextView({ value }: { value?: BuilderBlock['body'] }) {
-	return <>{value?.content.map((paragraph, pi) => <span key={pi}>{pi > 0 && <br />}{paragraph.content.map((run, ri) => {
-		let node: ReactNode = run.text;
-		if (run.marks?.includes('italic')) node = <em>{node}</em>;
-		if (run.marks?.includes('bold')) node = <strong>{node}</strong>;
-		return <span key={ri}>{node}</span>;
-	})}</span>)}</>;
-}
-
-function InlineTextEditor({ value, onChange, rows, label }: { value?: BuilderBlock['body']; onChange: (next: BuilderBlock['body']) => void; rows: number; label: string }) {
+function InlineTextEditor({ value, onChange, rows, label, className, onKeyDown, onBlur }: { value?: BuilderBlock['body']; onChange: (next: BuilderBlock['body']) => void; rows: number; label: string; className?: string; onKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void; onBlur?: () => void }) {
 	const ref = useRef<HTMLTextAreaElement>(null);
 	const composing = useRef(false);
+	useEffect(() => { ref.current?.focus(); }, []);
 	const format = (mark: 'bold' | 'italic') => {
 		const input = ref.current;
 		if (!input) return;
@@ -54,12 +49,25 @@ function InlineTextEditor({ value, onChange, rows, label }: { value?: BuilderBlo
 		onChange(next);
 		requestAnimationFrame(() => { input.focus(); input.setSelectionRange(start, end); });
 	};
+	const link = () => {
+		const input=ref.current; if(!input || input.selectionStart===input.selectionEnd) return;
+		const start=input.selectionStart, end=input.selectionEnd;
+		const current=value?.content.flatMap(p=>p.content).find(r=>r.link && plain({type:'doc',content:[{type:'paragraph',content:[r]}]}));
+		const href=window.prompt('Tautan (https://, http://, atau #bagian)',current?.link?.href || 'https://');
+		if(href===null) return;
+		const next=applyInlineLink(value,start,end,href);
+		if(next!==value) onChange(next);
+		requestAnimationFrame(()=>{input.focus();input.setSelectionRange(start,end);});
+	};
+	const unlink = () => { const input=ref.current; if(input && input.selectionStart!==input.selectionEnd) onChange(applyInlineLink(value,input.selectionStart,input.selectionEnd,null)); };
 	return <div className="bd-inline-text-editor">
 		<div role="group" aria-label="Pemformatan teks">
 			<button type="button" aria-label="Tebal" onMouseDown={e => e.preventDefault()} onClick={() => format('bold')}><strong>B</strong></button>
 			<button type="button" aria-label="Miring" onMouseDown={e => e.preventDefault()} onClick={() => format('italic')}><em>I</em></button>
+			<button type="button" aria-label="Tambahkan tautan" onMouseDown={e => e.preventDefault()} onClick={link}>↗</button>
+			<button type="button" aria-label="Hapus tautan" onMouseDown={e => e.preventDefault()} onClick={unlink}>Hapus tautan</button>
 		</div>
-		<textarea ref={ref} rows={rows} maxLength={20000} aria-label={label} value={plain(value)}
+		<textarea ref={ref} className={className} rows={rows} maxLength={20000} aria-label={label} value={plain(value)} onKeyDown={onKeyDown} onBlur={onBlur}
 			onCompositionStart={() => { composing.current = true; }}
 			onChange={e => { if (!composing.current && !(e.nativeEvent as InputEvent).isComposing) onChange(replaceRichText(value, e.target.value)); }}
 			onCompositionEnd={e => { composing.current = false; onChange(replaceRichText(value, e.currentTarget.value)); }} />
@@ -89,19 +97,14 @@ export function BuilderCanvasText({
 	block: BuilderBlock;
 	selected: boolean;
 	disabled?: boolean;
-	onChange: (value: string) => void;
+	onChange: (value: NonNullable<BuilderBlock['body']>) => void;
 }) {
 	const [editing, setEditing] = useState(false);
 	const [value, setValue] = useState(() => plain(block.body));
-	const editor = useRef<HTMLTextAreaElement>(null);
 	const surface = useRef<HTMLDivElement>(null);
-	const composing = useRef(false);
 	useEffect(() => {
-		if (!composing.current) setValue(plain(block.body));
+		setValue(plain(block.body));
 	}, [block.id, block.body]);
-	useEffect(() => {
-		if (editing) editor.current?.focus();
-	}, [editing]);
 	useEffect(() => {
 		if (!selected || disabled) setEditing(false);
 	}, [selected, disabled]);
@@ -110,40 +113,13 @@ export function BuilderCanvasText({
 	};
 	if (editing && selected && !disabled)
 		return (
-			<textarea
-				ref={editor}
-				className="bd-canvas-text-editor"
-				aria-label={
-					block.type === 'instructions'
-						? 'Edit instruksi langsung'
-						: 'Edit teks konfirmasi langsung'
-				}
-				maxLength={20000}
-				rows={Math.min(20, Math.max(2, value.split('\n').length))}
-				value={value}
-				onCompositionStart={() => {
-					composing.current = true;
-				}}
-				onChange={(event) => {
-					setValue(event.target.value);
-					if (
-						!composing.current &&
-						!(event.nativeEvent as InputEvent).isComposing
-					)
-						onChange(event.target.value);
-				}}
-				onCompositionEnd={(event) => {
-					composing.current = false;
-					setValue(event.currentTarget.value);
-					onChange(event.currentTarget.value);
-				}}
-				onKeyDown={(event) => {
+			<InlineTextEditor value={block.body} className="bd-canvas-text-editor" rows={Math.min(20, Math.max(2, value.split('\n').length))} label={block.type === 'instructions' ? 'Edit instruksi langsung' : 'Edit teks konfirmasi langsung'} onChange={next=>{setValue(plain(next));onChange(next || rich(''));}} onBlur={()=>setEditing(false)} onKeyDown={(event) => {
 					if (
 						canvasTextKeyboardAction(
 							event.key,
-							true,
-							selected,
-							composing.current || event.nativeEvent.isComposing,
+								true,
+								selected,
+								event.nativeEvent.isComposing,
 						) === 'exit'
 					) {
 						event.preventDefault();
@@ -151,15 +127,7 @@ export function BuilderCanvasText({
 						setEditing(false);
 						requestAnimationFrame(() => surface.current?.focus());
 					}
-				}}
-				onBlur={(event) => {
-					if (composing.current) {
-						composing.current = false;
-						onChange(event.currentTarget.value);
-					}
-					setEditing(false);
-				}}
-			/>
+			}} />
 		);
 	return (
 		<div
@@ -187,7 +155,7 @@ export function BuilderCanvasText({
 			}}
 		>
 			<p className="bd-canvas-text-content">
-				{plain(block.body) ? <RichTextView value={block.body} /> : (
+				{plain(block.body) ? <BuilderRichTextView value={block.body} preventNavigation /> : (
 					<span className="bd-canvas-text-placeholder">
 						Klik dua kali untuk menulis…
 					</span>
@@ -1310,8 +1278,8 @@ export function BuilderPreview({
 		const url = safeUrl(b.url);
 		switch (b.type) {
 			case 'instructions':
-                if (classroom && d.activities.find(a=>a.blocks.some(block=>block.id===b.id))?.blocks.find(block=>block.type==='instructions')?.id===b.id) return <section className="sc-activity-brief"><h3>Yang perlu Anda lakukan</h3><p className="sc-prose"><RichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</p></section>;
-				return <p className="bd-prose"><RichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</p>;
+				if (classroom && d.activities.find(a=>a.blocks.some(block=>block.id===b.id))?.blocks.find(block=>block.type==='instructions')?.id===b.id) return <section className="sc-activity-brief"><h3>Yang perlu Anda lakukan</h3><p className="sc-prose"><BuilderRichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</p></section>;
+				return <p className="bd-prose"><BuilderRichTextView value={b.body} />{!plain(b.body) && 'Instruksi belum diisi'}</p>;
 			case 'acknowledgement':
 				return (
 					<label className="bd-check">
@@ -1325,7 +1293,7 @@ export function BuilderPreview({
 								}))
 							}
 						/>
-						<RichTextView value={b.body} />
+						<BuilderRichTextView value={b.body} />
 					</label>
 				);
 			case 'image':
@@ -1423,7 +1391,7 @@ export function BuilderPreview({
 				</div>
 			)}
 			<h1>{d.title}</h1>
-			<p className="bd-prose">{plain(d.instructions)}</p>
+			<p className="bd-prose"><BuilderRichTextView value={d.instructions} /></p>
 			{d.activities.map(
 				(a, i) =>
 					(!activityId || a.id === activityId) && (

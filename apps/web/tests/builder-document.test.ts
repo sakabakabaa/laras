@@ -12,6 +12,8 @@ import {
 	copyScheduledToBuilder,
 	encodeBuilderDraft,
 	applyInlineMark,
+	applyInlineLink,
+	safeInlineUrl,
 	plain,
 	replaceRichText,
 } from '../src/lib/builder-document';
@@ -55,6 +57,30 @@ describe('shared builder identity and private envelope', () => {
 			{ type: 'text', text: 'bc', marks: ['bold', 'italic'] },
 			{ type: 'text', text: 'd', marks: ['italic'] },
 		]);
+	});
+	it('applies and removes links on a selection while preserving marks and subsequent edits', () => {
+		const value = {type:'doc' as const,content:[{type:'paragraph' as const,content:[{type:'text' as const,text:'go '},{type:'text' as const,text:'there',marks:['bold' as const]}]}]};
+		const linked=applyInlineLink(value,3,8,'https://example.org/path');
+		expect(linked.content[0].content[1]).toEqual({type:'text',text:'there',marks:['bold'],link:{href:'https://example.org/path'}});
+		expect(replaceRichText(linked,'go there!').content[0].content.at(-1)?.link).toEqual({href:'https://example.org/path'});
+		expect(applyInlineLink(linked,3,8,null).content[0].content[1]).toEqual({type:'text',text:'there',marks:['bold']});
+	});
+	it('rejects unsafe URLs identically at client and server and retains invalid linked text as plain text', () => {
+		for(const value of ['javascript:alert(1)','data:text/html,x','vbscript:foo','//example.org','https://example.org/\nfoo','https://bad host']) expect(safeInlineUrl(value)).toBeNull();
+		for(const value of ['https://example.org/a','http://example.org',' #bad']) {
+			if(value.startsWith(' ')) continue;
+			expect(safeInlineUrl(value)).toBe(value);
+		}
+		const d=fixture(), block=d.document.activities[0].blocks.find(b=>b.type==='instructions')!;
+		block.body={type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'safe',link:{href:'javascript:alert(1)'}} as any]}]};
+		const normalized=normalize(d).document.activities[0].blocks.find(b=>b.type==='instructions')!.body!;
+		expect(plain(normalized)).toBe('safe'); expect(normalized.content[0].content[0].link).toBeUndefined();
+		block.body={type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'linked',marks:['bold'],link:{href:'https://example.org'}} as any]}]};
+		expect(normalize(d).document.activities[0].blocks.find(b=>b.type==='instructions')!.body!.content[0].content[0]).toEqual({type:'text',text:'linked',marks:['bold'],link:{href:'https://example.org'}});
+		const question=Object.values(d.document.questionsById)[0]; question.prompt={type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'assessment',link:{href:'https://example.org'}} as any]}]};
+		expect(normalize(d).document.questionsById[question.id].prompt.content[0].content[0].link).toBeUndefined();
+		const serverPolicy=readFileSync(new URL('../../pocketbase/pb_hooks/builder-domain.js',import.meta.url),'utf8');
+		expect(serverPolicy).toContain('function inlineLink(v)');
 	});
 	it('reconciles edits with run offsets while retaining untouched formatting', () => {
 		const value = { type: 'doc' as const, content: [{ type: 'paragraph' as const, content: [

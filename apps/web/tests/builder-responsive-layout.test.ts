@@ -127,13 +127,13 @@ describe('responsive group layout', () => {
 		expect(resolveActivityLayout(activity)[0]).toMatchObject({ width: 'contained', maxWidth: 960, columnWeights: [2, 1, 1] });
 		expect(layoutGroupClassName(resolveActivityLayout(activity)[0] as BuilderLayoutGroup)).toContain('bl-width-contained');
 		const html = renderToStaticMarkup(createElement(BuilderLayoutView, { activity, renderBlock: () => null }));
-		expect(html).toContain('style="--bl-max-width:960px;grid-template-columns:2fr 1fr 1fr"');
+		expect(html).toContain('style="--bl-max-width:960px;grid-template-columns:2fr 1fr 1fr;background-color:');
 	});
 	it('keeps image-backed group content and fallback in server rendering without serializing asset references', () => {
 		const activity = { id: 'a', blocks: [], layout: { schemaVersion: 1 as const, nodes: [{ ...group, background: { mode: 'image' as const, asset: { fileId: 'private-id', filename: 'lesson.png', version: 2, name: 'Private image' } } }] } } as never;
 		const html = renderToStaticMarkup(createElement(BuilderLayoutView, { activity, renderBlock: () => null, renderGroup: () => createElement('button', null, 'Lesson control') }));
 		expect(html).toContain('Lesson control');
-		expect(html).toContain('background:var(--r-surface-2)');
+		expect(html).toContain('--bl-base-background-color:var(--r-surface-2)');
 		expect(html).not.toContain('private-id');
 		expect(html).not.toContain('lesson.png');
 	});

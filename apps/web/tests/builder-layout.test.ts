@@ -28,6 +28,8 @@ import {
 	removeBlockFromLayout,
 	removeLayoutGroup,
 	resolveActivityLayout,
+	resolveLayoutBackground,
+	resetResponsiveOverride,
 	flattenResolvedBlocks,
 } from '../src/lib/builder-layout';
 import { BuilderPreview } from '../src/components/app/builder/builder-elements';
@@ -53,6 +55,20 @@ function fixture() {
 }
 
 describe('builder layout tree', () => {
+	it('inherits device backgrounds while preserving explicit transparency and device-local reset', () => {
+		const { activity } = fixture();
+		const groupId = addLayoutGroup(activity, 'section', null, 1);
+		const group = findLayoutGroup(activity.layout!, groupId)!;
+		group.background = { mode: 'solid', token: 'surface' };
+		group.responsive = { tablet: { background: { mode: 'image', asset: { fileId: '123456789012345', filename: 'tablet.png', version: 1, name: 'Tablet' } } }, mobile: { background: { mode: 'transparent' } } };
+		expect(resolveLayoutBackground(group, 'tablet')).toMatchObject({ mode: 'image', asset: { filename: 'tablet.png' } });
+		expect(resolveLayoutBackground(group, 'mobile')).toEqual({ mode: 'transparent' });
+		resetResponsiveOverride(group, 'mobile');
+		expect(resolveLayoutBackground(group, 'mobile')).toMatchObject({ mode: 'image', asset: { filename: 'tablet.png' } });
+		resetResponsiveOverride(group, 'tablet');
+		expect(group.responsive).toBeUndefined();
+		expect(resolveLayoutBackground(group, 'mobile')).toEqual({ mode: 'solid', token: 'surface' });
+	});
 	it('normalizes nested protected image backgrounds and rejects invalid values', () => {
 		const { draft, activity } = fixture();
 		const group = addLayoutGroup(activity, 'section', null, 1);
@@ -64,6 +80,10 @@ describe('builder layout tree', () => {
 		expect(found[0]).toMatchObject({ kind: 'image', asset: { filename: 'cover.png' } });
 		const normalizedGroup = findLayoutGroup(saved.document.activities[0].layout!, group)!;
 		expect(normalizedGroup.background).toMatchObject({ mode: 'image', fit: 'cover', positionX: 50, positionY: 50 });
+		node.responsive = { tablet: { background: { mode: 'transparent' } }, mobile: { background: { mode: 'image', asset: { fileId: '123456789012345', filename: 'cover.png', version: 1, name: 'Cover' } } } };
+		const responsive = normalize(draft).document.activities[0].layout!;
+		expect(documentAssets({ activities: [{ blocks: [], layout: responsive }] })).toHaveLength(2);
+		expect(findLayoutGroup(responsive, group)?.responsive).toMatchObject({ tablet: { background: { mode: 'transparent' } }, mobile: { background: { mode: 'image' } } });
 		node.background.positionX = 101;
 		expect(() => normalize(draft)).toThrow();
 	});

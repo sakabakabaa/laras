@@ -13,6 +13,7 @@ import {
 	countLayoutGroups,
 	findLayoutGroup,
 	layoutPath,
+	resetResponsiveOverride,
 	removeLayoutGroup,
 	resolveActivityLayout,
 	setLayoutSide,
@@ -44,7 +45,7 @@ function editPx(target: BuilderLayoutGroup, key: 'rowGap'|'columnGap', raw: stri
 
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 
-function ResponsiveControls({ group, update }: { group: BuilderLayoutGroup; update: (edit: (group: BuilderLayoutGroup) => void) => void }) {
+function ResponsiveControls({ group, courseId, update }: { group: BuilderLayoutGroup; courseId: string; update: (edit: (group: BuilderLayoutGroup) => void) => void }) {
 	const [device, setDevice] = useState<'tablet'|'mobile'>('tablet');
 	const values = group.responsive?.[device] ?? {};
 	const set = (key: 'columns'|'direction'|'align'|'distribute'|'wrap'|'gap'|'padding'|'rowGap'|'columnGap', value: string) => update(target => {
@@ -69,10 +70,11 @@ function ResponsiveControls({ group, update }: { group: BuilderLayoutGroup; upda
 		<label>Bungkus baris<select value={values.wrap === undefined ? '' : String(values.wrap)} onChange={e=>set('wrap',e.target.value)}><option value="">Ikuti dasar</option><option value="true">Bungkus</option><option value="false">Jangan bungkus</option></select></label>
 		<label>Jarak<select value={values.gap ?? ''} onChange={e=>set('gap',e.target.value)}><option value="">Ikuti dasar ({group.gap})</option>{(['none','sm','md','lg'] as const).map(x=><option key={x} value={x}>{({none: 'Tanpa jarak', sm: 'Kecil', md: 'Sedang', lg: 'Besar'})[x]}</option>)}</select></label>
 		<label>Padding<select value={values.padding ?? ''} onChange={e=>set('padding',e.target.value)}><option value="">Ikuti dasar ({group.padding})</option>{(['none','sm','md'] as const).map(x=><option key={x} value={x}>{({none: 'Tanpa padding', sm: 'Kecil', md: 'Sedang'})[x]}</option>)}</select></label>
+		<BuilderGroupBackgroundControls key={device} responsive courseId={courseId} value={values.background} onChange={background=>update(target=>{const item=deviceTarget(target,device);if(background)item.background=background;else delete item.background;})} />
 		<SideSpacing key={`${device}-padding`} label="Padding per sisi (px)" value={values.paddingSides} linked={values.paddingLinked ?? sideLinked(values.paddingSides)} onLink={next=>update(target=>{const deviceGroup=deviceTarget(target,device);setSideLinked(deviceGroup,'paddingLinked',next);if(next){const value=Object.values(values.paddingSides ?? {})[0];setLayoutSide(deviceGroup, 'paddingSides','top',value,true);}})} onChange={(side,value,linked)=>update(target=>setLayoutSide(deviceTarget(target,device), 'paddingSides',side,value,linked))} />
 		<SideSpacing key={`${device}-margin`} label="Margin per sisi (px)" value={values.margin} linked={values.marginLinked ?? sideLinked(values.margin)} onLink={next=>update(target=>{const deviceGroup=deviceTarget(target,device);setSideLinked(deviceGroup,'marginLinked',next);if(next){const value=Object.values(values.margin ?? {})[0];setLayoutSide(deviceGroup, 'margin','top',value,true);}})} onChange={(side,value,linked)=>update(target=>setLayoutSide(deviceTarget(target,device), 'margin',side,value,linked))} />
 		<label>Jarak baris (px)<input type="number" min={0} max={80} value={values.rowGap ?? ''} onChange={e=>set('rowGap',e.target.value)} /></label><label>Jarak kolom (px)<input type="number" min={0} max={80} value={values.columnGap ?? ''} onChange={e=>set('columnGap',e.target.value)} /></label>
-		<button type="button" className="bd-secondary" onClick={()=>update(target=>{if(target.responsive) delete target.responsive[device]; if(target.responsive&&!Object.keys(target.responsive).length) delete target.responsive;})}>Reset perangkat ini</button>
+		<button type="button" className="bd-secondary" onClick={()=>update(target=>resetResponsiveOverride(target,device))}>Reset perangkat ini</button>
 	</fieldset>;
 }
 
@@ -497,7 +499,7 @@ export function BuilderLayoutInspector({
 				<div className="bd-fields">
 					<BuilderAppearanceControls exclude={['padding', 'background']} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
 					<BuilderGroupBackgroundControls courseId={courseId} value={group.background} onChange={background => update(target => { if (background) target.background = background; else delete target.background; })} />
-					<ResponsiveControls group={group} update={update} />
+					<ResponsiveControls group={group} courseId={courseId} update={update} />
 					<label>Arah alur<select value={group.direction ?? 'grid'} onChange={event=>update(target=>{const value=event.target.value as 'grid'|'row'|'column'; if(value==='grid') delete target.direction; else target.direction=value; })}><option value="grid">Grid</option><option value="row">Baris</option><option value="column">Kolom</option></select></label>
 					<label>Perataan silang<select value={group.align ?? ''} onChange={event=>update(target=>{if(event.target.value) target.align=event.target.value as 'start'|'center'|'end'|'stretch'; else delete target.align;})}><option value="">Regangkan (default)</option><option value="start">Awal</option><option value="center">Tengah</option><option value="end">Akhir</option><option value="stretch">Regangkan</option></select></label>
 					<label>Distribusi utama<select value={group.distribute ?? ''} onChange={event=>update(target=>{if(event.target.value) target.distribute=event.target.value as 'start'|'center'|'end'|'between'; else delete target.distribute;})}><option value="">Awal (default)</option><option value="start">Awal</option><option value="center">Tengah</option><option value="end">Akhir</option><option value="between">Ruang di antara</option></select></label>

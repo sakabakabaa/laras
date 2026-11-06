@@ -119,6 +119,10 @@
 	.bl-layout .bl-group.bl-tablet-wrap-no { flex-wrap: nowrap; }
 	.bl-layout .bl-group.bl-tablet-wrap-yes { flex-wrap: wrap; }
 	.bl-layout .bl-group[class] {
+		--bl-active-background-color: var(--bl-tablet-background-color, var(--bl-base-background-color, transparent));
+		--bl-active-background-image: var(--bl-tablet-background-image, var(--bl-base-background-image, none));
+		--bl-active-background-size: var(--bl-tablet-background-size, var(--bl-base-background-size, cover));
+		--bl-active-background-position: var(--bl-tablet-background-position, var(--bl-base-background-position, 50% 50%));
 		grid-template-columns: repeat(var(--bl-tablet-columns, 1), minmax(0, 1fr));
 		row-gap: var(--bl-tablet-row-gap, var(--bl-tablet-gap, var(--bl-row-gap, var(--bl-gap, 14px))));
 		column-gap: var(--bl-tablet-column-gap, var(--bl-tablet-gap, var(--bl-column-gap, var(--bl-gap, 14px))));
@@ -143,6 +147,10 @@
 	.bl-layout .bl-group.bl-mobile-wrap-no { flex-wrap: nowrap; }
 	.bl-layout .bl-group.bl-mobile-wrap-yes { flex-wrap: wrap; }
 	.bl-layout .bl-group[class] {
+		--bl-active-background-color: var(--bl-mobile-background-color, var(--bl-tablet-background-color, var(--bl-base-background-color, transparent)));
+		--bl-active-background-image: var(--bl-mobile-background-image, var(--bl-tablet-background-image, var(--bl-base-background-image, none)));
+		--bl-active-background-size: var(--bl-mobile-background-size, var(--bl-tablet-background-size, var(--bl-base-background-size, cover)));
+		--bl-active-background-position: var(--bl-mobile-background-position, var(--bl-tablet-background-position, var(--bl-base-background-position, 50% 50%)));
 		grid-template-columns: repeat(
 			var(--bl-mobile-columns, var(--bl-tablet-columns, 1)),
 			minmax(0, 1fr)

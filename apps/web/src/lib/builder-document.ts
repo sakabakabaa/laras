@@ -545,8 +545,14 @@ export function appendBlock(
 	const placement: BuilderPlacement = 'activity';
 	if (!activity || !BUILDER_BLOCK_REGISTRY[type].placements.includes(placement)) throw new Error('Builder block kind is not allowed at this placement');
 	const b: BuilderBlock = { id: uid(), type };
-	Object.assign(b, createBuilderBlockDefaults(type, { rich, uid, question: (questionKind) => appendQuestion(draft, questionKind) }));
+	const pendingQuestions: BuilderEnvelope = {
+		document: { ...draft.document, questionsById: {} },
+		privateKeys: { ...draft.privateKeys, answersByQuestionId: {} },
+	};
+	Object.assign(b, createBuilderBlockDefaults(type, { rich, uid, question: (questionKind) => appendQuestion(pendingQuestions, questionKind) }));
 	activity.blocks.push(b);
+	Object.assign(draft.document.questionsById, pendingQuestions.document.questionsById);
+	Object.assign(draft.privateKeys.answersByQuestionId, pendingQuestions.privateKeys.answersByQuestionId);
 	return b.id;
 }
 export function removeBlock(

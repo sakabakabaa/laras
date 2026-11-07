@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { createElement } from 'react';
@@ -12,6 +12,28 @@ const domain = { exports: {} as { normalize: (value: unknown) => any } };
 runInNewContext(readFileSync(new URL('../../pocketbase/pb_hooks/builder-domain.js', import.meta.url), 'utf8'), { module: domain });
 
 describe('builder block registry', () => {
+	it.each([
+		['matching', 2], ['matching', 3], ['matching', 4],
+		['gap_passage', 2], ['gap_passage', 3],
+		['question_group', 2], ['question_group', 3], ['question_group', 4],
+	] as const)('keeps the complete draft unchanged when %s ID allocation %i fails', (kind, failureAt) => {
+		const draft = blankBuilder('kelas', 'course000000001');
+		const activity = draft.document.activities[0];
+		appendBlock(draft, activity.id, 'question_group');
+		const before = structuredClone(draft);
+		const original = crypto.randomUUID.bind(crypto);
+		let calls = 0;
+		const allocate = vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
+			if (++calls === failureAt) throw new Error('ID allocation failed');
+			return original();
+		});
+		try {
+			expect(() => appendBlock(draft, activity.id, kind)).toThrow('ID allocation failed');
+			expect(draft).toEqual(before);
+		} finally {
+			allocate.mockRestore();
+		}
+	});
 	it('covers every library variant without conflating library IDs and persisted kinds', () => {
 		const kinds = new Set(Object.keys(BUILDER_BLOCK_REGISTRY));
 		for (const element of BUILDER_ELEMENTS) expect(kinds.has(element.type)).toBe(true);

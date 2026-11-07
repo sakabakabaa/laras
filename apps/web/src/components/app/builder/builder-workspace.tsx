@@ -59,6 +59,7 @@ import {
 	isEnhancedAuthoringDenied,
 	usesEnhancedAuthoring,
 	hasCustomThemeColors,
+	hasDetailedBorderRadius,
 	type BuilderCapabilityPayload,
 } from '@/lib/builder-capability';
 import { toWibInput, fromWibInput } from '@/lib/scheduled-classes';
@@ -188,6 +189,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const layoutLocksSupportedRef = useRef(false);
 	const [customColorsSupported, setCustomColorsSupported] = useState(false);
 	const customColorsSupportedRef = useRef(false);
+	const detailedBorderRadiusSupportedRef = useRef(false);
+	const [detailedBorderRadiusSupported, setDetailedBorderRadiusSupported] = useState(false);
 	const [recoveryInfo, setRecoveryInfo] = useState<{ at: number; baseRevision?: number } | null>(null);
 	const [publishReview, setPublishReview] = useState(false);
 	const saveQueue = useRef(createBuilderSaveQueue((command) => builderRequest<BuilderRecord>('save', command)));
@@ -284,6 +287,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		layoutLocksSupportedRef.current = false;
 		setLayoutLocksSupported(false);
 		customColorsSupportedRef.current = false;
+		detailedBorderRadiusSupportedRef.current = false;
+		setDetailedBorderRadiusSupported(false);
 		setCustomColorsSupported(false);
 		setStyleClipboard(null);
 		setStyleStatus('');
@@ -301,6 +306,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				layoutLocksSupportedRef.current = r.layoutLocks === true;
 				setLayoutLocksSupported(r.layoutLocks === true);
 				customColorsSupportedRef.current = r.customColors === true;
+				detailedBorderRadiusSupportedRef.current = r.detailedBorderRadius === true;
+				setDetailedBorderRadiusSupported(r.detailedBorderRadius === true);
 				setCustomColorsSupported(r.customColors === true);
 				const envelope = { document: r.document, privateKeys: r.privateKeys };
 				install(envelope);
@@ -357,6 +364,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const save = useCallback(async () => {
 		if (!current.current || savingRef.current || conflictRef.current) return;
 		if (!layoutLocksSupportedRef.current && hasLayoutLockFields(current.current)) { setError(LAYOUT_LOCK_CAPABILITY_REASON); return; }
+		if (!detailedBorderRadiusSupportedRef.current && hasDetailedBorderRadius(current.current)) { setError('Backend belum mendukung garis tepi dan sudut terperinci; perubahan ditahan agar data tidak hilang.'); return; }
 		if (readOnlyRef.current) return;
 		if (!navigator.onLine) { setError('Anda sedang offline. Perubahan belum tersimpan di server; coba simpan setelah terhubung.'); return; }
 		const savingId = id;
@@ -461,6 +469,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			layoutLocksSupportedRef.current = r.layoutLocks === true;
 			setLayoutLocksSupported(r.layoutLocks === true);
 			customColorsSupportedRef.current = r.customColors === true;
+			detailedBorderRadiusSupportedRef.current = r.detailedBorderRadius === true;
+			setDetailedBorderRadiusSupported(r.detailedBorderRadius === true);
 			setCustomColorsSupported(r.customColors === true);
 			install({ document: r.document, privateKeys: r.privateKeys });
 			setSaved(encode({ document: r.document, privateKeys: r.privateKeys }));
@@ -1002,7 +1012,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			})()}
 			{activity && (block || selectedGroup) && <BuilderLayoutLockControl activity={activity} nodeId={block?.id || selectedGroup!.id} disabled={locked || readOnly} supported={layoutLocksSupported} onChange={change} />}
 			{block ? (
-				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked} customColorsSupported={customColorsSupported} onChange={change} />
+				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked} customColorsSupported={customColorsSupported} detailedBorderRadiusSupported={detailedBorderRadiusSupported} onChange={change} />
 			) : selectedGroup && activity ? (
 				<>
 					<BuilderLayoutInspector
@@ -1011,6 +1021,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						group={selectedGroup}
 						disabled={locked}
 						customColorsSupported={customColorsSupported}
+						detailedBorderRadiusSupported={detailedBorderRadiusSupported}
 						onChange={change}
 						onAddBlock={() =>
 							openElements(activity.id, undefined, selectedGroup.id)
@@ -1329,10 +1340,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<button className="bd-secondary" onClick={() => downloadEnvelope(recovery)}>Unduh salinan perangkat</button>
 						<button
 							className="bd-primary"
-							disabled={readOnly || (!layoutLocksSupported && hasLayoutLockFields(recovery)) || (!customColorsSupported && hasCustomThemeColors(recovery))}
-							title={!layoutLocksSupported && hasLayoutLockFields(recovery) ? LAYOUT_LOCK_CAPABILITY_REASON : (!customColorsSupported && hasCustomThemeColors(recovery) ? 'Backend belum mendukung pasangan warna tema.' : undefined)}
+							disabled={readOnly || (!layoutLocksSupported && hasLayoutLockFields(recovery)) || (!customColorsSupported && hasCustomThemeColors(recovery)) || (!detailedBorderRadiusSupported && hasDetailedBorderRadius(recovery))}
+							title={!layoutLocksSupported && hasLayoutLockFields(recovery) ? LAYOUT_LOCK_CAPABILITY_REASON : (!customColorsSupported && hasCustomThemeColors(recovery) ? 'Backend belum mendukung pasangan warna tema.' : (!detailedBorderRadiusSupported && hasDetailedBorderRadius(recovery) ? 'Backend belum mendukung garis tepi dan sudut terperinci.' : undefined))}
 							onClick={() => {
-								if (readOnlyRef.current || (!layoutLocksSupportedRef.current && hasLayoutLockFields(recovery)) || (!customColorsSupportedRef.current && hasCustomThemeColors(recovery))) return;
+								if (readOnlyRef.current || (!layoutLocksSupportedRef.current && hasLayoutLockFields(recovery)) || (!customColorsSupportedRef.current && hasCustomThemeColors(recovery)) || (!detailedBorderRadiusSupportedRef.current && hasDetailedBorderRadius(recovery))) return;
 								const reason = current.current && layoutLockTransitionReason(current.current, recovery, layoutLocksSupportedRef.current);
 								if (reason) { setError(reason); setAnnouncement(reason); return; }
 								if (recoveryInfo?.baseRevision !== revision && !window.confirm('Revisi perangkat dan server berbeda. Muat salinan perangkat ke editor untuk ditinjau sebelum menyimpan?')) return;
@@ -1997,6 +2008,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				<BuilderSavedItems
 					id={id}
 					revision={revision}
+					detailedBorderRadiusSupported={detailedBorderRadiusSupported}
+					detailedStylesInDocument={hasDetailedBorderRadius(draft)}
 					activityId={savedItems.activityId}
 					groupId={savedItems.groupId}
 					dirty={dirty || saving || locked || readOnly}

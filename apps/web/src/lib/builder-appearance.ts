@@ -43,7 +43,11 @@ export const APPEARANCE_OPTIONS = {
 } as const;
 export type BuilderAppearance = {
 	[K in keyof typeof APPEARANCE_OPTIONS]?: keyof (typeof APPEARANCE_OPTIONS)[K]['values'];
-} & { customColors?: { light: { foreground: string; background: string }; dark: { foreground: string; background: string } } };
+} & {
+	customColors?: { light: { foreground: string; background: string }; dark: { foreground: string; background: string } };
+	borderDetail?: { style: 'none' | 'solid' | 'dashed' | 'dotted'; color?: 'border' | 'action' | 'ink' | 'surface-2'; linked?: boolean; widths?: Partial<Record<'top' | 'right' | 'bottom' | 'left', number>> };
+	corners?: { linked?: boolean; topLeft?: number; topRight?: number; bottomRight?: number; bottomLeft?: number };
+};
 
 export type ThemeColorPair = { foreground: string; background: string };
 export function validHexColor(value: unknown): value is string { return typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value); }
@@ -122,6 +126,8 @@ export function resetBuilderAppearance(
 	const next = { ...appearance };
 	for (const field of APPEARANCE_FIELDS) if (!preserve.includes(field)) delete next[field];
 	if (!preserve.includes('customColors')) delete next.customColors;
+	if (!preserve.includes('borderDetail')) delete next.borderDetail;
+	if (!preserve.includes('corners')) delete next.corners;
 	return Object.keys(next).length ? next : undefined;
 }
 
@@ -148,7 +154,27 @@ export function appearanceClassName(appearance?: BuilderAppearance): string {
 				Object.hasOwn(APPEARANCE_OPTIONS[key].values, appearance[key]!),
 		)
 		.map((key) => `ba-${key}-${appearance[key]}`)
-		.join(' ') + (safeColors ? ' ba-custom-colors' : '');
+		.join(' ') + (safeColors ? ' ba-custom-colors' : '') + (appearance.borderDetail ? ' ba-has-border-detail' : '') + (appearance.corners ? ' ba-has-corners' : '');
+}
+
+export function appearanceDetailStyle(appearance?: BuilderAppearance): Record<string, string> {
+	const style: Record<string, string> = {};
+	const border = appearance?.borderDetail;
+	if (border && ['none', 'solid', 'dashed', 'dotted'].includes(border.style) && (border.color === undefined || ['border', 'action', 'ink', 'surface-2'].includes(border.color)) && (border.linked === undefined || typeof border.linked === 'boolean') && Object.entries(border.widths ?? {}).every(([side, width]) => ['top', 'right', 'bottom', 'left'].includes(side) && typeof width === 'number' && Number.isFinite(width) && width >= 0 && width <= 8)) {
+		style['--ba-detail-border-style'] = border.style;
+		if (border.color) style['--ba-detail-border-color'] = `var(--r-${border.color})`;
+		for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+			const width = border.widths?.[side];
+			if (typeof width === 'number' && Number.isFinite(width) && width >= 0 && width <= 8) style[`--ba-border-${side}-width`] = `${width}px`;
+		}
+	}
+	const corners = appearance?.corners;
+	if (corners && Object.keys(corners).every(key => ['linked', 'topLeft', 'topRight', 'bottomRight', 'bottomLeft'].includes(key)) && (corners.linked === undefined || typeof corners.linked === 'boolean'))
+		for (const corner of ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'] as const) {
+			const value = corners[corner];
+			if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 48) style[`--ba-corner-${corner}`] = `${value}px`;
+		}
+	return style;
 }
 
 export function appearanceColorStyle(appearance?: BuilderAppearance): Record<string, string> {

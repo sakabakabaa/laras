@@ -103,6 +103,8 @@ describe('builder appearance persistence and rendering', () => {
 		block.appearance = reset;
 		expect(reset).toBeUndefined();
 		expect(resetBuilderAppearance(reset)).toBeUndefined();
+		const detailed = { borderDetail: { style: 'solid' as const, widths: { top: 2 } }, corners: { topLeft: 6 } };
+		expect(resetBuilderAppearance(detailed)).toBeUndefined();
 		const afterWithoutAppearance = structuredClone(draft);
 		delete afterWithoutAppearance.document.activities[0].blocks[0].appearance;
 		delete before.document.activities[0].blocks[0].appearance;
@@ -177,6 +179,29 @@ describe('builder appearance persistence and rendering', () => {
 			expect(() => normalize(draft)).toThrow('Warna harus berupa kode #RRGGBB lengkap.');
 		}
 	});
+	it('round-trips bounded detailed borders and corners while rejecting unsafe values', () => {
+		const { draft, block, group } = fixture();
+		const detail = { borderDetail: { style: 'dashed' as const, color: 'action' as const, linked: false, widths: { top: 0, right: 2.5, bottom: 8, left: 1 } }, corners: { linked: false, topLeft: 0, topRight: 12, bottomRight: 48, bottomLeft: 4 } };
+		block.appearance = detail;
+		group.appearance = structuredClone(detail);
+		const normalized = normalize(draft).document.activities[0];
+		expect(normalized.blocks[0].appearance).toEqual(detail);
+		expect(findLayoutGroup(normalized.layout!, group.id)?.appearance).toEqual(detail);
+		for (const invalid of [
+			{ borderDetail: { style: 'double' } },
+			{ borderDetail: { style: 'solid', color: 'url(x)' } },
+			{ borderDetail: { style: 'solid', widths: { top: -1 } } },
+			{ borderDetail: { style: 'solid', widths: { right: 8.01 } } },
+			{ borderDetail: { style: 'solid', widths: { left: Number.NaN } } },
+			{ borderDetail: { style: 'solid', widths: { left: 2, css: 'fixed' } } },
+			{ corners: { topLeft: 49 } },
+			{ corners: { topRight: Number.POSITIVE_INFINITY } },
+			{ corners: { opacity: 1 } },
+		]) {
+			block.appearance = invalid as unknown as BuilderAppearance;
+			expect(() => normalize(draft)).toThrow();
+		}
+	});
 	it('rejects invalid values and strips unsupported style fields', () => {
 		const { draft, block, group } = fixture();
 		block.appearance = { size: '999px' } as unknown as BuilderAppearance;
@@ -234,6 +259,21 @@ describe('builder appearance persistence and rendering', () => {
 		expect(html).toContain('--ba-custom-light-foreground:#172033');
 		expect(readFileSync(new URL('../src/styles/builder-appearance.css', import.meta.url), 'utf8')).toContain(':root.dark .bl-layout .ba-custom-colors');
 		expect(html).toContain('Materi yang ditata');
+	});
+	it('renders detailed styles on the shared block and group wrappers using theme tokens', () => {
+		const { draft, block, group } = fixture();
+		block.appearance = { borderDetail: { style: 'dotted', color: 'action', widths: { top: 2 } }, corners: { topLeft: 6 } };
+		group.appearance = { borderDetail: { style: 'dashed', color: 'border', widths: { left: 3 } }, corners: { topRight: 10 } };
+		const html = renderToStaticMarkup(createElement(BuilderPreview, { document: normalize(draft).document }));
+		expect(html.match(/ba-has-border-detail/g)).toHaveLength(2);
+		expect(html.match(/ba-has-corners/g)).toHaveLength(2);
+		expect(html).toContain('--ba-detail-border-color:var(--r-action)');
+		expect(html).toContain('--ba-border-left-width:3px');
+		expect(html).toContain('--ba-corner-topRight:10px');
+		const css = readFileSync(new URL('../src/styles/builder-appearance.css', import.meta.url), 'utf8');
+		expect(css).toContain('.bl-layout .ba-has-border-detail');
+		expect(css).toContain('.bl-layout .ba-has-corners');
+		expect(css).not.toContain('overflow: hidden');
 	});
 	it('round-trips bounded authored group backgrounds and renders shared theme CSS values', () => {
 		const { draft, group } = fixture();
@@ -313,6 +353,26 @@ describe('custom theme color pairs', () => {
 		try {
 			await expect(builderRequest('save', { document })).rejects.toThrow('Perintah builder tidak didukung');
 			expect(send).toHaveBeenCalledWith('/api/laras/builder', expect.objectContaining({ body: expect.objectContaining({ action: 'themeColors:save', document }) }));
+			expect(document).toEqual(before);
+		} finally { send.mockRestore(); }
+	});
+});
+
+describe('detailed border rollback command', () => {
+	it('uses one versioned command for document and snapshot/template payloads', () => {
+		const document = { activities: [{ blocks: [{ appearance: { corners: { topLeft: 8 } } }] }] };
+		expect(builderWriteAction('save', { document })).toBe('detailedStyles:save');
+		expect(builderWriteAction('create', { document })).toBe('detailedStyles:create');
+		expect(builderWriteAction('saveSnapshot', { document })).toBe('detailedStyles:saveSnapshot');
+		expect(builderWriteAction('saveTemplate', { document })).toBe('detailedStyles:saveTemplate');
+	});
+	it('retains local detail data when an older backend rejects the command', async () => {
+		const document = { activities: [{ blocks: [{ appearance: { borderDetail: { style: 'solid', widths: { top: 2 } } } }] }] };
+		const before = structuredClone(document);
+		const send = vi.spyOn(pb, 'send').mockRejectedValue(new Error('Perintah builder tidak didukung.'));
+		try {
+			await expect(builderRequest('save', { document })).rejects.toThrow('Perintah builder tidak didukung');
+			expect(send).toHaveBeenCalledWith('/api/laras/builder', expect.objectContaining({ body: expect.objectContaining({ action: 'detailedStyles:save', document }) }));
 			expect(document).toEqual(before);
 		} finally { send.mockRestore(); }
 	});

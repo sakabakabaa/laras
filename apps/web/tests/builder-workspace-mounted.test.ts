@@ -38,6 +38,14 @@ function click(element: Element) {
 	act(() => element.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 }
 
+function changeValue(element: HTMLInputElement | HTMLSelectElement, value: string) {
+	act(() => {
+		const prototype = element instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLSelectElement.prototype;
+		Object.getOwnPropertyDescriptor(prototype, 'value')!.set!.call(element, value);
+		element.dispatchEvent(new Event(element instanceof HTMLInputElement ? 'input' : 'change', { bubbles: true }));
+	});
+}
+
 function button(name: string) {
 	const result = [...host.querySelectorAll('button')].find((item) =>
 		item.getAttribute('aria-label') === name || item.textContent?.trim() === name,
@@ -48,10 +56,10 @@ function button(name: string) {
 
 async function mount(envelope = fixture()) {
 	serverEnvelope = structuredClone(envelope);
-	record = { id: 'draft-1', document: serverEnvelope.document, privateKeys: serverEnvelope.privateKeys, revision: 7, layoutLocks: true, customColors: true };
+	record = { id: 'draft-1', document: serverEnvelope.document, privateKeys: serverEnvelope.privateKeys, revision: 7, layoutLocks: true, customColors: true, detailedBorderRadius: true };
 	service.send.mockImplementation(async (_path: string, options: { body: { action: string; envelope?: BuilderEnvelope; document?: unknown } }) => {
 		if (options.body.action === 'get') return structuredClone(record);
-		if (options.body.action === 'save' || options.body.action === 'layoutLocks:save' || options.body.action === 'themeColors:save') {
+		if (options.body.action === 'save' || options.body.action === 'layoutLocks:save' || options.body.action === 'themeColors:save' || options.body.action === 'detailedStyles:save') {
 			return { ...structuredClone(record), ...options.body, revision: 8 };
 		}
 		throw new Error(`Unexpected builder action ${options.body.action}`);
@@ -119,6 +127,45 @@ describe('mounted BuilderWorkspace events', () => {
 			document: expect.objectContaining({ activities: [expect.objectContaining({ blocks: [expect.objectContaining({ type: 'instructions' })] })] }),
 			privateKeys: serverEnvelope.privateKeys,
 			action: 'save',
+		});
+	});
+
+	it('commits detailed appearance through the mounted inspector with reset, undo/redo, and versioned save', async () => {
+		await mount(fixture(['instructions']));
+		click(host.querySelector('.bd-block')!);
+		click([...host.querySelectorAll('summary')].find(item => item.textContent?.trim() === 'Garis tepi dan sudut terperinci')!);
+		const detail = host.querySelector('.bd-detail-style-panel')!;
+		changeValue(detail.querySelector('select')!, 'dashed');
+		const borderInputs = [...detail.querySelectorAll<HTMLInputElement>('input[type="number"]')].slice(0, 4);
+		for (const input of borderInputs) changeValue(input, '2');
+		click([...detail.querySelectorAll('button')].find(item => item.textContent?.trim() === 'Terapkan lebar garis')!);
+		let canvasBlock = host.querySelector<HTMLElement>('.bl-block[data-block-id]')!;
+		expect(canvasBlock.className).toContain('ba-has-border-detail');
+		expect(canvasBlock.getAttribute('style')).toContain('--ba-border-top-width: 2px');
+		click(button('Urungkan'));
+		canvasBlock = host.querySelector<HTMLElement>('.bl-block[data-block-id]')!;
+		expect(canvasBlock.getAttribute('style')).not.toContain('--ba-border-top-width');
+		click(button('Ulangi'));
+		canvasBlock = host.querySelector<HTMLElement>('.bl-block[data-block-id]')!;
+		expect(canvasBlock.getAttribute('style')).toContain('--ba-border-top-width: 2px');
+		const numericInputs = [...detail.querySelectorAll<HTMLInputElement>('input[type="number"]')];
+		for (const input of numericInputs.slice(4)) changeValue(input, '6');
+		click([...detail.querySelectorAll('button')].find(item => item.textContent?.trim() === 'Terapkan radius')!);
+		canvasBlock = host.querySelector<HTMLElement>('.bl-block[data-block-id]')!;
+		expect(canvasBlock.className).toContain('ba-has-corners');
+		click(button('Reset gaya'));
+		canvasBlock = host.querySelector<HTMLElement>('.bl-block[data-block-id]')!;
+		expect(canvasBlock.className).not.toContain('ba-has-border-detail');
+		expect(canvasBlock.className).not.toContain('ba-has-corners');
+		click(button('Urungkan'));
+		canvasBlock = host.querySelector<HTMLElement>('.bl-block[data-block-id]')!;
+		expect(canvasBlock.className).toContain('ba-has-corners');
+		click(button('Simpan'));
+		await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+		const saved = service.send.mock.calls.find((call) => call[1].body.action === 'detailedStyles:save');
+		expect(saved?.[1].body.document.activities[0].blocks[0].appearance).toEqual({
+			borderDetail: { style: 'dashed', linked: true, widths: { top: 2, right: 2, bottom: 2, left: 2 } },
+			corners: { linked: true, topLeft: 6, topRight: 6, bottomRight: 6, bottomLeft: 6 },
 		});
 	});
 

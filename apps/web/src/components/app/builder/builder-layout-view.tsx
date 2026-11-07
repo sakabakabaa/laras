@@ -1,6 +1,6 @@
 import '@/styles/builder-responsive.css';
 import '@/styles/builder-appearance.css';
-import { appearanceClassName, appearanceColorStyle } from '@/lib/builder-appearance';
+import { appearanceClassName, appearanceColorStyle, appearanceDetailStyle } from '@/lib/builder-appearance';
 import type { CSSProperties, ReactNode } from 'react';
 import type { BuilderActivity, BuilderBlock } from '@/lib/builder-document';
 import { useState } from 'react';
@@ -72,7 +72,7 @@ export function BuilderLayoutView({
 				<div
 					key={'block-' + node.block.id}
 					className={'bl-block ' + appearanceClassName(node.block.appearance) + (blockClassName ? ' ' + blockClassName : '')}
-					style={appearanceColorStyle(node.block.appearance) as CSSProperties}
+					style={{...appearanceColorStyle(node.block.appearance), ...appearanceDetailStyle(node.block.appearance)} as CSSProperties}
 					data-block-id={node.block.id}
 				>
 					{renderBeforeBlock?.(node.block)}
@@ -153,7 +153,7 @@ function LayoutGroup({group, spacing, className, maxWidth, columnWeights, childr
 		...(mobileBackground?.mode === 'image' ? {'--bl-mobile-background-image': responsiveImage(mobileBackground, serializedMobile), '--bl-mobile-background-size': mobileBackground.fit === 'contain' ? 'contain' : 'cover', '--bl-mobile-background-position': `${mobileBackground.positionX ?? 50}% ${mobileBackground.positionY ?? 50}%`} : {}),
 		...(image && layers ? {'--bl-base-background-image': layers, '--bl-base-background-size': image.fit === 'contain' ? 'contain' : 'cover', '--bl-base-background-position': `${image.positionX ?? 50}% ${image.positionY ?? 50}%`} : {}),
 	};
-	return <div className={className} style={{...appearanceColorStyle(group.appearance),...(maxWidth?{'--bl-max-width':`${maxWidth}px`}:{}),...(columnWeights?{gridTemplateColumns:columnWeights.map(weight=>`${weight}fr`).join(' ')}:{}),...spacing,...responsiveStyle,backgroundColor:'var(--bl-active-background-color, var(--bl-base-background-color, var(--ba-custom-background, transparent)))',backgroundImage:'var(--bl-active-background-image, var(--bl-base-background-image, none))',backgroundSize:'var(--bl-active-background-size, var(--bl-base-background-size, cover))',backgroundPosition:'var(--bl-active-background-position, var(--bl-base-background-position, 50% 50%))',backgroundRepeat:'no-repeat'} as CSSProperties} data-layout-node={group.id} data-layout-kind={group.kind}>
+	return <div className={className} style={{...appearanceColorStyle(group.appearance),...appearanceDetailStyle(group.appearance),...(maxWidth?{'--bl-max-width':`${maxWidth}px`}:{}),...(columnWeights?{gridTemplateColumns:columnWeights.map(weight=>`${weight}fr`).join(' ')}:{}),...spacing,...responsiveStyle,backgroundColor:'var(--bl-active-background-color, var(--bl-base-background-color, var(--ba-custom-background, transparent)))',backgroundImage:'var(--bl-active-background-image, var(--bl-base-background-image, none))',backgroundSize:'var(--bl-active-background-size, var(--bl-base-background-size, cover))',backgroundPosition:'var(--bl-active-background-position, var(--bl-base-background-position, 50% 50%))',backgroundRepeat:'no-repeat'} as CSSProperties} data-layout-node={group.id} data-layout-kind={group.kind}>
 		{asset && url && <img aria-hidden="true" tabIndex={-1} alt="" src={url} onError={()=>setFailed(true)} style={{position:'absolute',width:1,height:1,opacity:0,pointerEvents:'none'}} />}
 		{children}
 	</div>;

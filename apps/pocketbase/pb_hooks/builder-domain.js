@@ -198,6 +198,46 @@ function appearance(value) {
 		}
 		out.customColors = clean;
 	}
+	if (source.borderDetail !== undefined) {
+		const detail = obj(source.borderDetail), allowed = ['style', 'color', 'linked', 'widths'];
+		if (Object.keys(detail).some((key) => !allowed.includes(key))) fail('Pengaturan garis tepi tidak dikenal.');
+		if (!['none', 'solid', 'dashed', 'dotted'].includes(detail.style)) fail('Gaya garis tepi tidak valid.');
+		const clean = { style: detail.style };
+		if (detail.color !== undefined) {
+			if (!['border', 'action', 'ink', 'surface-2'].includes(detail.color)) fail('Warna garis tepi tidak valid.');
+			clean.color = detail.color;
+		}
+		if (detail.linked !== undefined) {
+			if (typeof detail.linked !== 'boolean') fail('Tautan lebar garis tidak valid.');
+			clean.linked = detail.linked;
+		}
+		if (detail.widths !== undefined) {
+			const widths = obj(detail.widths), sides = ['top', 'right', 'bottom', 'left'];
+			if (Object.keys(widths).some((key) => !sides.includes(key))) fail('Sisi garis tepi tidak dikenal.');
+			clean.widths = {};
+			for (const side of sides) if (widths[side] !== undefined) {
+				if (typeof widths[side] !== 'number' || !Number.isFinite(widths[side]) || widths[side] < 0 || widths[side] > 8) fail('Lebar garis tepi harus 0–8 piksel.');
+				clean.widths[side] = widths[side];
+			}
+			if (clean.linked && Object.values(clean.widths).some((value) => value !== clean.widths.top)) fail('Lebar garis tertaut harus sama pada semua sisi.');
+		}
+		out.borderDetail = clean;
+	}
+	if (source.corners !== undefined) {
+		const corners = obj(source.corners), allowed = ['linked', 'topLeft', 'topRight', 'bottomRight', 'bottomLeft'];
+		if (Object.keys(corners).some((key) => !allowed.includes(key))) fail('Pengaturan sudut tidak dikenal.');
+		const clean = {};
+		if (corners.linked !== undefined) {
+			if (typeof corners.linked !== 'boolean') fail('Tautan sudut tidak valid.');
+			clean.linked = corners.linked;
+		}
+		for (const corner of allowed.slice(1)) if (corners[corner] !== undefined) {
+			if (typeof corners[corner] !== 'number' || !Number.isFinite(corners[corner]) || corners[corner] < 0 || corners[corner] > 48) fail('Radius sudut harus 0–48 piksel.');
+			clean[corner] = corners[corner];
+		}
+		if (clean.linked && Object.values(clean).some((value) => typeof value === 'number' && value !== clean.topLeft)) fail('Radius sudut tertaut harus sama.');
+		out.corners = clean;
+	}
 	return out;
 }
 function layoutBackground(value) {

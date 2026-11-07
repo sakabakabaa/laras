@@ -2,6 +2,7 @@ import type { BuilderAppearance } from './builder-appearance';
 import type { ScheduledLesson } from './scheduled-lesson';
 import { findLayoutGroup, insertBlockIntoLayout, layoutItemLocation, removeBlockFromLayout, type BuilderLayout, type BuilderLayoutGroup, LAYOUT_LIMITS, countLayoutGroups, countLayoutNodes, layoutGroupDepth } from './builder-layout';
 import pb from './pocketbase-client';
+import { BUILDER_BLOCK_REGISTRY, createBuilderBlockDefaults, isBuilderRegistryKind, type BuilderPlacement } from './builder-element-registry';
 
 export type RichText = {
 	type: 'doc';
@@ -539,43 +540,19 @@ export function appendBlock(
 	activityId: string,
 	type: BlockType,
 ): string {
+	if (!isBuilderRegistryKind(type) || !BUILDER_BLOCK_REGISTRY[type]) throw new Error('Unknown builder block kind');
+	const activity = draft.document.activities.find((item) => item.id === activityId);
+	const placement: BuilderPlacement = 'activity';
+	if (!activity || !BUILDER_BLOCK_REGISTRY[type].placements.includes(placement)) throw new Error('Builder block kind is not allowed at this placement');
 	const b: BuilderBlock = { id: uid(), type };
-	if (type === 'instructions') b.body = rich('');
-	if (['image', 'audio', 'video', 'reference'].includes(type)) {
-		b.url = '';
-		b.label = '';
-		b.alt = '';
-	}
-	if (type === 'question_group')
-		b.questionIds = [appendQuestion(draft, 'single_choice')];
-	if (type === 'writing') b.questionId = appendQuestion(draft, 'long_writing');
-	if (type === 'reflection')
-		b.questionIds = [appendQuestion(draft, 'reflection')];
-	if (type === 'matching') {
-		b.questionIds = [appendQuestion(draft, 'matching')];
-		b.destinations = [
-			{ id: uid(), label: 'A', title: 'Kelompok A' },
-			{ id: uid(), label: 'B', title: 'Kelompok B' },
-		];
-	}
-	if (type === 'gap_passage') {
-		const id = appendQuestion(draft, 'short_answer');
-		b.sections = [
-			{
-				id: uid(),
-				segments: [
-					{ type: 'text', text: 'Tulis kalimat sebelum isian ' },
-					{ type: 'gap', questionId: id },
-					{ type: 'text', text: '.' },
-				],
-			},
-		];
-	}
-	if (type === 'acknowledgement')
-		b.body = rich('Saya sudah membaca dan memahami materi.');
-	if (type === 'lesson')
-		b.lesson = { goal: { de: '', id: '' }, steps: [], scenes: [] };
-	draft.document.activities.find((a) => a.id === activityId)!.blocks.push(b);
+	const pendingQuestions: BuilderEnvelope = {
+		document: { ...draft.document, questionsById: {} },
+		privateKeys: { ...draft.privateKeys, answersByQuestionId: {} },
+	};
+	Object.assign(b, createBuilderBlockDefaults(type, { rich, uid, question: (questionKind) => appendQuestion(pendingQuestions, questionKind) }));
+	activity.blocks.push(b);
+	Object.assign(draft.document.questionsById, pendingQuestions.document.questionsById);
+	Object.assign(draft.privateKeys.answersByQuestionId, pendingQuestions.privateKeys.answersByQuestionId);
 	return b.id;
 }
 export function removeBlock(

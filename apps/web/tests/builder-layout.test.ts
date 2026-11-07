@@ -18,6 +18,8 @@ import {
 	ensureLayout,
 	findLayoutGroup,
 	insertBlockIntoLayout,
+	insertBlockAtTarget,
+	resolveBlockInsertionTarget,
 	moveBlockBetweenActivities,
 	moveLayoutGroup,
 	moveBlockBefore,
@@ -221,6 +223,55 @@ describe('builder layout tree', () => {
 		expect(moveLayoutItem(activity, first, -1)).toBe(true);
 		expect(activity.blocks.some(item => item.id === second)).toBe(true);
 		expect(() => normalize(draft)).not.toThrow();
+	});
+
+	it.each([0, 1, 3])('appends a newly created element after all %i legacy flat blocks', count => {
+		const draft = blankBuilder('kelas', 'course000000001');
+		const activity = draft.document.activities[0];
+		for (let index = 0; index < count; index++) appendBlock(draft, activity.id, 'instructions');
+		const previous = activity.blocks.map(block => block.id);
+		const target = resolveBlockInsertionTarget(structuredClone(activity));
+		const blockId = appendBlock(draft, activity.id, 'instructions');
+		expect(insertBlockAtTarget(activity, blockId, target!)).toBe(true);
+		expect(activity.layout).toBeUndefined();
+		expect(activity.blocks.map(block => block.id)).toEqual([...previous, blockId]);
+	});
+
+	it('places a newly created flat element before an explicit target without losing the tail', () => {
+		const draft = blankBuilder('kelas', 'course000000001');
+		const activity = draft.document.activities[0];
+		const first = appendBlock(draft, activity.id, 'instructions');
+		const last = appendBlock(draft, activity.id, 'instructions');
+		const target = resolveBlockInsertionTarget(structuredClone(activity), last);
+		const added = appendBlock(draft, activity.id, 'instructions');
+		expect(insertBlockAtTarget(activity, added, target!)).toBe(true);
+		expect(activity.blocks.map(block => block.id)).toEqual([first, added, last]);
+	});
+
+	it('routes click-to-add through the same resolved target helper for flat and nested activities', () => {
+		const source = readFileSync(new URL('../src/components/app/builder/builder-workspace.tsx', import.meta.url), 'utf8');
+		const handler = source.slice(source.indexOf('const addElement ='), source.indexOf('const dropElement ='));
+		expect(handler).toContain('insertBlockAtTarget(targetActivity, blockId, insertionTarget)');
+		expect(handler).not.toContain('blocks.pop()');
+		expect(handler).not.toContain('targetActivity?.layout');
+	});
+
+	it('resolves bounded insertion coordinates and rejects stale or foreign targets', () => {
+		const { activity, first, second, third } = fixture();
+		const group = addLayoutGroup(activity, 'container');
+		insertBlockIntoLayout(activity, first, group);
+		insertBlockIntoLayout(activity, second, group);
+		const before = resolveBlockInsertionTarget(structuredClone(activity), second, group);
+		expect(before).toEqual({ parentId: group, index: 1 });
+		expect(resolveBlockInsertionTarget(structuredClone(activity), 'missing-block', group)).toBeNull();
+		const other = addLayoutGroup(activity, 'section');
+		expect(resolveBlockInsertionTarget(structuredClone(activity), first, other)).toBeNull();
+		const empty = addLayoutGroup(activity, 'section');
+		const end = resolveBlockInsertionTarget(structuredClone(activity), undefined, empty);
+		expect(end).toEqual({ parentId: empty, index: 0 });
+		expect(insertBlockAtTarget(activity, third, end!)).toBe(true);
+		expect(findLayoutGroup(activity.layout!, empty)!.children).toEqual([{ kind: 'block', blockId: third }]);
+		expect(insertBlockAtTarget(activity, third, { parentId: 'stale-parent', index: 0 })).toBe(false);
 	});
 
 	it('places unassigned blocks before reparenting and preserves failed insertions', () => {

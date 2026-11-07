@@ -107,10 +107,11 @@ import {
 import {
 	canMoveLayoutItem,
 	findLayoutGroup,
-	insertBlockIntoLayout,
 	layoutItemLocation,
-	moveBlockBefore,
 	moveBlockBetweenActivities,
+	insertBlockAtTarget,
+	removeBlockFromLayout,
+	resolveBlockInsertionTarget,
 	moveBlockInLayout,
 	moveLayoutItem,
 	reparentLayoutItem,
@@ -724,6 +725,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			(a) => a.id === activityId,
 		);
 		if (!target) return;
+		const insertionTarget = resolveBlockInsertionTarget(structuredClone(target), beforeId, parentId || null);
+		if (!insertionTarget) return;
 		if (
 			current.current!.document.activities.reduce(
 				(sum, a) => sum + a.blocks.length,
@@ -742,7 +745,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			const blocks = next.document.activities.find(
 				(a) => a.id === activityId,
 			)!.blocks;
-			const added = blocks.pop()!;
+			const added = blocks.find((block) => block.id === blockId)!;
 			if (element.shortAnswer) {
 				for (const qid of added.questionIds || []) {
 					delete next.document.questionsById[qid];
@@ -750,17 +753,11 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				}
 				added.questionIds = [appendQuestion(next, 'short_answer')];
 			}
-			const index = beforeId ? blocks.findIndex((b) => b.id === beforeId) : -1;
-			blocks.splice(index < 0 ? blocks.length : index, 0, added);
 			const targetActivity = next.document.activities.find(
 				(a) => a.id === activityId,
 			);
-			if (targetActivity?.layout) {
-				if (parentId)
-					insertBlockIntoLayout(targetActivity, blockId, parentId);
-				else if (beforeId)
-					moveBlockBefore(targetActivity, blockId, beforeId);
-				else insertBlockIntoLayout(targetActivity, blockId);
+			if (targetActivity) {
+				insertBlockAtTarget(targetActivity, blockId, insertionTarget);
 			}
 		})) return;
 		setInsertion({ activityId, beforeId, parentId });
@@ -776,9 +773,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		parentId?: string,
 	) => {
 		event.preventDefault();
+		event.stopPropagation();
 		const item = dragItem.current;
 		finishDrag();
-		if (!item || locked) return;
+		if (!item || locked || readOnly || recovery || conflict) return;
+		const raw = event.dataTransfer.getData(BUILDER_DRAG_TYPE);
+		if (item.elementId ? raw !== item.elementId : raw !== item.blockId) return;
 		if (item.elementId) {
 			addElement(item.elementId, { activityId, beforeId, parentId });
 			return;
@@ -788,6 +788,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			(a) => a.id === item.activityId,
 		);
 		if (!source?.blocks.some((b) => b.id === item.blockId)) return;
+		const targetSnapshot = current.current?.document.activities.find((a) => a.id === activityId);
+		if (!targetSnapshot) return;
+		const insertionTarget = resolveBlockInsertionTarget(structuredClone(targetSnapshot), beforeId, parentId || null);
+		if (!insertionTarget) return;
 		if (!change((next) => {
 			const from = next.document.activities.find(
 				(a) => a.id === item.activityId,
@@ -795,14 +799,20 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			const to = next.document.activities.find((a) => a.id === activityId);
 			if (!to) return;
 			if (from.id !== to.id) {
-				moveBlockBetweenActivities(from, to, item.blockId!, beforeId, parentId);
+				const index = from.blocks.findIndex((block) => block.id === item.blockId);
+				if (index < 0) return;
+				if (from.layout) removeBlockFromLayout(from, item.blockId!);
+				const [moving] = from.blocks.splice(index, 1);
+				const beforeIndex = beforeId ? to.blocks.findIndex((block) => block.id === beforeId) : -1;
+				to.blocks.splice(beforeIndex < 0 ? to.blocks.length : beforeIndex, 0, moving);
+				if (to.layout) insertBlockAtTarget(to, item.blockId!, insertionTarget);
 				return;
 			}
 			const index = from.blocks.findIndex((b) => b.id === item.blockId);
 			const [moving] = from.blocks.splice(index, 1);
 			const at = beforeId ? to.blocks.findIndex((b) => b.id === beforeId) : -1;
 			to.blocks.splice(at < 0 ? to.blocks.length : at, 0, moving);
-			if (to.layout) moveBlockBefore(to, item.blockId!, beforeId, parentId);
+			if (to.layout) insertBlockAtTarget(to, item.blockId!, insertionTarget);
 		})) return;
 		setInsertion(null);
 		setAnnouncement('Posisi elemen diperbarui.');

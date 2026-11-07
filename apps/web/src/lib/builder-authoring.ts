@@ -1,4 +1,4 @@
-import { appendBlock, appendQuestion, blankBuilder, copyBuilder, newActivity, plain, questionIds, rich, uid, type BuilderEnvelope } from './builder-document';
+import { appendBlock, appendQuestion, blankBuilder, builderAnchors, copyBuilder, newActivity, plain, questionIds, remapDuplicateBuilderAnchors, rich, uid, type BuilderEnvelope } from './builder-document';
 import type { ScheduledAiProposal } from './scheduled-class-ai';
 import { countLayoutGroups, countLayoutNodes, ensureLayout, findLayoutGroup, LAYOUT_LIMITS, type BuilderLayout, type BuilderLayoutNode } from './builder-layout';
 
@@ -142,6 +142,20 @@ export function applyBuilderProposal(target: BuilderEnvelope, source: BuilderEnv
 	Object.assign(target.privateKeys.answersByQuestionId, copied.privateKeys.answersByQuestionId);
 	const liveQuestionIds = new Set(activities.flatMap(activity => activity.blocks.flatMap(questionIds)));
 	for (const id of Object.keys(target.document.questionsById)) if (!liveQuestionIds.has(id)) { delete target.document.questionsById[id]; delete target.privateKeys.answersByQuestionId[id]; }
+	const incomingActivityIds = operation === 'replace' ? new Set<string>() : new Set(copied.document.activities.map(activity => activity.id));
+	const incomingNodeIds = new Set<string>();
+	const incomingBlockIds = new Set<string>();
+	const collectIncoming = (activity: BuilderEnvelope['document']['activities'][number]) => {
+		for (const block of activity.blocks) incomingBlockIds.add(block.id);
+		const visit = (nodes: BuilderLayoutNode[]) => nodes.forEach(node => { if (node.kind !== 'block') { incomingNodeIds.add(node.id); visit(node.children); } });
+		if (activity.layout) visit(activity.layout.nodes);
+	};
+	if (operation === 'replace') {
+		if (destination) collectIncoming(activities[targetIndex]);
+	} else for (const activity of copied.document.activities) { incomingActivityIds.add(activity.id); collectIncoming(activity); }
+	const incomingOwners = builderAnchors(target).filter(({ owner }) => incomingActivityIds.has((owner as { activityId?: string }).activityId || '') || incomingBlockIds.has(owner.id) || incomingNodeIds.has(owner.id)).map(({ owner }) => owner);
+	const incomingBlocks = target.document.activities.flatMap(activity => activity.blocks.filter(block => incomingActivityIds.has(activity.id) || incomingBlockIds.has(block.id)));
+	remapDuplicateBuilderAnchors(target, incomingOwners, incomingBlocks);
 	const inserted = operation === 'replace' ? activities[targetIndex].id : copied.document.activities[0]?.id || '';
 	return inserted;
 }

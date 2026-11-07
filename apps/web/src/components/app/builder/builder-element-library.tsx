@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from 'react';
+import { useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import {
 	AlignLeft,
 	Image,
@@ -167,6 +167,7 @@ export function BuilderElementLibrary({
 	onAdd,
 	onDragStart,
 	onDragEnd,
+	onPointerStart,
 	disabled,
 	target,
 }: {
@@ -175,6 +176,7 @@ export function BuilderElementLibrary({
 	onAdd: (id: string) => void;
 	onDragStart: (id: string, event: DragEvent<HTMLButtonElement>) => void;
 	onDragEnd: () => void;
+	onPointerStart: (id: string, event: ReactPointerEvent<HTMLButtonElement>) => void;
 	disabled: boolean;
 	target: string;
 }) {
@@ -236,10 +238,10 @@ export function BuilderElementLibrary({
 					<p className="bd-library-target">{target}</p>
 					<div className="bd-element-grid">
 						{visible.map(({ id, label, description, icon: Icon }) => (
+							<div className="bd-element-tile-wrap" key={id}>
 							<button
-								type="button"
+								 type="button"
 								className="bd-element-tile"
-								key={id}
 								disabled={disabled}
 								draggable={allowDrag && !disabled}
 								onDragStart={(e) => onDragStart(id, e)}
@@ -257,6 +259,8 @@ export function BuilderElementLibrary({
 								<strong>{label}</strong>
 								<small>{description}</small>
 							</button>
+							{allowDrag && <button type="button" className="bd-tile-pointer-grip" disabled={disabled} aria-label={`Seret ${label}`} title="Seret untuk menambahkan" onPointerDown={event => onPointerStart(id, event)}><GripVertical size={14} /></button>}
+							</div>
 						))}
 					</div>
 					{!visible.length && (

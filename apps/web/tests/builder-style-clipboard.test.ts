@@ -31,6 +31,14 @@ function fixture() {
 const imageBackground = (fileId: string): BuilderLayoutBackground => ({ mode: 'image', asset: { fileId, filename: 'private.png', version: 1, name: 'Private' } });
 
 describe('bounded builder style clipboard', () => {
+	it('copies and pastes allowlisted shadow and hover values without other style data', () => {
+		const { draft, source, target, from, to } = fixture();
+		source.appearance = { shadow: 'sm', hover: 'lift' };
+		const clipboard = copyBuilderStyle(draft, from)!;
+		expect(clipboard.appearance).toEqual({ shadow: 'sm', hover: 'lift' });
+		pasteBuilderStyle(draft, to, clipboard);
+		expect(target.appearance).toEqual({ shadow: 'sm', hover: 'lift' });
+	});
 	it('clones and freezes snapshots, then independently clones each paste', () => {
 		const { draft, sourceGroup, targetGroup, fromGroup, toGroup } = fixture();
 		sourceGroup.appearance = { size: 'lg' };
@@ -70,6 +78,19 @@ describe('bounded builder style clipboard', () => {
 		pasteBuilderStyle(draft, to, clip);
 		expect(target.appearance).toEqual(source.appearance);
 		expect(target.appearance?.borderDetail?.widths).not.toBe(source.appearance?.borderDetail?.widths);
+	});
+	it('copies responsive border and corner details without copying device backgrounds or layout', () => {
+		const { draft, sourceGroup, targetGroup, fromGroup, toGroup } = fixture();
+		sourceGroup.appearance = { responsive: { tablet: { borderDetail: { style: 'none', widths: { top: 0 } } }, mobile: { corners: { topLeft: 0 } } } };
+		sourceGroup.responsive = { tablet: { gap: 'lg' }, mobile: { background: imageBackground('source_mobile'), columns: 1 } };
+		targetGroup.responsive = { tablet: { background: imageBackground('target_tablet'), gap: 'sm' }, mobile: { background: imageBackground('target_mobile') } };
+		const before = structuredClone(targetGroup.responsive);
+		const clip = copyBuilderStyle(draft, fromGroup)!;
+		expect(clip.appearance?.responsive).toEqual(sourceGroup.appearance.responsive);
+		pasteBuilderStyle(draft, toGroup, clip);
+		expect(targetGroup.appearance?.responsive).toEqual(sourceGroup.appearance.responsive);
+		expect(targetGroup.responsive?.tablet).toEqual({ ...before?.tablet, gap: 'lg' });
+		expect(targetGroup.responsive?.mobile).toEqual({ ...before?.mobile, columns: 1 });
 	});
 
 	it('requires an exact block type or group kind and a real unique target', () => {

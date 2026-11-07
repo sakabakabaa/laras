@@ -40,13 +40,21 @@ export const APPEARANCE_OPTIONS = {
 		label: 'Bayangan',
 		values: { none: 'Tanpa bayangan', sm: 'Lembut', md: 'Sedang' },
 	},
+	hover: {
+		label: 'Efek saat diarahkan (perangkat dengan hover)',
+		values: { none: 'Tanpa efek', lift: 'Terangkat lembut', emphasis: 'Menonjol lembut' },
+	},
 } as const;
+export type BuilderBorderDetail = { style: 'none' | 'solid' | 'dashed' | 'dotted'; color?: 'border' | 'action' | 'ink' | 'surface-2'; linked?: boolean; widths?: Partial<Record<'top' | 'right' | 'bottom' | 'left', number>> };
+export type BuilderAppearanceCorners = { linked?: boolean; topLeft?: number; topRight?: number; bottomRight?: number; bottomLeft?: number };
+export type BuilderResponsiveAppearance = { borderDetail?: BuilderBorderDetail; corners?: BuilderAppearanceCorners };
 export type BuilderAppearance = {
 	[K in keyof typeof APPEARANCE_OPTIONS]?: keyof (typeof APPEARANCE_OPTIONS)[K]['values'];
 } & {
 	customColors?: { light: { foreground: string; background: string }; dark: { foreground: string; background: string } };
-	borderDetail?: { style: 'none' | 'solid' | 'dashed' | 'dotted'; color?: 'border' | 'action' | 'ink' | 'surface-2'; linked?: boolean; widths?: Partial<Record<'top' | 'right' | 'bottom' | 'left', number>> };
-	corners?: { linked?: boolean; topLeft?: number; topRight?: number; bottomRight?: number; bottomLeft?: number };
+	borderDetail?: BuilderBorderDetail;
+	corners?: BuilderAppearanceCorners;
+	responsive?: Partial<Record<'tablet' | 'mobile', BuilderResponsiveAppearance>>;
 };
 
 export type ThemeColorPair = { foreground: string; background: string };
@@ -128,7 +136,55 @@ export function resetBuilderAppearance(
 	if (!preserve.includes('customColors')) delete next.customColors;
 	if (!preserve.includes('borderDetail')) delete next.borderDetail;
 	if (!preserve.includes('corners')) delete next.corners;
+	if (!preserve.includes('responsive')) delete next.responsive;
 	return Object.keys(next).length ? next : undefined;
+}
+
+export function resetResponsiveAppearance(appearance: BuilderAppearance | undefined, device: 'tablet' | 'mobile'): BuilderAppearance | undefined {
+	if (!appearance?.responsive?.[device]) return appearance;
+	const responsive = { ...appearance.responsive };
+	delete responsive[device];
+	const next = { ...appearance };
+	if (Object.keys(responsive).length) next.responsive = responsive;
+	else delete next.responsive;
+	return Object.keys(next).length ? next : undefined;
+}
+
+/** Resets supported appearance on every block and nested group, preserving group spacing. */
+export function resetDocumentAppearance(envelope: import('./builder-document').BuilderEnvelope): boolean {
+	let changed = false;
+	const reset = (target: { appearance?: BuilderAppearance }, preserve: readonly (keyof BuilderAppearance)[] = []) => {
+		const next = resetBuilderAppearance(target.appearance, preserve);
+		if (JSON.stringify(next) === JSON.stringify(target.appearance)) return;
+		if (next) target.appearance = next;
+		else delete target.appearance;
+		changed = true;
+	};
+	const visit = (nodes: import('./builder-layout').BuilderLayoutNode[]) => {
+		for (const node of nodes) {
+			if (node.kind === 'block') continue;
+			reset(node, ['padding']);
+			visit(node.children);
+		}
+	};
+	for (const activity of envelope.document.activities) {
+		for (const block of activity.blocks) reset(block);
+		if (activity.layout) visit(activity.layout.nodes);
+	}
+	return changed;
+}
+
+export function hasDocumentAppearanceToReset(envelope: import('./builder-document').BuilderEnvelope): boolean {
+	const hasResettable = (appearance: BuilderAppearance | undefined, preserve: readonly (keyof BuilderAppearance)[] = []) =>
+		JSON.stringify(resetBuilderAppearance(appearance, preserve)) !== JSON.stringify(appearance);
+	const visit = (nodes: import('./builder-layout').BuilderLayoutNode[]): boolean => nodes.some(node =>
+		node.kind === 'block'
+			? false
+			: hasResettable(node.appearance, ['padding']) || visit(node.children),
+	);
+	return envelope.document.activities.some(activity =>
+		activity.blocks.some(block => hasResettable(block.appearance)) || Boolean(activity.layout && visit(activity.layout.nodes)),
+	);
 }
 
 export function matchingAppearancePreset(
@@ -154,26 +210,29 @@ export function appearanceClassName(appearance?: BuilderAppearance): string {
 				Object.hasOwn(APPEARANCE_OPTIONS[key].values, appearance[key]!),
 		)
 		.map((key) => `ba-${key}-${appearance[key]}`)
-		.join(' ') + (safeColors ? ' ba-custom-colors' : '') + (appearance.borderDetail ? ' ba-has-border-detail' : '') + (appearance.corners ? ' ba-has-corners' : '');
+		.join(' ') + (safeColors ? ' ba-custom-colors' : '') + (appearance.borderDetail ? ' ba-has-border-detail' : '') + (appearance.corners ? ' ba-has-corners' : '') + (appearance.responsive?.tablet?.borderDetail ? ' ba-tablet-has-border-detail' : '') + (appearance.responsive?.tablet?.corners ? ' ba-tablet-has-corners' : '') + (appearance.responsive?.mobile?.borderDetail ? ' ba-mobile-has-border-detail' : '') + (appearance.responsive?.mobile?.corners ? ' ba-mobile-has-corners' : '');
 }
 
 export function appearanceDetailStyle(appearance?: BuilderAppearance): Record<string, string> {
 	const style: Record<string, string> = {};
-	const border = appearance?.borderDetail;
-	if (border && ['none', 'solid', 'dashed', 'dotted'].includes(border.style) && (border.color === undefined || ['border', 'action', 'ink', 'surface-2'].includes(border.color)) && (border.linked === undefined || typeof border.linked === 'boolean') && Object.entries(border.widths ?? {}).every(([side, width]) => ['top', 'right', 'bottom', 'left'].includes(side) && typeof width === 'number' && Number.isFinite(width) && width >= 0 && width <= 8)) {
-		style['--ba-detail-border-style'] = border.style;
-		if (border.color) style['--ba-detail-border-color'] = `var(--r-${border.color})`;
-		for (const side of ['top', 'right', 'bottom', 'left'] as const) {
-			const width = border.widths?.[side];
-			if (typeof width === 'number' && Number.isFinite(width) && width >= 0 && width <= 8) style[`--ba-border-${side}-width`] = `${width}px`;
+	const write = (border: BuilderBorderDetail | undefined, corners: BuilderAppearanceCorners | undefined, prefix: string) => {
+		if (border && ['none', 'solid', 'dashed', 'dotted'].includes(border.style) && (border.color === undefined || ['border', 'action', 'ink', 'surface-2'].includes(border.color)) && (border.linked === undefined || typeof border.linked === 'boolean') && Object.entries(border.widths ?? {}).every(([side, width]) => ['top', 'right', 'bottom', 'left'].includes(side) && typeof width === 'number' && Number.isFinite(width) && width >= 0 && width <= 8)) {
+			style[`${prefix}detail-border-style`] = border.style;
+			if (border.color) style[`${prefix}detail-border-color`] = `var(--r-${border.color})`;
+			for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+				const width = border.widths?.[side];
+				if (border.style === 'none') style[`${prefix}border-${side}-width`] = '0px';
+				else if (typeof width === 'number' && Number.isFinite(width) && width >= 0 && width <= 8) style[`${prefix}border-${side}-width`] = `${width}px`;
+			}
 		}
-	}
-	const corners = appearance?.corners;
-	if (corners && Object.keys(corners).every(key => ['linked', 'topLeft', 'topRight', 'bottomRight', 'bottomLeft'].includes(key)) && (corners.linked === undefined || typeof corners.linked === 'boolean'))
-		for (const corner of ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'] as const) {
-			const value = corners[corner];
-			if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 48) style[`--ba-corner-${corner}`] = `${value}px`;
-		}
+		if (corners && Object.keys(corners).every(key => ['linked', 'topLeft', 'topRight', 'bottomRight', 'bottomLeft'].includes(key)) && (corners.linked === undefined || typeof corners.linked === 'boolean'))
+			for (const corner of ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'] as const) {
+				const value = corners[corner];
+				if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 48) style[`${prefix}corner-${corner}`] = `${value}px`;
+			}
+	};
+	write(appearance?.borderDetail, appearance?.corners, '--ba-');
+	for (const device of ['tablet', 'mobile'] as const) write(appearance?.responsive?.[device]?.borderDetail, appearance?.responsive?.[device]?.corners, `--ba-${device}-`);
 	return style;
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction, type ReactNode } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { ScheduledLessonView } from '../scheduled-lesson';
 import { ScheduledCardMatching } from '../scheduled-card-matching';
@@ -8,6 +8,7 @@ import {
 	applyInlineMark,
 	applyInlineLink,
 	applyBlockFormat,
+	adjustRichListDepth,
 	replaceRichText,
 	questionIds,
 	rich,
@@ -17,6 +18,7 @@ import {
 	type BuilderQuestion,
 } from '@/lib/builder-document';
 import { BuilderRichTextView } from './builder-richtext-view';
+import { BuilderAnchorScope } from './builder-anchor-scope';
 export { BuilderRichTextView } from './builder-richtext-view';
 import {
 	flattenResolvedBlocks,
@@ -31,12 +33,13 @@ import type {
 
 import { BuilderClassroomMatching, BuilderClassroomQuestions, matchingPictures } from './builder-classroom-blocks';
 import { BuilderMediaEditor, BuilderMediaView } from './builder-media';
+import { builderThemePaletteStyle } from '@/lib/builder-theme';
 
 type Change = (edit: (draft: BuilderEnvelope) => void) => void;
 const safeUrl = (url?: string) =>
 	url && /^https:\/\/[^\s<>"']+$/i.test(url) ? url : '';
 
-function InlineTextEditor({ value, onChange, rows, label, className, onKeyDown, onBlur }: { value?: BuilderBlock['body']; onChange: (next: BuilderBlock['body']) => void; rows: number; label: string; className?: string; onKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void; onBlur?: () => void }) {
+function InlineTextEditor({ value, onChange, rows, label, className, onKeyDown, onBlur, nestedListsSupported = true }: { value?: BuilderBlock['body']; onChange: (next: BuilderBlock['body']) => void; rows: number; label: string; className?: string; onKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void; onBlur?: () => void; nestedListsSupported?: boolean }) {
 	const ref = useRef<HTMLTextAreaElement>(null);
 	const composing = useRef(false);
 	useEffect(() => { ref.current?.focus(); }, []);
@@ -62,6 +65,7 @@ function InlineTextEditor({ value, onChange, rows, label, className, onKeyDown, 
 	};
 	const unlink = () => { const input=ref.current; if(input && input.selectionStart!==input.selectionEnd) onChange(applyInlineLink(value,input.selectionStart,input.selectionEnd,null)); };
 	const block = (format: 'paragraph' | 'heading2' | 'heading3' | 'heading4' | 'bullet' | 'number') => { const input=ref.current; if(!input)return; const next=applyBlockFormat(value,input.selectionStart,input.selectionEnd,format); onChange(next); requestAnimationFrame(()=>{input.focus();input.setSelectionRange(input.selectionStart,input.selectionEnd);}); };
+	const listDepth = (direction: 'indent' | 'outdent') => { const input = ref.current; if (!input || composing.current) return; const start = input.selectionStart, end = input.selectionEnd; const next = adjustRichListDepth(value, start, end, direction); if (next !== value) onChange(next); requestAnimationFrame(() => { input.focus(); input.setSelectionRange(start, end); }); };
 	return <div className="bd-inline-text-editor">
 		<div role="group" aria-label="Pemformatan teks">
 			<button type="button" aria-label="Tebal" onMouseDown={e => e.preventDefault()} onClick={() => format('bold')}><strong>B</strong></button>
@@ -73,6 +77,8 @@ function InlineTextEditor({ value, onChange, rows, label, className, onKeyDown, 
 			<button type="button" aria-label="Judul tingkat 4" onMouseDown={e => e.preventDefault()} onClick={() => block('heading4')}>H4</button>
 			<button type="button" aria-label="Daftar berpoin" onMouseDown={e => e.preventDefault()} onClick={() => block('bullet')}>• Daftar</button>
 			<button type="button" aria-label="Daftar bernomor" onMouseDown={e => e.preventDefault()} onClick={() => block('number')}>1. Daftar</button>
+			<button type="button" aria-label="Masukkan butir daftar" disabled={!nestedListsSupported} title={!nestedListsSupported ? 'Backend belum mendukung daftar bertingkat.' : undefined} onMouseDown={e => e.preventDefault()} onClick={() => listDepth('indent')}>Tambah inden</button>
+			<button type="button" aria-label="Keluarkan butir daftar" disabled={!nestedListsSupported} title={!nestedListsSupported ? 'Backend belum mendukung daftar bertingkat.' : undefined} onMouseDown={e => e.preventDefault()} onClick={() => listDepth('outdent')}>Kurangi inden</button>
 			<button type="button" aria-label="Kembali ke paragraf" onMouseDown={e => e.preventDefault()} onClick={() => block('paragraph')}>Paragraf</button>
 		</div>
 		<textarea ref={ref} className={className} rows={rows} maxLength={20000} aria-label={label} value={plain(value)} onKeyDown={onKeyDown} onBlur={onBlur}
@@ -100,11 +106,13 @@ export function BuilderCanvasText({
 	block,
 	selected,
 	disabled = false,
+	nestedListsSupported = true,
 	onChange,
 }: {
 	block: BuilderBlock;
 	selected: boolean;
 	disabled?: boolean;
+	nestedListsSupported?: boolean;
 	onChange: (value: NonNullable<BuilderBlock['body']>) => void;
 }) {
 	const [editing, setEditing] = useState(false);
@@ -121,7 +129,7 @@ export function BuilderCanvasText({
 	};
 	if (editing && selected && !disabled)
 		return (
-			<InlineTextEditor value={block.body} className="bd-canvas-text-editor" rows={Math.min(20, Math.max(2, value.split('\n').length))} label={block.type === 'instructions' ? 'Edit instruksi langsung' : 'Edit teks konfirmasi langsung'} onChange={next=>{setValue(plain(next));onChange(next || rich(''));}} onBlur={()=>setEditing(false)} onKeyDown={(event) => {
+			<InlineTextEditor value={block.body} nestedListsSupported={nestedListsSupported} className="bd-canvas-text-editor" rows={Math.min(20, Math.max(2, value.split('\n').length))} label={block.type === 'instructions' ? 'Edit instruksi langsung' : 'Edit teks konfirmasi langsung'} onChange={next=>{setValue(plain(next));onChange(next || rich(''));}} onBlur={()=>setEditing(false)} onKeyDown={(event) => {
 					if (
 						canvasTextKeyboardAction(
 							event.key,
@@ -185,11 +193,15 @@ export function BlockEditor({
 	envelope,
 	onChange,
 	idPrefix = 'builder-question-',
+	captionsSupported = false,
+	nestedListsSupported = true,
 }: {
 	block: BuilderBlock;
 	envelope: BuilderEnvelope;
 	onChange: Change;
 	idPrefix?: string;
+	captionsSupported?: boolean;
+	nestedListsSupported?: boolean;
 }) {
 	const [bulk, setBulk] = useState('');
 	const [bulkKind, setBulkKind] = useState<'short_answer' | 'single_choice'>(
@@ -229,16 +241,19 @@ export function BlockEditor({
 		});
 	if (block.type === 'instructions' || block.type === 'acknowledgement')
 		return (
-			<label>
+			<div className="bd-fields">
+				<span>
 				{block.type === 'instructions' ? 'Isi instruksi' : 'Teks konfirmasi'}
-				<InlineTextEditor rows={block.type === 'instructions' ? 4 : 2} label={block.type === 'instructions' ? 'Isi instruksi' : 'Teks konfirmasi'} value={block.body} onChange={next => update(b => { b.body = next; })} />
-			</label>
+				</span>
+				<InlineTextEditor rows={block.type === 'instructions' ? 4 : 2} label={block.type === 'instructions' ? 'Isi instruksi' : 'Teks konfirmasi'} value={block.body} nestedListsSupported={nestedListsSupported} onChange={next => update(b => { b.body = next; })} />
+			</div>
 		);
 	if (['image', 'audio', 'video'].includes(block.type))
 		return (
 			<BuilderMediaEditor
 				block={block}
 				courseId={envelope.document.context.courseId}
+				captionsSupported={captionsSupported}
 				onUpdate={update}
 			/>
 		);
@@ -1231,6 +1246,8 @@ export function BuilderPreview({
 	classroom?: boolean;
 }) {
 	const [localAnswers, setLocalAnswers] = useState<Record<string, string>>({});
+	const themeStyle = builderThemePaletteStyle(d.theme);
+	const themeClass = Object.keys(themeStyle).length ? ' bd-lesson-theme' : '';
 	const answers = suppliedAnswers || localAnswers;
 	const setAnswers: Dispatch<SetStateAction<Record<string, string>>> = (
 		value,
@@ -1383,13 +1400,13 @@ export function BuilderPreview({
 				return classroom ? <BuilderClassroomQuestions ids={questionIds(b)} document={d} answers={answers} onChange={setAnswers}/> : questionIds(b).map(question);
 		}
 	};
-    if (classroom) return <div className="bd-student-preview bd-classroom-content">{d.activities.filter(a=>!activityId||a.id===activityId).map(a=>{
+	if (classroom) return <BuilderAnchorScope><div className={`bd-student-preview bd-classroom-content${themeClass}`} style={themeStyle as CSSProperties}>{d.activities.filter(a=>!activityId||a.id===activityId).map(a=>{
         const ordered = orderedBlocks.get(a.id) || [];
         const hidden = new Set(ordered.filter((block, index) => block.type === 'image' && ordered[index + 1]?.type === 'matching' && matchingPictures(ordered[index + 1], block.images)).map(block => block.id));
         return <fieldset className="sc-fields" disabled={readOnly} key={a.id}><BuilderLayoutView activity={a} hideBlock={block => hidden.has(block.id)} renderBlock={b => <div className={`bd-preview-block bd-classroom-block is-${b.type}`}>{render(b)}</div>} /></fieldset>;
-    })}</div>;
+    })}</div></BuilderAnchorScope>;
 	return (
-		<div className="bd-student-preview">
+		<BuilderAnchorScope><div className={`bd-student-preview${themeClass}`} style={themeStyle as CSSProperties}>
 			{!live && (
 				<div className="bd-preview-banner">
 					<span>Pratinjau — jawaban ini tidak dikirim ke kelas.</span>
@@ -1423,6 +1440,6 @@ export function BuilderPreview({
 						</fieldset>
 					),
 			)}
-		</div>
+		</div></BuilderAnchorScope>
 	);
 }

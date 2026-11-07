@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-import { removeLayoutGroup, type BuilderLayoutNode } from '../src/lib/builder-layout';
+import { addLayoutGroup, findLayoutGroup, removeLayoutGroup, type BuilderLayoutNode } from '../src/lib/builder-layout';
 import {
 	appendBlock,
 	blankBuilder,
@@ -14,20 +14,203 @@ import {
 	rich,
 	copyScheduledToBuilder,
 	encodeBuilderDraft,
+	builderWriteAction,
 	applyInlineMark,
 	applyInlineLink,
 	safeInlineUrl,
 	plain,
 	resetBuilderPlayback,
 	BUILDER_TRANSCRIPT_MAX_LENGTH,
+	BUILDER_PLAYBACK_RATES,
+	BUILDER_PLAYBACK_MAX_SECONDS,
+	normalizeBuilderPlayback,
+	normalizeBuilderCaptions,
 	applyBlockFormat,
+	adjustRichListDepth,
+	normalizeBuilderRichText,
+	builderRichTextValid,
 	builderImagePresentationStyle,
 	resetBuilderImagePresentation,
 	replaceRichText,
 	savedTemplateScope,
+	validateBuilderAnchors,
+	builderNodeVisibilitySafe,
+	builderVisibilityForDevice,
+	normalizeBuilderVisibility,
+	remapDuplicateBuilderAnchors,
 	type BuilderEnvelope,
 } from '../src/lib/builder-document';
 const mod = { exports: {} } as { exports: { normalize: (v: unknown) => any; extractGroupTemplate: (v: any, activityId: string, groupId: string) => any } };
+
+describe('bounded nested rich text lists', () => {
+	const sample = () => normalizeBuilderRichText({ type: 'doc', content: [
+		{ type: 'heading', level: 2, content: [{ type: 'text', text: 'Heading' }] },
+		{ type: 'list_item', list: 'number', content: [{ type: 'text', text: 'Parent', marks: ['bold'] }] },
+		{ type: 'list_item', list: 'bullet', depth: 1, content: [{ type: 'text', text: 'Child', marks: ['italic'], link: { href: 'https://example.org' } }] },
+		{ type: 'list_item', list: 'number', depth: 2, content: [{ type: 'text', text: 'Grandchild' }] },
+		{ type: 'list_item', list: 'number', content: [{ type: 'text', text: 'Sibling' }] },
+	] });
+	it('normalizes flat legacy lists unchanged and preserves nested depth and inline-safe marks', () => {
+		const flat = normalizeBuilderRichText({ type: 'doc', content: [{ type: 'list_item', list: 'bullet', content: [{ type: 'text', text: 'Legacy' }] }] });
+		expect(flat.content[0]).not.toHaveProperty('depth');
+		const nested = sample();
+		expect(nested.content.map(node => node.type === 'list_item' ? node.depth || 0 : -1)).toEqual([-1, 0, 1, 2, 0]);
+		expect(nested.content[2].content[0]).toMatchObject({ marks: ['italic'], link: { href: 'https://example.org' } });
+	});
+	it.each([
+		[{ type: 'list_item', list: 'bullet', depth: 1, content: [] }],
+		[{ type: 'list_item', list: 'bullet', content: [] }, { type: 'list_item', list: 'bullet', depth: 2, content: [] }],
+		[{ type: 'list_item', list: 'bullet', depth: 3, content: [] }],
+		[{ type: 'paragraph', depth: 1, content: [] }],
+	])('rejects invalid nesting structure', content => expect(() => normalizeBuilderRichText({ type: 'doc', content })).toThrow());
+	it('rejects text aggregate overflow consistently with the server bound', () => {
+		expect(() => normalizeBuilderRichText({ type: 'doc', content: Array.from({ length: 2 }, () => ({ type: 'paragraph', content: [{ type: 'text', text: 'x'.repeat(10001) }] })) })).toThrow(/terlalu panjang/);
+		const envelope = blankBuilder('kelas', 'course');
+		envelope.document.instructions = { type: 'doc', content: [{ type: 'list_item', list: 'bullet', depth: 2, content: [{ type: 'text', text: 'jump' }] }] };
+		expect(builderRichTextValid(envelope)).toBe(false);
+	});
+	it('indents and outdents selected list rows while retaining marks, links, numbering, and headings', () => {
+		const source = sample(), text = plain(source), start = text.indexOf('Sibling');
+		const indented = adjustRichListDepth(source, start, start + 5, 'indent');
+		expect(indented.content[0]).toEqual(source.content[0]);
+		expect(indented.content[2]).toMatchObject({ type: 'list_item', list: 'bullet', depth: 1, content: [{ marks: ['italic'], link: { href: 'https://example.org' } }] });
+		expect(indented.content[3]).toMatchObject({ depth: 2 });
+		const outdented = adjustRichListDepth(indented, start, start + 5, 'outdent');
+		expect(outdented.content[4]).toMatchObject({ list: 'number' });
+		expect(outdented.content[4]).not.toHaveProperty('depth');
+		const childStart = text.indexOf('Child');
+		const parentOutdent = adjustRichListDepth(source, childStart, childStart + 5, 'outdent');
+		expect(parentOutdent.content[2]).not.toHaveProperty('depth');
+		expect(parentOutdent.content[3]).toMatchObject({ type: 'list_item', depth: 1 });
+		expect(adjustRichListDepth(source, 0, 0, 'indent')).toBe(source);
+	});
+});
+
+describe('builder versioned appearance writes', () => {
+	it('selects the presentation visibility command for documents and saved snapshots/templates', () => {
+		const document = { activities: [{ blocks: [{ presentation: { desktop: false } }], layout: { nodes: [{ kind: 'section', presentation: { mobile: false }, children: [] }] } }] };
+		expect(builderWriteAction('save', { document })).toBe('presentationVisibility:save');
+		expect(builderWriteAction('create', { document })).toBe('presentationVisibility:create');
+		expect(builderWriteAction('saveSnapshot', { presentationVisibility: true })).toBe('presentationVisibility:saveSnapshot');
+		expect(builderWriteAction('saveTemplate', { presentationVisibility: true })).toBe('presentationVisibility:saveTemplate');
+	});
+	it('selects the no-downgrade document anchor command for document and snapshot/template envelopes', () => {
+		const document = { activities: [{ blocks: [{ anchor: 'intro' }] }] };
+		expect(builderWriteAction('save', { document })).toBe('documentAnchors:save');
+		expect(builderWriteAction('create', { document })).toBe('documentAnchors:create');
+		expect(builderWriteAction('saveSnapshot', { documentAnchors: true })).toBe('documentAnchors:saveSnapshot');
+		expect(builderWriteAction('saveTemplate', { documentAnchors: true })).toBe('documentAnchors:saveTemplate');
+	});
+	it('selects a separate nested-list version family that composes with other current schema flags', () => {
+		const document = { activities: [{ blocks: [{ body: { type: 'doc', content: [{ type: 'list_item', list: 'bullet', depth: 1, content: [] }] }, captions: { cues: [] }, appearance: { responsive: { mobile: { corners: { topLeft: 0 } } } } }] }] };
+		expect(builderWriteAction('save', { document })).toBe('nestedLists:save');
+		expect(builderWriteAction('saveSnapshot', { nestedRichText: true })).toBe('nestedLists:saveSnapshot');
+		expect(builderWriteAction('create', { document })).toBe('nestedLists:create');
+	});
+	it('dispatches every additive shadow/hover and detailed field through the protected command family', () => {
+		for (const appearance of [{ shadow: 'sm' }, { hover: 'lift' }, { borderDetail: { style: 'solid' } }, { corners: { topLeft: 4 } }]) {
+			expect(builderWriteAction('save', { document: { activities: [{ blocks: [{ appearance }] }] } })).toBe('detailedStyles:save');
+		}
+		expect(builderWriteAction('save', { document: { activities: [{ blocks: [{ appearance: { shadow: 'sm', responsive: { tablet: { corners: { topLeft: 4 } } } } }] }] } })).toBe('responsiveStyles:save');
+	});
+});
+
+describe('document anchors', () => {
+	it('keeps legacy documents anchor-free and validates bounded document-wide names', () => {
+		const envelope = blankBuilder('kelas', 'course');
+		appendBlock(envelope, envelope.document.activities[0].id, 'instructions');
+		const activity = envelope.document.activities[0];
+		activity.blocks[0].anchor = 'intro';
+		activity.layout = { schemaVersion: 1, nodes: [{ kind: 'section', id: 'section-1', title: 'Section', columns: 1, gap: 'md', padding: 'none', surface: 'none', anchor: 'details', children: [] }] };
+		expect(validateBuilderAnchors(envelope)).toBe(true);
+		(activity.layout.nodes[0] as any).anchor = 'intro';
+		expect(validateBuilderAnchors(envelope)).toBe(false);
+		const legacy = blankBuilder('kelas', 'course');
+		expect(validateBuilderAnchors(legacy)).toBe(true);
+	});
+	it('remaps copied conflicting names deterministically and retains numeric IDs', () => {
+		const envelope = blankBuilder('kelas', 'course');
+		const activity = envelope.document.activities[0];
+		appendBlock(envelope, activity.id, 'instructions');
+		activity.blocks[0].anchor = 'intro';
+		const copied = duplicateActivity(envelope, activity.id);
+		expect(envelope.document.activities.find(item => item.id === copied)?.blocks[0]).toMatchObject({ anchor: 'intro-2' });
+		remapDuplicateBuilderAnchors(envelope);
+		expect(validateBuilderAnchors(envelope)).toBe(true);
+	});
+	it('remaps copied fragment links with copied anchor targets while preserving unrelated links', () => {
+		const envelope = blankBuilder('kelas', 'course');
+		const activity = envelope.document.activities[0];
+		const sourceId = appendBlock(envelope, activity.id, 'instructions');
+		const source = activity.blocks.find(block => block.id === sourceId)!;
+		source.anchor = 'intro';
+		source.body = { type: 'doc', content: [{ type: 'paragraph', content: [
+			{ type: 'text', text: 'within copy', link: { href: '#intro' } },
+			{ type: 'text', text: 'unrelated external fragment', link: { href: '#external' } },
+		] }] };
+		const other = appendBlock(envelope, activity.id, 'instructions');
+		activity.blocks.find(block => block.id === other)!.anchor = 'other';
+		const copied = duplicateActivity(envelope, activity.id);
+		const copy = envelope.document.activities.find(item => item.id === copied)!.blocks[0];
+		expect(copy.anchor).toBe('intro-2');
+		expect(copy.body!.content[0].content.map(run => run.link?.href)).toEqual(['#intro-2', '#external']);
+		expect(envelope.document.activities[0].blocks[0].body!.content[0].content[0].link?.href).toBe('#intro');
+		expect(validateBuilderAnchors(envelope)).toBe(true);
+	});
+	it('server normalization rejects invalid and duplicate block/group anchors', () => {
+		const envelope = blankBuilder('kelas', 'course');
+		const activity = envelope.document.activities[0];
+		appendBlock(envelope, activity.id, 'instructions');
+		activity.blocks[0].anchor = 'lesson-intro';
+		const accepted = normalize(envelope);
+		expect(accepted.document.activities[0].blocks[0].anchor).toBe('lesson-intro');
+		activity.layout = { schemaVersion: 1, nodes: [{ kind: 'section', id: 'section-1', title: '', columns: 1, gap: 'md', padding: 'none', surface: 'none', anchor: 'lesson-intro', children: [] }] };
+		expect(() => normalize(envelope)).toThrow(/ganda/);
+		(activity.layout.nodes[0] as any).anchor = 'Bad selector';
+		expect(() => normalize(envelope)).toThrow(/tautan bagian/);
+	});
+});
+
+describe('synchronized media captions', () => {
+	it('strictly bounds cue timing, order, overlap, count, text, and language', () => {
+		const valid = { language: 'en-US', cues: [{ start: 0, end: 2.5, text: 'First' }, { start: 2.5, end: 4, text: '<script>alert(1)</script>' }] };
+		expect(normalizeBuilderCaptions(valid)).toEqual(valid);
+		for (const bad of [
+			{ cues: [{ start: -1, end: 1, text: 'x' }] },
+			{ cues: [{ start: 1, end: 1, text: 'x' }] },
+			{ cues: [{ start: 2, end: 3, text: 'x' }, { start: 1, end: 2, text: 'y' }] },
+			{ cues: [{ start: 0, end: 3, text: 'x' }, { start: 2, end: 4, text: 'y' }] },
+			{ cues: [{ start: NaN, end: 1, text: 'x' }] },
+			{ language: 'not a language!', cues: [] },
+			{ label: 'unsupported metadata', cues: [] },
+			{ cues: [{ start: 0, end: 1, text: 'x'.repeat(501) }] },
+			{ cues: [{ start: 0, end: 1, text: 'x\u0000y' }] },
+			{ cues: [{ start: 0, end: 1, text: 'x', html: '<b>' }] },
+			{ cues: Array.from({ length: 301 }, (_, i) => ({ start: i * 2, end: i * 2 + 1, text: 'x' })) },
+		]) expect(() => normalizeBuilderCaptions(bad)).toThrow();
+	});
+
+	it('routes cue-bearing writes through the new capability family and server normalization', () => {
+		const d = fixture(); appendBlock(d, d.document.activities[0].id, 'audio');
+		const audio = d.document.activities[0].blocks.at(-1)!;
+		audio.captions = { language: 'id', cues: [{ start: 0, end: 1, text: '<script>alert(1)</script>' }] };
+		expect(builderWriteAction('save', { document: d.document })).toBe('mediaCaptions:save');
+		expect(builderWriteAction('saveSnapshot', { mediaCaptions: true })).toBe('mediaCaptions:saveSnapshot');
+		expect(builderWriteAction('saveTemplate', { mediaCaptions: true })).toBe('mediaCaptions:saveTemplate');
+		expect(builderWriteAction('save', { document: { activities: [{ blocks: [{ playback: { start: 0, rate: 1.25 } }] }] } })).toBe('mediaPlayback:save');
+		expect(builderWriteAction('saveSnapshot', { mediaPlayback: true })).toBe('mediaPlayback:saveSnapshot');
+		expect(normalize(d).document.activities[0].blocks.at(-1)?.captions).toEqual(audio.captions);
+		for (const invalid of [
+			{ type: 'reference', captions: audio.captions },
+			{ type: 'video', captions: { cues: [{ start: 0, end: 1, text: 'x', onerror: 'bad' }] } },
+			{ type: 'video', captions: { cues: [{ start: 2, end: 3, text: 'a' }, { start: 1, end: 2, text: 'b' }] } },
+		]) {
+			const bad = structuredClone(d); Object.assign(bad.document.activities[0].blocks.at(-1)!, invalid);
+			expect(() => normalize(bad)).toThrow();
+		}
+	});
+});
+
 runInNewContext(
 	readFileSync(
 		new URL('../../pocketbase/pb_hooks/builder-domain.js', import.meta.url),
@@ -56,7 +239,7 @@ describe('shared builder identity and private envelope', () => {
 			appendBlock(d, activity.id, type);
 			const block = activity.blocks.at(-1)!;
 			block.transcript = 'Line one\n<script>alert(1)</script>';
-			block.playback = { loop: true, muted: true };
+			block.playback = { loop: true, muted: true, start: 0, end: 18.5, rate: 1.5 };
 		}
 		const saved = normalize(d);
 		const reset = resetBuilderPlayback(structuredClone(saved.document.activities[0].blocks.at(-1)!));
@@ -65,8 +248,8 @@ describe('shared builder identity and private envelope', () => {
 		expect(saved.document.questionsById).toEqual(d.document.questionsById);
 		expect(saved.privateKeys.answersByQuestionId).toEqual(d.privateKeys.answersByQuestionId);
 		expect(saved.document.activities[0].blocks.slice(-2).map(block => [block.transcript, block.playback])).toEqual([
-			['Line one\n<script>alert(1)</script>', { loop: true, muted: true }],
-			['Line one\n<script>alert(1)</script>', { loop: true, muted: true }],
+			['Line one\n<script>alert(1)</script>', { loop: true, muted: true, start: 0, end: 18.5, rate: 1.5 }],
+			['Line one\n<script>alert(1)</script>', { loop: true, muted: true, start: 0, end: 18.5, rate: 1.5 }],
 		]);
 		const copied = copyBuilder(saved, saved.document.kind, saved.document.context);
 		expect(copied.document.activities[0].blocks.slice(-2).map(block => [block.transcript, block.playback])).toEqual(saved.document.activities[0].blocks.slice(-2).map(block => [block.transcript, block.playback]));
@@ -88,12 +271,23 @@ describe('shared builder identity and private envelope', () => {
 			{ type: 'audio', transcript: 'x'.repeat(20001) },
 			{ type: 'video', playback: { autoplay: true } },
 			{ type: 'video', playback: { loop: false } },
+			{ type: 'video', playback: { start: -1 } },
+			{ type: 'video', playback: { start: 5, end: 4 } },
+			{ type: 'video', playback: { rate: 1.1 } },
+			{ type: 'video', playback: { end: Infinity } },
 		]) {
 			const bad = structuredClone(d);
 			const target = bad.document.activities[0].blocks.at(-1)!;
 			Object.assign(target, invalid);
 			expect(() => normalize(bad)).toThrow();
 		}
+	});
+	it('validates bounded playback range and allowlisted initial speed while preserving explicit zero', () => {
+		expect(BUILDER_PLAYBACK_MAX_SECONDS).toBe(86400);
+		expect(BUILDER_PLAYBACK_RATES).toEqual([0.5, 0.75, 1, 1.25, 1.5, 2]);
+		expect(normalizeBuilderPlayback({ start: 0, end: 4, rate: 1.5, loop: true })).toEqual({ start: 0, end: 4, rate: 1.5, loop: true });
+		expect(normalizeBuilderPlayback({ loop: true, muted: true })).toEqual({ loop: true, muted: true });
+		for (const value of [{ start: -1 }, { end: Infinity }, { start: NaN }, { start: 2, end: 2 }, { start: 3, end: 2 }, { end: 86401 }, { rate: 1.1 }, { autoplay: true }]) expect(() => normalizeBuilderPlayback(value)).toThrow();
 	});
 	it('roundtrips legacy images and validated presentation through normalization and templates', () => {
 		const d = fixture(); const activity=d.document.activities[0]; appendBlock(d,activity.id,'image');
@@ -517,5 +711,34 @@ describe('shared builder identity and private envelope', () => {
 		clean.document.instructions = rich('');
 		(clean.document as any).schemaVersion = 2;
 		expect(() => normalize(clean)).toThrow();
+	});
+	it('allows inherited responsive visibility on presentation-only content and rejects protected descendants transitively', () => {
+		const d = fixture();
+		const activity = d.document.activities[0];
+		const text = appendBlock(d, activity.id, 'instructions');
+		activity.blocks.find(block => block.id === text)!.presentation = { desktop: false, tablet: true, mobile: false };
+		activity.blocks.find(block => block.id === text)!.body = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Link', link: { href: 'https://example.org' } }] }] };
+		expect(builderNodeVisibilitySafe(d)).toBe(false);
+		delete activity.blocks.find(block => block.id === text)!.body;
+		expect(builderNodeVisibilitySafe(d)).toBe(true);
+		expect(builderVisibilityForDevice({ desktop: false, tablet: true }, 'tablet')).toBe(true);
+		expect(builderVisibilityForDevice({ desktop: false, tablet: true }, 'mobile')).toBe(true);
+		expect(builderVisibilityForDevice({ desktop: false }, 'mobile')).toBe(false);
+		expect(() => normalizeBuilderVisibility({ mobile: 0 })).toThrow();
+		const groupId = addLayoutGroup(activity, 'section', null, 1);
+		const group = findLayoutGroup(activity.layout!, groupId)!;
+		group.children.push({ kind: 'block', blockId: text });
+		group.presentation = { mobile: false };
+		expect(builderNodeVisibilitySafe(d)).toBe(true);
+		const reference = appendBlock(d, activity.id, 'reference');
+		group.children.push({ kind: 'block', blockId: reference });
+		expect(builderNodeVisibilitySafe(d)).toBe(false);
+		group.children.pop();
+		const assessment = appendBlock(d, activity.id, 'question_group');
+		group.children.push({ kind: 'block', blockId: assessment });
+		expect(builderNodeVisibilitySafe(d)).toBe(false);
+		group.children.pop();
+		activity.blocks.find(block => block.id === assessment)!.presentation = { desktop: false };
+		expect(builderNodeVisibilitySafe(d)).toBe(false);
 	});
 });

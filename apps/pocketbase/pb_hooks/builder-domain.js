@@ -71,6 +71,7 @@ function inlineLink(v) {
 function rich(v, allowLinks = false) {
 	obj(v);
 	if (v.type !== 'doc') fail('Format teks tidak didukung.');
+	let previousDepth = 0, previousWasList = false, totalText = 0;
 	return {
 		type: 'doc',
 		content: list(v.content, 100).map((p) => {
@@ -79,6 +80,10 @@ function rich(v, allowLinks = false) {
 			if (!allowLinks && p.type !== 'paragraph') fail('Format blok tidak didukung pada bidang ini.');
 			if (p.type === 'heading' && ![2, 3, 4].includes(p.level)) fail('Judul tidak valid.');
 			if (p.type === 'list_item' && p.list !== 'bullet' && p.list !== 'number') fail('Daftar tidak valid.');
+			const depth = p.type === 'list_item' ? (p.depth === undefined ? 0 : p.depth) : 0;
+			if (p.type === 'list_item') {
+				if (!Number.isInteger(depth) || depth < 0 || depth > 2 || (depth > 0 && (!previousWasList || depth > previousDepth + 1))) fail('Kedalaman daftar tidak valid.');
+			} else if (p.depth !== undefined) fail('Kedalaman daftar tidak valid.');
 			const content = [];
 			for (const t of list(p.content, 100)) {
 				obj(t);
@@ -89,12 +94,14 @@ function rich(v, allowLinks = false) {
 				const href = allowLinks && t.link && typeof t.link === 'object' ? inlineLink(t.link.href) : null;
 				const link = href ? { href } : undefined;
 				const prior = content[content.length - 1];
-				const text = str(t.text, 20000);
+				const text = str(t.text, 20000); totalText += text.length;
+				if (totalText > 20000) fail('Teks draf tidak valid atau terlalu panjang.');
 				if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(marks) && prior.link?.href === link?.href) prior.text += text;
 				else content.push({ type: 'text', text, ...(marks.length ? { marks } : {}), ...(link ? { link } : {}) });
 			}
+			previousWasList = p.type === 'list_item'; previousDepth = depth;
 			return p.type === 'heading' ? { type: 'heading', level: p.level, content }
-				: p.type === 'list_item' ? { type: 'list_item', list: p.list, content }
+				: p.type === 'list_item' ? { type: 'list_item', list: p.list, ...(depth ? { depth } : {}), content }
 				: { type: 'paragraph', content };
 		}),
 	};
@@ -181,6 +188,7 @@ function appearance(value) {
 		border: ['none', 'subtle', 'accent'],
 		radius: ['none', 'sm', 'md', 'lg'],
 		shadow: ['none', 'sm', 'md'],
+		hover: ['none', 'lift', 'emphasis'],
 	};
 	for (const key of Object.keys(options)) {
 		if (source[key] === undefined) continue;
@@ -238,7 +246,44 @@ function appearance(value) {
 		if (clean.linked && Object.values(clean).some((value) => typeof value === 'number' && value !== clean.topLeft)) fail('Radius sudut tertaut harus sama.');
 		out.corners = clean;
 	}
+	if (source.responsive !== undefined) {
+		const responsive = obj(source.responsive), devices = ['tablet', 'mobile'];
+		if (Object.keys(responsive).some((device) => !devices.includes(device))) fail('Perangkat tampilan garis dan sudut tidak dikenal.');
+		const cleanResponsive = {};
+		for (const device of devices) if (responsive[device] !== undefined) {
+			const override = obj(responsive[device]);
+			if (!Object.keys(override).length || Object.keys(override).some((key) => !['borderDetail', 'corners'].includes(key))) fail('Pengaturan responsif hanya menerima garis dan sudut.');
+			const cleanOverride = appearance(override);
+			if (!cleanOverride.borderDetail && !cleanOverride.corners) fail('Pengaturan responsif harus memuat garis atau sudut.');
+			cleanResponsive[device] = cleanOverride;
+		}
+		if (!Object.keys(cleanResponsive).length) fail('Pengaturan responsif harus memuat tablet atau ponsel.');
+		out.responsive = cleanResponsive;
+	}
 	return out;
+}
+function documentTheme(value) {
+	const source = obj(value);
+	const plain = value => { const proto = Object.getPrototypeOf(value); return proto === null || (Object.getPrototypeOf(proto) === null && Object.hasOwn(proto, 'constructor') && proto.constructor && proto.constructor.name === 'Object'); };
+	if (![source, source.palette, source.palette && source.palette.light, source.palette && source.palette.dark,
+		source.palette && source.palette.light && source.palette.light.base, source.palette && source.palette.light && source.palette.light.accent,
+		source.palette && source.palette.dark && source.palette.dark.base, source.palette && source.palette.dark && source.palette.dark.accent]
+		.every(value => value && typeof value === 'object' && !Array.isArray(value) && plain(value))) fail('Prototipe palet tema tidak valid.');
+	if (Object.keys(source).length !== 1 || !Object.hasOwn(source, 'palette')) fail('Kunci tema dokumen tidak dikenal.');
+	const palette = obj(source.palette);
+	if (Object.keys(palette).length !== 2 || !palette.light || !palette.dark) fail('Palet harus memiliki pasangan terang dan gelap.');
+	const clean = {};
+	for (const mode of ['light', 'dark']) {
+		const tokens = obj(palette[mode]);
+		if (Object.keys(tokens).length !== 2 || !tokens.base || !tokens.accent) fail('Token palet tidak dikenal.');
+		clean[mode] = {};
+		for (const token of ['base', 'accent']) {
+			const pair = obj(tokens[token]);
+			if (Object.keys(pair).length !== 2 || !/^#[0-9A-Fa-f]{6}$/.test(pair.foreground || '') || !/^#[0-9A-Fa-f]{6}$/.test(pair.background || '')) fail('Warna harus berupa pasangan #RRGGBB lengkap.');
+			clean[mode][token] = { foreground: pair.foreground.toUpperCase(), background: pair.background.toUpperCase() };
+		}
+	}
+	return { palette: clean };
 }
 function layoutBackground(value) {
 	const source = obj(value), tokens = ['surface', 'surface-2', 'action'];
@@ -340,9 +385,10 @@ function extractGroupTemplate(envelope, activityId, groupId) {
 	document.questionsById = Object.fromEntries(Object.entries(obj(document.questionsById)).filter(([id]) => questions.has(id)));
 	envelope.privateKeys.answersByQuestionId = Object.fromEntries(Object.entries(obj(envelope.privateKeys.answersByQuestionId)).filter(([id]) => questions.has(id)));
 	envelope.scope = 'group';
+	delete document.theme;
 	return envelope;
 }
-function layout(value, blockIds, unique) {
+function layout(value, blockIds, unique, anchor) {
 	const source = obj(value);
 	if (source.schemaVersion !== 1) fail('Versi tata letak tidak didukung.');
 	const refs = new Set();
@@ -436,9 +482,18 @@ function layout(value, blockIds, unique) {
 				responsive[device] = clean;
 			}
 		}
+		const presentation = (input) => {
+			if (input === undefined) return undefined;
+			const source = obj(input), clean = {};
+			if (Object.keys(source).some(key => !['desktop', 'tablet', 'mobile'].includes(key))) fail('Visibilitas perangkat tidak valid.');
+			for (const device of ['desktop', 'tablet', 'mobile']) if (source[device] !== undefined) { if (typeof source[device] !== 'boolean') fail('Visibilitas perangkat tidak valid.'); clean[device] = source[device]; }
+			return clean;
+		};
 		return {
 			kind: value.kind,
 			id: unique(value.id),
+			...(value.anchor !== undefined ? { anchor: anchor(value.anchor) } : {}),
+			...(value.presentation !== undefined ? { presentation: presentation(value.presentation) } : {}),
 			...(value.layoutLocked !== undefined ? { layoutLocked: typeof value.layoutLocked === 'boolean' ? value.layoutLocked : fail('Kunci tata letak tidak valid.') } : {}),
 			title: value.title === undefined ? '' : str(value.title, 200),
 			columns,
@@ -485,6 +540,17 @@ function normalize(body) {
 		fail('Maksimum 500 butir per dokumen.');
 	const seen = new Set(),
 		locations = {};
+	const anchors = new Set();
+	const anchor = (value) => {
+		if (typeof value !== 'string' || !/^[a-z][a-z0-9-]{0,39}$/.test(value) || anchors.has(value)) fail('Nama tautan bagian tidak valid atau ganda.');
+		anchors.add(value); return value;
+	};
+	const presentation = (value) => {
+		const source = obj(value), clean = {};
+		if (Object.keys(source).some(key => !['desktop', 'tablet', 'mobile'].includes(key))) fail('Visibilitas perangkat tidak valid.');
+		for (const device of ['desktop', 'tablet', 'mobile']) if (source[device] !== undefined) { if (typeof source[device] !== 'boolean') fail('Visibilitas perangkat tidak valid.'); clean[device] = source[device]; }
+		return clean;
+	};
 	const unique = (v) => {
 		const value = id(v);
 		if (seen.has(value)) fail('ID elemen ganda.');
@@ -542,6 +608,8 @@ function normalize(body) {
 			if (++blockCount > 500 || !types.includes(b.type))
 				fail('Jenis/jumlah elemen tidak didukung.');
 			const out = { id: unique(b.id), type: b.type };
+			if (b.anchor !== undefined) out.anchor = anchor(b.anchor);
+			if (b.presentation !== undefined) out.presentation = presentation(b.presentation);
 			if (b.layoutLocked !== undefined) out.layoutLocked = typeof b.layoutLocked === 'boolean' ? b.layoutLocked : fail('Kunci tata letak tidak valid.');
 			if (b.appearance !== undefined) out.appearance = appearance(b.appearance);
 			blockIds.add(out.id);
@@ -553,13 +621,32 @@ function normalize(body) {
 				if (!['audio', 'video'].includes(b.type)) fail('Transkrip hanya untuk audio atau video.');
 				out.transcript = str(b.transcript, 20000);
 			}
+			if (b.captions !== undefined) {
+				if (!['audio', 'video'].includes(b.type)) fail('Keterangan bertanda waktu hanya untuk audio atau video.');
+				const captions = obj(b.captions);
+				if (Object.keys(captions).some((key) => !['language', 'cues'].includes(key))) fail('Kolom keterangan tidak dikenal.');
+				if (captions.language !== undefined && (typeof captions.language !== 'string' || !/^[a-z]{2,3}(?:-[A-Z]{2})?$/.test(captions.language))) fail('Bahasa keterangan tidak valid.');
+				const cues = list(captions.cues, 300);
+				let priorStart = -1, priorEnd = -1, total = 0;
+				out.captions = { ...(captions.language ? { language: captions.language } : {}), cues: cues.map((entry) => {
+					const cue = obj(entry);
+					if (Object.keys(cue).some((key) => !['start', 'end', 'text'].includes(key))) fail('Kolom cue tidak dikenal.');
+					if (typeof cue.start !== 'number' || !Number.isFinite(cue.start) || cue.start < 0 || typeof cue.end !== 'number' || !Number.isFinite(cue.end) || cue.end <= cue.start || cue.start < priorStart || cue.start < priorEnd || typeof cue.text !== 'string' || !cue.text.trim() || cue.text.length > 500 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(cue.text)) fail('Cue keterangan tidak valid.');
+					priorStart = cue.start; priorEnd = cue.end; total += cue.text.length;
+					return { start: cue.start, end: cue.end, text: cue.text };
+				}) };
+				if (total > 30000) fail('Ukuran keterangan terlalu besar.');
+			}
 			if (b.playback !== undefined) {
 				if (!['audio', 'video'].includes(b.type)) fail('Pemutaran hanya untuk audio atau video.');
 				const playback = obj(b.playback);
-				if (Object.keys(playback).some((key) => !['loop', 'muted'].includes(key))) fail('Pengaturan pemutaran tidak dikenal.');
+				if (Object.keys(playback).some((key) => !['loop', 'muted', 'start', 'end', 'rate'].includes(key))) fail('Pengaturan pemutaran tidak dikenal.');
 				if (playback.loop !== undefined && playback.loop !== true) fail('Pengaturan ulang pemutaran tidak valid.');
 				if (playback.muted !== undefined && playback.muted !== true) fail('Pengaturan audio awal tidak valid.');
-				out.playback = { ...(playback.loop ? { loop: true } : {}), ...(playback.muted ? { muted: true } : {}) };
+				for (const key of ['start', 'end']) if (playback[key] !== undefined && (typeof playback[key] !== 'number' || !Number.isFinite(playback[key]) || playback[key] < 0 || playback[key] > 86400)) fail('Waktu pemutaran tidak valid.');
+				if (playback.start !== undefined && playback.end !== undefined && playback.end <= playback.start) fail('Akhir pemutaran harus setelah awal.');
+				if (playback.rate !== undefined && ![0.5, 0.75, 1, 1.25, 1.5, 2].includes(playback.rate)) fail('Kecepatan pemutaran tidak valid.');
+				out.playback = { ...(playback.loop ? { loop: true } : {}), ...(playback.muted ? { muted: true } : {}), ...(playback.start !== undefined ? { start: playback.start } : {}), ...(playback.end !== undefined ? { end: playback.end } : {}), ...(playback.rate !== undefined ? { rate: playback.rate } : {}) };
 			}
 			if (b.asset) {
 				if (!['image', 'audio', 'video'].includes(b.type))
@@ -615,7 +702,7 @@ function normalize(body) {
 			blocks,
 		};
 		if (a.layout !== undefined)
-			activity.layout = layout(a.layout, blockIds, unique);
+			activity.layout = layout(a.layout, blockIds, unique, anchor);
 		return activity;
 	});
 	const answersByQuestionId = {};
@@ -714,6 +801,20 @@ function normalize(body) {
 				if (!allowed.includes(questionsById[qid].kind))
 					fail('Pertanyaan tidak sesuai dengan jenis elemen.');
 		}
+	const safePresentationBlocks = new Set(['instructions', 'image']);
+	for (const a of activities) {
+		const blocksById = new Map(a.blocks.map(block => [block.id, block]));
+		const nodeSafe = node => {
+			if (node.kind === 'block') {
+				const block = blocksById.get(node.blockId);
+				return Boolean(block && safePresentationBlocks.has(block.type) && !block.questionId && !(block.questionIds?.length) && !(block.sections?.some(section => section.segments.some(segment => segment.type === 'gap'))) && !(block.body?.content?.some(node => node.content?.some(run => run.link))));
+			}
+			return node.children.length > 0 && node.children.every(nodeSafe);
+		};
+		for (const block of a.blocks) if (block.presentation && Object.values(block.presentation).some(value => value === false) && !nodeSafe({kind:'block',blockId:block.id})) fail('Elemen ini tidak dapat disembunyikan karena berisi atau dapat memerlukan jawaban.');
+		const visit = nodes => nodes.every(node => node.kind === 'block' || ((!node.presentation || Object.values(node.presentation).every(value => value !== false) || nodeSafe(node)) && visit(node.children)));
+		if (a.layout && !visit(a.layout.nodes)) fail('Bagian ini tidak dapat disembunyikan karena berisi elemen yang memerlukan jawaban atau tidak didukung.');
+	}
 	if (
 		delivery.kind !== d.kind ||
 		!['scheduled', 'guided', 'free'].includes(delivery.progression) ||
@@ -743,6 +844,7 @@ function normalize(body) {
 	return {
 		document: {
 			schemaVersion: 1,
+			...(d.theme !== undefined ? { theme: documentTheme(d.theme) } : {}),
 			kind: d.kind,
 			context: {
 				courseId: id(context.courseId),

@@ -3,7 +3,9 @@ import '@/styles/builder-appearance.css';
 import { appearanceClassName, appearanceColorStyle, appearanceDetailStyle } from '@/lib/builder-appearance';
 import type { CSSProperties, ReactNode } from 'react';
 import type { BuilderActivity, BuilderBlock } from '@/lib/builder-document';
+import { builderBlockCanBeHidden, builderVisibilityForDevice } from '@/lib/builder-document';
 import { useState } from 'react';
+import { builderAnchorId, useBuilderAnchorId, useBuilderAnchorPrefix } from './builder-anchor-scope';
 import { useBuilderAssetUrl } from './builder-media';
 import {
 	resolveActivityLayout,
@@ -52,6 +54,7 @@ export function BuilderLayoutView({
 	hideBlock,
 	className = '',
 	blockClassName = '',
+	editorMode = false,
 }: {
 	activity: BuilderActivity;
 	renderBlock: (block: BuilderBlock) => ReactNode;
@@ -64,16 +67,26 @@ export function BuilderLayoutView({
 	) => ReactNode;
 	className?: string;
 	blockClassName?: string;
+	editorMode?: boolean;
 }) {
+	const anchorPrefix = useBuilderAnchorPrefix();
+	const blocksById = new Map(activity.blocks.map(block => [block.id, block]));
+	const safeSubtree = (nodes: ResolvedLayoutNode[]): boolean => nodes.length > 0 && nodes.every(node => node.kind === 'block' ? Boolean(blocksById.get(node.block.id) && builderBlockCanBeHidden(blocksById.get(node.block.id)!)) : safeSubtree(node.children));
+	const presentationAttrs = (value: BuilderBlock['presentation'], safe: boolean) => {
+		if (!safe || !value || !Object.values(value).some(item => item === false)) return {};
+		return { 'data-presentation-desktop': builderVisibilityForDevice(value, 'desktop') ? 'visible' : 'hidden', 'data-presentation-tablet': builderVisibilityForDevice(value, 'tablet') ? 'visible' : 'hidden', 'data-presentation-mobile': builderVisibilityForDevice(value, 'mobile') ? 'visible' : 'hidden', ...(editorMode ? { 'data-editor-presentation-hidden': 'true' } : {}) };
+	};
 	const renderNodes = (nodes: ResolvedLayoutNode[]): ReactNode =>
 		nodes.map((node) => {
 			if (node.kind === 'block' && hideBlock?.(node.block)) return null;
 			return node.kind === 'block' ? (
 				<div
 					key={'block-' + node.block.id}
+					id={builderAnchorId(anchorPrefix, node.block.anchor)}
 					className={'bl-block ' + appearanceClassName(node.block.appearance) + (blockClassName ? ' ' + blockClassName : '')}
 					style={{...appearanceColorStyle(node.block.appearance), ...appearanceDetailStyle(node.block.appearance)} as CSSProperties}
 					data-block-id={node.block.id}
+					{...presentationAttrs(node.block.presentation, builderBlockCanBeHidden(node.block))}
 				>
 					{renderBeforeBlock?.(node.block)}
 					{renderBlock(node.block)}
@@ -114,7 +127,7 @@ export function BuilderLayoutView({
 		}
 					}
 					return (
-						<LayoutGroup key={node.id} group={node} spacing={spacing} className={layoutGroupClassName(node)} maxWidth={node.maxWidth} columnWeights={node.columnWeights}>
+						<LayoutGroup key={node.id} group={node} spacing={spacing} className={layoutGroupClassName(node)} maxWidth={node.maxWidth} columnWeights={node.columnWeights} presentation={presentationAttrs(node.presentation, safeSubtree(node.children))}>
 						{renderGroup ? renderGroup(node, renderNodes(node.children)) : renderNodes(node.children)}
 						</LayoutGroup>
 					);
@@ -128,12 +141,13 @@ export function BuilderLayoutView({
 	);
 }
 
-function LayoutGroup({group, spacing, className, maxWidth, columnWeights, children}: {group: ResolvedLayoutGroup; spacing: Record<string,string>; className: string; maxWidth?:number; columnWeights?:number[]; children:ReactNode}) {
+function LayoutGroup({group, spacing, className, maxWidth, columnWeights, presentation, children}: {group: ResolvedLayoutGroup; spacing: Record<string,string>; className: string; maxWidth?:number; columnWeights?:number[]; presentation: Record<string, string>; children:ReactNode}) {
 	const [failed, setFailed] = useState(false);
 	const asset = group.background?.mode === 'image' ? group.background.asset : undefined;
 	const {url} = useBuilderAssetUrl(asset);
 	const tabletBackground = group.responsive?.tablet?.background;
 	const mobileBackground = group.responsive?.mobile?.background;
+	const displayFor = (direction?: ResolvedLayoutGroup['direction']) => direction === 'row' || direction === 'column' ? 'flex' : 'grid';
 	const tabletAsset = tabletBackground?.mode === 'image' ? tabletBackground.asset : undefined;
 	const mobileAsset = mobileBackground?.mode === 'image' ? mobileBackground.asset : undefined;
 	const {url: tabletUrl} = useBuilderAssetUrl(tabletAsset);
@@ -153,7 +167,7 @@ function LayoutGroup({group, spacing, className, maxWidth, columnWeights, childr
 		...(mobileBackground?.mode === 'image' ? {'--bl-mobile-background-image': responsiveImage(mobileBackground, serializedMobile), '--bl-mobile-background-size': mobileBackground.fit === 'contain' ? 'contain' : 'cover', '--bl-mobile-background-position': `${mobileBackground.positionX ?? 50}% ${mobileBackground.positionY ?? 50}%`} : {}),
 		...(image && layers ? {'--bl-base-background-image': layers, '--bl-base-background-size': image.fit === 'contain' ? 'contain' : 'cover', '--bl-base-background-position': `${image.positionX ?? 50}% ${image.positionY ?? 50}%`} : {}),
 	};
-	return <div className={className} style={{...appearanceColorStyle(group.appearance),...appearanceDetailStyle(group.appearance),...(maxWidth?{'--bl-max-width':`${maxWidth}px`}:{}),...(columnWeights?{gridTemplateColumns:columnWeights.map(weight=>`${weight}fr`).join(' ')}:{}),...spacing,...responsiveStyle,backgroundColor:'var(--bl-active-background-color, var(--bl-base-background-color, var(--ba-custom-background, transparent)))',backgroundImage:'var(--bl-active-background-image, var(--bl-base-background-image, none))',backgroundSize:'var(--bl-active-background-size, var(--bl-base-background-size, cover))',backgroundPosition:'var(--bl-active-background-position, var(--bl-base-background-position, 50% 50%))',backgroundRepeat:'no-repeat'} as CSSProperties} data-layout-node={group.id} data-layout-kind={group.kind}>
+	return <div id={useBuilderAnchorId(group.anchor)} className={className} style={{...appearanceColorStyle(group.appearance),...appearanceDetailStyle(group.appearance),...(Object.keys(presentation).length ? {'--bl-presentation-tablet-display':displayFor(group.responsive?.tablet?.direction ?? group.direction),'--bl-presentation-mobile-display':displayFor(group.responsive?.mobile?.direction ?? group.responsive?.tablet?.direction ?? group.direction)} : {}),...(maxWidth?{'--bl-max-width':`${maxWidth}px`}:{}),...(columnWeights?{gridTemplateColumns:columnWeights.map(weight=>`${weight}fr`).join(' ')}:{}),...spacing,...responsiveStyle,backgroundColor:'var(--bl-active-background-color, var(--bl-base-background-color, var(--ba-custom-background, transparent)))',backgroundImage:'var(--bl-active-background-image, var(--bl-base-background-image, none))',backgroundSize:'var(--bl-active-background-size, var(--bl-base-background-size, cover))',backgroundPosition:'var(--bl-active-background-position, var(--bl-base-background-position, 50% 50%))',backgroundRepeat:'no-repeat'} as CSSProperties} data-layout-node={group.id} data-layout-kind={group.kind} {...presentation}>
 		{asset && url && <img aria-hidden="true" tabIndex={-1} alt="" src={url} onError={()=>setFailed(true)} style={{position:'absolute',width:1,height:1,opacity:0,pointerEvents:'none'}} />}
 		{children}
 	</div>;

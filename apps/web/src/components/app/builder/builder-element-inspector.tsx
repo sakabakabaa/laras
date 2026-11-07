@@ -11,11 +11,13 @@ export function BuilderElementInspector({
 	block,
 	envelope,
 	disabled,
+	customColorsSupported = true,
 	onChange,
 }: {
 	block: BuilderBlock;
 	envelope: BuilderEnvelope;
 	disabled: boolean;
+	customColorsSupported?: boolean;
 	onChange: (edit: (draft: BuilderEnvelope) => void) => void;
 }) {
 	const [panel, setPanel] = useState<'content' | 'assessment' | 'style'>(() =>
@@ -63,6 +65,7 @@ export function BuilderElementInspector({
 			) : panel === 'style' ? (
 				<BuilderAppearanceControls
 					value={block.appearance}
+					customColorsSupported={customColorsSupported}
 					onChange={(appearance) =>
 						onChange((draft) => {
 							const target = draft.document.activities

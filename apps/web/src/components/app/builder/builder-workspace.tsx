@@ -58,6 +58,7 @@ import {
 	fetchBuilderCapability,
 	isEnhancedAuthoringDenied,
 	usesEnhancedAuthoring,
+	hasCustomThemeColors,
 	type BuilderCapabilityPayload,
 } from '@/lib/builder-capability';
 import { toWibInput, fromWibInput } from '@/lib/scheduled-classes';
@@ -185,6 +186,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const [capability, setCapability] = useState<BuilderCapabilityPayload | null>(null);
 	const [layoutLocksSupported, setLayoutLocksSupported] = useState(false);
 	const layoutLocksSupportedRef = useRef(false);
+	const [customColorsSupported, setCustomColorsSupported] = useState(false);
+	const customColorsSupportedRef = useRef(false);
 	const [recoveryInfo, setRecoveryInfo] = useState<{ at: number; baseRevision?: number } | null>(null);
 	const [publishReview, setPublishReview] = useState(false);
 	const saveQueue = useRef(createBuilderSaveQueue((command) => builderRequest<BuilderRecord>('save', command)));
@@ -280,6 +283,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		current.current = null;
 		layoutLocksSupportedRef.current = false;
 		setLayoutLocksSupported(false);
+		customColorsSupportedRef.current = false;
+		setCustomColorsSupported(false);
 		setStyleClipboard(null);
 		setStyleStatus('');
 		setError('');
@@ -295,6 +300,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				if (!live) return;
 				layoutLocksSupportedRef.current = r.layoutLocks === true;
 				setLayoutLocksSupported(r.layoutLocks === true);
+				customColorsSupportedRef.current = r.customColors === true;
+				setCustomColorsSupported(r.customColors === true);
 				const envelope = { document: r.document, privateKeys: r.privateKeys };
 				install(envelope);
 				setSaved(encode(envelope));
@@ -453,6 +460,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			const r = await builderRequest<BuilderRecord>('get', { id });
 			layoutLocksSupportedRef.current = r.layoutLocks === true;
 			setLayoutLocksSupported(r.layoutLocks === true);
+			customColorsSupportedRef.current = r.customColors === true;
+			setCustomColorsSupported(r.customColors === true);
 			install({ document: r.document, privateKeys: r.privateKeys });
 			setSaved(encode({ document: r.document, privateKeys: r.privateKeys }));
 			revisionRef.current = r.revision;
@@ -993,7 +1002,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			})()}
 			{activity && (block || selectedGroup) && <BuilderLayoutLockControl activity={activity} nodeId={block?.id || selectedGroup!.id} disabled={locked || readOnly} supported={layoutLocksSupported} onChange={change} />}
 			{block ? (
-				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked} onChange={change} />
+				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked} customColorsSupported={customColorsSupported} onChange={change} />
 			) : selectedGroup && activity ? (
 				<>
 					<BuilderLayoutInspector
@@ -1001,6 +1010,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						courseId={contextCourseId}
 						group={selectedGroup}
 						disabled={locked}
+						customColorsSupported={customColorsSupported}
 						onChange={change}
 						onAddBlock={() =>
 							openElements(activity.id, undefined, selectedGroup.id)
@@ -1319,10 +1329,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<button className="bd-secondary" onClick={() => downloadEnvelope(recovery)}>Unduh salinan perangkat</button>
 						<button
 							className="bd-primary"
-							disabled={readOnly || (!layoutLocksSupported && hasLayoutLockFields(recovery))}
-							title={!layoutLocksSupported && hasLayoutLockFields(recovery) ? LAYOUT_LOCK_CAPABILITY_REASON : undefined}
+							disabled={readOnly || (!layoutLocksSupported && hasLayoutLockFields(recovery)) || (!customColorsSupported && hasCustomThemeColors(recovery))}
+							title={!layoutLocksSupported && hasLayoutLockFields(recovery) ? LAYOUT_LOCK_CAPABILITY_REASON : (!customColorsSupported && hasCustomThemeColors(recovery) ? 'Backend belum mendukung pasangan warna tema.' : undefined)}
 							onClick={() => {
-								if (readOnlyRef.current || (!layoutLocksSupportedRef.current && hasLayoutLockFields(recovery))) return;
+								if (readOnlyRef.current || (!layoutLocksSupportedRef.current && hasLayoutLockFields(recovery)) || (!customColorsSupportedRef.current && hasCustomThemeColors(recovery))) return;
 								const reason = current.current && layoutLockTransitionReason(current.current, recovery, layoutLocksSupportedRef.current);
 								if (reason) { setError(reason); setAnnouncement(reason); return; }
 								if (recoveryInfo?.baseRevision !== revision && !window.confirm('Revisi perangkat dan server berbeda. Muat salinan perangkat ke editor untuk ditinjau sebelum menyimpan?')) return;

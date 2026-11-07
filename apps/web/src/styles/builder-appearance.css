@@ -1,4 +1,7 @@
 /* Shared by the canvas, preview, and published student runtime. */
+.bl-layout .ba-custom-colors { --ba-custom-foreground: var(--ba-custom-light-foreground); --ba-custom-background: var(--ba-custom-light-background); }
+:root.dark .bl-layout .ba-custom-colors { --ba-custom-foreground: var(--ba-custom-dark-foreground); --ba-custom-background: var(--ba-custom-dark-background); }
+.bl-layout .bl-block.ba-custom-colors { background-color: var(--ba-custom-background); }
 .ba-size-sm {
 	--ba-font-size: 0.875rem;
 }
@@ -62,6 +65,7 @@
 .bl-layout :is(.bl-group, .bl-block)[class*='ba-color-'] :is(p, textarea, .bd-rich) {
 	color: var(--ba-color);
 }
+.bl-layout :is(.bl-group, .bl-block).ba-custom-colors :is(p, h1, h2, h3, h4, h5, h6, li, .bd-rich) { color: var(--ba-custom-foreground); }
 .bl-layout .ba-background-none {
 	--ba-background: transparent;
 	background: transparent;
@@ -77,6 +81,7 @@
 .bl-layout .bl-group[class*='ba-background-'] {
 	--bl-base-background-color: var(--ba-background);
 }
+.bl-layout .bl-group.ba-custom-colors { --bl-base-background-color: var(--ba-custom-background); }
 .bl-layout .ba-padding-none {
 	padding: 0;
 }

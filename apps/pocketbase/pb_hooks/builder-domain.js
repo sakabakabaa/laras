@@ -188,6 +188,16 @@ function appearance(value) {
 			fail('Pengaturan tampilan tidak valid: ' + key);
 		out[key] = source[key];
 	}
+	if (source.customColors !== undefined) {
+		const pairs = obj(source.customColors), clean = {};
+		if (Object.keys(pairs).length !== 2 || !pairs.light || !pairs.dark) fail('Pasangan warna tema tidak valid.');
+		for (const theme of ['light', 'dark']) {
+			const pair = obj(pairs[theme]);
+			if (Object.keys(pair).length !== 2 || !/^#[0-9A-Fa-f]{6}$/.test(pair.foreground || '') || !/^#[0-9A-Fa-f]{6}$/.test(pair.background || '')) fail('Warna harus berupa kode #RRGGBB lengkap.');
+			clean[theme] = { foreground: pair.foreground, background: pair.background };
+		}
+		out.customColors = clean;
+	}
 	return out;
 }
 function layoutBackground(value) {

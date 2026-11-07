@@ -408,6 +408,7 @@ export function insertGroupTemplate(
 }
 export type BuilderRecord = BuilderEnvelope & {
 	layoutLocks?: boolean;
+	customColors?: boolean;
 	id: string;
 	revision: number;
 	updated: string;
@@ -853,8 +854,14 @@ export function builderWriteAction(action: string, body: Record<string, unknown>
 		if (Object.prototype.hasOwnProperty.call(value, 'layoutLocked')) return true;
 		return Object.values(value).some(containsLocks);
 	};
-	if (action === 'saveSnapshot' || action === 'saveTemplate' ||
-		((action === 'save' || action === 'create') && containsLocks(body.document))) return `layoutLocks:${action}`;
+	const containsColors = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Object.prototype.hasOwnProperty.call(value, 'customColors')) return true;
+		return Object.values(value).some(containsColors);
+	};
+	if ((action === 'save' || action === 'create') && containsColors(body.document)) return `themeColors:${action}`;
+	if (action === 'saveSnapshot' || action === 'saveTemplate') return `themeColors:${action}`;
+	if ((action === 'save' || action === 'create') && containsLocks(body.document)) return `layoutLocks:${action}`;
 	return action;
 }
 export async function builderRequest<T>(

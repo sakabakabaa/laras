@@ -138,6 +138,7 @@ function view(app, r) {
 	return {
 		id: r.id,
 		layoutLocks: true,
+		customColors: true,
 		title: r.getString('title'),
 		kind: r.getString('kind'),
 		revision: r.getInt('revision'),
@@ -149,8 +150,8 @@ function view(app, r) {
 function handle(app, user, body) {
 	if (user.getString('role') !== 'faculty')
 		throw new ForbiddenError('Builder hanya tersedia untuk dosen.');
-	if (['layoutLocks:create', 'layoutLocks:save', 'layoutLocks:saveSnapshot', 'layoutLocks:saveTemplate'].includes(body.action))
-		body = { ...body, action: body.action.slice('layoutLocks:'.length) };
+	if (/^(layoutLocks|themeColors):(create|save|saveSnapshot|saveTemplate)$/.test(body.action))
+		body = { ...body, action: body.action.slice(body.action.indexOf(':') + 1) };
 	// Reads (list/get/saved) always work so recovery and export stay reachable.
 	const capability = enhancedAuthoring(),
 		allowed = authoringAllowed(user, capability);

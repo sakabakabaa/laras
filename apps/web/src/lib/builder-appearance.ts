@@ -47,6 +47,83 @@ export type BuilderAppearance = {
 	]?: keyof (typeof APPEARANCE_OPTIONS)[K]['values'];
 };
 
+export const BUILDER_APPEARANCE_PRESETS = {
+	default: { label: 'Default', values: {} },
+	highlight: {
+		label: 'Highlight',
+		values: {
+			background: 'accent',
+			color: 'accent',
+			border: 'accent',
+			radius: 'md',
+			padding: 'md',
+		},
+	},
+	exercise: {
+		label: 'Exercise',
+		values: {
+			background: 'muted',
+			color: 'ink',
+			border: 'subtle',
+			radius: 'sm',
+			padding: 'md',
+		},
+	},
+	note: {
+		label: 'Note',
+		values: {
+			background: 'none',
+			color: 'muted',
+			border: 'subtle',
+			radius: 'none',
+			padding: 'sm',
+		},
+	},
+} as const satisfies Record<string, { label: string; values: Partial<BuilderAppearance> }>;
+
+export type BuilderAppearancePreset = keyof typeof BUILDER_APPEARANCE_PRESETS;
+export const PRESET_APPEARANCE_FIELDS = [
+	'background', 'color', 'border', 'radius', 'padding',
+] as const satisfies readonly (keyof BuilderAppearance)[];
+export const APPEARANCE_FIELDS = Object.keys(APPEARANCE_OPTIONS) as (keyof BuilderAppearance)[];
+
+export function applyAppearancePreset(
+	appearance: BuilderAppearance | undefined,
+	preset: BuilderAppearancePreset,
+	preserve: readonly (keyof BuilderAppearance)[] = [],
+): BuilderAppearance | undefined {
+	const next: BuilderAppearance = {};
+	for (const field of preserve) {
+		if (appearance?.[field] !== undefined) Object.assign(next, { [field]: appearance[field] });
+	}
+	for (const [field, value] of Object.entries(BUILDER_APPEARANCE_PRESETS[preset].values)) {
+		if (!preserve.includes(field as keyof BuilderAppearance)) Object.assign(next, { [field]: value });
+	}
+	return Object.keys(next).length ? next : undefined;
+}
+
+export function resetBuilderAppearance(
+	appearance: BuilderAppearance | undefined,
+	preserve: readonly (keyof BuilderAppearance)[] = [],
+): BuilderAppearance | undefined {
+	if (!appearance) return undefined;
+	const next = { ...appearance };
+	for (const field of APPEARANCE_FIELDS) if (!preserve.includes(field)) delete next[field];
+	return Object.keys(next).length ? next : undefined;
+}
+
+export function matchingAppearancePreset(
+	appearance?: BuilderAppearance,
+	preserve: readonly (keyof BuilderAppearance)[] = [],
+): BuilderAppearancePreset | 'custom' {
+	const comparable = Object.fromEntries(Object.entries(appearance ?? {}).filter(([key]) => !preserve.includes(key as keyof BuilderAppearance)));
+	for (const preset of Object.keys(BUILDER_APPEARANCE_PRESETS) as BuilderAppearancePreset[]) {
+		const expected = Object.fromEntries(Object.entries(BUILDER_APPEARANCE_PRESETS[preset].values).filter(([key]) => !preserve.includes(key as keyof BuilderAppearance)));
+		if (Object.keys(comparable).length === Object.keys(expected).length && Object.entries(expected).every(([key, value]) => comparable[key] === value)) return preset;
+	}
+	return 'custom';
+}
+
 export function appearanceClassName(appearance?: BuilderAppearance): string {
 	if (!appearance) return '';
 	return (Object.keys(APPEARANCE_OPTIONS) as (keyof BuilderAppearance)[])

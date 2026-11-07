@@ -36,6 +36,15 @@ Baseline reconciled to `origin/main` at `0aa443cf5f467260de8b37e49e5ab2e22177d50
 | Missing | Navigation locks/rename/scroll, persistent per-node drag/layout locks, reliable drag, broader theme/selection scope/registry/hardening remain separate open slices. |
 | Unverified | Browser/assistive-technology/touch interaction, workspace event-driven undo acceptance, production runtime, deployment and CI review. Pure history and server-normalization coverage does not substitute for those checks. Local validation: 81 tests across clipboard, appearance, document, layout and responsive-layout suites; TypeScript, changed-file ESLint and diff check pass. No PocketBase code touched. |
 
+## Bounded theme presets and selected-node reset
+
+| Status | Scope and evidence |
+|---|---|
+| Done | One shared registry defines Default, Highlight, Exercise and Note with allowlisted theme-token values for background, text color, border, radius and padding. Controls expose them to selected blocks and sections/containers. Group preset/reset preserves appearance padding and all explicit layout dimensions; explicit section backgrounds at base/tablet/mobile remain untouched and retain visual precedence, explained in the inspector. `aria-pressed` marks an exact in-scope match and other appearance edits report Kustom. Operations change only `appearance` through the existing guarded `change()` callback, producing one history entry; reset is idempotent. |
+| Partial | Reset is scoped to one selected block or group. Custom colors, contrast warnings, detailed effects, and document-wide preset/reset workflows remain open. Presets rely on existing global theme tokens and shared canvas/preview/student rendering. |
+| Missing | Arbitrary custom-color editing and contrast checks. |
+| Unverified | Mounted workspace interactions, real undo/redo events, browser/accessibility acceptance, and production rendering. Focused pure helper, UI markup, server normalization, and existing history/guard suites provide source-level evidence only. |
+
 ## Navigator rename and select-scroll slice (2026-11-06)
 
 Baseline: deployed/main PR108 `ccac41adb2dd694e134850b6934c23543aa42f69`; the assigned clean worktree was fast-forwarded from its stale parent without changing other worktrees. Existing structure selection, breadcrumbs, collapse and move controls were inspected and reused, not replaced.
@@ -76,10 +85,10 @@ Rollback review fix validation: 62 focused lock/save/capability tests pass, incl
 |---|---|
 | Rich text follow-up | Headings/lists are flat only (nesting unsupported); controls appear in the shared instruction/acknowledgement editor. Contextual AI, responsive backgrounds, media controls, broader accessibility validation, rich editing for other text fields, and browser IME/selection behavior still need separate bounded work. Editor lock core is implemented above; runtime drag acceptance remains unverified. Do not store arbitrary HTML or render through raw HTML. Preserve plain text compatibility and protect assessment IDs/private keys. |
 | Nested template validation | Subtree extraction/insertion pure helper tests pass. Backend owner/media authorization, old-template read/apply fixtures, and workspace undo integration still need focused coverage. |
-| Theme controls | No complete theme contrast controls, theme preset registry, or safe reset workflow identified in the builder appearance surface. |
+| Theme controls | Bounded block and section/container appearance presets and selected-node style reset are implemented below. Arbitrary custom colors, contrast warnings, a doc-wide reset, and detailed effects remain open. |
 | Image/audio/video media | Image crop/fit and focal controls are implemented only for image blocks. Audio/video have plain-text transcript and loop/initial-muted controls; synchronized captions, full playback range/speed, and remaining accessibility acceptance are outstanding. |
 | Builder interaction parity | Bounded explicit copy-style, navigator rename/select-scroll and editor layout locks are implemented above with limited local evidence; reliable drag, mounted/runtime navigator and lock acceptance and narrower proposal scopes remain outstanding. |
-| Theme detail | Theme presets, contrast, reset workflow, detailed borders, and effects remain outstanding. |
+| Theme detail | Full-document theme presets, contrast, custom colors, detailed effects, and broad theme reset remain outstanding. |
 | Registry and commands | Full element registry and command coverage remain outstanding. |
 | Compatibility | Explicitly test older published lesson variants remain readable without destructive normalization. |
 | Accessibility, touch, and performance | Keyboard-accessible controls exist for this image slice, but broad screen reader validation, touch authoring, and large-document performance remain outstanding. |

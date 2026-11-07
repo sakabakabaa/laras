@@ -4,8 +4,14 @@ import { runInNewContext } from 'node:vm';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
+	applyAppearancePreset,
 	APPEARANCE_OPTIONS,
+	APPEARANCE_FIELDS,
 	appearanceClassName,
+	BUILDER_APPEARANCE_PRESETS,
+	matchingAppearancePreset,
+	PRESET_APPEARANCE_FIELDS,
+	resetBuilderAppearance,
 	type BuilderAppearance,
 } from '../src/lib/builder-appearance';
 import {
@@ -13,6 +19,7 @@ import {
 	blankBuilder,
 	duplicateActivity,
 	duplicateBlock,
+	moveBuilderHistory,
 	rich,
 	type BuilderEnvelope,
 } from '../src/lib/builder-document';
@@ -21,11 +28,13 @@ import {
 	findLayoutGroup,
 	insertBlockIntoLayout,
 } from '../src/lib/builder-layout';
+import { guardedLayoutEdit } from '../src/lib/builder-layout-lock';
 import { BuilderPreview } from '../src/components/app/builder/builder-elements';
 import {
 	BuilderElementLibrary,
 	BUILDER_ELEMENTS,
 } from '../src/components/app/builder/builder-element-library';
+import { BuilderAppearanceControls } from '../src/components/app/builder/builder-appearance-controls';
 
 const domain = {
 	exports: {} as { normalize: (value: unknown) => BuilderEnvelope },
@@ -51,6 +60,84 @@ function fixture() {
 }
 
 describe('builder appearance persistence and rendering', () => {
+	it('keeps preset values inside the appearance allowlist and reports exact or custom state', () => {
+		for (const preset of Object.values(BUILDER_APPEARANCE_PRESETS)) {
+			for (const [key, value] of Object.entries(preset.values)) {
+				expect(APPEARANCE_FIELDS).toContain(key);
+				expect(Object.hasOwn(APPEARANCE_OPTIONS[key as keyof BuilderAppearance].values, value)).toBe(true);
+			}
+		}
+		expect(PRESET_APPEARANCE_FIELDS).toEqual(['background', 'color', 'border', 'radius', 'padding']);
+		for (const [name, preset] of Object.entries(BUILDER_APPEARANCE_PRESETS))
+			expect(matchingAppearancePreset(preset.values as BuilderAppearance)).toBe(name);
+		expect(matchingAppearancePreset({ ...BUILDER_APPEARANCE_PRESETS.note.values, size: 'lg' })).toBe('custom');
+	});
+	it('applies and resets only appearance data without aliasing or changing protected document fields', () => {
+		const { draft, activity, block, group } = fixture();
+		group.background = { mode: 'gradient', from: 'action', to: 'surface', angle: 135, overlay: 'surface-2', opacity: 20 };
+		group.responsive = { tablet: { columns: 2, background: { mode: 'solid', token: 'surface-2' } }, mobile: { columns: 1, background: { mode: 'transparent' } } };
+		group.paddingSides = { top: 18, right: 19, bottom: 20, left: 21 };
+		group.layoutLocked = false;
+		group.appearance = { padding: 'lg', size: 'xl' };
+		block.layoutLocked = false;
+		block.appearance = { size: 'xl' };
+		const before = structuredClone(draft);
+		const changed = applyAppearancePreset(block.appearance, 'highlight')!;
+		group.appearance = applyAppearancePreset(group.appearance, 'exercise', ['padding']);
+		expect(group.appearance?.padding).toBe('lg');
+		expect(group.appearance?.size).toBeUndefined();
+		expect(matchingAppearancePreset(group.appearance, ['padding'])).toBe('exercise');
+		group.appearance = resetBuilderAppearance(group.appearance, ['padding']);
+		expect(group.appearance).toEqual({ padding: 'lg' });
+		expect(block.appearance).toEqual({ size: 'xl' });
+		block.appearance = changed;
+		expect(changed).toEqual(BUILDER_APPEARANCE_PRESETS.highlight.values);
+		expect(matchingAppearancePreset(changed)).toBe('highlight');
+		const reset = resetBuilderAppearance(block.appearance);
+		block.appearance = reset;
+		expect(reset).toBeUndefined();
+		expect(resetBuilderAppearance(reset)).toBeUndefined();
+		const afterWithoutAppearance = structuredClone(draft);
+		delete afterWithoutAppearance.document.activities[0].blocks[0].appearance;
+		delete before.document.activities[0].blocks[0].appearance;
+		findLayoutGroup(before.document.activities[0].layout!, group.id)!.appearance = { padding: 'lg' };
+		expect(afterWithoutAppearance).toEqual(before);
+		expect(activity.blocks[0].layoutLocked).toBe(false);
+		expect(group.layoutLocked).toBe(false);
+		expect(group.paddingSides).toEqual({ top: 18, right: 19, bottom: 20, left: 21 });
+	});
+	it('renders accessible preset pressed state, custom state, and retained-background guidance', () => {
+		const html = renderToStaticMarkup(createElement(BuilderAppearanceControls, {
+			value: { ...BUILDER_APPEARANCE_PRESETS.note.values, size: 'lg' } as BuilderAppearance,
+			onChange: vi.fn(),
+			backgroundNotice: true,
+		}));
+		expect(html).toContain('aria-pressed="false"');
+		expect(html).toContain('Kustom');
+		expect(html).toContain('Latar kustom bagian dan latar responsif tetap dipertahankan');
+		expect(html).toContain('Reset gaya');
+	});
+	it('records a style change once through the guarded history path and safely ignores a stale target', () => {
+		const { draft, activity, block } = fixture();
+		block.layoutLocked = true;
+		const result = guardedLayoutEdit(draft, next => {
+			const target = next.document.activities.find(item => item.id === activity.id)?.blocks.find(item => item.id === block.id);
+			if (target) target.appearance = applyAppearancePreset(target.appearance, 'exercise');
+		}, true);
+		expect(result.reason).toBeNull();
+		const next = result.next!;
+		const past = [draft];
+		const future: BuilderEnvelope[] = [];
+		expect(moveBuilderHistory(past, future, next)).toBe(draft);
+		expect(moveBuilderHistory(past, future, draft, true)).toBe(next);
+		expect(past).toHaveLength(1);
+		expect(next.document.activities[0].blocks[0].appearance).toEqual(BUILDER_APPEARANCE_PRESETS.exercise.values);
+		const stale = guardedLayoutEdit(next, value => {
+			const target = value.document.activities.find(item => item.id === activity.id)?.blocks.find(item => item.id === 'deleted-block');
+			if (target) target.appearance = applyAppearancePreset(target.appearance, 'note');
+		}, true).next!;
+		expect(stale).toEqual(next);
+	});
 	it('preserves every supported override through server normalization', () => {
 		for (const [key, setting] of Object.entries(APPEARANCE_OPTIONS)) {
 			for (const value of Object.keys(setting.values)) {

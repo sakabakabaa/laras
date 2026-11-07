@@ -1,73 +1,51 @@
 import {
+	APPEARANCE_FIELDS,
 	APPEARANCE_OPTIONS,
+	applyAppearancePreset,
+	BUILDER_APPEARANCE_PRESETS,
+	matchingAppearancePreset,
+	resetBuilderAppearance,
 	type BuilderAppearance,
+	type BuilderAppearancePreset,
 } from '@/lib/builder-appearance';
 
 export function BuilderAppearanceControls({
 	value,
 	onChange,
 	exclude = [],
+	presetPreserve = [],
+	backgroundNotice = false,
 }: {
 	value?: BuilderAppearance;
 	onChange: (value: BuilderAppearance | undefined) => void;
 	exclude?: (keyof BuilderAppearance)[];
+	presetPreserve?: (keyof BuilderAppearance)[];
+	backgroundNotice?: boolean;
 }) {
+	const selectedPreset = matchingAppearancePreset(value, presetPreserve);
 	return (
 		<div className="bd-fields bd-appearance-controls">
 			<fieldset className="bd-fields">
-				<legend>Praset tema</legend>
-				{(['default', 'highlight', 'exercise', 'note'] as const).map(
+				<legend>Praset tampilan</legend>
+				{(Object.keys(BUILDER_APPEARANCE_PRESETS) as BuilderAppearancePreset[]).map(
 					(preset) => (
 						<button
 							type="button"
 							className="bd-secondary"
 							key={preset}
-							onClick={() =>
-								onChange(
-									preset === 'default'
-										? undefined
-										: preset === 'highlight'
-											? {
-													background: 'accent',
-													color: 'accent',
-													border: 'accent',
-													radius: 'md',
-													padding: 'md',
-												}
-											: preset === 'exercise'
-												? {
-														background: 'muted',
-														color: 'ink',
-														border: 'subtle',
-														radius: 'sm',
-														padding: 'md',
-													}
-												: {
-														background: 'none',
-														color: 'muted',
-														border: 'subtle',
-														radius: 'none',
-														padding: 'sm',
-													},
-								)
-							}
+							aria-pressed={selectedPreset === preset}
+							onClick={() => onChange(applyAppearancePreset(value, preset, presetPreserve))}
 						>
-							{preset === 'default'
-								? 'Default'
-								: preset === 'highlight'
-									? 'Highlight'
-									: preset === 'exercise'
-										? 'Exercise'
-										: 'Note'}
+							{BUILDER_APPEARANCE_PRESETS[preset].label}
 						</button>
 					),
 				)}
 			</fieldset>
 			<p className="bd-help">
-				Mengikuti tema jika tidak diatur. Perubahan tampil di pratinjau dan
-				halaman mahasiswa.
+				{selectedPreset === 'custom' ? 'Kustom' : `Terpilih: ${BUILDER_APPEARANCE_PRESETS[selectedPreset].label}`}. Praset mengatur warna teks, latar tampilan, garis, sudut, dan ruang dalam; warna memakai token tema.
 			</p>
-			{(Object.keys(APPEARANCE_OPTIONS) as (keyof BuilderAppearance)[])
+			{backgroundNotice && <p className="bd-help">Latar kustom bagian dan latar responsif tetap dipertahankan serta tampil di atas latar praset.</p>}
+			{APPEARANCE_FIELDS
 				.filter((key) => !exclude.includes(key))
 				.map((key) => (
 					<label key={key}>
@@ -96,10 +74,10 @@ export function BuilderAppearanceControls({
 			<button
 				type="button"
 				className="bd-secondary"
-				disabled={!value || !Object.keys(value).length}
-				onClick={() => onChange(undefined)}
+				disabled={!value || !APPEARANCE_FIELDS.some((key) => !presetPreserve.includes(key) && value[key] !== undefined)}
+					onClick={() => onChange(resetBuilderAppearance(value, presetPreserve))}
 			>
-				Reset tampilan
+				Reset gaya
 			</button>
 		</div>
 	);

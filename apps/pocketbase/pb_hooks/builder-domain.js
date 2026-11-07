@@ -389,6 +389,7 @@ function layout(value, blockIds, unique) {
 		return {
 			kind: value.kind,
 			id: unique(value.id),
+			...(value.layoutLocked !== undefined ? { layoutLocked: typeof value.layoutLocked === 'boolean' ? value.layoutLocked : fail('Kunci tata letak tidak valid.') } : {}),
 			title: value.title === undefined ? '' : str(value.title, 200),
 			columns,
 			gap,
@@ -491,6 +492,7 @@ function normalize(body) {
 			if (++blockCount > 500 || !types.includes(b.type))
 				fail('Jenis/jumlah elemen tidak didukung.');
 			const out = { id: unique(b.id), type: b.type };
+			if (b.layoutLocked !== undefined) out.layoutLocked = typeof b.layoutLocked === 'boolean' ? b.layoutLocked : fail('Kunci tata letak tidak valid.');
 			if (b.appearance !== undefined) out.appearance = appearance(b.appearance);
 			blockIds.add(out.id);
 			if (b.body !== undefined) out.body = rich(b.body, b.type === 'instructions' || b.type === 'acknowledgement');

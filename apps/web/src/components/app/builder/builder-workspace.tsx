@@ -9,6 +9,8 @@ import { Link, useBlocker, useNavigate, useSearchParams } from 'react-router';
 import { canPasteBuilderStyle, copyBuilderStyle, pasteBuilderStyle, type BuilderStyleClipboard, type BuilderStyleSelection } from '@/lib/builder-style-clipboard';
 import { BuilderStyleActions } from './builder-style-actions';
 import { renameNavigatorGroup, revealNavigatorCanvas, type NavigatorReveal } from '@/lib/builder-navigator';
+import { activityLayoutProtected, guardedLayoutEdit, hasLayoutLockFields, layoutLockState, layoutLockTransitionReason, LAYOUT_LOCK_CAPABILITY_REASON, LAYOUT_LOCK_REASON } from '@/lib/builder-layout-lock';
+import { BuilderLayoutLockControl } from './builder-layout-lock-control';
 import {
 	ArrowDown,
 	ChevronDown,
@@ -114,7 +116,7 @@ import {
 	reparentLayoutItem,
 } from '@/lib/builder-layout';
 
-type Change = (edit: (draft: BuilderEnvelope) => void) => void;
+type Change = (edit: (draft: BuilderEnvelope) => void) => boolean;
 type CourseOption = { id: string; title: string; code: string };
 type MeetingOption = { id: string; title: string; week: number; section: string };
 const encode = encodeBuilderDraft;
@@ -180,6 +182,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const [online, setOnline] = useState(true);
 	const [storageWarning, setStorageWarning] = useState('');
 	const [capability, setCapability] = useState<BuilderCapabilityPayload | null>(null);
+	const [layoutLocksSupported, setLayoutLocksSupported] = useState(false);
+	const layoutLocksSupportedRef = useRef(false);
 	const [recoveryInfo, setRecoveryInfo] = useState<{ at: number; baseRevision?: number } | null>(null);
 	const [publishReview, setPublishReview] = useState(false);
 	const saveQueue = useRef(createBuilderSaveQueue((command) => builderRequest<BuilderRecord>('save', command)));
@@ -273,6 +277,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setLoading(true);
 		setDraft(null);
 		current.current = null;
+		layoutLocksSupportedRef.current = false;
+		setLayoutLocksSupported(false);
 		setStyleClipboard(null);
 		setStyleStatus('');
 		setError('');
@@ -286,6 +292,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		builderRequest<BuilderRecord>('get', { id })
 			.then((r) => {
 				if (!live) return;
+				layoutLocksSupportedRef.current = r.layoutLocks === true;
+				setLayoutLocksSupported(r.layoutLocks === true);
 				const envelope = { document: r.document, privateKeys: r.privateKeys };
 				install(envelope);
 				setSaved(encode(envelope));
@@ -314,20 +322,23 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		if (selected) setSelectedNode('');
 	}, [selected]);
 	const change: Change = (edit) => {
-		if (!current.current || recovery || conflict || readOnlyRef.current) return;
-		const prior = current.current,
-			next = structuredClone(prior);
-		edit(next);
-		if (encode(next) === encode(prior)) return;
+		if (!current.current || recovery || conflict || readOnlyRef.current) return false;
+		const prior = current.current;
+		const { next, reason } = guardedLayoutEdit(prior, edit, layoutLocksSupportedRef.current);
+		if (!next) { setError(reason); setAnnouncement(reason); return false; }
+		if (encode(next) === encode(prior)) return false;
 		past.current = [...past.current.slice(-29), prior];
 		future.current = [];
 		install(next);
 		setHistoryVersion((v) => v + 1);
+		return true;
 	};
 	const authoringTools = useBuilderAuthoringTools({ id, draft, disabled: conflict || Boolean(recovery) || !online || readOnlyRef.current, selectedActivityId: active, selectedBlockId: selected, selectedGroupId: selectedNode,
 		onApply: (source, operation: ProposalOperation, targetActivityId) => {
 			if (!current.current || conflict || recovery || !online) throw new Error('Draf belum siap menerima tambahan. Selesaikan pemulihan atau konflik terlebih dahulu.');
-			change(next => { Object.assign(next, structuredClone(source)); });
+			const reason = layoutLockTransitionReason(current.current, source, layoutLocksSupportedRef.current);
+			if (reason) throw new Error(reason);
+			if (!change(next => { Object.assign(next, structuredClone(source)); })) throw new Error('Usulan tidak diterapkan. Periksa mode hanya-baca atau status draf.');
 			if (operation === 'replace') setActive(targetActivityId);
 			else if (operation === 'insert') setActive(targetActivityId);
 			else setActive(source.document.activities[0]?.id || active);
@@ -337,6 +348,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	});
 	const save = useCallback(async () => {
 		if (!current.current || savingRef.current || conflictRef.current) return;
+		if (!layoutLocksSupportedRef.current && hasLayoutLockFields(current.current)) { setError(LAYOUT_LOCK_CAPABILITY_REASON); return; }
+		if (readOnlyRef.current) return;
 		if (!navigator.onLine) { setError('Anda sedang offline. Perubahan belum tersimpan di server; coba simpan setelah terhubung.'); return; }
 		const savingId = id;
 		savingRef.current = true;
@@ -402,6 +415,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		return () => window.removeEventListener('beforeunload', handler);
 	}, [dirty, saving]);
 	const undo = (forward = false) => {
+		if (recovery || conflict || readOnlyRef.current) return;
 		const next = moveBuilderHistory(
 			past.current,
 			future.current,
@@ -436,6 +450,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setLoading(true);
 		try {
 			const r = await builderRequest<BuilderRecord>('get', { id });
+			layoutLocksSupportedRef.current = r.layoutLocks === true;
+			setLayoutLocksSupported(r.layoutLocks === true);
 			install({ document: r.document, privateKeys: r.privateKeys });
 			setSaved(encode({ document: r.document, privateKeys: r.privateKeys }));
 			revisionRef.current = r.revision;
@@ -527,7 +543,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	// read-only view instead of a reduced editor that would drop layout/appearance.
 	const enhancedDocument = usesEnhancedAuthoring(draft.document);
 	// Reflect the server decision so enabled lecturers never see a denial notice.
-	const readOnly = capability ? !capability.authoring : false;
+	const layoutLockFallback = !layoutLocksSupported && hasLayoutLockFields(draft);
+	const readOnly = (capability ? !capability.authoring : false) || layoutLockFallback;
 	readOnlyRef.current = readOnly;
 	const capabilityNotice = capability
 		? enhancedAuthoringNotice(
@@ -555,9 +572,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const addGroup = (kind: 'section' | 'container', parentId: string | null = null) => {
 		if (!activity || locked) return;
 		let id = '';
-		change((next) => {
+		if (!change((next) => {
 			id = addLayoutGroupToActivity(next, activity.id, kind, parentId);
-		});
+		})) return;
 		if (!id) {
 			setAnnouncement('Batas bagian atau kedalaman tata letak tercapai.');
 			return;
@@ -609,18 +626,18 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	) => {
 		if (!activity || locked) return;
 		let moved = false;
-		change((next) => {
+		if (!change((next) => {
 			const target = next.document.activities.find((a) => a.id === activity.id);
 			if (target) moved = reparentLayoutItem(target, itemId, direction);
-		});
+		})) return;
 		if (!moved)
 			setAnnouncement('Tidak dapat memindahkan bagian ke dalam dirinya sendiri atau melewati batas kedalaman.');
 	};
 	const removeGroup = (groupId: string, activityId = activity?.id) => {
 		if (!activityId || locked) return;
-		change((next) => {
+		if (!change((next) => {
 			removeLayoutGroupFromActivity(next, activityId, groupId);
-		});
+		})) return;
 		setSelectedNode('');
 		setAnnouncement('Bagian dihapus. Elemen dan pertanyaan di dalamnya tetap tersimpan.');
 	};
@@ -720,7 +737,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			return;
 		}
 		let blockId = '';
-		change((next) => {
+		if (!change((next) => {
 			blockId = appendBlock(next, activityId, element.type);
 			const blocks = next.document.activities.find(
 				(a) => a.id === activityId,
@@ -745,7 +762,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					moveBlockBefore(targetActivity, blockId, beforeId);
 				else insertBlockIntoLayout(targetActivity, blockId);
 			}
-		});
+		})) return;
 		setInsertion({ activityId, beforeId, parentId });
 		setAnnouncement(
 			`${element.label} ditambahkan ke ${target.title || 'kegiatan'}.`,
@@ -771,7 +788,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			(a) => a.id === item.activityId,
 		);
 		if (!source?.blocks.some((b) => b.id === item.blockId)) return;
-		change((next) => {
+		if (!change((next) => {
 			const from = next.document.activities.find(
 				(a) => a.id === item.activityId,
 			)!;
@@ -786,7 +803,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			const at = beforeId ? to.blocks.findIndex((b) => b.id === beforeId) : -1;
 			to.blocks.splice(at < 0 ? to.blocks.length : at, 0, moving);
 			if (to.layout) moveBlockBefore(to, item.blockId!, beforeId, parentId);
-		});
+		})) return;
 		setInsertion(null);
 		setAnnouncement('Posisi elemen diperbarui.');
 		revealBlock(activityId, item.blockId);
@@ -879,9 +896,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 								}
 								onClick={() => {
 									let copied = '';
-									change((next) => {
+									if (!change((next) => {
 										copied = duplicateActivity(next, a.id);
-									});
+									})) return;
 									setActive(copied);
 									setInsertion(null);
 									setSelected('');
@@ -927,6 +944,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				onReparent={reparentStructureItem}
 				onRemoveGroup={removeGroup}
 			/>
+			{activity && (selected || selectedNode) && <BuilderLayoutLockControl activity={activity} nodeId={selected || selectedNode} disabled={locked || readOnly} supported={layoutLocksSupported} onChange={change} />}
 			<p>Draf pribadi · hanya dosen</p>
 		</div>
 	);
@@ -963,6 +981,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							});
 						}} />;
 			})()}
+			{activity && (block || selectedGroup) && <BuilderLayoutLockControl activity={activity} nodeId={block?.id || selectedGroup!.id} disabled={locked || readOnly} supported={layoutLocksSupported} onChange={change} />}
 			{block ? (
 				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked} onChange={change} />
 			) : selectedGroup && activity ? (
@@ -1056,6 +1075,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					</button>
 					<button
 						className="bd-text-button"
+						disabled={locked || readOnly || activityLayoutProtected(activity)}
+						title={activityLayoutProtected(activity) ? LAYOUT_LOCK_REASON : undefined}
 						onClick={() => {
 							if (
 								activity.blocks.length &&
@@ -1064,13 +1085,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 								)
 							)
 								return;
-							change((next) => {
+							if (!change((next) => {
 								for (const b of [...activity.blocks])
 									removeBlock(next, activity.id, b.id);
 								next.document.activities = next.document.activities.filter(
 									(a) => a.id !== activity.id,
 								);
-							});
+							})) return;
 							setActive(
 								d.activities.find((a) => a.id !== activity.id)?.id || '',
 							);
@@ -1130,7 +1151,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<button
 							type="button"
 							className="bd-icon"
-							disabled={!past.current.length || conflict || Boolean(recovery)}
+							disabled={!past.current.length || conflict || Boolean(recovery) || readOnly}
 							aria-label="Urungkan"
 							onClick={() => undo()}
 						>
@@ -1139,7 +1160,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<button
 							type="button"
 							className="bd-icon"
-							disabled={!future.current.length || conflict || Boolean(recovery)}
+							disabled={!future.current.length || conflict || Boolean(recovery) || readOnly}
 							aria-label="Ulangi"
 							onClick={() => undo(true)}
 						>
@@ -1276,6 +1297,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					)}
 				</div>
 			)}
+			{layoutLockFallback && <p role="alert">{LAYOUT_LOCK_CAPABILITY_REASON}</p>}
 			{recovery && (
 				<div className="bd-recovery" role="alert">
 					<strong>Ada perubahan yang tersimpan di perangkat.</strong>
@@ -1287,7 +1309,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<button className="bd-secondary" onClick={() => downloadEnvelope(recovery)}>Unduh salinan perangkat</button>
 						<button
 							className="bd-primary"
+							disabled={readOnly || (!layoutLocksSupported && hasLayoutLockFields(recovery))}
+							title={!layoutLocksSupported && hasLayoutLockFields(recovery) ? LAYOUT_LOCK_CAPABILITY_REASON : undefined}
 							onClick={() => {
+								if (readOnlyRef.current || (!layoutLocksSupportedRef.current && hasLayoutLockFields(recovery))) return;
+								const reason = current.current && layoutLockTransitionReason(current.current, recovery, layoutLocksSupportedRef.current);
+								if (reason) { setError(reason); setAnnouncement(reason); return; }
 								if (recoveryInfo?.baseRevision !== revision && !window.confirm('Revisi perangkat dan server berbeda. Muat salinan perangkat ke editor untuk ditinjau sebelum menyimpan?')) return;
 								install(recovery);
 								setRecovery(null);
@@ -1491,9 +1518,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															<button
 																type="button"
 																className="bd-icon"
-																disabled={locked || readOnly}
+																disabled={locked || readOnly || layoutLockState(a, group.id).own || Boolean(layoutLockState(a, group.id).inheritedFrom)}
 																aria-label="Tambah elemen ke bagian ini"
-																title="Tambah elemen ke bagian ini"
+																title={layoutLockState(a, group.id).own || layoutLockState(a, group.id).inheritedFrom ? LAYOUT_LOCK_REASON : 'Tambah elemen ke bagian ini'}
 																onClick={() =>
 																	openElements(a.id, undefined, group.id)
 																}
@@ -1503,9 +1530,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															<button
 																type="button"
 																className="bd-icon"
-																disabled={locked || readOnly}
+																disabled={locked || readOnly || layoutLockState(a, group.id).protectedStructure}
 																aria-label="Hapus bagian, simpan isinya"
-																title="Hapus bagian, simpan isinya"
+																title={layoutLockState(a, group.id).protectedStructure ? LAYOUT_LOCK_REASON : 'Hapus bagian, simpan isinya'}
 															onClick={() => removeGroup(group.id, a.id)}
 															>
 																<Trash2 size={13} />
@@ -1541,10 +1568,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															<button
 																type="button"
 																className="bd-block-grip"
-																draggable={!locked && !readOnly}
-																disabled={locked || readOnly}
+																draggable={!locked && !readOnly && !layoutLockState(a, b.id).protectedStructure}
+																disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure}
 																aria-label={`Seret ${BLOCK_LABELS[b.type]}`}
-																title="Seret untuk memindahkan elemen"
+																title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : 'Seret untuk memindahkan elemen'}
 																onDragStart={(event) => {
 																	event.stopPropagation();
 																	dragItem.current = {
@@ -1580,9 +1607,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																onClick={(e) => {
 																	e.stopPropagation();
 																	let copy = '';
-																	change((next) => {
+																	if (!change((next) => {
 																		copy = duplicateBlock(next, a.id, b.id);
-																	});
+																	})) return;
 																	revealBlock(a.id, copy);
 																	setAnnouncement('Elemen diduplikat.');
 																}}
@@ -1593,11 +1620,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																className="bd-move-select"
 																aria-label="Pindahkan elemen ke kegiatan"
 																value=""
-																disabled={locked || readOnly}
+																disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure}
+																title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : undefined}
 																onClick={(e) => e.stopPropagation()}
 																onChange={(e) => {
 																	const targetId = e.target.value;
-																	change((next) => {
+																	if (!change((next) => {
 																		const source =
 																				next.document.activities.find(
 																					(v) => v.id === a.id,
@@ -1611,7 +1639,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																				target,
 																				b.id,
 																			);
-																	});
+																	})) return;
 																	revealBlock(targetId, b.id);
 																	setAnnouncement('Elemen dipindahkan.');
 																}}
@@ -1647,7 +1675,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Naikkan elemen"
-															disabled={locked || readOnly || !canMoveLayoutItem(a, b.id, -1)}
+															disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure || !canMoveLayoutItem(a, b.id, -1)}
+															title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : undefined}
 															onClick={() => moveBlockBy(a.id, b.id, -1)}
 															>
 																<ArrowUp size={14} />
@@ -1656,7 +1685,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Turunkan elemen"
-															disabled={locked || readOnly || !canMoveLayoutItem(a, b.id, 1)}
+															disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure || !canMoveLayoutItem(a, b.id, 1)}
+															title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : undefined}
 															onClick={() => moveBlockBy(a.id, b.id, 1)}
 															>
 																<ArrowDown size={14} />
@@ -1665,11 +1695,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Hapus elemen"
+																disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure}
+																title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : undefined}
 																onClick={(e) => {
 																	e.stopPropagation();
-																	change((next) =>
+																	if (!change((next) =>
 																		removeBlock(next, a.id, b.id),
-																	);
+																	)) return;
 																	setAnnouncement(
 																		'Elemen dihapus. Gunakan Urungkan untuk mengembalikannya.',
 																	);
@@ -1950,10 +1982,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					dirty={dirty || saving || locked || readOnly}
 					onClose={() => setSavedItems(null)}
 					onRestore={(envelope) => {
-						change((next) => {
+						if (!change((next) => {
 							next.document = envelope.document;
 							next.privateKeys = envelope.privateKeys;
-						});
+						})) return;
 						setActive(envelope.document.activities[0]?.id || '');
 						setSelected('');
 						setAnnouncement('Snapshot dipulihkan ke draf.');
@@ -1965,7 +1997,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							if (!targetActivity || !targetGroup) { setError('Pilih kegiatan dan bagian tujuan yang masih tersedia.'); return; }
 						let inserted = '';
 						try {
-							change(next => { inserted = insertGroupTemplate(next, targetActivity.id, targetGroup.id, envelope); });
+							if (!change(next => { inserted = insertGroupTemplate(next, targetActivity.id, targetGroup.id, envelope); })) return;
 							setSelectedNode(inserted);
 							setSelected('');
 							setAnnouncement('Template bagian disisipkan sebagai salinan.');
@@ -1985,9 +2017,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							return;
 						}
 						let inserted = '';
-						change((next) => {
+						if (!change((next) => {
 							inserted = insertActivityTemplate(next, envelope);
-						});
+						})) return;
 						selectActivity(inserted);
 						setAnnouncement('Template kegiatan ditambahkan.');
 					}}

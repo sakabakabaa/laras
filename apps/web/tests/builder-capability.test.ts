@@ -375,6 +375,31 @@ function serviceContext(env: Record<string, string | undefined>, options: { priv
 const OFF = { [ENHANCED_AUTHORING_ENV]: 'off' };
 
 describe('builder service — server-side enforcement', () => {
+	it('accepts versioned lock writes through the normal revision and ownership path', () => {
+		const { handle, app, values, saved } = serviceContext({});
+		const advanced = advancedEnvelope();
+		appendBlock(advanced, advanced.document.activities[0].id, 'instructions');
+		advanced.document.activities[0].blocks[0].layoutLocked = true;
+		values.document = JSON.stringify(advanced.document);
+		handle(app, faculty(), {
+			action: 'layoutLocks:save', id: 'draft0000000001', baseRevision: 2,
+			commandId: 'cmd-versioned', ...advanced,
+		});
+		expect(saved).toHaveLength(2);
+		expect(JSON.parse(values.document as string).activities[0].blocks[0].layoutLocked).toBe(true);
+		expect(() => handle(app, faculty(), {
+			action: 'layoutLocks:save', id: 'draft0000000001', baseRevision: 2,
+			commandId: 'cmd-stale', ...advanced,
+		})).toThrow('REVISION_CONFLICT');
+		expect(saved).toHaveLength(2);
+	});
+
+	it('rejects unknown versioned commands without persisting anything', () => {
+		const { handle, app, saved } = serviceContext({});
+		expect(() => handle(app, faculty(), { action: 'layoutLocks:unknown' })).toThrow('Perintah builder tidak didukung');
+		expect(saved).toHaveLength(0);
+	});
+
 	it('saves an advanced draft when the flag is unset (production default)', () => {
 		const { handle, app, values, saved } = serviceContext({});
 		const advanced = advancedEnvelope();

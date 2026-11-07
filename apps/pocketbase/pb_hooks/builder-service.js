@@ -48,7 +48,7 @@ function enhancedDocument(d) {
 					a.blocks.some(
 						(b) =>
 							!!b &&
-							(b.appearance !== undefined || Array.isArray(b.sections) || b.transcript !== undefined || b.playback !== undefined || (b.body && Array.isArray(b.body.content) && b.body.content.some((node) => node && (node.type === 'heading' || node.type === 'list_item')))),
+							(b.layoutLocked !== undefined || b.appearance !== undefined || Array.isArray(b.sections) || b.transcript !== undefined || b.playback !== undefined || (b.body && Array.isArray(b.body.content) && b.body.content.some((node) => node && (node.type === 'heading' || node.type === 'list_item')))),
 					))),
 	);
 }
@@ -137,6 +137,7 @@ function view(app, r) {
 		throw new BadRequestError('Pengaturan penilaian draf tidak ditemukan.');
 	return {
 		id: r.id,
+		layoutLocks: true,
 		title: r.getString('title'),
 		kind: r.getString('kind'),
 		revision: r.getInt('revision'),
@@ -148,6 +149,8 @@ function view(app, r) {
 function handle(app, user, body) {
 	if (user.getString('role') !== 'faculty')
 		throw new ForbiddenError('Builder hanya tersedia untuk dosen.');
+	if (['layoutLocks:create', 'layoutLocks:save', 'layoutLocks:saveSnapshot', 'layoutLocks:saveTemplate'].includes(body.action))
+		body = { ...body, action: body.action.slice('layoutLocks:'.length) };
 	// Reads (list/get/saved) always work so recovery and export stay reachable.
 	const capability = enhancedAuthoring(),
 		allowed = authoringAllowed(user, capability);

@@ -50,7 +50,7 @@ import {
 import pb from '@/lib/pocketbase-client';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import { createBuilderSaveQueue } from '@/lib/builder-save';
-import { type ProposalOperation } from '@/lib/builder-authoring';
+import { type ProposalOperation, type ProposalTarget } from '@/lib/builder-authoring';
 import { useBuilderAuthoringTools } from './builder-authoring-tools';
 import { BuilderPublishDialog, builderPublishWarnings } from './builder-publish-dialog';
 import {
@@ -335,13 +335,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		return true;
 	};
 	const authoringTools = useBuilderAuthoringTools({ id, draft, disabled: conflict || Boolean(recovery) || !online || readOnlyRef.current, selectedActivityId: active, selectedBlockId: selected, selectedGroupId: selectedNode,
-		onApply: (source, operation: ProposalOperation, targetActivityId) => {
+		onApply: (source, operation: ProposalOperation, target: ProposalTarget) => {
 			if (!current.current || conflict || recovery || !online) throw new Error('Draf belum siap menerima tambahan. Selesaikan pemulihan atau konflik terlebih dahulu.');
 			const reason = layoutLockTransitionReason(current.current, source, layoutLocksSupportedRef.current);
 			if (reason) throw new Error(reason);
 			if (!change(next => { Object.assign(next, structuredClone(source)); })) throw new Error('Usulan tidak diterapkan. Periksa mode hanya-baca atau status draf.');
-			if (operation === 'replace') setActive(targetActivityId);
-			else if (operation === 'insert') setActive(targetActivityId);
+			if (operation === 'replace') setActive(target.activityId);
+			else if (operation === 'insert') setActive(target.activityId);
 			else setActive(source.document.activities[0]?.id || active);
 			setSelected(''); setInsertion(null);
 			setAnnouncement(`Usulan ${operation.toUpperCase()} diterapkan sebagai satu perubahan. Jadwal draf tetap dipertahankan.`);

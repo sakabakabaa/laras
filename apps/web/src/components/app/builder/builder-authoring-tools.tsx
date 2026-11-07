@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { BookOpen, Sparkles } from 'lucide-react';
 import { builderRequest, uid, type BuilderEnvelope, type BuilderRecord } from '@/lib/builder-document';
-import { applyBuilderProposal, builderFromAiProposal, type ProposalOperation } from '@/lib/builder-authoring';
+import { applyBuilderProposal, builderFromAiProposal, type ProposalOperation, type ProposalTarget } from '@/lib/builder-authoring';
 import { builderImportRequest, type BuilderImportJob } from '@/lib/builder-import';
 import { scheduledAiRequest } from '@/lib/scheduled-class-ai-client';
 import type { ScheduledAcademicContext, ScheduledAiProposal } from '@/lib/scheduled-class-ai';
@@ -13,7 +13,7 @@ type Tool = 'ai' | 'book';
 
 export function useBuilderAuthoringTools({ id, draft, disabled, selectedActivityId, selectedBlockId, selectedGroupId, onApply }: {
 	id: string; draft: BuilderEnvelope | null; disabled: boolean;
-	selectedActivityId: string; selectedBlockId: string; selectedGroupId: string; onApply: (envelope: BuilderEnvelope, operation: ProposalOperation, targetActivityId: string) => void;
+	selectedActivityId: string; selectedBlockId: string; selectedGroupId: string; onApply: (envelope: BuilderEnvelope, operation: ProposalOperation, target: ProposalTarget) => void;
 }) {
 	const [params] = useSearchParams();
 	const [tool, setTool] = useState<Tool | null>(() => params.get('tool') === 'book' ? 'book' : params.get('tool') === 'ai' ? 'ai' : null);
@@ -93,12 +93,16 @@ export function useBuilderAuthoringTools({ id, draft, disabled, selectedActivity
 		} catch (failure) { if (mounted.current) setError((failure as Error).message); }
 		finally { working.current = false; if (mounted.current) setBusy(false); }
 	};
+	const replacementTarget: ProposalTarget | null = selectedBlock ? { kind: 'block', id: selectedBlock.id, activityId: selectedActivityId } : selectedGroup ? { kind: 'group', id: selectedGroup.id, activityId: selectedActivityId } : selectedActivity ? { kind: 'activity', id: selectedActivity.id, activityId: selectedActivity.id } : null;
+	const targetLabel = replacementTarget?.kind === 'block' ? 'elemen terpilih' : replacementTarget?.kind === 'group' ? `grup “${selectedGroup?.title}”` : `kegiatan “${selectedActivity?.title}”`;
 	const apply = () => {
 		if (disabled || working.current || !proposal || !proposalCurrent) return false;
 		try {
 			const next = structuredClone(current.current.draft!);
-			applyBuilderProposal(next, proposal.source, operation, proposal.targetId);
-			current.current.onApply(next, operation, proposal.targetId);
+			const target = operation === 'replace' ? replacementTarget : { kind: 'activity' as const, id: proposal.targetId, activityId: proposal.targetId };
+			if (!target) throw new Error('Pilih target yang akan diganti.');
+			applyBuilderProposal(next, proposal.source, operation, target);
+			current.current.onApply(next, operation, target);
 			setError(''); return true;
 		}
 		catch (failure) { setError((failure as Error).message); return false; }
@@ -150,7 +154,7 @@ export function useBuilderAuthoringTools({ id, draft, disabled, selectedActivity
 			{job?.status === 'failed' && <p role="alert">{job.error}</p>}
 			{job?.status === 'ready' && <><p>{job.report.activityCount} kegiatan siap ditinjau. {job.report.missingMedia?.length || 0} media perlu dilengkapi.</p>{job.report.warnings?.map((warning, index) => <p className="bd-help" key={index}>{warning}</p>)}<button type="button" className="bd-primary" disabled={disabled || busy} onClick={() => void applyImport()}>Tinjau usulan</button></>}
 		</section>}
-		{proposal && <section className="bd-tool-proposal" aria-label="Pratinjau usulan"><h3>{proposal.label}</h3><label>Penempatan<select value={operation} onChange={event => { setOperation(event.target.value as ProposalOperation); setConfirmReplace(false); }}><option value="append">APPEND · akhir draf</option><option value="insert" disabled={!selectedActivityId}>INSERT · sebelum kegiatan terpilih</option><option value="replace" disabled={!selectedActivityId || !replacementAvailable}>REPLACE · isi kegiatan terpilih</option></select></label>{!replacementAvailable && <p className="bd-help">REPLACE hanya tersedia untuk usulan berisi tepat satu kegiatan. Gunakan APPEND atau INSERT untuk menerapkan semua kegiatan dalam pratinjau.</p>}{operation === 'replace' && <label><input type="checkbox" checked={confirmReplace} onChange={event => setConfirmReplace(event.target.checked)} /> Saya memahami seluruh isi kegiatan “{draft.document.activities.find(item => item.id === proposal.targetId)?.title || 'target tidak tersedia'}” akan diganti dengan isi satu kegiatan dalam pratinjau. Kegiatan lain dan jadwal tetap.</label>}<div className="bd-tool-preview"><BuilderPreview document={proposal.source.document} readOnly /></div><p className="bd-help">Pratinjau peserta tidak menampilkan kunci jawaban. Kunci AI perlu ditinjau sebelum diterbitkan.</p>{!proposalCurrent && <p role="alert">Pilihan atau draf berubah. Buat ulang usulan sebelum menerapkan.</p>}<button type="button" className="bd-primary" disabled={disabled || busy || !proposalCurrent || (operation === 'replace' && (!confirmReplace || !replacementAvailable))} onClick={() => { if (apply()) setProposal(null); }}>Terapkan {operation.toUpperCase()}</button><button type="button" className="bd-secondary" onClick={() => setProposal(null)}>Batal</button></section>}
+		{proposal && <section className="bd-tool-proposal" aria-label="Pratinjau usulan"><h3>{proposal.label}</h3><label>Penempatan<select value={operation} onChange={event => { setOperation(event.target.value as ProposalOperation); setConfirmReplace(false); }}><option value="append">APPEND · akhir draf</option><option value="insert" disabled={!selectedActivityId}>INSERT · sebelum kegiatan terpilih</option><option value="replace" disabled={!replacementTarget || !replacementAvailable}>REPLACE · {replacementTarget?.kind === 'block' ? 'elemen terpilih' : replacementTarget?.kind === 'group' ? 'grup terpilih' : 'kegiatan terpilih'}</option></select></label>{!replacementAvailable && <p className="bd-help">REPLACE hanya tersedia untuk usulan berisi tepat satu kegiatan. Gunakan APPEND atau INSERT untuk menerapkan semua kegiatan dalam pratinjau.</p>}{operation === 'replace' && <label><input type="checkbox" checked={confirmReplace} onChange={event => setConfirmReplace(event.target.checked)} /> Ganti isi {targetLabel} dengan seluruh konten usulan satu kegiatan. Properti pembungkus grup dan kegiatan tetap dipertahankan.</label>}<div className="bd-tool-preview"><BuilderPreview document={proposal.source.document} readOnly /></div><p className="bd-help">Pratinjau peserta tidak menampilkan kunci jawaban. Kunci AI perlu ditinjau sebelum diterbitkan.</p>{!proposalCurrent && <p role="alert">Pilihan atau draf berubah. Buat ulang usulan sebelum menerapkan.</p>}<button type="button" className="bd-primary" disabled={disabled || busy || !proposalCurrent || (operation === 'replace' && (!confirmReplace || !replacementAvailable || !replacementTarget))} onClick={() => { if (apply()) setProposal(null); }}>Terapkan {operation.toUpperCase()}</button><button type="button" className="bd-secondary" onClick={() => setProposal(null)}>Batal</button></section>}
 		{job && tool !== 'book' && <p className="bd-help" role={job.status === 'failed' ? 'alert' : 'status'}>Impor buku: {pending ? 'sedang diproses' : job.status === 'ready' ? 'siap ditinjau' : job.status === 'failed' ? `gagal. ${job.error}` : 'selesai'}. Buka Unggah bahan untuk detail.</p>}
 		{error && <p role="alert">{error}{pending && <button type="button" className="bd-secondary" onClick={() => setPollAttempt(value => value + 1)}>Muat ulang status</button>}</p>}
 	</div>;

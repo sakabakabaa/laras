@@ -410,6 +410,7 @@ export function insertGroupTemplate(
 export type BuilderRecord = BuilderEnvelope & {
 	layoutLocks?: boolean;
 	customColors?: boolean;
+	detailedBorderRadius?: boolean;
 	id: string;
 	revision: number;
 	updated: string;
@@ -836,6 +837,12 @@ export function builderWriteAction(action: string, body: Record<string, unknown>
 		if (Object.prototype.hasOwnProperty.call(value, 'customColors')) return true;
 		return Object.values(value).some(containsColors);
 	};
+	const containsDetailed = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Object.prototype.hasOwnProperty.call(value, 'borderDetail') || Object.prototype.hasOwnProperty.call(value, 'corners')) return true;
+		return Object.values(value).some(containsDetailed);
+	};
+	if (body.detailedBorderRadius === true || containsDetailed(body)) return `detailedStyles:${action}`;
 	if ((action === 'save' || action === 'create') && containsColors(body.document)) return `themeColors:${action}`;
 	if (action === 'saveSnapshot' || action === 'saveTemplate') return `themeColors:${action}`;
 	if ((action === 'save' || action === 'create') && containsLocks(body.document)) return `layoutLocks:${action}`;

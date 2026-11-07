@@ -103,6 +103,12 @@
 .bl-layout .ba-border-accent {
 	border: 1px solid color-mix(in srgb, var(--r-action) 50%, transparent);
 }
+.bl-layout .ba-has-border-detail {
+	border-style: var(--ba-detail-border-style);
+	border-color: var(--ba-detail-border-color, var(--r-border));
+	border-width: var(--ba-border-top-width, 1px) var(--ba-border-right-width, 1px) var(--ba-border-bottom-width, 1px) var(--ba-border-left-width, 1px);
+}
+.bl-layout .ba-has-border-detail[style*='--ba-detail-border-style: none'] { border-width: 0; }
 .bl-layout .ba-radius-none {
 	border-radius: 0;
 }
@@ -114,6 +120,9 @@
 }
 .bl-layout .ba-radius-lg {
 	border-radius: 1.5rem;
+}
+.bl-layout .ba-has-corners {
+	border-radius: var(--ba-corner-topLeft, 0) var(--ba-corner-topRight, 0) var(--ba-corner-bottomRight, 0) var(--ba-corner-bottomLeft, 0);
 }
 .bl-layout .ba-shadow-none {
 	box-shadow: none;
@@ -127,6 +136,15 @@
 /* Preserve selection outlines while allowing the chosen surface to show. */
 .bd-canvas .bl-block[class*='ba-background-'] > .bd-block {
 	background: transparent;
+}
+.bd-detail-number-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.5rem;
+}
+.bd-detail-number-grid input {
+	box-sizing: border-box;
+	width: 100%;
 }
 @media (max-width: 600px) {
 	.bl-layout .ba-padding-lg {

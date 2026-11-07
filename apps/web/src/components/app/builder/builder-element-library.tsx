@@ -19,15 +19,17 @@ import {
 	type LucideIcon,
 } from 'lucide-react';
 import type { BlockType } from '@/lib/builder-document';
+import { BUILDER_BLOCK_REGISTRY } from '@/lib/builder-element-registry';
 
 export type BuilderElementBucket = 'text' | 'question' | 'media';
+const bucketFor = (type: BlockType): BuilderElementBucket => BUILDER_BLOCK_REGISTRY[type].category;
 export const BUILDER_ELEMENTS: {
 	id: string;
 	type: BlockType;
 	label: string;
 	description: string;
-	group: string;
-	bucket: BuilderElementBucket;
+		group: string;
+		bucket: BuilderElementBucket;
 	icon: LucideIcon;
 	shortAnswer?: boolean;
 }[] = [
@@ -37,7 +39,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Teks & instruksi',
 		description: 'Arahan, bacaan, atau pengantar kegiatan.',
 		group: 'Konten',
-		bucket: 'text',
+		bucket: bucketFor('instructions'),
 		icon: AlignLeft,
 	},
 	{
@@ -46,7 +48,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Gambar',
 		description: 'Ilustrasi atau foto dari tautan gambar.',
 		group: 'Konten',
-		bucket: 'media',
+		bucket: bucketFor('image'),
 		icon: Image,
 	},
 	{
@@ -55,7 +57,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Audio',
 		description: 'Rekaman untuk latihan menyimak.',
 		group: 'Konten',
-		bucket: 'media',
+		bucket: bucketFor('audio'),
 		icon: Headphones,
 	},
 	{
@@ -64,7 +66,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Video',
 		description: 'Video pembelajaran dari tautan.',
 		group: 'Konten',
-		bucket: 'media',
+		bucket: bucketFor('video'),
 		icon: Video,
 	},
 	{
@@ -73,7 +75,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Tautan & referensi',
 		description: 'Sumber bacaan atau materi tambahan.',
 		group: 'Konten',
-		bucket: 'text',
+		bucket: bucketFor('reference'),
 		icon: Link2,
 	},
 	{
@@ -82,7 +84,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Pilihan ganda',
 		description: 'Pertanyaan dengan pilihan dan kunci jawaban.',
 		group: 'Pertanyaan',
-		bucket: 'question',
+		bucket: bucketFor('question_group'),
 		icon: ListChecks,
 	},
 	{
@@ -91,7 +93,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Jawaban singkat',
 		description: 'Isian pendek dengan alternatif jawaban benar.',
 		group: 'Pertanyaan',
-		bucket: 'question',
+		bucket: bucketFor('question_group'),
 		icon: TextCursorInput,
 		shortAnswer: true,
 	},
@@ -101,7 +103,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Mencocokkan',
 		description: 'Pasangkan pernyataan dengan kelompok tujuan.',
 		group: 'Pertanyaan',
-		bucket: 'question',
+		bucket: bucketFor('matching'),
 		icon: Shuffle,
 	},
 	{
@@ -110,7 +112,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Isian dalam teks',
 		description: 'Lengkapi bagian kosong dalam bacaan.',
 		group: 'Pertanyaan',
-		bucket: 'question',
+		bucket: bucketFor('gap_passage'),
 		icon: FormInput,
 	},
 	{
@@ -119,7 +121,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Menulis panjang',
 		description: 'Esai, surat, atau jawaban terbuka.',
 		group: 'Menulis',
-		bucket: 'text',
+		bucket: bucketFor('writing'),
 		icon: PenLine,
 	},
 	{
@@ -128,7 +130,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Refleksi',
 		description: 'Tanggapan dan refleksi mahasiswa.',
 		group: 'Menulis',
-		bucket: 'text',
+		bucket: bucketFor('reflection'),
 		icon: MessageSquare,
 	},
 	{
@@ -137,7 +139,7 @@ export const BUILDER_ELEMENTS: {
 		label: 'Penjelasan interaktif',
 		description: 'Kartu penjelasan dan dialog pembelajaran.',
 		group: 'Pembelajaran',
-		bucket: 'text',
+		bucket: bucketFor('lesson'),
 		icon: Presentation,
 	},
 	{
@@ -146,10 +148,13 @@ export const BUILDER_ELEMENTS: {
 		label: 'Konfirmasi membaca',
 		description: 'Konfirmasi bahwa materi sudah dipahami.',
 		group: 'Pembelajaran',
-		bucket: 'text',
+		bucket: bucketFor('acknowledgement'),
 		icon: BookOpenCheck,
 	},
 ];
+for (const element of BUILDER_ELEMENTS) {
+	if (!BUILDER_BLOCK_REGISTRY[element.type]) throw new Error(`Missing builder block registry entry: ${element.type}`);
+}
 const BUCKETS: { id: BuilderElementBucket; label: string; description: string; icon: LucideIcon }[] = [
 	{ id: 'text', label: 'Teks', description: 'Pengantar, bacaan, tautan, atau refleksi.', icon: AlignLeft },
 	{ id: 'question', label: 'Pertanyaan', description: 'Pilihan ganda, isian, atau mencocokkan.', icon: ListChecks },

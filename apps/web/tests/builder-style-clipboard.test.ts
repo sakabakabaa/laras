@@ -52,13 +52,13 @@ describe('bounded builder style clipboard', () => {
 
 	it('copies only supported appearance, not block content, assets, assessment or identity', () => {
 		const { draft, source, target, from, to } = fixture();
-		Object.assign(source, { appearance: { size: 'lg', css: 'position:fixed', constructor: 'bad' }, asset: { fileId: 'secret' }, questionId: 'secret', sections: [{ id: 'secret' }], locked: true });
+		Object.assign(source, { appearance: { size: 'lg', customColors: { light: { foreground: '#111111', background: '#FFFFFF' }, dark: { foreground: '#EEEEEE', background: '#111111' } }, css: 'position:fixed', constructor: 'bad' }, asset: { fileId: 'secret' }, questionId: 'secret', sections: [{ id: 'secret' }], locked: true });
 		const before = structuredClone(draft);
 		const clip = copyBuilderStyle(draft, from)!;
 		expect(canPasteBuilderStyle(draft, to, clip)).toBe(true);
-		expect(clip).toEqual({ type: 'block:instructions', appearance: { size: 'lg' } });
+		expect(clip).toEqual({ type: 'block:instructions', appearance: { size: 'lg', customColors: { light: { foreground: '#111111', background: '#FFFFFF' }, dark: { foreground: '#EEEEEE', background: '#111111' } } } });
 		pasteBuilderStyle(draft, to, clip);
-		expect(target).toEqual({ ...before.document.activities[0].blocks[1], appearance: { size: 'lg' } });
+		expect(target).toEqual({ ...before.document.activities[0].blocks[1], appearance: { size: 'lg', customColors: { light: { foreground: '#111111', background: '#FFFFFF' }, dark: { foreground: '#EEEEEE', background: '#111111' } } } });
 		expect(draft.privateKeys).toEqual(before.privateKeys);
 		expect(draft.document.questionsById).toEqual(before.document.questionsById);
 	});

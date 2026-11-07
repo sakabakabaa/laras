@@ -12,6 +12,8 @@ import {
 	matchingAppearancePreset,
 	PRESET_APPEARANCE_FIELDS,
 	resetBuilderAppearance,
+	contrastRatio,
+	validHexColor,
 	type BuilderAppearance,
 } from '../src/lib/builder-appearance';
 import {
@@ -19,16 +21,19 @@ import {
 	blankBuilder,
 	duplicateActivity,
 	duplicateBlock,
+	builderRequest,
 	moveBuilderHistory,
 	rich,
 	type BuilderEnvelope,
 } from '../src/lib/builder-document';
+import pb from '../src/lib/pocketbase-client';
 import {
 	addLayoutGroup,
 	findLayoutGroup,
 	insertBlockIntoLayout,
 } from '../src/lib/builder-layout';
 import { guardedLayoutEdit } from '../src/lib/builder-layout-lock';
+import { builderWriteAction } from '../src/lib/builder-document';
 import { BuilderPreview } from '../src/components/app/builder/builder-elements';
 import {
 	BuilderElementLibrary,
@@ -153,6 +158,24 @@ describe('builder appearance persistence and rendering', () => {
 			}
 		}
 	});
+	it('round-trips complete theme pairs and rejects partial or executable values', () => {
+		const { draft, block } = fixture();
+		const customColors = {
+			light: { foreground: '#172033', background: '#FFFFFF' },
+			dark: { foreground: '#E8EDF4', background: '#151A20' },
+		};
+		block.appearance = { customColors };
+		expect(normalize(draft).document.activities[0].blocks[0].appearance).toEqual({ customColors });
+		for (const malformed of [
+			{ light: { foreground: '#000000' }, dark: { foreground: '#FFFFFF', background: '#000000' } },
+			{ light: { foreground: 'url(x)', background: '#FFFFFF' }, dark: customColors.dark },
+			{ light: { foreground: '#000', background: '#FFFFFF' }, dark: customColors.dark },
+			{ light: { foreground: '#000000', background: '#FFFFFF', opacity: 0 }, dark: customColors.dark },
+		]) {
+			block.appearance = { customColors: malformed } as unknown as BuilderAppearance;
+			expect(() => normalize(draft)).toThrow('Warna harus berupa kode #RRGGBB lengkap.');
+		}
+	});
 	it('rejects invalid values and strips unsupported style fields', () => {
 		const { draft, block, group } = fixture();
 		block.appearance = { size: '999px' } as unknown as BuilderAppearance;
@@ -200,12 +223,15 @@ describe('builder appearance persistence and rendering', () => {
 		).not.toHaveProperty('appearance');
 		expect(findLayoutGroup(normalize(draft).document.activities[0].layout!, group.id)).not.toHaveProperty('background');
 		block.appearance = { size: 'xl', color: 'accent' };
-		group.appearance = { border: 'subtle', radius: 'md' };
+		group.appearance = { border: 'subtle', radius: 'md', customColors: { light: { foreground: '#172033', background: '#FFFFFF' }, dark: { foreground: '#E8EDF4', background: '#151A20' } } };
 		const html = renderToStaticMarkup(
 			createElement(BuilderPreview, { document: normalize(draft).document }),
 		);
 		expect(html).toContain('ba-size-xl ba-color-accent');
 		expect(html).toContain('ba-border-subtle ba-radius-md');
+		expect(html).toContain('ba-custom-colors');
+		expect(html).toContain('--ba-custom-light-foreground:#172033');
+		expect(readFileSync(new URL('../src/styles/builder-appearance.css', import.meta.url), 'utf8')).toContain(':root.dark .bl-layout .ba-custom-colors');
 		expect(html).toContain('Materi yang ditata');
 	});
 	it('round-trips bounded authored group backgrounds and renders shared theme CSS values', () => {
@@ -248,5 +274,45 @@ it('makes the full element palette searchable immediately in the sidebar and dis
 		);
 	expect(html).toContain('Tujuan: Bagian 1');
 	expect(html).not.toContain('draggable="true"');
-	expect(html).toContain('disabled=""');
+expect(html).toContain('disabled=""');
+});
+
+describe('custom theme color pairs', () => {
+	it('validates strict canonical hex and known contrast vectors', () => {
+		expect(validHexColor('#A1b2C3')).toBe(true);
+		for (const value of ['red', '#fff', '#11223344', 'var(--x)', 'url(x)']) expect(validHexColor(value)).toBe(false);
+		expect(contrastRatio('#000000', '#FFFFFF')).toBe(21);
+		expect(contrastRatio('#FFFFFF', '#FFFFFF')).toBe(1);
+		expect(contrastRatio('#777777', '#FFFFFF')).toBe(4.48);
+	});
+	it('clears pairs on preset and reset while keeping protected appearance fields', () => {
+		const value: BuilderAppearance = { background: 'accent', customColors: { light: { foreground: '#000000', background: '#FFFFFF' }, dark: { foreground: '#FFFFFF', background: '#000000' } } };
+		expect(applyAppearancePreset(value, 'default', ['background'])).toEqual({ background: 'accent' });
+		expect(resetBuilderAppearance(value, ['background'])).toEqual({ background: 'accent' });
+	});
+	it('uses a rollback-safe versioned write for color-bearing documents and templates', () => {
+		const document = { activities: [{ blocks: [{ appearance: { customColors: { light: {}, dark: {} } } }] }] };
+		expect(builderWriteAction('save', { document })).toBe('themeColors:save');
+		expect(builderWriteAction('create', { document })).toBe('themeColors:create');
+		expect(builderWriteAction('saveTemplate', {})).toBe('themeColors:saveTemplate');
+	});
+	it('keeps the local custom-color draft when a rolled-back backend rejects the versioned command', async () => {
+		const document = {
+			activities: [{
+				blocks: [{ appearance: {
+					customColors: {
+						light: { foreground: '#000000', background: '#FFFFFF' },
+						dark: { foreground: '#FFFFFF', background: '#000000' },
+					},
+				} }],
+			}],
+		};
+		const before = structuredClone(document);
+		const send = vi.spyOn(pb, 'send').mockRejectedValue(new Error('Perintah builder tidak didukung.'));
+		try {
+			await expect(builderRequest('save', { document })).rejects.toThrow('Perintah builder tidak didukung');
+			expect(send).toHaveBeenCalledWith('/api/laras/builder', expect.objectContaining({ body: expect.objectContaining({ action: 'themeColors:save', document }) }));
+			expect(document).toEqual(before);
+		} finally { send.mockRestore(); }
+	});
 });

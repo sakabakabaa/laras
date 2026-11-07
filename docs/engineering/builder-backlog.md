@@ -85,10 +85,10 @@ Rollback review fix validation: 62 focused lock/save/capability tests pass, incl
 |---|---|
 | Rich text follow-up | Headings/lists are flat only (nesting unsupported); controls appear in the shared instruction/acknowledgement editor. Contextual AI, responsive backgrounds, media controls, broader accessibility validation, rich editing for other text fields, and browser IME/selection behavior still need separate bounded work. Editor lock core is implemented above; runtime drag acceptance remains unverified. Do not store arbitrary HTML or render through raw HTML. Preserve plain text compatibility and protect assessment IDs/private keys. |
 | Nested template validation | Subtree extraction/insertion pure helper tests pass. Backend owner/media authorization, old-template read/apply fixtures, and workspace undo integration still need focused coverage. |
-| Theme controls | Bounded block and section/container appearance presets and selected-node style reset are implemented below. Arbitrary custom colors, contrast warnings, a doc-wide reset, and detailed effects remain open. |
+| Theme controls | Bounded block and section/container appearance presets, selected-node reset, and paired light/dark custom colors with per-pair contrast warnings are implemented below. A doc-wide reset and detailed effects remain open. |
 | Image/audio/video media | Image crop/fit and focal controls are implemented only for image blocks. Audio/video have plain-text transcript and loop/initial-muted controls; synchronized captions, full playback range/speed, and remaining accessibility acceptance are outstanding. |
 | Builder interaction parity | Bounded explicit copy-style, navigator rename/select-scroll and editor layout locks are implemented above with limited local evidence; reliable drag, mounted/runtime navigator and lock acceptance and narrower proposal scopes remain outstanding. |
-| Theme detail | Full-document theme presets, contrast, custom colors, detailed effects, and broad theme reset remain outstanding. |
+| Theme detail | Full-document theme presets, detailed effects, and broad theme reset remain outstanding. |
 | Registry and commands | Full element registry and command coverage remain outstanding. |
 | Compatibility | Explicitly test older published lesson variants remain readable without destructive normalization. |
 | Accessibility, touch, and performance | Keyboard-accessible controls exist for this image slice, but broad screen reader validation, touch authoring, and large-document performance remain outstanding. |
@@ -96,6 +96,15 @@ Rollback review fix validation: 62 focused lock/save/capability tests pass, incl
 | Browser and input behavior | Browser interaction, IME composition, touch, and responsive acceptance remain outstanding. |
 
 ## Unverified
+
+### Paired custom theme colors
+
+| Status | Scope and evidence |
+|---|---|
+| Done | Appearance accepts one complete `customColors` object containing strict `#RRGGBB` foreground/background pairs for light and dark themes. The PocketBase normalizer rejects extra keys, partial pairs, CSS expressions, and non-hex values. Accessible draft hex inputs commit once on Apply; separate light/dark WCAG relative-luminance ratios are shown and values below 4.5:1 are warned. The shared canvas/preview/student renderer selects the corresponding pair through the app's `:root.dark` theme class. Presets and reset remove pairs while preserving caller-protected group background/layout fields; normal copy/duplicate paths retain appearance. Color-bearing saves and snapshot/template writes use `themeColors:*` versioned actions, and GET advertises actual support. |
+| Partial | Contrast describes only the authored pair; it does not establish lesson-wide WCAG conformance. Protected images and gradients remain visible and can make contrast indeterminate. Inherited/transparent effective surfaces, full layout-background precedence indications, browser/assistive-technology acceptance, and broader renderer interactions need more coverage. |
+| Missing | Detailed border/hover effects, document-wide reset, and palette-wide editing remain out of scope. |
+| Unverified | The focused appearance, copy-style, and layout-lock suites pass (66 tests); official web typecheck, changed-file ESLint, PocketBase hook syntax, and `git diff --check` pass. This is source/helper evidence, not browser or assistive-technology acceptance; mounted theme switching and actual workspace undo/redo remain unverified. |
 
 ### Bounded library and block drag insertion
 

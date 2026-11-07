@@ -1,4 +1,4 @@
-import { APPEARANCE_OPTIONS, type BuilderAppearance } from './builder-appearance';
+import { APPEARANCE_OPTIONS, validHexColor, type BuilderAppearance } from './builder-appearance';
 import type { BuilderBlock, BuilderEnvelope } from './builder-document';
 import { findLayoutGroup, type BuilderLayoutGroup, type BuilderResponsiveOverride } from './builder-layout';
 
@@ -49,6 +49,8 @@ export function copyBuilderStyle(envelope: BuilderEnvelope, selection: BuilderSt
 		const option = APPEARANCE_OPTIONS[key as keyof BuilderAppearance];
 		return option && Object.hasOwn(option.values, value);
 	})) as BuilderAppearance;
+	const colors = target.appearance?.customColors;
+	if (colors && validHexColor(colors.light?.foreground) && validHexColor(colors.light?.background) && validHexColor(colors.dark?.foreground) && validHexColor(colors.dark?.background)) appearance.customColors = structuredClone(colors);
 	const clipboard: BuilderStyleClipboard = { type: targetType(target), ...(Object.keys(appearance).length ? { appearance } : {}) };
 	if (!('kind' in target)) return freezeStyle(clipboard);
 	const layout: Partial<BuilderLayoutGroup> = { ...pickFields(target, layoutFields), ...spacing(target) };

@@ -59,7 +59,7 @@ describe('shared editor-only layout lock mutation boundary', () => {
 		const flat = blankBuilder('kelas', 'course000000001');
 		expect(builderWriteAction('save', flat)).toBe('save');
 		for (const action of ['saveSnapshot', 'saveTemplate'])
-			expect(builderWriteAction(action, { id: 'draft0000000001' })).toBe(`layoutLocks:${action}`);
+		expect(builderWriteAction(action, { id: 'draft0000000001' })).toBe(`themeColors:${action}`);
 		for (const action of ['get', 'list', 'savedGet', 'delete'])
 			expect(builderWriteAction(action, draft)).toBe(action);
 	});
@@ -330,6 +330,8 @@ describe('accessible controls and actual workspace wiring evidence', () => {
 		expect(workspace).toContain('const layoutLockFallback = !layoutLocksSupported && hasLayoutLockFields(draft)');
 		const service = readFileSync(new URL('builder-service.js', hooks), 'utf8');
 		expect(service).toContain('layoutLocks: true');
+		expect(service).toContain('customColors: true');
+		expect(service).toContain('/^(layoutLocks|themeColors):(create|save|saveSnapshot|saveTemplate)$/');
 		expect(service).toContain('b.layoutLocked !== undefined');
 	});
 });

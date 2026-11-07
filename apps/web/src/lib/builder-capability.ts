@@ -122,6 +122,19 @@ export function usesEnhancedAuthoring(envelope: unknown): boolean {
 	});
 }
 
+export function hasCustomThemeColors(envelope: unknown): boolean {
+	if (!envelope || typeof envelope !== 'object') return false;
+	const document = (envelope as { document?: unknown }).document ?? envelope;
+	const activities = (document as { activities?: unknown })?.activities;
+	if (!Array.isArray(activities)) return false;
+	const has = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Object.prototype.hasOwnProperty.call(value, 'customColors')) return true;
+		return Object.values(value).some(has);
+	};
+	return has(activities);
+}
+
 export type BuilderAuthoringGate =
 	| { allowed: true }
 	| { allowed: false; status: 403 | 409; message: string };

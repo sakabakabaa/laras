@@ -42,10 +42,20 @@ export const APPEARANCE_OPTIONS = {
 	},
 } as const;
 export type BuilderAppearance = {
-	[
-		K in keyof typeof APPEARANCE_OPTIONS
-	]?: keyof (typeof APPEARANCE_OPTIONS)[K]['values'];
-};
+	[K in keyof typeof APPEARANCE_OPTIONS]?: keyof (typeof APPEARANCE_OPTIONS)[K]['values'];
+} & { customColors?: { light: { foreground: string; background: string }; dark: { foreground: string; background: string } } };
+
+export type ThemeColorPair = { foreground: string; background: string };
+export function validHexColor(value: unknown): value is string { return typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value); }
+export function contrastRatio(foreground: string, background: string): number | null {
+	if (!validHexColor(foreground) || !validHexColor(background)) return null;
+	const luminance = (hex: string) => {
+		const channels = hex.slice(1).match(/../g)!.map(channel => parseInt(channel, 16) / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+		return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+	};
+	const a = luminance(foreground), b = luminance(background);
+	return Number(((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toFixed(2));
+}
 
 export const BUILDER_APPEARANCE_PRESETS = {
 	default: { label: 'Default', values: {} },
@@ -94,6 +104,7 @@ export function applyAppearancePreset(
 ): BuilderAppearance | undefined {
 	const next: BuilderAppearance = {};
 	for (const field of preserve) {
+		if (field === 'customColors') continue;
 		if (appearance?.[field] !== undefined) Object.assign(next, { [field]: appearance[field] });
 	}
 	for (const [field, value] of Object.entries(BUILDER_APPEARANCE_PRESETS[preset].values)) {
@@ -109,6 +120,7 @@ export function resetBuilderAppearance(
 	if (!appearance) return undefined;
 	const next = { ...appearance };
 	for (const field of APPEARANCE_FIELDS) if (!preserve.includes(field)) delete next[field];
+	if (!preserve.includes('customColors')) delete next.customColors;
 	return Object.keys(next).length ? next : undefined;
 }
 
@@ -126,12 +138,25 @@ export function matchingAppearancePreset(
 
 export function appearanceClassName(appearance?: BuilderAppearance): string {
 	if (!appearance) return '';
-	return (Object.keys(APPEARANCE_OPTIONS) as (keyof BuilderAppearance)[])
+	const colors = appearance.customColors;
+	const safeColors = colors && validHexColor(colors.light?.foreground) && validHexColor(colors.light?.background) && validHexColor(colors.dark?.foreground) && validHexColor(colors.dark?.background);
+	return (Object.keys(APPEARANCE_OPTIONS) as (keyof typeof APPEARANCE_OPTIONS)[])
 		.filter(
 			(key) =>
 				appearance[key] !== undefined &&
 				Object.hasOwn(APPEARANCE_OPTIONS[key].values, appearance[key]!),
 		)
 		.map((key) => `ba-${key}-${appearance[key]}`)
-		.join(' ');
+		.join(' ') + (safeColors ? ' ba-custom-colors' : '');
+}
+
+export function appearanceColorStyle(appearance?: BuilderAppearance): Record<string, string> {
+	const colors = appearance?.customColors;
+	if (!colors || !validHexColor(colors.light?.foreground) || !validHexColor(colors.light?.background) || !validHexColor(colors.dark?.foreground) || !validHexColor(colors.dark?.background)) return {};
+	return {
+		'--ba-custom-light-foreground': colors.light.foreground,
+		'--ba-custom-light-background': colors.light.background,
+		'--ba-custom-dark-foreground': colors.dark.foreground,
+		'--ba-custom-dark-background': colors.dark.background,
+	};
 }

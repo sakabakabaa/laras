@@ -2,7 +2,11 @@
 
 PR112 follow-up: reviewed AI/upload proposals support bounded replacement of an explicitly captured activity, block, or group when the proposal contains exactly one activity. Block replacement uses that node's exact layout slot; group replacement changes its children while retaining the selected group's wrapper, title, identity, appearance, and responsive settings. Multi-activity and empty replacement remain rejected before mutation; APPEND and INSERT remain available. Provider/browser roundtrips, book-worker roundtrips, and replacement across larger scopes remain unverified or open.
 
-Updated 6 November 2026. This is a status ledger for the original builder scope. “Code evidence” describes repository behavior; it is not runtime or production proof. No live-record migration is part of this scope.
+Updated 7 November 2026. This is a status ledger for the original builder scope. “Code evidence” describes repository behavior; it is not runtime or production proof. No live-record migration is part of this scope.
+
+### Mounted workspace event evidence (7 November 2026)
+
+`apps/web/tests/builder-workspace-mounted.test.ts` mounts the real `BuilderWorkspace` in `happy-dom` with React DOM. It mocks only PocketBase, the router's data-router blocker boundary, and the capability HTTP response; builder mutation, layout-lock, history and save-queue behavior and all builder child components remain real. Six deterministic synthetic-UI tests cover flat click-to-add at position 0, position 1 and before the first block in a multi-block activity; one mounted add followed by one-step undo/redo and the exact save request fields; revision-conflict local edit retention and recovery actions; and disabled delete/reorder while a block is locked followed by successful unlocking, reordering and deletion. This is DOM event and rendered-state evidence, not browser, touch, IME, accessibility or production acceptance. Block/group proposal replacement is still not mounted here. Browser, AI-provider, book-worker, Safari, performance, publishing and the original styling/registry scopes remain open.
 
 ## Done
 

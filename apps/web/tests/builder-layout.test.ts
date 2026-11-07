@@ -225,6 +225,37 @@ describe('builder layout tree', () => {
 		expect(() => normalize(draft)).not.toThrow();
 	});
 
+	it.each([0, 1, 3])('appends a newly created element after all %i legacy flat blocks', count => {
+		const draft = blankBuilder('kelas', 'course000000001');
+		const activity = draft.document.activities[0];
+		for (let index = 0; index < count; index++) appendBlock(draft, activity.id, 'instructions');
+		const previous = activity.blocks.map(block => block.id);
+		const target = resolveBlockInsertionTarget(structuredClone(activity));
+		const blockId = appendBlock(draft, activity.id, 'instructions');
+		expect(insertBlockAtTarget(activity, blockId, target!)).toBe(true);
+		expect(activity.layout).toBeUndefined();
+		expect(activity.blocks.map(block => block.id)).toEqual([...previous, blockId]);
+	});
+
+	it('places a newly created flat element before an explicit target without losing the tail', () => {
+		const draft = blankBuilder('kelas', 'course000000001');
+		const activity = draft.document.activities[0];
+		const first = appendBlock(draft, activity.id, 'instructions');
+		const last = appendBlock(draft, activity.id, 'instructions');
+		const target = resolveBlockInsertionTarget(structuredClone(activity), last);
+		const added = appendBlock(draft, activity.id, 'instructions');
+		expect(insertBlockAtTarget(activity, added, target!)).toBe(true);
+		expect(activity.blocks.map(block => block.id)).toEqual([first, added, last]);
+	});
+
+	it('routes click-to-add through the same resolved target helper for flat and nested activities', () => {
+		const source = readFileSync(new URL('../src/components/app/builder/builder-workspace.tsx', import.meta.url), 'utf8');
+		const handler = source.slice(source.indexOf('const addElement ='), source.indexOf('const dropElement ='));
+		expect(handler).toContain('insertBlockAtTarget(targetActivity, blockId, insertionTarget)');
+		expect(handler).not.toContain('blocks.pop()');
+		expect(handler).not.toContain('targetActivity?.layout');
+	});
+
 	it('resolves bounded insertion coordinates and rejects stale or foreign targets', () => {
 		const { activity, first, second, third } = fixture();
 		const group = addLayoutGroup(activity, 'container');

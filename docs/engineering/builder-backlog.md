@@ -90,6 +90,8 @@ Rollback review fix validation: 62 focused lock/save/capability tests pass, incl
 
 ### Bounded library and block drag insertion
 
+PR111 review correction: click-to-add now keeps the new block in its activity and applies the resolved insertion target through `insertBlockAtTarget` for both flat and nested layouts. The removed `pop()`/manual fallback splice incorrectly inserted before the existing final block. Regression coverage checks empty, single-block and multi-block flat append, explicit before-target insertion, and source wiring to the shared helper. The layout, layout-lock, workspace-redesign and document suites pass 93 tests. This is helper/source evidence, not mounted workspace acceptance.
+
 | Status | Scope and evidence |
 |---|---|
 | Done (implementation) | Canvas insertion slots resolve a stable activity, optional group parent, and before-block or end coordinate at drop time. Empty group tails and the activity root end remain explicit targets. Library additions and existing block moves use the shared layout tree and one guarded workspace `change()`; moves retain block/question IDs and private-key references. Drag payloads must match the active typed transfer, stale/foreign targets reject without fallback, event bubbling is stopped at the native drop handler, and drag end/cancel clears transient state. Click-to-add and existing keyboard move controls remain available. |

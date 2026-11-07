@@ -745,7 +745,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			const blocks = next.document.activities.find(
 				(a) => a.id === activityId,
 			)!.blocks;
-			const added = blocks.pop()!;
+			const added = blocks.find((block) => block.id === blockId)!;
 			if (element.shortAnswer) {
 				for (const qid of added.questionIds || []) {
 					delete next.document.questionsById[qid];
@@ -753,12 +753,10 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				}
 				added.questionIds = [appendQuestion(next, 'short_answer')];
 			}
-			const blockIndex = beforeId ? blocks.findIndex((block) => block.id === beforeId) : -1;
-			blocks.splice(blockIndex < 0 ? blocks.length - 1 : blockIndex, 0, added);
 			const targetActivity = next.document.activities.find(
 				(a) => a.id === activityId,
 			);
-			if (targetActivity?.layout) {
+			if (targetActivity) {
 				insertBlockAtTarget(targetActivity, blockId, insertionTarget);
 			}
 		})) return;

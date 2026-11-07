@@ -18,6 +18,8 @@ import {
 	ensureLayout,
 	findLayoutGroup,
 	insertBlockIntoLayout,
+	insertBlockAtTarget,
+	resolveBlockInsertionTarget,
 	moveBlockBetweenActivities,
 	moveLayoutGroup,
 	moveBlockBefore,
@@ -221,6 +223,24 @@ describe('builder layout tree', () => {
 		expect(moveLayoutItem(activity, first, -1)).toBe(true);
 		expect(activity.blocks.some(item => item.id === second)).toBe(true);
 		expect(() => normalize(draft)).not.toThrow();
+	});
+
+	it('resolves bounded insertion coordinates and rejects stale or foreign targets', () => {
+		const { activity, first, second, third } = fixture();
+		const group = addLayoutGroup(activity, 'container');
+		insertBlockIntoLayout(activity, first, group);
+		insertBlockIntoLayout(activity, second, group);
+		const before = resolveBlockInsertionTarget(structuredClone(activity), second, group);
+		expect(before).toEqual({ parentId: group, index: 1 });
+		expect(resolveBlockInsertionTarget(structuredClone(activity), 'missing-block', group)).toBeNull();
+		const other = addLayoutGroup(activity, 'section');
+		expect(resolveBlockInsertionTarget(structuredClone(activity), first, other)).toBeNull();
+		const empty = addLayoutGroup(activity, 'section');
+		const end = resolveBlockInsertionTarget(structuredClone(activity), undefined, empty);
+		expect(end).toEqual({ parentId: empty, index: 0 });
+		expect(insertBlockAtTarget(activity, third, end!)).toBe(true);
+		expect(findLayoutGroup(activity.layout!, empty)!.children).toEqual([{ kind: 'block', blockId: third }]);
+		expect(insertBlockAtTarget(activity, third, { parentId: 'stale-parent', index: 0 })).toBe(false);
 	});
 
 	it('places unassigned blocks before reparenting and preserves failed insertions', () => {

@@ -360,6 +360,49 @@ export function moveBlockBefore(
 	);
 }
 
+export type BuilderBlockInsertionTarget = {
+	parentId: string | null;
+	index: number;
+};
+
+export function resolveBlockInsertionTarget(
+	activity: BuilderActivity,
+	beforeBlockId?: string,
+	parentId: string | null = null,
+): BuilderBlockInsertionTarget | null {
+	if (!activity.layout) {
+		if (parentId) return null;
+		const index = beforeBlockId ? activity.blocks.findIndex(block => block.id === beforeBlockId) : activity.blocks.length;
+		return index < 0 ? null : { parentId: null, index };
+	}
+	reconcileActivityLayout(activity, true);
+	if (beforeBlockId) {
+		const before = layoutItemLocation(activity, beforeBlockId);
+		if (!before || before.node.kind !== 'block') return null;
+		if (parentId && before.parent?.id !== parentId) return null;
+		return { parentId: before.parent?.id || null, index: before.index };
+	}
+	const children = groupChildren(activity.layout, parentId);
+	if (!children) return null;
+	return { parentId, index: children.length };
+}
+
+export function insertBlockAtTarget(
+	activity: BuilderActivity,
+	blockId: string,
+	target: BuilderBlockInsertionTarget,
+): boolean {
+	if (!activity.blocks.some((block) => block.id === blockId)) return false;
+	if (!activity.layout) {
+		if (target.parentId !== null || target.index < 0 || target.index > activity.blocks.length) return false;
+		const [block] = activity.blocks.splice(activity.blocks.findIndex((item) => item.id === blockId), 1);
+		activity.blocks.splice(Math.min(target.index, activity.blocks.length), 0, block);
+		return true;
+	}
+	if (target.parentId && !findLayoutGroup(activity.layout, target.parentId)) return false;
+	return moveBlockInLayout(activity, blockId, target.parentId, target.index);
+}
+
 export function insertBlockIntoLayout(
 	activity: BuilderActivity,
 	blockId: string,

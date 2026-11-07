@@ -88,6 +88,14 @@ Rollback review fix validation: 62 focused lock/save/capability tests pass, incl
 
 ## Unverified
 
+### Bounded library and block drag insertion
+
+| Status | Scope and evidence |
+|---|---|
+| Done (implementation) | Canvas insertion slots resolve a stable activity, optional group parent, and before-block or end coordinate at drop time. Empty group tails and the activity root end remain explicit targets. Library additions and existing block moves use the shared layout tree and one guarded workspace `change()`; moves retain block/question IDs and private-key references. Drag payloads must match the active typed transfer, stale/foreign targets reject without fallback, event bubbling is stopped at the native drop handler, and drag end/cancel clears transient state. Click-to-add and existing keyboard move controls remain available. |
+| Partial | The shared layout-lock transition policy rejects protected source, destination, ancestor, and sibling-position changes atomically. Capacity and layout depth/group limits continue through existing insertion helpers. Nested group dragging is excluded. No coherent pointer/touch drag mechanism exists here; touch use remains a follow-up, with click and keyboard alternatives available. |
+| Unverified | Four focused suites pass (70 tests), including pure exact sibling/end coordinates, empty nested group insertion, stale/foreign targets, existing layout-lock transitions, and legacy flat compatibility. Official web typecheck, scoped ESLint, and `git diff --check` pass. Browser mounted/event acceptance, cross-activity drag identity/private-key behavior, duplicate-drop behavior, actual workspace undo/redo, cancellation in a browser, touch, keyboard screen-reader announcement quality, and assistive-technology/browser compatibility remain unverified. |
+
 - Physical keyboard IME composition behavior; editor composition handlers are present, but browser-level IME parity is explicitly unverified. Nested lists and full semantic authoring parity are also outstanding.
 - Runtime behavior of any backlog item in production; no browser, SSH, deployment, or live health check was run for this task.
 - Responsive protected-image background controls/rendering and full asset ownership/snapshot authorization coverage are not verified by this partial implementation.

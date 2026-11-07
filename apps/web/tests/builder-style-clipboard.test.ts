@@ -62,6 +62,15 @@ describe('bounded builder style clipboard', () => {
 		expect(draft.privateKeys).toEqual(before.privateKeys);
 		expect(draft.document.questionsById).toEqual(before.document.questionsById);
 	});
+	it('deep clones bounded border and corner detail', () => {
+		const { draft, source, target, from, to } = fixture();
+		source.appearance = { borderDetail: { style: 'dashed', color: 'action', linked: false, widths: { top: 2, left: 4 } }, corners: { linked: false, topLeft: 8, bottomRight: 12 } };
+		const clip = copyBuilderStyle(draft, from)!;
+		expect(clip.appearance).toEqual(source.appearance);
+		pasteBuilderStyle(draft, to, clip);
+		expect(target.appearance).toEqual(source.appearance);
+		expect(target.appearance?.borderDetail?.widths).not.toBe(source.appearance?.borderDetail?.widths);
+	});
 
 	it('requires an exact block type or group kind and a real unique target', () => {
 		const { draft, activity, from, to, fromGroup, toGroup, target } = fixture();

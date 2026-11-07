@@ -331,7 +331,7 @@ describe('accessible controls and actual workspace wiring evidence', () => {
 		const service = readFileSync(new URL('builder-service.js', hooks), 'utf8');
 		expect(service).toContain('layoutLocks: true');
 		expect(service).toContain('customColors: true');
-		expect(service).toContain('/^(layoutLocks|themeColors):(create|save|saveSnapshot|saveTemplate)$/');
+		expect(service).toContain('/^(layoutLocks|themeColors|detailedStyles):(create|save|saveSnapshot|saveTemplate)$/');
 		expect(service).toContain('b.layoutLocked !== undefined');
 	});
 });

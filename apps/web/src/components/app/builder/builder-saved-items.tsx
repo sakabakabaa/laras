@@ -21,6 +21,8 @@ export function BuilderSavedItems({
 	activityId,
 	groupId,
 	dirty,
+	detailedBorderRadiusSupported,
+	detailedStylesInDocument,
 	onRestore,
 	onInsert,
 	onClose,
@@ -30,6 +32,8 @@ export function BuilderSavedItems({
 	activityId?: string;
 	groupId?: string;
 	dirty: boolean;
+	detailedBorderRadiusSupported?: boolean;
+	detailedStylesInDocument?: boolean;
 	onRestore: (envelope: BuilderEnvelope) => void;
 	onInsert: (envelope: SavedBuilderTemplate) => void;
 	onClose: () => void;
@@ -64,7 +68,7 @@ export function BuilderSavedItems({
 		try {
 			await builderRequest(
 				tab === 'snapshot' ? 'saveSnapshot' : 'saveTemplate',
-				{ id, baseRevision: revision, activityId, groupId, scope: groupId ? 'group' : 'activity', title, commandId: uid() },
+				{ id, baseRevision: revision, activityId, groupId, scope: groupId ? 'group' : 'activity', title, commandId: uid(), ...(detailedBorderRadiusSupported ? { detailedBorderRadius: true } : {}) },
 			);
 			setTitle('');
 			await load();
@@ -155,7 +159,7 @@ export function BuilderSavedItems({
 						</label>
 						<button
 							className="bd-primary"
-							disabled={busy || dirty || !title.trim()}
+							disabled={busy || dirty || !title.trim() || Boolean(detailedStylesInDocument && !detailedBorderRadiusSupported)}
 							onClick={() => void save()}
 						>
 							Simpan{' '}

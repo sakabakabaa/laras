@@ -419,6 +419,7 @@ export function BuilderLayoutInspector({
 	group,
 	disabled,
 	customColorsSupported = true,
+	detailedBorderRadiusSupported = false,
 	onChange,
 	onAddBlock,
 	onAddGroup,
@@ -431,6 +432,7 @@ export function BuilderLayoutInspector({
 	group: BuilderLayoutGroup;
 	disabled: boolean;
 	customColorsSupported?: boolean;
+	detailedBorderRadiusSupported?: boolean;
 	onChange: Change;
 	onAddBlock: () => void;
 	onAddGroup: (kind: 'section' | 'container') => void;
@@ -522,7 +524,7 @@ export function BuilderLayoutInspector({
 				</div>
 			) : tab === 'style' ? (
 				<div className="bd-fields">
-					<BuilderAppearanceControls exclude={['padding', 'background']} presetPreserve={['padding']} backgroundNotice={Boolean(group.background || group.responsive?.tablet?.background || group.responsive?.mobile?.background)} customColorsSupported={customColorsSupported} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
+					<BuilderAppearanceControls exclude={['padding', 'background']} presetPreserve={['padding']} backgroundNotice={Boolean(group.background || group.responsive?.tablet?.background || group.responsive?.mobile?.background)} customColorsSupported={customColorsSupported} detailedBorderRadiusSupported={detailedBorderRadiusSupported} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
 					<BuilderGroupBackgroundControls courseId={courseId} value={group.background} onChange={background => update(target => { if (background) target.background = background; else delete target.background; })} />
 					<ResponsiveControls group={group} courseId={courseId} update={update} />
 					<label>Arah alur<select value={group.direction ?? 'grid'} onChange={event=>update(target=>{const value=event.target.value as 'grid'|'row'|'column'; if(value==='grid') delete target.direction; else target.direction=value; })}><option value="grid">Grid</option><option value="row">Baris</option><option value="column">Kolom</option></select></label>

@@ -3,7 +3,8 @@ import { runInNewContext } from 'node:vm';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { appendBlock, blankBuilder, copyBuilder, duplicateActivity, duplicateBlock, encodeBuilderDraft, insertGroupTemplate, moveBuilderHistory, newActivity, removeBlock, rich, type BuilderEnvelope } from '../src/lib/builder-document';
+import { appendBlock, blankBuilder, builderRequest, builderWriteAction, copyBuilder, duplicateActivity, duplicateBlock, encodeBuilderDraft, insertGroupTemplate, moveBuilderHistory, newActivity, removeBlock, rich, type BuilderEnvelope } from '../src/lib/builder-document';
+import pb from '../src/lib/pocketbase-client';
 import { addLayoutGroup, findLayoutGroup, insertBlockIntoLayout, moveBlockBetweenActivities, moveLayoutItem, removeLayoutGroup, reparentLayoutItem } from '../src/lib/builder-layout';
 import { guardedLayoutEdit, hasLayoutLockFields, layoutLockState, layoutLockTransitionReason, LAYOUT_LOCK_CAPABILITY_REASON, LAYOUT_LOCK_REASON } from '../src/lib/builder-layout-lock';
 import { applyBuilderProposal } from '../src/lib/builder-authoring';
@@ -33,6 +34,35 @@ function fixture() {
 }
 
 describe('shared editor-only layout lock mutation boundary', () => {
+	it('sends the guarded command and retains the local draft when a rolled-back backend rejects it', async () => {
+		const { draft } = fixture();
+		const before = encodeBuilderDraft(draft);
+		const send = vi.spyOn(pb, 'send').mockRejectedValue(new Error('Perintah builder tidak didukung.'));
+		try {
+			await expect(builderRequest('save', { ...draft, action: 'save' })).rejects.toThrow('Perintah builder tidak didukung');
+			expect(send).toHaveBeenCalledWith('/api/laras/builder', expect.objectContaining({
+				body: expect.objectContaining({ action: 'layoutLocks:save', document: draft.document }),
+			}));
+			expect(encodeBuilderDraft(draft)).toBe(before);
+			expect(send).toHaveBeenCalledTimes(1);
+		} finally {
+			send.mockRestore();
+		}
+	});
+	it('uses rollback-safe write commands independently of the initial capability handshake', () => {
+		const { draft, inner } = fixture();
+		for (const locked of [true, false]) {
+			inner.layoutLocked = locked;
+			for (const action of ['create', 'save'])
+				expect(builderWriteAction(action, draft)).toBe(`layoutLocks:${action}`);
+		}
+		const flat = blankBuilder('kelas', 'course000000001');
+		expect(builderWriteAction('save', flat)).toBe('save');
+		for (const action of ['saveSnapshot', 'saveTemplate'])
+			expect(builderWriteAction(action, { id: 'draft0000000001' })).toBe(`layoutLocks:${action}`);
+		for (const action of ['get', 'list', 'savedGet', 'delete'])
+			expect(builderWriteAction(action, draft)).toBe(action);
+	});
 	it('distinguishes own and inherited protection and protects ancestors without locking content', () => {
 		const { draft, activity, inner, outerId, blockId } = fixture();
 		expect(layoutLockState(activity, inner.id)).toEqual({ own: true, inheritedFrom: undefined, protectedStructure: true });

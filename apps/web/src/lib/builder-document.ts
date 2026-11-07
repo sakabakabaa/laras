@@ -847,6 +847,16 @@ export function applyTemplate(
 	);
 	if (template === 'listening') appendBlock(draft, a.id, 'matching');
 }
+export function builderWriteAction(action: string, body: Record<string, unknown>): string {
+	const containsLocks = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Object.prototype.hasOwnProperty.call(value, 'layoutLocked')) return true;
+		return Object.values(value).some(containsLocks);
+	};
+	if (action === 'saveSnapshot' || action === 'saveTemplate' ||
+		((action === 'save' || action === 'create') && containsLocks(body.document))) return `layoutLocks:${action}`;
+	return action;
+}
 export async function builderRequest<T>(
 	action: string,
 	body: Record<string, unknown> = {},
@@ -854,7 +864,7 @@ export async function builderRequest<T>(
 	try {
 		return await pb.send<T>('/api/laras/builder', {
 			method: 'POST',
-			body: { action, ...body },
+			body: { ...body, action: builderWriteAction(action, body) },
 			requestKey: null,
 			signal: AbortSignal.timeout(20000),
 		});

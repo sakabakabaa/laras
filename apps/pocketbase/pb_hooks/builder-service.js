@@ -149,6 +149,8 @@ function view(app, r) {
 function handle(app, user, body) {
 	if (user.getString('role') !== 'faculty')
 		throw new ForbiddenError('Builder hanya tersedia untuk dosen.');
+	if (['layoutLocks:create', 'layoutLocks:save', 'layoutLocks:saveSnapshot', 'layoutLocks:saveTemplate'].includes(body.action))
+		body = { ...body, action: body.action.slice('layoutLocks:'.length) };
 	// Reads (list/get/saved) always work so recovery and export stay reachable.
 	const capability = enhancedAuthoring(),
 		allowed = authoringAllowed(user, capability);

@@ -63,13 +63,19 @@
 	color: var(--ba-color);
 }
 .bl-layout .ba-background-none {
+	--ba-background: transparent;
 	background: transparent;
 }
 .bl-layout .ba-background-muted {
-	background: color-mix(in srgb, var(--r-surface-2) 65%, transparent);
+	--ba-background: color-mix(in srgb, var(--r-surface-2) 65%, transparent);
+	background: var(--ba-background);
 }
 .bl-layout .ba-background-accent {
-	background: color-mix(in srgb, var(--r-action) 8%, transparent);
+	--ba-background: color-mix(in srgb, var(--r-action) 8%, transparent);
+	background: var(--ba-background);
+}
+.bl-layout .bl-group[class*='ba-background-'] {
+	--bl-base-background-color: var(--ba-background);
 }
 .bl-layout .ba-padding-none {
 	padding: 0;

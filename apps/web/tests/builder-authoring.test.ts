@@ -153,4 +153,31 @@ describe('in-builder authoring additions', () => {
 		expect(() => applyBuilderProposal(target, source, 'append')).toThrow('batas');
 		expect(target).toEqual(beforeFull);
 	});
+	it('replaces one nested block at its exact layout position and preserves unrelated data', () => {
+		const target = blankBuilder('kelas', context.courseId, context.meetingId), activity = target.document.activities[0];
+		const beforeId = appendBlock(target, activity.id, 'instructions'), chosenId = appendBlock(target, activity.id, 'acknowledgement'), afterId = appendBlock(target, activity.id, 'reflection');
+		const shared = questionIds(activity.blocks.find(block => block.id === afterId)!)[0];
+		activity.layout = { schemaVersion: 1, nodes: [{ kind: 'block', blockId: beforeId }, { kind: 'section', id: 'section00000001', title: 'Keep wrapper', columns: 1, gap: 'lg', padding: 'md', surface: 'accent', background: { mode: 'solid', token: 'surface-2' }, children: [{ kind: 'block', blockId: chosenId }] }, { kind: 'block', blockId: afterId }] };
+		const replacement = builderFromAiProposal({ ...proposal, draft: { ...proposal.draft, activities: [proposal.draft.activities[2]] } }, context);
+		const originalActivity = structuredClone(activity), delivery = structuredClone(target.document.delivery), answer = structuredClone(target.privateKeys.answersByQuestionId[shared]);
+		applyBuilderProposal(target, replacement, 'replace', { kind: 'block', id: chosenId, activityId: activity.id });
+		const changed = target.document.activities[0];
+		expect(changed.layout?.nodes.map(node => node.kind === 'block' ? node.blockId : node.children[0]?.kind === 'block' ? node.children[0].blockId : node.id)).toEqual([beforeId, changed.blocks[1].id, afterId]);
+		expect(changed.layout?.nodes[1]).toMatchObject({ kind: 'section', id: 'section00000001', title: 'Keep wrapper', gap: 'lg', padding: 'md', surface: 'accent', background: { mode: 'solid', token: 'surface-2' } });
+		expect(changed.blocks.filter(block => block.id === beforeId || block.id === afterId)).toEqual(originalActivity.blocks.filter(block => block.id === beforeId || block.id === afterId));
+		expect(target.privateKeys.answersByQuestionId[shared]).toEqual(answer);
+		expect(domain.exports.normalize(target)).toEqual(target);
+		expect(target.document.delivery).toEqual(delivery);
+	});
+	it('replaces group children while retaining wrapper styling and group identity', () => {
+		const target = blankBuilder('kelas', context.courseId, context.meetingId), activity = target.document.activities[0];
+		const childId = appendBlock(target, activity.id, 'instructions'), outsideId = appendBlock(target, activity.id, 'acknowledgement');
+		activity.layout = { schemaVersion: 1, nodes: [{ kind: 'container', id: 'container0000001', title: 'Styled wrapper', columns: 2, gap: 'lg', padding: 'md', surface: 'muted', appearance: { radius: 'lg' }, responsive: { mobile: { columns: 1, padding: 'sm' } }, children: [{ kind: 'block', blockId: childId }] }, { kind: 'block', blockId: outsideId }] };
+		const replacement = builderFromAiProposal({ ...proposal, draft: { ...proposal.draft, activities: [proposal.draft.activities[2]] } }, context);
+		applyBuilderProposal(target, replacement, 'replace', { kind: 'group', id: 'container0000001', activityId: activity.id });
+		expect(target.document.activities[0].layout?.nodes[0]).toMatchObject({ id: 'container0000001', title: 'Styled wrapper', gap: 'lg', padding: 'md', surface: 'muted', appearance: { radius: 'lg' }, responsive: { mobile: { columns: 1, padding: 'sm' } } });
+		expect(target.document.activities[0].layout?.nodes[0].kind === 'block' ? [] : target.document.activities[0].layout?.nodes[0].children).toHaveLength(replacement.document.activities[0].blocks.length);
+		expect(target.document.activities[0].blocks.some(block => block.id === outsideId)).toBe(true);
+		expect(domain.exports.normalize(target)).toEqual(target);
+	});
 });

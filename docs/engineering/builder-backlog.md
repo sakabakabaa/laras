@@ -1,6 +1,6 @@
 # Builder implementation backlog
 
-PR104 review correction: REPLACE is supported only when the proposal contains exactly one activity, so all previewed activity content is applied. Multi-activity proposals must use APPEND or INSERT; both the UI and mutation helper reject partial replacement before changing any content or private keys. The focused authoring/server suites pass 20 tests, including empty and multi-activity replacement atomicity. Multi-activity replacement and narrower block/group replacement remain incomplete, not silently approximated by replacing the first activity.
+PR112 follow-up: reviewed AI/upload proposals support bounded replacement of an explicitly captured activity, block, or group when the proposal contains exactly one activity. Block replacement uses that node's exact layout slot; group replacement changes its children while retaining the selected group's wrapper, title, identity, appearance, and responsive settings. Multi-activity and empty replacement remain rejected before mutation; APPEND and INSERT remain available. Provider/browser roundtrips, book-worker roundtrips, and replacement across larger scopes remain unverified or open.
 
 Updated 6 November 2026. This is a status ledger for the original builder scope. “Code evidence” describes repository behavior; it is not runtime or production proof. No live-record migration is part of this scope.
 

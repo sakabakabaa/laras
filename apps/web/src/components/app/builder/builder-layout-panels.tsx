@@ -1,9 +1,12 @@
 import { BuilderAppearanceControls } from './builder-appearance-controls';
+import { BuilderVisibilityControl } from './builder-visibility-control';
+import { BuilderAnchorControl } from './builder-anchor-control';
 import { BuilderGroupBackgroundControls } from './builder-group-background-controls';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { BuilderNavigatorTitle } from './builder-navigator-title';
 import { revealNavigatorAncestors } from '@/lib/builder-navigator';
 import { layoutLockState, LAYOUT_LOCK_REASON } from '@/lib/builder-layout-lock';
+import { builderLayoutGroupCanBeHidden } from '@/lib/builder-document';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import {
 	BLOCK_LABELS,
@@ -420,6 +423,9 @@ export function BuilderLayoutInspector({
 	disabled,
 	customColorsSupported = true,
 	detailedBorderRadiusSupported = false,
+	responsiveBorderRadiusSupported = false,
+	presentationVisibilitySupported = false,
+	anchorNames = [],
 	onChange,
 	onAddBlock,
 	onAddGroup,
@@ -433,6 +439,9 @@ export function BuilderLayoutInspector({
 	disabled: boolean;
 	customColorsSupported?: boolean;
 	detailedBorderRadiusSupported?: boolean;
+	responsiveBorderRadiusSupported?: boolean;
+	presentationVisibilitySupported?: boolean;
+	anchorNames?: string[];
 	onChange: Change;
 	onAddBlock: () => void;
 	onAddGroup: (kind: 'section' | 'container') => void;
@@ -490,6 +499,7 @@ export function BuilderLayoutInspector({
 			<div role="tabpanel" id={`${tabId}-panel`} aria-labelledby={`${tabId}-${tab}`}>
 			{tab === 'content' ? (
 				<div className="bd-fields">
+					<BuilderAnchorControl value={group.anchor} used={anchorNames} disabled={disabled} onApply={anchor => update(target => { target.anchor = anchor; })} onClear={() => update(target => { delete target.anchor; })} />
 					<label>
 						Nama {group.kind === 'section' ? 'bagian' : 'kontainer'}
 						<input
@@ -524,7 +534,8 @@ export function BuilderLayoutInspector({
 				</div>
 			) : tab === 'style' ? (
 				<div className="bd-fields">
-					<BuilderAppearanceControls exclude={['padding', 'background']} presetPreserve={['padding']} backgroundNotice={Boolean(group.background || group.responsive?.tablet?.background || group.responsive?.mobile?.background)} customColorsSupported={customColorsSupported} detailedBorderRadiusSupported={detailedBorderRadiusSupported} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
+					<BuilderAppearanceControls exclude={['padding', 'background']} presetPreserve={['padding']} backgroundNotice={Boolean(group.background || group.responsive?.tablet?.background || group.responsive?.mobile?.background)} customColorsSupported={customColorsSupported} detailedBorderRadiusSupported={detailedBorderRadiusSupported} responsiveBorderRadiusSupported={responsiveBorderRadiusSupported} value={group.appearance} onChange={appearance => update(target => { if (appearance) target.appearance = appearance; else delete target.appearance; })} />
+					{builderLayoutGroupCanBeHidden(group, activity.blocks) ? <BuilderVisibilityControl value={group.presentation} disabled={disabled || !presentationVisibilitySupported} onChange={presentation => update(target => { if (presentation) target.presentation = presentation; else delete target.presentation; })} /> : <p className="bd-help">Bagian ini selalu terlihat karena berisi asesmen, pengakuan, atau jenis elemen yang belum didukung.</p>}
 					<BuilderGroupBackgroundControls courseId={courseId} value={group.background} onChange={background => update(target => { if (background) target.background = background; else delete target.background; })} />
 					<ResponsiveControls group={group} courseId={courseId} update={update} />
 					<label>Arah alur<select value={group.direction ?? 'grid'} onChange={event=>update(target=>{const value=event.target.value as 'grid'|'row'|'column'; if(value==='grid') delete target.direction; else target.direction=value; })}><option value="grid">Grid</option><option value="row">Baris</option><option value="column">Kolom</option></select></label>

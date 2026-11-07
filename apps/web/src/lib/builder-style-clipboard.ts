@@ -12,6 +12,16 @@ export type BuilderStyleClipboard = Readonly<{
 
 const responsiveFields = ['columns', 'direction', 'align', 'distribute', 'wrap', 'gap', 'padding', 'paddingLinked', 'marginLinked', 'rowGap', 'columnGap'] as const;
 const layoutFields = [...responsiveFields, 'surface', 'width', 'maxWidth'] as const;
+function validResponsiveBorder(value: unknown): boolean {
+	if (!value || typeof value !== 'object') return false;
+	const border = value as Record<string, unknown>;
+	return Object.keys(border).every(key => ['style', 'color', 'linked', 'widths'].includes(key)) && ['none', 'solid', 'dashed', 'dotted'].includes(String(border.style)) && (border.color === undefined || ['border', 'action', 'ink', 'surface-2'].includes(String(border.color))) && (border.linked === undefined || typeof border.linked === 'boolean') && (border.widths === undefined || Boolean(border.widths && typeof border.widths === 'object' && Object.keys(border.widths).every(side => ['top', 'right', 'bottom', 'left'].includes(side)) && Object.values(border.widths).every(width => typeof width === 'number' && Number.isFinite(width) && width >= 0 && width <= 8)));
+}
+function validResponsiveCorners(value: unknown): boolean {
+	if (!value || typeof value !== 'object') return false;
+	const corners = value as Record<string, unknown>;
+	return Object.keys(corners).every(key => ['linked', 'topLeft', 'topRight', 'bottomRight', 'bottomLeft'].includes(key)) && (corners.linked === undefined || typeof corners.linked === 'boolean') && Object.entries(corners).every(([key, radius]) => key === 'linked' || typeof radius === 'number' && Number.isFinite(radius) && radius >= 0 && radius <= 48);
+}
 
 function targetIn(envelope: BuilderEnvelope, selection: BuilderStyleSelection): StyleTarget | undefined {
 	const activity = envelope.document.activities.find(item => item.id === selection.activityId);
@@ -53,6 +63,8 @@ export function copyBuilderStyle(envelope: BuilderEnvelope, selection: BuilderSt
 	if (colors && validHexColor(colors.light?.foreground) && validHexColor(colors.light?.background) && validHexColor(colors.dark?.foreground) && validHexColor(colors.dark?.background)) appearance.customColors = structuredClone(colors);
 	if (target.appearance?.borderDetail && ['none', 'solid', 'dashed', 'dotted'].includes(target.appearance.borderDetail.style) && (target.appearance.borderDetail.color === undefined || ['border', 'action', 'ink', 'surface-2'].includes(target.appearance.borderDetail.color)) && (target.appearance.borderDetail.linked === undefined || typeof target.appearance.borderDetail.linked === 'boolean') && Object.keys(target.appearance.borderDetail.widths ?? {}).every(key => ['top', 'right', 'bottom', 'left'].includes(key)) && Object.entries(target.appearance.borderDetail.widths ?? {}).every(([, value]) => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 8)) appearance.borderDetail = structuredClone(target.appearance.borderDetail);
 	if (target.appearance?.corners && Object.entries(target.appearance.corners).every(([key, value]) => key === 'linked' ? typeof value === 'boolean' : ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'].includes(key) && typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 48)) appearance.corners = structuredClone(target.appearance.corners);
+	const responsive = target.appearance?.responsive;
+	if (responsive && Object.keys(responsive).every(device => ['tablet', 'mobile'].includes(device)) && Object.entries(responsive).every(([, override]) => override && Object.keys(override).length > 0 && Object.keys(override).every(key => ['borderDetail', 'corners'].includes(key)) && (override.borderDetail === undefined || validResponsiveBorder(override.borderDetail)) && (override.corners === undefined || validResponsiveCorners(override.corners)))) appearance.responsive = structuredClone(responsive);
 	const clipboard: BuilderStyleClipboard = { type: targetType(target), ...(Object.keys(appearance).length ? { appearance } : {}) };
 	if (!('kind' in target)) return freezeStyle(clipboard);
 	const layout: Partial<BuilderLayoutGroup> = { ...pickFields(target, layoutFields), ...spacing(target) };

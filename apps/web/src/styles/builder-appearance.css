@@ -1,4 +1,29 @@
 /* Shared by the canvas, preview, and published student runtime. */
+.bd-lesson-theme {
+	--bd-theme-ink: var(--bt-light-base-foreground);
+	--bd-theme-surface: var(--bt-light-base-background);
+	--bd-theme-on-action: var(--bt-light-accent-foreground);
+	--bd-theme-action: var(--bt-light-accent-background);
+	--bd-text: var(--bd-theme-ink);
+	--bd-muted: var(--r-ink-2);
+	--bd-panel: var(--bd-theme-surface);
+	--bd-soft: var(--r-surface-2);
+	--bd-border: var(--r-border);
+	--bd-accent: var(--bd-theme-action);
+	color: var(--bd-theme-ink);
+	background-color: var(--bd-theme-surface);
+}
+:root.dark .bd-lesson-theme {
+	--bd-theme-ink: var(--bt-dark-base-foreground);
+	--bd-theme-surface: var(--bt-dark-base-background);
+	--bd-theme-on-action: var(--bt-dark-accent-foreground);
+	--bd-theme-action: var(--bt-dark-accent-background);
+}
+.bd-lesson-theme .ba-color-ink { --ba-color: var(--bd-theme-ink); }
+.bd-lesson-theme .ba-color-accent { --ba-color: var(--bd-theme-action); }
+.bd-lesson-theme .ba-background-accent { --ba-background: color-mix(in srgb, var(--bd-theme-action) 8%, transparent); }
+.bd-lesson-theme .bd-primary { color: var(--bd-theme-on-action); background: var(--bd-theme-action); border-color: var(--bd-theme-action); }
+.bd-lesson-theme .bd-primary:hover { background: var(--bd-theme-action); }
 .bl-layout .ba-custom-colors { --ba-custom-foreground: var(--ba-custom-light-foreground); --ba-custom-background: var(--ba-custom-light-background); }
 :root.dark .bl-layout .ba-custom-colors { --ba-custom-foreground: var(--ba-custom-dark-foreground); --ba-custom-background: var(--ba-custom-dark-background); }
 .bl-layout .bl-block.ba-custom-colors { background-color: var(--ba-custom-background); }
@@ -133,6 +158,14 @@
 .bl-layout .ba-shadow-md {
 	box-shadow: 0 8px 24px color-mix(in srgb, var(--r-ink) 12%, transparent);
 }
+/* Decorative only: no cursor, focus, hit-area, or semantic changes. */
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+	.bl-layout :is(.bl-group, .bl-block).ba-hover-lift,
+	.bl-layout :is(.bl-group, .bl-block).ba-hover-emphasis { transition: transform 140ms ease; }
+	.bl-layout :is(.bl-group, .bl-block).ba-hover-lift:hover { transform: translateY(-2px); }
+	.bl-layout :is(.bl-group, .bl-block).ba-hover-emphasis:hover { transform: scale(1.01); }
+}
 /* Preserve selection outlines while allowing the chosen surface to show. */
 .bd-canvas .bl-block[class*='ba-background-'] > .bd-block {
 	background: transparent;
@@ -149,5 +182,43 @@
 @media (max-width: 600px) {
 	.bl-layout .ba-padding-lg {
 		padding: 1.25rem;
+	}
+}
+/* Presentation visibility is device-local and uses the activity container's breakpoints. */
+.bl-layout :is(.bl-block, .bl-group)[data-presentation-desktop='hidden']:not([data-editor-presentation-hidden]) { display: none; }
+@container laras-activity (max-width: 900px) {
+	.bl-layout :is(.bl-block, .bl-group)[data-presentation-tablet='hidden']:not([data-editor-presentation-hidden]) { display: none; }
+	.bl-layout .bl-block[data-presentation-tablet='visible']:not([data-editor-presentation-hidden]) { display: block; }
+	.bl-layout .bl-group[data-presentation-tablet='visible']:not([data-editor-presentation-hidden]) { display: var(--bl-presentation-tablet-display, grid); }
+}
+@container laras-activity (max-width: 600px) {
+	.bl-layout :is(.bl-block, .bl-group)[data-presentation-mobile='hidden']:not([data-editor-presentation-hidden]) { display: none; }
+	.bl-layout .bl-block[data-presentation-mobile='visible']:not([data-editor-presentation-hidden]) { display: block; }
+	.bl-layout .bl-group[data-presentation-mobile='visible']:not([data-editor-presentation-hidden]) { display: var(--bl-presentation-mobile-display, grid); }
+}
+.bd-canvas .bl-layout :is(.bl-block, .bl-group)[data-editor-presentation-hidden]::before {
+	content: 'Tersembunyi pada tampilan pelajar'; display: block; width: fit-content; margin: 0.2rem 0; padding: 0.15rem 0.4rem; border-radius: 0.25rem; color: var(--r-ink); background: var(--r-surface-2); font-size: 0.72rem;
+}
+/* Responsive detail overrides use the same activity container breakpoints as layout flow. */
+@container laras-activity (max-width: 900px) {
+	.bl-layout :is(.bl-group, .bl-block).ba-tablet-has-border-detail {
+		border-style: var(--ba-tablet-detail-border-style);
+		border-color: var(--ba-tablet-detail-border-color, var(--ba-detail-border-color, var(--r-border)));
+		border-width: var(--ba-tablet-border-top-width, var(--ba-border-top-width, 1px)) var(--ba-tablet-border-right-width, var(--ba-border-right-width, 1px)) var(--ba-tablet-border-bottom-width, var(--ba-border-bottom-width, 1px)) var(--ba-tablet-border-left-width, var(--ba-border-left-width, 1px));
+	}
+	.bl-layout :is(.bl-group, .bl-block).ba-tablet-has-border-detail[style*='--ba-tablet-detail-border-style: none'] { border-width: 0; }
+	.bl-layout :is(.bl-group, .bl-block).ba-tablet-has-corners {
+		border-radius: var(--ba-tablet-corner-topLeft, var(--ba-corner-topLeft, 0)) var(--ba-tablet-corner-topRight, var(--ba-corner-topRight, 0)) var(--ba-tablet-corner-bottomRight, var(--ba-corner-bottomRight, 0)) var(--ba-tablet-corner-bottomLeft, var(--ba-corner-bottomLeft, 0));
+	}
+}
+@container laras-activity (max-width: 600px) {
+	.bl-layout :is(.bl-group, .bl-block).ba-mobile-has-border-detail {
+		border-style: var(--ba-mobile-detail-border-style);
+		border-color: var(--ba-mobile-detail-border-color, var(--ba-tablet-detail-border-color, var(--ba-detail-border-color, var(--r-border))));
+		border-width: var(--ba-mobile-border-top-width, var(--ba-tablet-border-top-width, var(--ba-border-top-width, 1px))) var(--ba-mobile-border-right-width, var(--ba-tablet-border-right-width, var(--ba-border-right-width, 1px))) var(--ba-mobile-border-bottom-width, var(--ba-tablet-border-bottom-width, var(--ba-border-bottom-width, 1px))) var(--ba-mobile-border-left-width, var(--ba-tablet-border-left-width, var(--ba-border-left-width, 1px)));
+	}
+	.bl-layout :is(.bl-group, .bl-block).ba-mobile-has-border-detail[style*='--ba-mobile-detail-border-style: none'] { border-width: 0; }
+	.bl-layout :is(.bl-group, .bl-block).ba-mobile-has-corners {
+		border-radius: var(--ba-mobile-corner-topLeft, var(--ba-tablet-corner-topLeft, var(--ba-corner-topLeft, 0))) var(--ba-mobile-corner-topRight, var(--ba-tablet-corner-topRight, var(--ba-corner-topRight, 0))) var(--ba-mobile-corner-bottomRight, var(--ba-tablet-corner-bottomRight, var(--ba-corner-bottomRight, 0))) var(--ba-mobile-corner-bottomLeft, var(--ba-tablet-corner-bottomLeft, var(--ba-corner-bottomLeft, 0)));
 	}
 }

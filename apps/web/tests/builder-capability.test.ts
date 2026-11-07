@@ -7,6 +7,7 @@ import {
 	ENHANCED_AUTHORING_ENV,
 	builderAuthoringGate,
 	builderCapabilityPayload,
+	hasDetailedBorderRadius,
 	enhancedAuthoringNotice,
 	isEnhancedAuthoringDenied,
 	parseEnhancedAuthoringAllowlist,
@@ -123,6 +124,13 @@ function withEnv(values: Record<string, string | undefined>, run: () => void) {
 }
 
 describe('enhanced authoring capability — default (flag unset) preserves production', () => {
+	it('uses versioned detailed-style writes for shadow as well as border, corner, and hover fields', () => {
+		for (const appearance of [{ shadow: 'sm' }, { borderDetail: { style: 'solid' } }, { corners: { topLeft: 2 } }, { hover: 'lift' }]) {
+			expect(hasDetailedBorderRadius({ document: { activities: [{ blocks: [{ appearance }] }] } })).toBe(true);
+		}
+		expect(hasDetailedBorderRadius({ document: { activities: [{ blocks: [{ appearance: { size: 'lg' } }] }] } })).toBe(false);
+	});
+
 	it('treats unset and unrecognised values as enabled', () => {
 		expect(parseEnhancedAuthoringMode(undefined)).toBe('on');
 		expect(parseEnhancedAuthoringMode('')).toBe('on');
@@ -317,6 +325,10 @@ function serviceContext(env: Record<string, string | undefined>, options: { priv
 		findCollectionByNameOrId: () => ({ id: 'collection', name: 'builder_documents' }),
 		save: (item: unknown) => {
 			const row = item as { getString: (name: string) => string };
+			if (row.getString('envelope')) {
+				saved.push(item);
+				return;
+			}
 			if (row.getString('keys')) {
 				keyColumns.document = row.getString('document');
 				keyColumns.keys = row.getString('keys');
@@ -391,6 +403,81 @@ describe('builder service — server-side enforcement', () => {
 			action: 'layoutLocks:save', id: 'draft0000000001', baseRevision: 2,
 			commandId: 'cmd-stale', ...advanced,
 		})).toThrow('REVISION_CONFLICT');
+		expect(saved).toHaveLength(2);
+	});
+
+	it('requires the true responsive capability marker and persists responsive detail through a versioned write', () => {
+		const { handle, app, values, saved } = serviceContext({});
+		const responsive = facultyEnvelope();
+		appendBlock(responsive, responsive.document.activities[0].id, 'instructions');
+		responsive.document.activities[0].blocks[0].appearance = { responsive: { tablet: { borderDetail: { style: 'none', widths: { top: 0 } } } } };
+		values.document = JSON.stringify(facultyEnvelope().document);
+		for (const marker of [false, 0, undefined]) {
+			expect(() => handle(app, faculty(), { action: 'responsiveStyles:save', id: 'draft0000000001', baseRevision: 2, commandId: `cmd-bad-${String(marker)}`, responsiveBorderRadius: marker, document: responsive.document, privateKeys: responsive.privateKeys })).toThrow('Perintah gaya responsif tidak valid');
+		}
+		expect(() => handle(app, faculty(), { action: 'responsiveStyles:create', commandId: 'cmd-create-bad', responsiveBorderRadius: 0, document: responsive.document, privateKeys: responsive.privateKeys })).toThrow('Perintah gaya responsif tidak valid');
+		expect(saved).toHaveLength(0);
+		expect(() => handle(app, faculty(), { action: 'save', id: 'draft0000000001', baseRevision: 2, commandId: 'cmd-unversioned-responsive', document: responsive.document, privateKeys: responsive.privateKeys })).toThrow('Gaya responsif memerlukan perintah versi responsif');
+		handle(app, faculty(), { action: 'responsiveStyles:save', responsiveBorderRadius: true, id: 'draft0000000001', baseRevision: 2, commandId: 'cmd-responsive', document: responsive.document, privateKeys: responsive.privateKeys });
+		expect(saved).toHaveLength(2);
+		expect(JSON.parse(values.document as string).activities[0].blocks[0].appearance.responsive.tablet.borderDetail).toEqual({ style: 'none', widths: { top: 0 } });
+		handle(app, faculty(), { action: 'responsiveStyles:create', responsiveBorderRadius: true, commandId: 'cmd-create-responsive', document: responsive.document, privateKeys: responsive.privateKeys });
+		expect(saved).toHaveLength(4);
+	});
+
+	it('requires the nested list capability marker for writes and saved snapshots without blocking mixed current fields', () => {
+		const { handle, app, values, saved } = serviceContext({});
+		const nested = facultyEnvelope(); const activity = nested.document.activities[0]; appendBlock(nested, activity.id, 'instructions');
+		nested.document.activities[0].blocks[0].body = { type: 'doc', content: [
+			{ type: 'list_item', list: 'number', content: [{ type: 'text', text: 'Parent' }] },
+			{ type: 'list_item', list: 'bullet', depth: 1, content: [{ type: 'text', text: 'Child' }] },
+		] };
+		values.document = JSON.stringify(facultyEnvelope().document);
+		expect(() => handle(app, faculty(), { action: 'save', id: 'draft0000000001', baseRevision: 2, commandId: 'nested-old-save', document: nested.document, privateKeys: nested.privateKeys })).toThrow(/versi daftar/i);
+		expect(() => handle(app, faculty(), { action: 'nestedLists:save', nestedRichText: false, id: 'draft0000000001', baseRevision: 2, commandId: 'nested-false', document: nested.document, privateKeys: nested.privateKeys })).toThrow(/perintah daftar bertingkat tidak valid/i);
+		nested.document.activities[0].blocks[0].captions = { cues: [{ start: 0, end: 1, text: 'caption' }] };
+		nested.document.activities[0].blocks[0].appearance = { responsive: { tablet: { corners: { topLeft: 0 } } } };
+		handle(app, faculty(), { action: 'nestedLists:save', nestedRichText: true, mediaCaptions: true, responsiveBorderRadius: true, id: 'draft0000000001', baseRevision: 2, commandId: 'nested-valid', document: nested.document, privateKeys: nested.privateKeys });
+		expect(saved).toHaveLength(2);
+		expect(JSON.parse(values.document as string).activities[0].blocks[0].body.content[1].depth).toBe(1);
+		expect(() => handle(app, faculty(), { action: 'saveSnapshot', id: 'draft0000000001', baseRevision: 2, commandId: 'nested-snapshot-old', title: 'Old', activityId: activity.id })).toThrow(/versi daftar/i);
+		handle(app, faculty(), { action: 'nestedLists:saveSnapshot', nestedRichText: true, mediaCaptions: true, responsiveBorderRadius: true, id: 'draft0000000001', baseRevision: Number(values.revision), commandId: 'nested-snapshot', title: 'Nested', activityId: activity.id });
+		handle(app, faculty(), { action: 'nestedLists:saveTemplate', nestedRichText: true, mediaCaptions: true, responsiveBorderRadius: true, id: 'draft0000000001', baseRevision: Number(values.revision), commandId: 'nested-template', title: 'Nested template', activityId: activity.id, scope: 'activity' });
+		expect(saved).toHaveLength(4);
+	});
+
+	it('requires the media playback version marker across save, snapshot and template, including combined current features', () => {
+		const { handle, app, values, saved } = serviceContext({});
+		const source = facultyEnvelope(); const activity = source.document.activities[0]; appendBlock(source, activity.id, 'audio');
+		const audio = activity.blocks.at(-1)!; audio.playback = { start: 0, end: 12, rate: 1.25 }; audio.captions = { cues: [{ start: 0, end: 2, text: 'Cue' }] };
+		const richId = appendBlock(source, activity.id, 'instructions');
+		const richBlock = activity.blocks.find(block => block.id === richId)!;
+		richBlock.body = { type: 'doc', content: [{ type: 'list_item', list: 'number', content: [{ type: 'text', text: 'Parent' }] }, { type: 'list_item', list: 'bullet', depth: 1, content: [{ type: 'text', text: 'Nested' }] }] };
+		audio.appearance = { responsive: { tablet: { corners: { topLeft: 0 } } } };
+		values.document = JSON.stringify(facultyEnvelope().document);
+		expect(() => handle(app, faculty(), { action: 'save', id: 'draft0000000001', baseRevision: 2, commandId: 'media-playback-old', document: source.document, privateKeys: source.privateKeys })).toThrow(/daftar bertingkat memerlukan perintah|keterangan media memerlukan perintah/i);
+		expect(() => handle(app, faculty(), { action: 'mediaPlayback:save', mediaPlayback: false, mediaCaptions: true, nestedRichText: true, responsiveBorderRadius: true, id: 'draft0000000001', baseRevision: 2, commandId: 'media-playback-false', document: source.document, privateKeys: source.privateKeys })).toThrow(/perintah pemutaran media tidak valid/i);
+		const markers = { mediaPlayback: true, mediaCaptions: true, nestedRichText: true, responsiveBorderRadius: true };
+		handle(app, faculty(), { action: 'mediaPlayback:save', ...markers, id: 'draft0000000001', baseRevision: 2, commandId: 'media-playback-save', document: source.document, privateKeys: source.privateKeys });
+		expect(JSON.parse(values.document as string).activities[0].blocks[0].playback).toEqual({ start: 0, end: 12, rate: 1.25 });
+		expect(() => handle(app, faculty(), { action: 'saveSnapshot', mediaCaptions: true, nestedRichText: true, responsiveBorderRadius: true, id: 'draft0000000001', baseRevision: Number(values.revision), commandId: 'media-playback-old-snapshot', title: 'Old', activityId: activity.id })).toThrow(/versi pemutaran/i);
+		handle(app, faculty(), { action: 'mediaPlayback:saveSnapshot', ...markers, id: 'draft0000000001', baseRevision: Number(values.revision), commandId: 'media-playback-snapshot', title: 'Current', activityId: activity.id });
+		handle(app, faculty(), { action: 'mediaPlayback:saveTemplate', ...markers, id: 'draft0000000001', baseRevision: Number(values.revision), commandId: 'media-playback-template', title: 'Current', activityId: activity.id, scope: 'activity' });
+		expect(saved).toHaveLength(4);
+	});
+
+	it('requires responsive version markers for snapshot and template persistence', () => {
+		const { handle, app, values, saved } = serviceContext({});
+		const source = facultyEnvelope();
+		const activity = source.document.activities[0];
+		appendBlock(source, activity.id, 'instructions');
+		activity.blocks[0].appearance = { responsive: { mobile: { corners: { topLeft: 0 } } } };
+		values.document = JSON.stringify(source.document);
+		for (const action of ['responsiveStyles:saveSnapshot', 'responsiveStyles:saveTemplate']) {
+			for (const marker of [false, 0]) expect(() => handle(app, faculty(), { action, id: 'draft0000000001', baseRevision: 2, commandId: `bad-${action}-${marker}`, activityId: activity.id, scope: 'activity', title: 'Salinan', responsiveBorderRadius: marker })).toThrow('Perintah gaya responsif tidak valid');
+		}
+		expect(saved).toHaveLength(0);
+		for (const [index, action] of ['responsiveStyles:saveSnapshot', 'responsiveStyles:saveTemplate'].entries()) handle(app, faculty(), { action, id: 'draft0000000001', baseRevision: 2, commandId: `good-responsive-${index}`, activityId: activity.id, scope: 'activity', title: 'Salinan', responsiveBorderRadius: true });
 		expect(saved).toHaveLength(2);
 	});
 

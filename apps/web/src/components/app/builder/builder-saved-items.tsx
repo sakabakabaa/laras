@@ -11,6 +11,8 @@ import {
 	duplicateActivity,
 	plain,
 	uid,
+	builderNodeVisibilitySafe,
+	remapDuplicateBuilderAnchors,
 	type BuilderEnvelope,
 	type SavedBuilderTemplate,
 } from '@/lib/builder-document';
@@ -23,6 +25,19 @@ export function BuilderSavedItems({
 	dirty,
 	detailedBorderRadiusSupported,
 	detailedStylesInDocument,
+	responsiveBorderRadiusSupported,
+	responsiveStylesInDocument,
+	mediaCaptionsInDocument,
+	mediaCaptionsSupported,
+	mediaPlaybackInDocument,
+	mediaPlaybackSupported,
+	nestedRichTextInDocument,
+	nestedRichTextSupported,
+	documentAnchorsInDocument,
+	documentAnchorsSupported,
+	presentationVisibilityInDocument,
+	presentationVisibilitySupported,
+	themePaletteInDocument,
 	onRestore,
 	onInsert,
 	onClose,
@@ -34,6 +49,19 @@ export function BuilderSavedItems({
 	dirty: boolean;
 	detailedBorderRadiusSupported?: boolean;
 	detailedStylesInDocument?: boolean;
+	responsiveBorderRadiusSupported?: boolean;
+	responsiveStylesInDocument?: boolean;
+	mediaCaptionsInDocument?: boolean;
+	mediaCaptionsSupported?: boolean;
+	mediaPlaybackInDocument?: boolean;
+	mediaPlaybackSupported?: boolean;
+	nestedRichTextInDocument?: boolean;
+	nestedRichTextSupported?: boolean;
+	documentAnchorsInDocument?: boolean;
+	documentAnchorsSupported?: boolean;
+	presentationVisibilityInDocument?: boolean;
+	presentationVisibilitySupported?: boolean;
+	themePaletteInDocument?: boolean;
 	onRestore: (envelope: BuilderEnvelope) => void;
 	onInsert: (envelope: SavedBuilderTemplate) => void;
 	onClose: () => void;
@@ -55,8 +83,18 @@ export function BuilderSavedItems({
 		[busy, setBusy] = useState(false),
 		[preview, setPreview] = useState<SavedBuilderTemplate | null>(null),
 		[error, setError] = useState('');
+	const featureMarkers = {
+		...(themePaletteInDocument ? { themePalette: true } : {}),
+		...(documentAnchorsInDocument ? { documentAnchors: true } : {}),
+		...(presentationVisibilityInDocument ? { presentationVisibility: true } : {}),
+		...(detailedBorderRadiusSupported ? { detailedBorderRadius: true } : {}),
+		...(responsiveStylesInDocument || responsiveBorderRadiusSupported ? { responsiveBorderRadius: true } : {}),
+		...(mediaCaptionsInDocument ? { mediaCaptions: true } : {}),
+		...(mediaPlaybackInDocument ? { mediaPlayback: true } : {}),
+		...(nestedRichTextInDocument ? { nestedRichText: true } : {}),
+	};
 	const load = () =>
-		builderRequest<{ items: typeof items }>('savedList', { id }).then((r) =>
+		builderRequest<{ items: typeof items }>('savedList', { id, ...featureMarkers }).then((r) =>
 			setItems(r.items),
 		);
 	useEffect(() => {
@@ -68,7 +106,7 @@ export function BuilderSavedItems({
 		try {
 			await builderRequest(
 				tab === 'snapshot' ? 'saveSnapshot' : 'saveTemplate',
-				{ id, baseRevision: revision, activityId, groupId, scope: groupId ? 'group' : 'activity', title, commandId: uid(), ...(detailedBorderRadiusSupported ? { detailedBorderRadius: true } : {}) },
+				{ id, baseRevision: revision, activityId, groupId, scope: groupId ? 'group' : 'activity', title, commandId: uid(), ...featureMarkers },
 			);
 			setTitle('');
 			await load();
@@ -86,6 +124,7 @@ export function BuilderSavedItems({
 				'savedGet',
 				{ itemId: item.id },
 			);
+			if (!builderNodeVisibilitySafe(r.envelope)) throw new Error('Template ditolak karena menyembunyikan asesmen, pengakuan, atau elemen yang belum didukung.');
 			if (item.kind === 'snapshot') {
 				if (
 					!window.confirm(
@@ -159,7 +198,7 @@ export function BuilderSavedItems({
 						</label>
 						<button
 							className="bd-primary"
-							disabled={busy || dirty || !title.trim() || Boolean(detailedStylesInDocument && !detailedBorderRadiusSupported)}
+				disabled={busy || dirty || !title.trim() || Boolean(presentationVisibilityInDocument && !presentationVisibilitySupported) || Boolean(documentAnchorsInDocument && !documentAnchorsSupported) || Boolean(detailedStylesInDocument && !detailedBorderRadiusSupported) || Boolean(responsiveStylesInDocument && !responsiveBorderRadiusSupported) || Boolean(mediaCaptionsInDocument && !mediaCaptionsSupported) || Boolean(mediaPlaybackInDocument && !mediaPlaybackSupported) || Boolean(nestedRichTextInDocument && !nestedRichTextSupported)}
 							onClick={() => void save()}
 						>
 							Simpan{' '}
@@ -269,6 +308,10 @@ export function insertActivityTemplate(
 		}
 	activity.title = original.title;
 	target.document.activities.push(activity);
+	const owners: Array<{ anchor?: string }> = [...activity.blocks];
+	const collectOwners = (nodes: import('@/lib/builder-layout').BuilderLayoutNode[]) => nodes.forEach(node => { if (node.kind !== 'block') { owners.push(node); collectOwners(node.children); } });
+	if (activity.layout) collectOwners(activity.layout.nodes);
+	remapDuplicateBuilderAnchors(target, owners, activity.blocks);
 	Object.assign(target.document.questionsById, copy.document.questionsById);
 	Object.assign(
 		target.privateKeys.answersByQuestionId,

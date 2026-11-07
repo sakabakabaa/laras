@@ -3,11 +3,13 @@ import type { ScheduledLesson } from './scheduled-lesson';
 import { findLayoutGroup, insertBlockIntoLayout, layoutItemLocation, removeBlockFromLayout, type BuilderLayout, type BuilderLayoutGroup, LAYOUT_LIMITS, countLayoutGroups, countLayoutNodes, layoutGroupDepth } from './builder-layout';
 import pb from './pocketbase-client';
 import { BUILDER_BLOCK_REGISTRY, createBuilderBlockDefaults, isBuilderRegistryKind, type BuilderPlacement } from './builder-element-registry';
+import { normalizeBuilderDocumentTheme, type BuilderDocumentTheme } from './builder-theme';
 
 export type RichText = {
 	type: 'doc';
-	content: ({ type: 'paragraph'; content: RichTextRun[] } | { type: 'heading'; level: 2 | 3 | 4; content: RichTextRun[] } | { type: 'list_item'; list: 'bullet' | 'number'; content: RichTextRun[] })[];
+	content: ({ type: 'paragraph'; content: RichTextRun[] } | { type: 'heading'; level: 2 | 3 | 4; content: RichTextRun[] } | { type: 'list_item'; list: 'bullet' | 'number'; depth?: number; content: RichTextRun[] })[];
 };
+export const BUILDER_RICH_LIST_MAX_DEPTH = 2;
 export type RichTextRun = { type: 'text'; text: string; marks?: ('bold' | 'italic')[]; link?: { href: string } };
 export function safeInlineUrl(value: string): string | null {
 	if (!value || /[\u0000-\u0020\u007f\\]/.test(value) || value.startsWith('//')) return null;
@@ -22,6 +24,77 @@ export const plain = (value?: RichText) =>
 	value?.content.map((p) => p.content.map((t) => t.text).join('')).join('\n') ||
 	'';
 
+export function normalizeBuilderRichText(value: unknown): RichText {
+	if (!value || typeof value !== 'object' || Array.isArray(value) || (value as Record<string, unknown>).type !== 'doc') throw new Error('Format teks tidak didukung.');
+	const raw = value as { content?: unknown };
+	if (!Array.isArray(raw.content) || raw.content.length > 100) throw new Error('Jumlah paragraf teks melewati batas.');
+	let previousDepth = 0, previousWasList = false, total = 0;
+	const content = raw.content.map((entry): RichText['content'][number] => {
+		if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error('Paragraf tidak valid.');
+		const node = entry as Record<string, unknown>;
+		const isList = node.type === 'list_item';
+		if (node.type !== 'paragraph' && node.type !== 'heading' && !isList) throw new Error('Paragraf tidak valid.');
+		if (node.type === 'heading' && ![2, 3, 4].includes(Number(node.level))) throw new Error('Judul tidak valid.');
+		if (isList && node.list !== 'bullet' && node.list !== 'number') throw new Error('Daftar tidak valid.');
+		const depth = isList ? (node.depth === undefined ? 0 : node.depth) : 0;
+		if (isList && (!Number.isInteger(depth) || Number(depth) < 0 || Number(depth) > BUILDER_RICH_LIST_MAX_DEPTH || (Number(depth) > 0 && (!previousWasList || Number(depth) > previousDepth + 1)))) throw new Error('Kedalaman daftar tidak valid.');
+		if (!isList && node.depth !== undefined) throw new Error('Kedalaman daftar tidak valid.');
+		if (!Array.isArray(node.content) || node.content.length > 100) throw new Error('Jumlah format teks melewati batas.');
+		const runs = node.content.map((item): RichTextRun => {
+			if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Teks tidak valid.');
+			const run = item as Record<string, unknown>;
+			if (run.type !== 'text' || typeof run.text !== 'string' || run.text.length > 20000) throw new Error('Teks tidak valid.');
+			total += run.text.length; if (total > 20000) throw new Error('Teks draf terlalu panjang.');
+			const marks = Array.isArray(run.marks) ? [...new Set(run.marks.filter(mark => mark === 'bold' || mark === 'italic'))].sort() as ('bold' | 'italic')[] : [];
+			const href = run.link && typeof run.link === 'object' ? safeInlineUrl(String((run.link as { href?: unknown }).href || '')) : null;
+			return { type: 'text', text: run.text, ...(marks.length ? { marks } : {}), ...(href ? { link: { href } } : {}) };
+		});
+		previousWasList = isList; previousDepth = Number(depth);
+		return node.type === 'heading' ? { type: 'heading', level: Number(node.level) as 2 | 3 | 4, content: runs } : isList ? { type: 'list_item', list: node.list as 'bullet' | 'number', ...(Number(depth) ? { depth: Number(depth) } : {}), content: runs } : { type: 'paragraph', content: runs };
+	});
+	return { type: 'doc', content };
+}
+
+/** Adjust selected list lines. First-item indent and depth-zero outdent are no-ops. */
+export function adjustRichListDepth(value: RichText | undefined, start: number, end: number, direction: 'indent' | 'outdent'): RichText {
+	const source = value || rich('');
+	const text = plain(source), a = Math.max(0, Math.min(text.length, start)), b = Math.max(a, Math.min(text.length, end));
+	const ranges: { from: number; to: number }[] = [];
+	let offset = 0;
+	for (const node of source.content) { const length = node.content.map(run => run.text).join('').length; ranges.push({ from: offset, to: offset + length }); offset += length + 1; }
+	const selected = ranges.map((range, index) => ({ range, index })).filter(({ range }) => a === b ? range.from <= a && a <= range.to : range.from < b && range.to > a).map(({ index }) => index);
+	if (!selected.length || selected.some(index => source.content[index].type !== 'list_item')) return source;
+	const next = source.content.map(node => node.type === 'list_item' ? { ...node, depth: node.depth || 0 } : node);
+	const affected = new Set(selected);
+	for (const index of selected) {
+		const depth = (next[index] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0;
+		for (let child = index + 1; child < next.length && next[child].type === 'list_item'; child++) {
+			const childDepth = (next[child] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0;
+			if (childDepth <= depth) break;
+			affected.add(child);
+		}
+	}
+	if (direction === 'indent') {
+		const first = selected[0];
+		if (first === 0 || next[first - 1].type !== 'list_item') return source;
+		const target = (next[first] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0;
+		if (target >= BUILDER_RICH_LIST_MAX_DEPTH || ((next[first - 1] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0) < target || [...affected].some(index => ((next[index] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0) >= BUILDER_RICH_LIST_MAX_DEPTH)) return source;
+		for (const index of affected) (next[index] as Extract<typeof next[number], { type: 'list_item' }>).depth = ((next[index] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0) + 1;
+	} else {
+		if (selected.some(index => !((next[index] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0))) return source;
+		for (const index of affected) (next[index] as Extract<typeof next[number], { type: 'list_item' }>).depth = ((next[index] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0) - 1;
+	}
+	for (let i = 0; i < next.length; i++) if (next[i].type === 'list_item') {
+		const depth = (next[i] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0;
+		if (depth > BUILDER_RICH_LIST_MAX_DEPTH || (depth > 0 && (i === 0 || next[i - 1].type !== 'list_item' || depth > (((next[i - 1] as Extract<typeof next[number], { type: 'list_item' }>).depth || 0) + 1)))) return source;
+	}
+	return { type: 'doc', content: next.map(node => {
+		if (node.type !== 'list_item') return node;
+		const { depth, ...flat } = node;
+		return depth ? { ...flat, depth } : flat;
+	}) };
+}
+
 export function applyBlockFormat(value: RichText | undefined, start: number, end: number, format: 'paragraph' | 'heading2' | 'heading3' | 'heading4' | 'bullet' | 'number'): RichText {
 	const paragraphs = value?.content || rich(plain(value)).content;
 	const total = plain(value);
@@ -33,7 +106,7 @@ export function applyBlockFormat(value: RichText | undefined, start: number, end
 		const selected = a === b ? from <= a && a <= to : from < b && to > a;
 		offset = to + 1;
 		const runs = p.content.map(r => ({ ...r, ...(r.marks ? { marks: [...r.marks] } : {}), ...(r.link ? { link: { ...r.link } } : {}) }));
-		if (!selected) return p.type === 'heading' ? { type: 'heading' as const, level: p.level, content: runs } : p.type === 'list_item' ? { type: 'list_item' as const, list: p.list, content: runs } : { type: 'paragraph' as const, content: runs };
+		if (!selected) return p.type === 'heading' ? { type: 'heading' as const, level: p.level, content: runs } : p.type === 'list_item' ? { type: 'list_item' as const, list: p.list, ...(p.depth ? { depth: p.depth } : {}), content: runs } : { type: 'paragraph' as const, content: runs };
 		if (format === 'paragraph') return { type: 'paragraph' as const, content: runs };
 		if (format.startsWith('heading')) return { type: 'heading' as const, level: Number(format.slice(-1)) as 2 | 3 | 4, content: runs };
 		return { type: 'list_item' as const, list: format as 'bullet' | 'number', content: runs };
@@ -69,7 +142,7 @@ export function applyInlineMark(value: RichText | undefined, start: number, end:
 			if (prior && JSON.stringify(prior.marks || []) === JSON.stringify(segment.marks) && prior.link?.href === segment.link?.href) prior.text += segment.text;
 			else content.push({ type: 'text', text: segment.text, ...(segment.marks.length ? { marks: segment.marks } : {}), ...(segment.link ? {link:segment.link}:{}) });
 		}
-		paragraphs.push(paragraph.type === 'heading' ? { type: 'heading', level: paragraph.level, content } : paragraph.type === 'list_item' ? { type: 'list_item', list: paragraph.list, content } : { type: 'paragraph', content });
+		paragraphs.push(paragraph.type === 'heading' ? { type: 'heading', level: paragraph.level, content } : paragraph.type === 'list_item' ? { type: 'list_item', list: paragraph.list, ...(paragraph.depth ? { depth: paragraph.depth } : {}), content } : { type: 'paragraph', content });
 		offset += 1;
 	}
 	return { type: 'doc', content: paragraphs };
@@ -115,7 +188,7 @@ export function replaceRichText(value: RichText | undefined, nextText: string): 
 	return { type: 'doc', content: paragraphs.map(p => {
 		const prior = value?.content[Math.min(pi++, (value?.content.length || 1) - 1)];
 		if (prior?.type === 'heading') return { type: 'heading' as const, level: prior.level, content: p.content };
-		if (prior?.type === 'list_item') return { type: 'list_item' as const, list: prior.list, content: p.content };
+		if (prior?.type === 'list_item') return { type: 'list_item' as const, list: prior.list, ...(prior.depth ? { depth: prior.depth } : {}), content: p.content };
 		return p;
 	}) };
 }
@@ -141,7 +214,7 @@ export function applyInlineLink(value: RichText | undefined, start: number, end:
 			}
 		}
 		offset++;
-		return paragraph.type === 'heading' ? { type: 'heading' as const, level: paragraph.level, content: runs } : paragraph.type === 'list_item' ? { type: 'list_item' as const, list: paragraph.list, content: runs } : {type:'paragraph' as const,content:runs};
+		return paragraph.type === 'heading' ? { type: 'heading' as const, level: paragraph.level, content: runs } : paragraph.type === 'list_item' ? { type: 'list_item' as const, list: paragraph.list, ...(paragraph.depth ? { depth: paragraph.depth } : {}), content: runs } : {type:'paragraph' as const,content:runs};
 	});
 	return {type:'doc',content};
 }
@@ -186,6 +259,63 @@ export type BuilderImage = {
 	presentation?: BuilderImagePresentation;
 };
 export const BUILDER_TRANSCRIPT_MAX_LENGTH = 20000;
+export const BUILDER_CAPTIONS_MAX_CUES = 300;
+export const BUILDER_CAPTIONS_MAX_TEXT = 500;
+export const BUILDER_CAPTIONS_MAX_TOTAL = 30000;
+export type BuilderCaptionCue = { start: number; end: number; text: string };
+export type BuilderCaptions = { language?: string; cues: BuilderCaptionCue[] };
+export const BUILDER_PLAYBACK_MAX_SECONDS = 86400;
+export const BUILDER_PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+export type BuilderPlayback = { loop?: true; muted?: true; start?: number; end?: number; rate?: typeof BUILDER_PLAYBACK_RATES[number] };
+export function normalizeBuilderPlayback(value: unknown): BuilderPlayback {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid playback settings');
+	const raw = value as Record<string, unknown>;
+	if (Object.keys(raw).some(key => !['loop', 'muted', 'start', 'end', 'rate'].includes(key))) throw new Error('Unknown playback setting');
+	if (raw.loop !== undefined && raw.loop !== true || raw.muted !== undefined && raw.muted !== true) throw new Error('Invalid playback setting');
+	for (const key of ['start', 'end'] as const) if (raw[key] !== undefined && (typeof raw[key] !== 'number' || !Number.isFinite(raw[key]) || raw[key] < 0 || raw[key] > BUILDER_PLAYBACK_MAX_SECONDS)) throw new Error('Invalid playback time');
+	if (typeof raw.start === 'number' && typeof raw.end === 'number' && raw.end <= raw.start) throw new Error('Playback end must follow start');
+	if (raw.rate !== undefined && !(BUILDER_PLAYBACK_RATES as readonly unknown[]).includes(raw.rate)) throw new Error('Invalid playback rate');
+	return { ...(raw.loop ? { loop: true as const } : {}), ...(raw.muted ? { muted: true as const } : {}), ...(raw.start !== undefined ? { start: raw.start as number } : {}), ...(raw.end !== undefined ? { end: raw.end as number } : {}), ...(raw.rate !== undefined ? { rate: raw.rate as BuilderPlayback['rate'] } : {}) };
+}
+export function normalizeBuilderCaptions(value: unknown): BuilderCaptions {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid captions');
+	const raw = value as Record<string, unknown>;
+	if (Object.keys(raw).some(key => !['language', 'cues'].includes(key))) throw new Error('Unknown captions field');
+	if (raw.language !== undefined && (typeof raw.language !== 'string' || !/^[a-z]{2,3}(?:-[A-Z]{2})?$/.test(raw.language))) throw new Error('Invalid caption language');
+	if (!Array.isArray(raw.cues) || raw.cues.length > BUILDER_CAPTIONS_MAX_CUES) throw new Error('Invalid caption cues');
+	let previousStart = -1, previousEnd = -1, total = 0;
+	const cues = raw.cues.map((entry) => {
+		if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error('Invalid caption cue');
+		const cue = entry as Record<string, unknown>;
+		if (Object.keys(cue).some(key => !['start', 'end', 'text'].includes(key))) throw new Error('Unknown caption cue field');
+		if (typeof cue.start !== 'number' || !Number.isFinite(cue.start) || cue.start < 0 || typeof cue.end !== 'number' || !Number.isFinite(cue.end) || cue.end <= cue.start || cue.start < previousStart || cue.start < previousEnd || typeof cue.text !== 'string' || !cue.text.trim() || cue.text.length > BUILDER_CAPTIONS_MAX_TEXT || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(cue.text)) throw new Error('Invalid caption cue');
+		previousStart = cue.start; previousEnd = cue.end; total += cue.text.length;
+		return { start: cue.start, end: cue.end, text: cue.text };
+	});
+	if (total > BUILDER_CAPTIONS_MAX_TOTAL) throw new Error('Caption text limit exceeded');
+	return { ...(raw.language ? { language: raw.language as string } : {}), cues };
+}
+export function hasNestedBuilderLists(envelope: unknown): boolean {
+	const root = envelope && typeof envelope === 'object' && 'document' in envelope ? (envelope as { document: unknown }).document : envelope;
+	let found = false;
+	const scan = (value: unknown) => {
+		if (found || !value || typeof value !== 'object') return;
+		if (Array.isArray(value)) { value.forEach(scan); return; }
+		const record = value as Record<string, unknown>;
+		if (record.type === 'list_item' && typeof record.depth === 'number' && record.depth > 0) { found = true; return; }
+		Object.values(record).forEach(scan);
+	};
+	scan(root); return found;
+}
+export function builderRichTextValid(envelope: BuilderEnvelope): boolean {
+	try {
+		normalizeBuilderRichText(envelope.document.instructions);
+		for (const activity of envelope.document.activities) for (const block of activity.blocks) {
+			if ((block.type === 'instructions' || block.type === 'acknowledgement') && block.body) normalizeBuilderRichText(block.body);
+		}
+		return true;
+	} catch { return false; }
+}
 export type BuilderImagePresentation = { fit?: 'contain' | 'cover'; aspect?: 'natural' | 'square' | '4:3' | '3:2' | '16:9'; focalX?: number; focalY?: number };
 export function resetBuilderImagePresentation(image: BuilderImage): BuilderImage {
 	const retained = { ...image };
@@ -211,8 +341,11 @@ export function builderImagePresentationStyle(value: unknown) {
 	};
 }
 export type BuilderBlock = {
+	presentation?: Partial<Record<'desktop' | 'tablet' | 'mobile', boolean>>;
 	layoutLocked?: boolean;
 	appearance?: BuilderAppearance;
+	/** Optional document-scoped safe fragment name; never copied as style. */
+	anchor?: string;
 	id: string;
 	type: BlockType;
 	body?: RichText;
@@ -221,7 +354,8 @@ export type BuilderBlock = {
 	alt?: string;
 	asset?: BuilderAsset;
 	transcript?: string;
-	playback?: { loop?: true; muted?: true };
+	captions?: BuilderCaptions;
+	playback?: BuilderPlayback;
 	images?: BuilderImage[];
 	columns?: number;
 	questionIds?: string[];
@@ -247,8 +381,129 @@ export type BuilderActivity = {
 	blocks: BuilderBlock[];
 	layout?: BuilderLayout;
 };
+
+export const BUILDER_ANCHOR_PATTERN = /^[a-z][a-z0-9-]{0,39}$/;
+export type BuilderVisibilityDevice = 'desktop' | 'tablet' | 'mobile';
+export function normalizeBuilderVisibility(value: unknown): Partial<Record<BuilderVisibilityDevice, boolean>> {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Pengaturan tampilan perangkat tidak valid.');
+	const source = value as Record<string, unknown>;
+	if (Object.keys(source).some(key => !['desktop', 'tablet', 'mobile'].includes(key)) || Object.values(source).some(item => typeof item !== 'boolean')) throw new Error('Pengaturan tampilan perangkat tidak valid.');
+	return { ...(source.desktop !== undefined ? { desktop: source.desktop as boolean } : {}), ...(source.tablet !== undefined ? { tablet: source.tablet as boolean } : {}), ...(source.mobile !== undefined ? { mobile: source.mobile as boolean } : {}) };
+}
+export function builderVisibilityForDevice(value: Partial<Record<BuilderVisibilityDevice, boolean>> | undefined, device: BuilderVisibilityDevice): boolean {
+	if (device === 'mobile' && value?.mobile !== undefined) return value.mobile;
+	if (device !== 'desktop' && value?.tablet !== undefined) return value.tablet;
+	return value?.desktop ?? true;
+}
+const SAFE_PRESENTATION_BLOCKS = new Set<BlockType>(['instructions', 'image']);
+export function builderNodeVisibilitySafe(envelope: Pick<BuilderEnvelope, 'document'>): boolean {
+	try {
+		for (const activity of envelope.document.activities) {
+			for (const block of activity.blocks) if (block.presentation !== undefined) normalizeBuilderVisibility(block.presentation);
+			const visitFields = (nodes: import('./builder-layout').BuilderLayoutNode[]) => nodes.forEach(node => { if (node.kind !== 'block') { if (node.presentation !== undefined) normalizeBuilderVisibility(node.presentation); visitFields(node.children); } });
+			if (activity.layout) visitFields(activity.layout.nodes);
+		}
+	} catch { return false; }
+	const blocks = new Map(envelope.document.activities.flatMap(activity => activity.blocks.map(block => [block.id, block] as const)));
+	const nodeSafe = (node: import('./builder-layout').BuilderLayoutNode): boolean => {
+		if (node.kind === 'block') { const block = blocks.get(node.blockId); return Boolean(block && builderBlockCanBeHidden(block)); }
+		return node.children.length > 0 && node.children.every(nodeSafe);
+	};
+	for (const activity of envelope.document.activities) {
+		for (const block of activity.blocks) if (block.presentation && Object.values(block.presentation).some(value => value === false) && !nodeSafe({ kind: 'block', blockId: block.id })) return false;
+		if (activity.layout) {
+			const visit = (nodes: import('./builder-layout').BuilderLayoutNode[]): boolean => nodes.every(node => node.kind === 'block' ? true : (!node.presentation || Object.values(node.presentation).every(value => value !== false) || nodeSafe(node)) && visit(node.children));
+			if (!visit(activity.layout.nodes)) return false;
+		}
+	}
+	return true;
+}
+export function builderBlockCanBeHidden(block: BuilderBlock): boolean { return SAFE_PRESENTATION_BLOCKS.has(block.type) && !block.questionId && !(block.questionIds?.length) && !(block.sections?.some(section => section.segments.some(segment => segment.type === 'gap'))) && !(block.body?.content.some(node => node.content.some(run => Boolean(run.link)))); }
+export function builderLayoutGroupCanBeHidden(group: BuilderLayoutGroup, blocks: BuilderBlock[]): boolean {
+	const byId = new Map(blocks.map(block => [block.id, block]));
+	const safe = (node: import('./builder-layout').BuilderLayoutNode): boolean => node.kind === 'block' ? Boolean(byId.get(node.blockId) && builderBlockCanBeHidden(byId.get(node.blockId)!)) : node.children.length > 0 && node.children.every(safe);
+	return group.children.length > 0 && group.children.every(safe);
+}
+export function hasBuilderVisibility(envelope: unknown): boolean {
+	const document = (envelope as { document?: any })?.document ?? envelope as any;
+	return Array.isArray(document?.activities) && document.activities.some((activity: any) => activity?.blocks?.some((block: any) => block?.presentation !== undefined) || activity?.layout?.nodes?.some((node: any) => hasLayoutPresentation(node)));
+}
+function hasLayoutPresentation(node: any): boolean { return Boolean(node && node.kind !== 'block' && (node.presentation !== undefined || node.children?.some(hasLayoutPresentation))); }
+export function builderAnchors(envelope: Pick<BuilderEnvelope, 'document'>): { anchor: string; owner: BuilderBlock | BuilderLayoutGroup }[] {
+	const found: { anchor: string; owner: BuilderBlock | BuilderLayoutGroup }[] = [];
+	const visit = (nodes: import('./builder-layout').BuilderLayoutNode[]) => nodes.forEach(node => {
+		if (node.kind === 'block') return;
+		if (node.anchor) found.push({ anchor: node.anchor, owner: node });
+		visit(node.children);
+	});
+	for (const activity of envelope.document.activities) {
+		for (const block of activity.blocks) if (block.anchor) found.push({ anchor: block.anchor, owner: block });
+		if (activity.layout) visit(activity.layout.nodes);
+	}
+	return found;
+}
+export function normalizeBuilderAnchor(value: unknown): string {
+	if (typeof value !== 'string' || !BUILDER_ANCHOR_PATTERN.test(value)) throw new Error('Nama tautan bagian tidak valid. Gunakan huruf kecil, angka, dan tanda hubung; mulai dengan huruf.');
+	return value;
+}
+export function validateBuilderAnchors(envelope: Pick<BuilderEnvelope, 'document'>): boolean {
+	try {
+		const seen = new Set<string>();
+		for (const { anchor } of builderAnchors(envelope)) { normalizeBuilderAnchor(anchor); if (seen.has(anchor)) return false; seen.add(anchor); }
+		return true;
+	} catch { return false; }
+}
+/** Preserve the first document-scoped name and deterministically suffix later inserted collisions. */
+export function remapDuplicateBuilderAnchors(
+	envelope: Pick<BuilderEnvelope, 'document'>,
+	incomingOwners?: Array<{ anchor?: string }>,
+	incomingBlocks?: BuilderBlock[],
+): void {
+	if (incomingOwners) {
+		const incoming = new Set(incomingOwners);
+		const used = new Set(builderAnchors(envelope).filter(item => !incoming.has(item.owner)).map(item => item.anchor));
+		const remapped = new Map<string, string>();
+		for (const owner of incomingOwners) {
+			if (!owner.anchor || !BUILDER_ANCHOR_PATTERN.test(owner.anchor)) continue;
+			const original = owner.anchor;
+			if (!used.has(original)) { used.add(original); continue; }
+			for (let suffix = 2; suffix < 10000; suffix++) {
+				const candidate = `${original.slice(0, 40 - String(suffix).length - 1)}-${suffix}`;
+				if (!used.has(candidate)) { owner.anchor = candidate; used.add(candidate); remapped.set(original, candidate); break; }
+			}
+		}
+		if (remapped.size && incomingBlocks) {
+			for (const block of incomingBlocks) for (const paragraph of block.body?.content || []) for (const run of paragraph.content) {
+				const replacement = run.link?.href.startsWith('#') ? remapped.get(run.link.href.slice(1)) : undefined;
+				if (replacement) run.link = { ...run.link!, href: `#${replacement}` };
+			}
+		}
+		return;
+	}
+	const used = new Set<string>();
+	const visit = (owner: { anchor?: string }) => {
+		if (!owner.anchor) return;
+		const original = owner.anchor;
+		if (!BUILDER_ANCHOR_PATTERN.test(original)) return;
+		if (!used.has(original)) { used.add(original); return; }
+		for (let suffix = 2; suffix < 10000; suffix++) {
+			const candidate = `${original.slice(0, 40 - String(suffix).length - 1)}-${suffix}`;
+			if (!used.has(candidate)) { owner.anchor = candidate; used.add(candidate); return; }
+		}
+		delete owner.anchor;
+	};
+	const groups = (nodes: import('./builder-layout').BuilderLayoutNode[]) => nodes.forEach(node => {
+		if (node.kind === 'block') return;
+		visit(node); groups(node.children);
+	});
+	for (const activity of envelope.document.activities) {
+		activity.blocks.forEach(visit);
+		if (activity.layout) groups(activity.layout.nodes);
+	}
+}
 export type BuilderDocument = {
 	schemaVersion: 1;
+	theme?: BuilderDocumentTheme;
 	kind: BuilderKind;
 	context: { courseId: string; meetingId: string; sectionIds: string[] };
 	title: string;
@@ -292,6 +547,12 @@ export type BuilderEnvelope = {
 	};
 };
 export type SavedBuilderTemplate = BuilderEnvelope & { scope?: 'activity' | 'group' };
+
+export function hasBuilderThemePalette(value: unknown): boolean {
+	if (!value || typeof value !== 'object') return false;
+	const document = (value as { document?: unknown }).document ?? value;
+	return Boolean(document && typeof document === 'object' && Object.hasOwn(document, 'theme'));
+}
 
 export function savedTemplateScope(scope: SavedBuilderTemplate['scope']): 'activity' | 'group' {
 	return scope === 'group' ? 'group' : 'activity';
@@ -405,12 +666,23 @@ export function insertGroupTemplate(
 		target.privateKeys.answersByQuestionId[id] = sourceCopy.privateKeys.answersByQuestionId[id];
 	}
 	parent.children.push(copiedGroup);
+	const owners: Array<{ anchor?: string }> = [...copiedBlocks];
+	const collectOwners = (node: BuilderLayoutGroup) => { owners.push(node); for (const child of node.children) if (child.kind !== 'block') collectOwners(child); };
+	collectOwners(copiedGroup);
+	remapDuplicateBuilderAnchors(target, owners, copiedBlocks);
 	return copiedGroup.id;
 }
 export type BuilderRecord = BuilderEnvelope & {
 	layoutLocks?: boolean;
 	customColors?: boolean;
 	detailedBorderRadius?: boolean;
+	responsiveBorderRadius?: boolean;
+	mediaCaptions?: boolean;
+	mediaPlayback?: boolean;
+	nestedRichText?: boolean;
+	documentAnchors?: boolean;
+	presentationVisibility?: boolean;
+	themePalette?: boolean;
 	id: string;
 	revision: number;
 	updated: string;
@@ -642,6 +914,10 @@ export function duplicateActivity(draft: BuilderEnvelope, activityId: string) {
 		0,
 		next,
 	);
+	const owners: Array<{ anchor?: string }> = [...next.blocks];
+	const collectOwners = (nodes: import('./builder-layout').BuilderLayoutNode[]) => nodes.forEach(node => { if (node.kind !== 'block') { owners.push(node); collectOwners(node.children); } });
+	if (next.layout) collectOwners(next.layout.nodes);
+	remapDuplicateBuilderAnchors(draft, owners, next.blocks);
 	return next.id;
 }
 export function duplicateBlock(
@@ -689,6 +965,9 @@ export function builderIssues({
 		questionId?: string,
 	) => issues.push({ message, activityId, blockId, questionId });
 	if (!d.title.trim()) add('Isi judul dokumen.');
+	if (d.theme !== undefined) try { normalizeBuilderDocumentTheme(d.theme); } catch { add('Palet tema dokumen tidak valid.'); }
+	if (!validateBuilderAnchors({ document: d })) add('Nama tautan bagian harus unik dan memakai huruf kecil, angka, serta tanda hubung.');
+	if (!builderNodeVisibilitySafe({ document: d })) add('Visibilitas presentasi ditolak karena elemen tersembunyi berisi asesmen, pengakuan, atau jenis elemen yang belum didukung.');
 	if (!d.activities.length) add('Tambahkan kegiatan.');
 	for (const a of d.activities) {
 		if (!a.title.trim()) add('Isi judul kegiatan.', a.id);
@@ -696,6 +975,9 @@ export function builderIssues({
 		if (d.kind === 'kelas' && a.plannedMinutes < 1)
 			add('Durasi kegiatan minimal 1 menit.', a.id);
 		for (const b of a.blocks) {
+			if (b.body !== undefined && (b.type === 'instructions' || b.type === 'acknowledgement')) {
+				try { normalizeBuilderRichText(b.body); } catch { add('Format teks atau kedalaman daftar tidak valid.', a.id, b.id); }
+			}
 			if (
 				[
 					'question_group',
@@ -762,6 +1044,7 @@ export function builderIssues({
 			}
 		}
 	}
+	try { normalizeBuilderRichText(d.instructions); } catch { add('Format instruksi atau kedalaman daftar tidak valid.'); }
 	if (d.kind === 'kelas') {
 		if (!d.context.meetingId) add('Pilih pertemuan untuk kelas.');
 		if (!d.delivery.checkInClosesAt) add('Isi batas check-in.');
@@ -827,6 +1110,14 @@ export function applyTemplate(
 	if (template === 'listening') appendBlock(draft, a.id, 'matching');
 }
 export function builderWriteAction(action: string, body: Record<string, unknown>): string {
+	if (action === 'savedList') return action;
+	if (body.themePalette === true || hasBuilderThemePalette(body.document)) return `themePalette:${action}`;
+	const contains = (value: unknown, predicate: (record: Record<string, unknown>) => boolean): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Array.isArray(value)) return value.some(item => contains(item, predicate));
+		const record = value as Record<string, unknown>;
+		return predicate(record) || Object.values(record).some(item => contains(item, predicate));
+	};
 	const containsLocks = (value: unknown): boolean => {
 		if (!value || typeof value !== 'object') return false;
 		if (Object.prototype.hasOwnProperty.call(value, 'layoutLocked')) return true;
@@ -839,9 +1130,47 @@ export function builderWriteAction(action: string, body: Record<string, unknown>
 	};
 	const containsDetailed = (value: unknown): boolean => {
 		if (!value || typeof value !== 'object') return false;
-		if (Object.prototype.hasOwnProperty.call(value, 'borderDetail') || Object.prototype.hasOwnProperty.call(value, 'corners')) return true;
+		if (Object.prototype.hasOwnProperty.call(value, 'borderDetail') || Object.prototype.hasOwnProperty.call(value, 'corners') || Object.prototype.hasOwnProperty.call(value, 'shadow') || Object.prototype.hasOwnProperty.call(value, 'hover')) return true;
 		return Object.values(value).some(containsDetailed);
 	};
+	const containsResponsive = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Object.prototype.hasOwnProperty.call(value, 'responsive')) {
+			const responsive = (value as { responsive?: unknown }).responsive;
+			if (responsive && typeof responsive === 'object' && Object.values(responsive).some(device => device && typeof device === 'object' && (Object.hasOwn(device, 'borderDetail') || Object.hasOwn(device, 'corners')))) return true;
+		}
+		return Object.values(value).some(containsResponsive);
+	};
+	const containsCaptions = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Object.prototype.hasOwnProperty.call(value, 'captions')) return true;
+		return Object.values(value).some(containsCaptions);
+	};
+	const containsNestedLists = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Array.isArray(value)) return value.some(containsNestedLists);
+		const record = value as Record<string, unknown>;
+		if (record.type === 'list_item' && typeof record.depth === 'number' && record.depth > 0) return true;
+		return Object.values(record).some(containsNestedLists);
+	};
+	const containsPlayback = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Array.isArray(value)) return value.some(containsPlayback);
+		const record = value as Record<string, unknown>;
+		if (record.playback && typeof record.playback === 'object' && ['start', 'end', 'rate'].some(key => Object.hasOwn(record.playback as object, key))) return true;
+		return Object.values(record).some(containsPlayback);
+	};
+	const containsAnchor = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Object.prototype.hasOwnProperty.call(value, 'anchor')) return true;
+		return Object.values(value).some(containsAnchor);
+	};
+	if (body.presentationVisibility === true || contains(body.document, record => Object.hasOwn(record, 'presentation'))) return `presentationVisibility:${action}`;
+	if (body.documentAnchors === true || body.document && containsAnchor(body.document)) return `documentAnchors:${action}`;
+	if (body.mediaPlayback === true || containsPlayback(body.document)) return `mediaPlayback:${action}`;
+	if (body.nestedRichText === true || containsNestedLists(body.document)) return `nestedLists:${action}`;
+	if (body.mediaCaptions === true || containsCaptions(body.document)) return `mediaCaptions:${action}`;
+	if (body.responsiveBorderRadius === true || containsResponsive(body)) return `responsiveStyles:${action}`;
 	if (body.detailedBorderRadius === true || containsDetailed(body)) return `detailedStyles:${action}`;
 	if ((action === 'save' || action === 'create') && containsColors(body.document)) return `themeColors:${action}`;
 	if (action === 'saveSnapshot' || action === 'saveTemplate') return `themeColors:${action}`;
@@ -853,9 +1182,17 @@ export async function builderRequest<T>(
 	body: Record<string, unknown> = {},
 ): Promise<T> {
 	try {
+		const writeAction = builderWriteAction(action, body);
+		const contains = (value: unknown, predicate: (record: Record<string, unknown>) => boolean): boolean => {
+			if (!value || typeof value !== 'object') return false;
+			if (Array.isArray(value)) return value.some(item => contains(item, predicate));
+			const record = value as Record<string, unknown>;
+			return predicate(record) || Object.values(record).some(item => contains(item, predicate));
+		};
+		const document = body.document;
 		return await pb.send<T>('/api/laras/builder', {
 			method: 'POST',
-			body: { ...body, action: builderWriteAction(action, body) },
+		body: { ...body, ...(writeAction.startsWith('themePalette:') || body.themePalette === true || hasBuilderThemePalette(document) ? { themePalette: true } : {}), ...(writeAction.startsWith('presentationVisibility:') || contains(document, record => Object.hasOwn(record, 'presentation')) ? { presentationVisibility: true } : {}), ...(writeAction.startsWith('documentAnchors:') || contains(document, record => Object.hasOwn(record, 'anchor')) ? { documentAnchors: true } : {}), ...(writeAction.startsWith('responsiveStyles:') || contains(document, record => Boolean(record.responsive && typeof record.responsive === 'object' && Object.values(record.responsive as object).some((device: any) => device && typeof device === 'object' && (Object.hasOwn(device, 'borderDetail') || Object.hasOwn(device, 'corners'))))) ? { responsiveBorderRadius: true } : {}), ...(writeAction.startsWith('mediaCaptions:') || contains(document, record => Object.hasOwn(record, 'captions')) ? { mediaCaptions: true } : {}), ...(writeAction.startsWith('nestedLists:') || contains(document, record => record.type === 'list_item' && typeof record.depth === 'number' && record.depth > 0) ? { nestedRichText: true } : {}), ...(writeAction.startsWith('mediaPlayback:') || contains(document, record => Boolean(record.playback && typeof record.playback === 'object' && ['start', 'end', 'rate'].some(key => Object.hasOwn(record.playback as object, key)))) ? { mediaPlayback: true } : {}), action: writeAction },
 			requestKey: null,
 			signal: AbortSignal.timeout(20000),
 		});

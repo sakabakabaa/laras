@@ -48,7 +48,7 @@ function enhancedDocument(d) {
 					a.blocks.some(
 						(b) =>
 							!!b &&
-							(b.layoutLocked !== undefined || b.appearance !== undefined || Array.isArray(b.sections) || b.transcript !== undefined || b.playback !== undefined || (b.body && Array.isArray(b.body.content) && b.body.content.some((node) => node && (node.type === 'heading' || node.type === 'list_item')))),
+							(b.layoutLocked !== undefined || b.appearance !== undefined || Array.isArray(b.sections) || b.transcript !== undefined || b.captions !== undefined || b.playback !== undefined || (b.body && Array.isArray(b.body.content) && b.body.content.some((node) => node && (node.type === 'heading' || node.type === 'list_item')))),
 					))),
 	);
 }
@@ -140,6 +140,13 @@ function view(app, r) {
 		layoutLocks: true,
 		customColors: true,
 		detailedBorderRadius: true,
+		responsiveBorderRadius: true,
+		mediaCaptions: true,
+		mediaPlayback: true,
+		nestedRichText: true,
+		documentAnchors: true,
+		presentationVisibility: true,
+		themePalette: true,
 		title: r.getString('title'),
 		kind: r.getString('kind'),
 		revision: r.getInt('revision'),
@@ -151,7 +158,58 @@ function view(app, r) {
 function handle(app, user, body) {
 	if (user.getString('role') !== 'faculty')
 		throw new ForbiddenError('Builder hanya tersedia untuk dosen.');
-	if (/^(layoutLocks|themeColors|detailedStyles):(create|save|saveSnapshot|saveTemplate)$/.test(body.action))
+	const responsiveVersioned = /^responsiveStyles:(create|save|saveSnapshot|saveTemplate)$/.test(body.action);
+	const themePaletteVersioned = /^themePalette:(create|save|saveSnapshot|saveTemplate)$/.test(body.action);
+	const captionVersioned = /^mediaCaptions:(create|save|saveSnapshot|saveTemplate)$/.test(body.action);
+	const playbackVersioned = /^mediaPlayback:(create|save|saveSnapshot|saveTemplate)$/.test(body.action);
+	const nestedListVersioned = /^nestedLists:(create|save|saveSnapshot|saveTemplate)$/.test(body.action);
+	const anchorVersioned = /^documentAnchors:(create|save|saveSnapshot|saveTemplate)$/.test(body.action);
+	const visibilityVersioned = /^presentationVisibility:(create|save|saveSnapshot|saveTemplate)$/.test(body.action);
+	const containsThemePalette = value => !value || typeof value !== 'object' ? false : Object.hasOwn(value, 'theme') || Object.values(value).some(containsThemePalette);
+	const containsAnchors = (value) => !value || typeof value !== 'object' ? false : Object.hasOwn(value, 'anchor') || Object.values(value).some(containsAnchors);
+	const containsVisibility = (value) => !value || typeof value !== 'object' ? false : Object.hasOwn(value, 'presentation') || Object.values(value).some(containsVisibility);
+	if (anchorVersioned && body.documentAnchors !== true) throw new BadRequestError('Perintah tautan bagian tidak valid.');
+	if (visibilityVersioned && body.presentationVisibility !== true) throw new BadRequestError('Perintah visibilitas presentasi tidak valid.');
+	if (themePaletteVersioned && body.themePalette !== true) throw new BadRequestError('Perintah palet tema dokumen tidak valid.');
+	if (containsThemePalette(body.document) && !themePaletteVersioned) throw new BadRequestError('Palet tema dokumen memerlukan perintah versi khusus.');
+	if (containsVisibility(body.document) && !visibilityVersioned && !(themePaletteVersioned && body.presentationVisibility === true)) throw new BadRequestError('Visibilitas presentasi memerlukan perintah versi khusus.');
+	if (containsAnchors(body.document) && !anchorVersioned && !(visibilityVersioned && body.documentAnchors === true) && !(themePaletteVersioned && body.documentAnchors === true)) throw new BadRequestError('Tautan bagian memerlukan perintah versi jangkar.');
+	const containsNestedLists = (value) => {
+		if (!value || typeof value !== 'object') return false;
+		if (Array.isArray(value)) return value.some(containsNestedLists);
+		if (value.type === 'list_item' && typeof value.depth === 'number' && value.depth > 0) return true;
+		return Object.values(value).some(containsNestedLists);
+	};
+	const containsPlayback = (value) => {
+		if (!value || typeof value !== 'object') return false;
+		if (Array.isArray(value)) return value.some(containsPlayback);
+		if (value.playback && ['start', 'end', 'rate'].some((key) => Object.hasOwn(value.playback, key))) return true;
+		return Object.values(value).some(containsPlayback);
+	};
+	if (nestedListVersioned && body.nestedRichText !== true) throw new BadRequestError('Perintah daftar bertingkat tidak valid.');
+	if (!(nestedListVersioned || anchorVersioned || visibilityVersioned && body.nestedRichText === true || (playbackVersioned || captionVersioned || responsiveVersioned || themePaletteVersioned) && body.nestedRichText === true) && containsNestedLists(body.document)) throw new BadRequestError('Daftar bertingkat memerlukan perintah versi daftar.');
+	const containsCaptions = (value) => {
+		if (!value || typeof value !== 'object') return false;
+		if (Object.hasOwn(value, 'captions')) return true;
+		return Object.values(value).some(containsCaptions);
+	};
+	if (captionVersioned && body.mediaCaptions !== true) throw new BadRequestError('Perintah keterangan media tidak valid.');
+	if (playbackVersioned && body.mediaPlayback !== true) throw new BadRequestError('Perintah pemutaran media tidak valid.');
+	if (!(playbackVersioned || anchorVersioned || visibilityVersioned && body.mediaPlayback === true || themePaletteVersioned && body.mediaPlayback === true) && containsPlayback(body.document)) throw new BadRequestError('Rentang dan kecepatan memerlukan perintah versi pemutaran.');
+	if (!(captionVersioned || anchorVersioned || visibilityVersioned && body.mediaCaptions === true || (playbackVersioned || nestedListVersioned || responsiveVersioned || themePaletteVersioned) && body.mediaCaptions === true) && containsCaptions(body.document)) throw new BadRequestError('Keterangan media memerlukan perintah versi captions.');
+	const containsResponsiveDetails = (value) => {
+		if (!value || typeof value !== 'object') return false;
+		if (value.responsive && typeof value.responsive === 'object' && Object.values(value.responsive).some((device) => device && typeof device === 'object' && (Object.hasOwn(device, 'borderDetail') || Object.hasOwn(device, 'corners')))) return true;
+		return Object.values(value).some(containsResponsiveDetails);
+	};
+	if (responsiveVersioned && body.responsiveBorderRadius !== true)
+		throw new BadRequestError('Perintah gaya responsif tidak valid.');
+	// The caption command is also a schema-version fence for mixed documents:
+	// this server normalizes the full current document, including responsive
+	// appearance, before accepting the write.
+	if (!(responsiveVersioned || anchorVersioned || visibilityVersioned && body.responsiveBorderRadius === true || (playbackVersioned || captionVersioned || nestedListVersioned || themePaletteVersioned) && body.responsiveBorderRadius === true) && containsResponsiveDetails(body.document))
+		throw new BadRequestError('Gaya responsif memerlukan perintah versi responsif.');
+	if (/^(layoutLocks|themeColors|themePalette|detailedStyles|responsiveStyles|mediaCaptions|mediaPlayback|nestedLists|documentAnchors|presentationVisibility):(create|save|saveSnapshot|saveTemplate)$/.test(body.action))
 		body = { ...body, action: body.action.slice(body.action.indexOf(':') + 1) };
 	// Reads (list/get/saved) always work so recovery and export stay reachable.
 	const capability = enhancedAuthoring(),
@@ -194,12 +252,17 @@ function handle(app, user, body) {
 			const saved = json(item, 'envelope');
 			authorizeContext(app, user, saved.document);
 			if (item.getString('kind') === 'template') authorizeAssets(app, user, saved.document);
+			let normalizedSaved = saved;
+			if (containsVisibility(saved.document) || containsThemePalette(saved.document)) {
+				normalizedSaved = domain.normalize(saved);
+				if (saved.scope !== undefined) normalizedSaved.scope = saved.scope === 'group' ? 'group' : 'activity';
+			}
 			return {
 				id: item.id,
 				title: item.getString('title'),
 				kind: item.getString('kind'),
 				documentId: item.getString('document'),
-				envelope: saved,
+				envelope: normalizedSaved,
 			};
 		}
 		const source = app.findRecordById(
@@ -211,6 +274,13 @@ function handle(app, user, body) {
 		if (source.getBool('deleted'))
 			throw new BadRequestError('Draf telah dihapus.');
 		const envelope = view(app, source);
+		if (containsThemePalette(envelope.document) && body.themePalette !== true) throw new BadRequestError('Palet tema dokumen memerlukan perintah versi khusus.');
+		if (containsVisibility(envelope.document) && body.presentationVisibility !== true) throw new BadRequestError('Visibilitas presentasi memerlukan perintah versi khusus.');
+		if (containsAnchors(envelope.document) && body.documentAnchors !== true) throw new BadRequestError('Tautan bagian memerlukan perintah versi jangkar.');
+		if (containsNestedLists(envelope.document) && body.nestedRichText !== true) throw new BadRequestError('Daftar bertingkat memerlukan perintah versi daftar.');
+		if (containsCaptions(envelope.document) && body.mediaCaptions !== true) throw new BadRequestError('Keterangan media memerlukan perintah versi captions.');
+		if (containsPlayback(envelope.document) && body.mediaPlayback !== true) throw new BadRequestError('Rentang dan kecepatan memerlukan perintah versi pemutaran.');
+		if (containsResponsiveDetails(envelope.document) && body.responsiveBorderRadius !== true) throw new BadRequestError('Gaya responsif memerlukan perintah versi responsif.');
 		authorizeContext(app, user, envelope.document);
 		if (body.action === 'savedList')
 			return {
@@ -243,7 +313,7 @@ function handle(app, user, body) {
 		if (existing) return { id: existing.id };
 		if (
 			authoringDenied(allowed, [envelope.document]) ||
-			(body.action === 'saveTemplate' && body.scope !== 'group' &&
+			(body.action === 'saveTemplate' && !responsiveVersioned && !captionVersioned && !nestedListVersioned && !playbackVersioned && !visibilityVersioned && !anchorVersioned && !themePaletteVersioned && body.scope !== 'group' &&
 				enhancedDocument({
 					activities: envelope.document.activities.filter(
 						(a) => a.id === body.activityId,

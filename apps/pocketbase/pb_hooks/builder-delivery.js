@@ -315,8 +315,73 @@ function publicState(app, ctx, user) {
 	};
 }
 function handle(app, user, body) {
+	const themePaletteVersioned = body.action === 'themePalette:publish';
+	if (themePaletteVersioned) {
+		if (body.themePalette !== true) throw new BadRequestError('Perintah palet tema dokumen tidak valid.');
+		body = { ...body, action: 'publish' };
+	}
+	if (body.action === 'presentationVisibility:publish') {
+		if (body.presentationVisibility !== true) throw new BadRequestError('Perintah visibilitas presentasi tidak valid.');
+		body = { ...body, action: 'publish' };
+	}
+	if (body.action === 'nestedLists:publish') {
+		if (body.nestedRichText !== true) throw new BadRequestError('Perintah daftar bertingkat tidak valid.');
+		body = { ...body, action: 'publish' };
+	}
+	if (body.action === 'documentAnchors:publish') {
+		if (body.documentAnchors !== true) throw new BadRequestError('Perintah tautan bagian tidak valid.');
+		body = { ...body, action: 'publish' };
+	}
+	if (body.action === 'mediaCaptions:publish') {
+		if (body.mediaCaptions !== true) throw new BadRequestError('Perintah keterangan media tidak valid.');
+		body = { ...body, action: 'publish' };
+	}
+	if (body.action === 'mediaPlayback:publish') {
+		if (body.mediaPlayback !== true) throw new BadRequestError('Perintah pemutaran media tidak valid.');
+		body = { ...body, action: 'publish' };
+	}
+	if (body.action === 'responsiveStyles:publish') {
+		if (body.responsiveBorderRadius !== true) throw new BadRequestError('Perintah gaya responsif tidak valid.');
+		body = { ...body, action: 'publish' };
+	}
 	if (body.action === 'publish') {
+		const hasThemePalette = value => !value || typeof value !== 'object' ? false : Object.hasOwn(value, 'theme') || Object.values(value).some(hasThemePalette);
+		if (hasThemePalette(body.document || {}) && body.themePalette !== true) throw new BadRequestError('Palet tema dokumen memerlukan perintah versi khusus.');
+		const hasVisibility = value => !value || typeof value !== 'object' ? false : Object.hasOwn(value, 'presentation') || Object.values(value).some(hasVisibility);
+		if (hasVisibility(body.document || {}) && body.presentationVisibility !== true) throw new BadRequestError('Visibilitas presentasi memerlukan perintah versi khusus.');
+		const containsAnchors = (value) => !value || typeof value !== 'object' ? false : Object.hasOwn(value, 'anchor') || Object.values(value).some(containsAnchors);
+		if (containsAnchors(body.document || {}) && body.documentAnchors !== true) throw new BadRequestError('Tautan bagian memerlukan perintah versi jangkar.');
+		const hasNestedLists = (value) => {
+			if (!value || typeof value !== 'object') return false;
+			if (Array.isArray(value)) return value.some(hasNestedLists);
+			if (value.type === 'list_item' && typeof value.depth === 'number' && value.depth > 0) return true;
+			return Object.values(value).some(hasNestedLists);
+		};
+		const hasCaptions = (value) => {
+			if (!value || typeof value !== 'object') return false;
+			if (Object.hasOwn(value, 'captions')) return true;
+			return Object.values(value).some(hasCaptions);
+		};
+		const hasPlayback = (value) => {
+			if (!value || typeof value !== 'object') return false;
+			if (Array.isArray(value)) return value.some(hasPlayback);
+			if (value.playback && ['start', 'end', 'rate'].some((key) => Object.hasOwn(value.playback, key))) return true;
+			return Object.values(value).some(hasPlayback);
+		};
+		const hasResponsiveDetails = (value) => {
+			if (!value || typeof value !== 'object') return false;
+			if (Array.isArray(value)) return value.some(hasResponsiveDetails);
+			if (value.responsive && typeof value.responsive === 'object' && Object.values(value.responsive).some((device) => device && typeof device === 'object' && (Object.hasOwn(device, 'borderDetail') || Object.hasOwn(device, 'corners')))) return true;
+			return Object.values(value).some(hasResponsiveDetails);
+		};
 		const source = ownedDraft(app, user, body.id);
+		if (hasThemePalette(data(source, 'document')) && body.themePalette !== true) throw new BadRequestError('Palet tema dokumen memerlukan perintah versi khusus.');
+		if (hasVisibility(data(source, 'document')) && body.presentationVisibility !== true) throw new BadRequestError('Visibilitas presentasi memerlukan perintah versi khusus.');
+		if (hasNestedLists(data(source, 'document')) && body.nestedRichText !== true) throw new BadRequestError('Daftar bertingkat memerlukan perintah versi daftar.');
+		if (containsAnchors(data(source, 'document')) && body.documentAnchors !== true) throw new BadRequestError('Tautan bagian memerlukan perintah versi jangkar.');
+		if (hasCaptions(data(source, 'document')) && body.mediaCaptions !== true) throw new BadRequestError('Keterangan media memerlukan perintah versi captions.');
+		if (hasPlayback(data(source, 'document')) && body.mediaPlayback !== true) throw new BadRequestError('Rentang dan kecepatan media memerlukan perintah versi pemutaran.');
+		if (hasResponsiveDetails(data(source, 'document')) && body.responsiveBorderRadius !== true) throw new BadRequestError('Gaya responsif memerlukan perintah versi responsif.');
 		if (!/^[a-zA-Z0-9_-]{1,80}$/.test(String(body.commandId || '')))
 			throw new BadRequestError('Identitas penerbitan tidak valid.');
 		const existing = find(

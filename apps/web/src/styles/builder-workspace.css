@@ -837,6 +837,18 @@
 .bd-picker-dialog {
 	max-width: 620px !important;
 }
+.bd-theme-palette-dialog { display: grid; gap: 14px; }
+.bd-theme-palette-mode, .bd-theme-palette-pair { min-width: 0; border: 1px solid var(--bd-border); border-radius: 8px; padding: 10px; }
+.bd-theme-palette-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.bd-theme-palette-mode > legend { grid-column: 1 / -1; font-weight: 650; }
+.bd-theme-palette-pair { display: grid; gap: 8px; }
+.bd-theme-palette-pair > legend { font-size: 12px; font-weight: 600; }
+.bd-theme-palette-pair label { display: grid; gap: 4px; font-size: 11px; color: var(--bd-muted); }
+.bd-theme-palette-pair input { width: 100%; min-width: 0; border: 1px solid var(--bd-border); border-radius: 6px; padding: 6px 8px; color: var(--bd-text); background: var(--bd-panel); font: inherit; }
+.bd-theme-palette-pair input:focus-visible { outline: 2px solid var(--bd-accent); outline-offset: 1px; }
+.bd-theme-contrast { font-size: 11px; color: var(--bd-muted); }
+.bd-theme-contrast.is-low { color: var(--r-warning); }
+.bd-theme-palette-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .bd-block-picker {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
@@ -1279,6 +1291,26 @@
 		border-color 0.15s,
 		background 0.15s;
 }
+.bd-element-tile-wrap { position: relative; min-width: 0; }
+.bd-element-tile-wrap .bd-element-tile { width: 100%; }
+.bd-tile-pointer-grip {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: 5px;
+	background: var(--bd-panel);
+	color: var(--bd-muted);
+	cursor: grab;
+	touch-action: pinch-zoom;
+	user-select: none;
+}
+.bd-tile-pointer-grip:focus-visible { outline: 2px solid var(--bd-accent); }
 .bd-element-tile:hover {
 	border-color: var(--bd-accent);
 	background: var(--bd-soft);
@@ -1401,6 +1433,8 @@
 	background: none;
 	color: var(--bd-muted);
 	cursor: grab !important;
+	touch-action: pinch-zoom;
+	user-select: none;
 }
 .bd-block:focus {
 	outline: 2px solid var(--bd-accent);
@@ -1574,6 +1608,17 @@
 }
 .bd-media-view audio {
 	width: 100%;
+}
+.bd-media-cue {
+	min-height: 1.5em;
+	margin: 8px 0 0;
+	padding: 8px 12px;
+	border-radius: 6px;
+	background: var(--bd-soft);
+	color: var(--bd-text);
+	font-weight: 600;
+	text-align: center;
+	white-space: pre-wrap;
 }
 .bd-media-view figcaption {
 	color: var(--bd-muted);

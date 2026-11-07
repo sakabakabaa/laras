@@ -8,10 +8,14 @@ import {
 	APPEARANCE_OPTIONS,
 	APPEARANCE_FIELDS,
 	appearanceClassName,
+	appearanceDetailStyle,
 	BUILDER_APPEARANCE_PRESETS,
 	matchingAppearancePreset,
 	PRESET_APPEARANCE_FIELDS,
 	resetBuilderAppearance,
+	resetResponsiveAppearance,
+	resetDocumentAppearance,
+	hasDocumentAppearanceToReset,
 	contrastRatio,
 	validHexColor,
 	type BuilderAppearance,
@@ -19,6 +23,7 @@ import {
 import {
 	appendBlock,
 	blankBuilder,
+	newActivity,
 	duplicateActivity,
 	duplicateBlock,
 	builderRequest,
@@ -40,6 +45,7 @@ import {
 	BUILDER_ELEMENTS,
 } from '../src/components/app/builder/builder-element-library';
 import { BuilderAppearanceControls } from '../src/components/app/builder/builder-appearance-controls';
+import { hasDetailedBorderRadius } from '../src/lib/builder-capability';
 
 const domain = {
 	exports: {} as { normalize: (value: unknown) => BuilderEnvelope },
@@ -65,7 +71,51 @@ function fixture() {
 }
 
 describe('builder appearance persistence and rendering', () => {
+	it('resets appearance across activities and nested groups while preserving document data and is idempotent', () => {
+		const { draft, activity, block, group } = fixture();
+		const nestedId = addLayoutGroup(activity, 'container', group.id);
+		const nestedBlockId = appendBlock(draft, activity.id, 'image');
+		insertBlockIntoLayout(activity, nestedBlockId, nestedId);
+		const second = newActivity('Kegiatan kedua');
+		draft.document.activities.push(second);
+		const secondBlockId = appendBlock(draft, second.id, 'reflection');
+		const nested = findLayoutGroup(activity.layout!, nestedId)!;
+		const background = { mode: 'image' as const, asset: { fileId: 'asset0000000001', filename: 'cover.png', version: 2, name: 'Cover' }, fit: 'cover' as const };
+		group.background = structuredClone(background);
+		group.responsive = { tablet: { columns: 2, background: structuredClone(background) }, mobile: { columns: 1, background: { mode: 'solid', token: 'surface-2' } } };
+		group.appearance = { padding: 'lg', customColors: { light: { foreground: '#000000', background: '#FFFFFF' }, dark: { foreground: '#FFFFFF', background: '#000000' } }, borderDetail: { style: 'solid', widths: { top: 2 } }, corners: { topLeft: 8 }, shadow: 'md', hover: 'lift' };
+		nested.appearance = { border: 'accent', radius: 'lg', shadow: 'sm', hover: 'emphasis' };
+		block.appearance = { customColors: { light: { foreground: '#000000', background: '#FFFFFF' }, dark: { foreground: '#FFFFFF', background: '#000000' } }, borderDetail: { style: 'dotted' }, corners: { topLeft: 4 }, shadow: 'md', hover: 'lift' };
+		const secondBlock = second.blocks.find(item => item.id === secondBlockId)!;
+		const audioId = appendBlock(draft, second.id, 'audio');
+		const audio = second.blocks.find(item => item.id === audioId)!;
+		audio.captions = { language: 'id', cues: [{ start: 0, end: 1, text: 'Cue tetap' }] };
+		audio.playback = { start: 0, end: 12, rate: 1.25, loop: true };
+		secondBlock.appearance = { size: 'xl', color: 'accent', background: 'muted', padding: 'lg', border: 'accent', radius: 'lg', shadow: 'md', hover: 'emphasis' };
+		secondBlock.asset = structuredClone(background.asset);
+		draft.document.questionsById.keep = { id: 'keep', prompt: rich('question'), options: [], kind: 'short_answer' } as never;
+		draft.privateKeys.answersByQuestionId.keep = { strategy: 'exact_text', accepted: ['keep'] };
+		const before = structuredClone(draft);
+		expect(hasDocumentAppearanceToReset(draft)).toBe(true);
+		expect(resetDocumentAppearance(draft)).toBe(true);
+		expect(block.appearance).toBeUndefined();
+		expect(secondBlock.appearance).toBeUndefined();
+		expect(group.appearance).toEqual({ padding: 'lg' });
+		expect(nested.appearance).toBeUndefined();
+		expect(group.background).toEqual(background);
+		expect(group.responsive).toEqual(before.document.activities[0].layout && findLayoutGroup(before.document.activities[0].layout!, group.id)?.responsive);
+		expect(group.paddingSides).toEqual(findLayoutGroup(before.document.activities[0].layout!, group.id)?.paddingSides);
+		expect(secondBlock.asset).toEqual(before.document.activities[1].blocks[0].asset);
+		expect(audio.captions).toEqual(before.document.activities[1].blocks.find(item => item.id === audioId)?.captions);
+		expect(audio.playback).toEqual({ start: 0, end: 12, rate: 1.25, loop: true });
+		expect(draft.document.questionsById).toEqual(before.document.questionsById);
+		expect(draft.privateKeys).toEqual(before.privateKeys);
+		expect(resetDocumentAppearance(draft)).toBe(false);
+		expect(hasDocumentAppearanceToReset(draft)).toBe(false);
+	});
 	it('keeps preset values inside the appearance allowlist and reports exact or custom state', () => {
+		expect(APPEARANCE_OPTIONS.shadow.values).toEqual({ none: 'Tanpa bayangan', sm: 'Lembut', md: 'Sedang' });
+		expect(APPEARANCE_OPTIONS.hover.values).toEqual({ none: 'Tanpa efek', lift: 'Terangkat lembut', emphasis: 'Menonjol lembut' });
 		for (const preset of Object.values(BUILDER_APPEARANCE_PRESETS)) {
 			for (const [key, value] of Object.entries(preset.values)) {
 				expect(APPEARANCE_FIELDS).toContain(key);
@@ -77,6 +127,28 @@ describe('builder appearance persistence and rendering', () => {
 		for (const [name, preset] of Object.entries(BUILDER_APPEARANCE_PRESETS))
 			expect(matchingAppearancePreset(preset.values as BuilderAppearance)).toBe(name);
 		expect(matchingAppearancePreset({ ...BUILDER_APPEARANCE_PRESETS.note.values, size: 'lg' })).toBe('custom');
+	});
+	it('keeps legacy appearance neutral and handles hover defaults, preset, reset, and exact matching', () => {
+		const { draft, block } = fixture();
+		expect(normalize(draft).document.activities[0].blocks[0]).not.toHaveProperty('appearance');
+		block.appearance = { shadow: 'md', hover: 'lift' };
+		expect(appearanceClassName(block.appearance)).toBe('ba-shadow-md ba-hover-lift');
+		expect(matchingAppearancePreset(block.appearance)).toBe('custom');
+		const preset = applyAppearancePreset(block.appearance, 'default');
+		expect(preset).toBeUndefined();
+		expect(resetBuilderAppearance(block.appearance)).toBeUndefined();
+		block.appearance = { hover: 'none' };
+		expect(matchingAppearancePreset(block.appearance)).toBe('custom');
+		expect(normalize(draft).document.activities[0].blocks[0].appearance).toEqual({ hover: 'none' });
+	});
+	it('uses safe transform-only hover rendering under device and motion guards', () => {
+		const css = readFileSync(new URL('../src/styles/builder-appearance.css', import.meta.url), 'utf8');
+		expect(css).toContain('@media (hover: hover) and (prefers-reduced-motion: no-preference)');
+		expect(css).toContain('.ba-hover-lift:hover { transform: translateY(-2px); }');
+		expect(css).toContain('.ba-hover-emphasis:hover { transform: scale(1.01); }');
+		expect(css).not.toMatch(/ba-hover-[^{]+\{[^}]*box-shadow/s);
+		expect(css).not.toMatch(/ba-hover-[^{]+\{[^}]*background/s);
+		expect(css).not.toContain('cursor: pointer');
 	});
 	it('applies and resets only appearance data without aliasing or changing protected document fields', () => {
 		const { draft, activity, block, group } = fixture();
@@ -146,6 +218,15 @@ describe('builder appearance persistence and rendering', () => {
 		}, true).next!;
 		expect(stale).toEqual(next);
 	});
+	it('uses versioned detailed-style actions for hover documents and snapshot/template writes', () => {
+		const { draft, block } = fixture();
+		block.appearance = { hover: 'emphasis' };
+		expect(builderWriteAction('save', { document: draft.document })).toBe('detailedStyles:save');
+		expect(builderWriteAction('saveSnapshot', { document: draft.document })).toBe('detailedStyles:saveSnapshot');
+		expect(builderWriteAction('saveTemplate', { document: draft.document })).toBe('detailedStyles:saveTemplate');
+		expect(hasDetailedBorderRadius(draft)).toBe(true);
+		expect(hasDetailedBorderRadius({ ...draft, document: { ...draft.document, activities: [{ ...draft.document.activities[0], blocks: [{ ...block, appearance: { shadow: 'md' } }] }] } })).toBe(true);
+	});
 	it('preserves every supported override through server normalization', () => {
 		for (const [key, setting] of Object.entries(APPEARANCE_OPTIONS)) {
 			for (const value of Object.keys(setting.values)) {
@@ -201,6 +282,59 @@ describe('builder appearance persistence and rendering', () => {
 			block.appearance = invalid as unknown as BuilderAppearance;
 			expect(() => normalize(draft)).toThrow();
 		}
+	});
+	it('retains responsive border and corner allowlists, legacy inheritance and explicit zero/none', () => {
+		const { draft, block, group } = fixture();
+		const responsive = { tablet: { borderDetail: { style: 'none' as const, linked: false, widths: { top: 0 } }, corners: { linked: false, topLeft: 0, bottomRight: 0 } }, mobile: { borderDetail: { style: 'solid' as const, color: 'action' as const, widths: { left: 0 } }, corners: { topLeft: 0, topRight: 48 } } };
+		block.appearance = { borderDetail: { style: 'dashed', widths: { top: 2 } }, corners: { topLeft: 12 }, responsive };
+		group.appearance = structuredClone(block.appearance);
+		const normalized = normalize(draft).document.activities[0];
+		expect(normalized.blocks[0].appearance).toEqual(block.appearance);
+		expect(findLayoutGroup(normalized.layout!, group.id)?.appearance).toEqual(group.appearance);
+		expect(appearanceDetailStyle(block.appearance)['--ba-tablet-border-top-width']).toBe('0px');
+		expect(appearanceDetailStyle(block.appearance)['--ba-tablet-detail-border-style']).toBe('none');
+		expect(appearanceDetailStyle(block.appearance)['--ba-mobile-border-left-width']).toBe('0px');
+		const resetTablet = resetResponsiveAppearance(block.appearance, 'tablet')!;
+		expect(resetTablet.responsive).toEqual({ mobile: responsive.mobile });
+		expect(resetTablet.borderDetail).toEqual(block.appearance.borderDetail);
+		expect(resetResponsiveAppearance(resetTablet, 'tablet')).toEqual(resetTablet);
+		for (const bad of [
+			{ ...responsive, desktop: { corners: { topLeft: 4 } } },
+			{ ...responsive, mobile: { corners: { topLeft: 49 } } },
+			{ ...responsive, mobile: { borderDetail: { style: 'solid', color: 'url(x)' } } },
+			{ ...responsive, mobile: { corners: { topLeft: 4, css: 'position:fixed' } } },
+		]) {
+			block.appearance = { responsive: bad } as unknown as BuilderAppearance;
+			expect(() => normalize(draft)).toThrow();
+		}
+	});
+	it('writes an explicit responsive version marker for responsive document and saved-item commands', async () => {
+		const send = vi.spyOn(pb, 'send').mockResolvedValue({} as never);
+		try {
+			expect(builderWriteAction('create', { document: { activities: [{ blocks: [{ appearance: { responsive: { mobile: { corners: { topLeft: 0 } } } } }] }] } })).toBe('responsiveStyles:create');
+			await builderRequest('save', { document: { activities: [{ blocks: [{ appearance: { responsive: { tablet: { corners: { topLeft: 0 } } } } }] }] } });
+			await builderRequest('saveSnapshot', { id: 'draft', responsiveBorderRadius: true });
+			expect(send.mock.calls[0]?.[1]?.body).toMatchObject({ action: 'responsiveStyles:save', responsiveBorderRadius: true });
+			expect(send.mock.calls[1]?.[1]?.body).toMatchObject({ action: 'responsiveStyles:saveSnapshot', responsiveBorderRadius: true });
+		} finally { send.mockRestore(); }
+	});
+	it('requires the responsive version marker in the publish workspace and PocketBase delivery handler', () => {
+		const workspace = readFileSync(new URL('../src/components/app/builder/builder-workspace.tsx', import.meta.url), 'utf8');
+		const delivery = readFileSync(new URL('../../pocketbase/pb_hooks/builder-delivery.js', import.meta.url), 'utf8');
+		expect(workspace).toContain("hasResponsiveDetails ? 'responsiveStyles:publish' : 'publish'");
+		expect(workspace).toContain('...(hasResponsiveDetails ? { responsiveBorderRadius: true } : {})');
+		expect(delivery).toContain("body.action === 'responsiveStyles:publish'");
+		expect(delivery).toContain('body.responsiveBorderRadius !== true');
+	});
+	it('keeps responsive overrides intact when a rolled-back backend rejects the versioned save', async () => {
+		const document = { activities: [{ blocks: [{ appearance: { responsive: { tablet: { borderDetail: { style: 'none', widths: { top: 0 } } } } } }] }] };
+		const before = structuredClone(document);
+		const send = vi.spyOn(pb, 'send').mockRejectedValue(new Error('Perintah builder tidak didukung.'));
+		try {
+			await expect(builderRequest('save', { document })).rejects.toThrow('Perintah builder tidak didukung');
+			expect(send).toHaveBeenCalledWith('/api/laras/builder', expect.objectContaining({ body: expect.objectContaining({ action: 'responsiveStyles:save', responsiveBorderRadius: true, document }) }));
+			expect(document).toEqual(before);
+		} finally { send.mockRestore(); }
 	});
 	it('rejects invalid values and strips unsupported style fields', () => {
 		const { draft, block, group } = fixture();
@@ -274,6 +408,19 @@ describe('builder appearance persistence and rendering', () => {
 		expect(css).toContain('.bl-layout .ba-has-border-detail');
 		expect(css).toContain('.bl-layout .ba-has-corners');
 		expect(css).not.toContain('overflow: hidden');
+	});
+	it('renders responsive detail on shared wrappers using activity container breakpoints and inherited values', () => {
+		const { draft, block } = fixture();
+		block.appearance = { borderDetail: { style: 'solid', color: 'action', widths: { top: 3 } }, corners: { topLeft: 18 }, responsive: { tablet: { borderDetail: { style: 'none', widths: { top: 0 } }, corners: { topLeft: 0 } }, mobile: { borderDetail: { style: 'dashed', widths: { left: 0 } } } } };
+		const html = renderToStaticMarkup(createElement(BuilderPreview, { document: normalize(draft).document }));
+		expect(html).toContain('ba-tablet-has-border-detail');
+		expect(html).toContain('ba-mobile-has-border-detail');
+		expect(html).toContain('--ba-mobile-border-left-width:0px');
+		expect(html).toContain('--ba-tablet-corner-topLeft:0px');
+		const css = readFileSync(new URL('../src/styles/builder-appearance.css', import.meta.url), 'utf8');
+		expect(css).toContain('@container laras-activity (max-width: 900px)');
+		expect(css).toContain('@container laras-activity (max-width: 600px)');
+		expect(css).toContain('var(--ba-mobile-corner-topLeft, var(--ba-tablet-corner-topLeft, var(--ba-corner-topLeft, 0)))');
 	});
 	it('round-trips bounded authored group backgrounds and renders shared theme CSS values', () => {
 		const { draft, group } = fixture();
@@ -360,14 +507,14 @@ describe('custom theme color pairs', () => {
 
 describe('detailed border rollback command', () => {
 	it('uses one versioned command for document and snapshot/template payloads', () => {
-		const document = { activities: [{ blocks: [{ appearance: { corners: { topLeft: 8 } } }] }] };
+		const document = { activities: [{ blocks: [{ appearance: { corners: { topLeft: 8 }, hover: 'lift' } }] }] };
 		expect(builderWriteAction('save', { document })).toBe('detailedStyles:save');
 		expect(builderWriteAction('create', { document })).toBe('detailedStyles:create');
 		expect(builderWriteAction('saveSnapshot', { document })).toBe('detailedStyles:saveSnapshot');
 		expect(builderWriteAction('saveTemplate', { document })).toBe('detailedStyles:saveTemplate');
 	});
 	it('retains local detail data when an older backend rejects the command', async () => {
-		const document = { activities: [{ blocks: [{ appearance: { borderDetail: { style: 'solid', widths: { top: 2 } } } }] }] };
+		const document = { activities: [{ blocks: [{ appearance: { borderDetail: { style: 'solid', widths: { top: 2 } }, hover: 'emphasis' } }] }] };
 		const before = structuredClone(document);
 		const send = vi.spyOn(pb, 'send').mockRejectedValue(new Error('Perintah builder tidak didukung.'));
 		try {

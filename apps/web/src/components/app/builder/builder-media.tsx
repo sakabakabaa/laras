@@ -34,6 +34,10 @@ import {
 	builderImagePresentationStyle,
 	resetBuilderImagePresentation,
 	resetBuilderPlayback,
+	BUILDER_PLAYBACK_RATES,
+	normalizeBuilderPlayback,
+	normalizeBuilderCaptions,
+	type BuilderCaptions,
 	type BuilderAsset,
 	type BuilderBlock,
 	type BuilderImage,
@@ -131,6 +135,7 @@ function MediaView({
 	presentation,
 	transcript = '',
 	playback,
+	captions,
 }: {
 	kind: Kind;
 	asset?: BuilderAsset;
@@ -139,27 +144,81 @@ function MediaView({
 	caption?: string;
 	presentation?: BuilderImage['presentation'];
 	transcript?: string;
-	playback?: { loop?: true; muted?: true };
+	playback?: BuilderBlock['playback'];
+	captions?: BuilderCaptions;
 }) {
 	const { url, error } = useBuilderAssetUrl(asset, external);
-	const playbackState = useRef({ time: 0, playing: false });
+	const [captionTime, setCaptionTime] = useState(0);
+	const activeCue = captions?.cues.find(cue => captionTime >= cue.start && captionTime < cue.end);
+	const audioRef = useRef<HTMLAudioElement>(null);
+	const videoRef = useRef<HTMLVideoElement>(null);
+	useEffect(() => {
+		const media = kind === 'audio' ? audioRef.current : videoRef.current;
+		if (!media || !url) return;
+		try { media.playbackRate = playback?.rate ?? 1; } catch { /* unsupported native rate */ }
+	}, [url, playback?.rate, kind]);
+	useEffect(() => {
+		const media = kind === 'audio' ? audioRef.current : videoRef.current;
+	if (!media || !url || (playback?.start === undefined && playback?.end === undefined)) return;
+		let disposed = false;
+		let configured = false;
+		const currentSource = () => !media.currentSrc || media.currentSrc === media.src;
+		const finiteDuration = () => Number.isFinite(media.duration) && media.duration >= 0 ? media.duration : null;
+		const bounds = () => {
+			const duration = finiteDuration();
+			const start = Math.min(playback?.start ?? 0, duration ?? (playback?.start ?? 0));
+			const authoredEnd = playback?.end;
+			const end = authoredEnd === undefined ? null : duration === null ? authoredEnd : Math.min(authoredEnd, duration);
+			return { start, end };
+		};
+		const seek = (time: number) => { if (!disposed && Math.abs(media.currentTime - time) > 0.05) media.currentTime = time; };
+		const onMetadata = () => {
+			if (disposed || !currentSource()) return;
+			const { start, end } = bounds();
+			if (!configured) {
+				configured = true;
+				if (playback?.start !== undefined) seek(start);
+			} else if (end !== null && end <= start) seek(start);
+			setCaptionTime(media.currentTime);
+		};
+		const onTime = () => {
+			if (disposed || !currentSource()) return;
+			const { start, end } = bounds();
+			if (end !== null && media.currentTime >= end) {
+				if (playback?.loop && end > start) { seek(start); if (!media.paused) void media.play().catch(() => {}); }
+				else { seek(end); media.pause(); }
+			}
+			setCaptionTime(media.currentTime);
+		};
+		const onSeeking = () => {
+			if (disposed || !currentSource()) return;
+			const { start, end } = bounds();
+			if (media.currentTime < start) seek(start);
+			else if (end !== null && media.currentTime > end) seek(end);
+		};
+		const onEnded = () => {
+			if (disposed || !currentSource()) return;
+			const { start, end } = bounds();
+			if (end !== null) {
+				if (playback?.loop && end > start) { seek(start); void media.play().catch(() => {}); }
+				else media.pause();
+			}
+		};
+		media.addEventListener('loadedmetadata', onMetadata);
+		media.addEventListener('durationchange', onMetadata);
+		media.addEventListener('timeupdate', onTime);
+		media.addEventListener('seeking', onSeeking);
+		media.addEventListener('ended', onEnded);
+		if (media.readyState > 0) onMetadata();
+		return () => { disposed = true; media.removeEventListener('loadedmetadata', onMetadata); media.removeEventListener('durationchange', onMetadata); media.removeEventListener('timeupdate', onTime); media.removeEventListener('seeking', onSeeking); media.removeEventListener('ended', onEnded); };
+	}, [url, playback?.start, playback?.end, playback?.rate, playback?.loop, kind]);
 	const playbackEvents = {
 		onTimeUpdate: (event: React.SyntheticEvent<HTMLMediaElement>) => {
-			if (event.currentTarget.readyState > 0)
-			playbackState.current.time = event.currentTarget.currentTime;
+			if (event.currentTarget.readyState > 0) {
+				setCaptionTime(event.currentTarget.currentTime);
+			}
 		},
-		onPlay: () => {
-			playbackState.current.playing = true;
-		},
-		onPause: (event: React.SyntheticEvent<HTMLMediaElement>) => {
-			if (event.currentTarget.readyState > 0) playbackState.current.playing = false;
-		},
-		onLoadedMetadata: (event: React.SyntheticEvent<HTMLMediaElement>) => {
-			const media = event.currentTarget;
-			if (playbackState.current.time > 0 && playbackState.current.time < media.duration)
-				media.currentTime = playbackState.current.time;
-			if (playbackState.current.playing) void media.play().catch(() => {});
-		},
+			onSeeked: (event: React.SyntheticEvent<HTMLMediaElement>) => setCaptionTime(event.currentTarget.currentTime),
 	};
 	return (
 		<figure className="bd-media-view">
@@ -169,25 +228,28 @@ function MediaView({
 				<img src={url} alt={alt} loading="lazy" style={presentation && Object.keys(presentation).length ? builderImagePresentationStyle(presentation) as CSSProperties : undefined} />
 			) : kind === 'audio' ? (
 				<audio
+					ref={audioRef}
 					{...playbackEvents}
 					src={url}
 					controls
 					preload="metadata"
-					loop={playback?.loop === true}
+					loop={playback?.loop === true && playback?.end === undefined}
 					muted={playback?.muted === true}
 					aria-label={caption || asset?.name || 'Audio'}
 				/>
 			) : (
 				<video
+					ref={videoRef}
 					{...playbackEvents}
 					src={url}
 					controls
 					preload="metadata"
-					loop={playback?.loop === true}
+					loop={playback?.loop === true && playback?.end === undefined}
 					muted={playback?.muted === true}
 					aria-label={caption || asset?.name || 'Video'}
 				/>
 			)}
+			{captions?.cues.length ? <p className="bd-media-cue" lang={captions.language} aria-live="polite" aria-atomic="true">{activeCue?.text || ''}</p> : null}
 			{caption && <figcaption>{caption}</figcaption>}
 			{transcript?.trim() && <details className="bd-media-transcript"><summary>Transkrip teks</summary><div className="bd-prose">{transcript}</div></details>}
 		</figure>
@@ -233,6 +295,7 @@ export function BuilderMediaView({ block }: { block: BuilderBlock }) {
 			caption={block.label}
 			transcript={block.transcript}
 			playback={block.playback}
+			captions={block.captions}
 		/>
 	);
 }
@@ -478,16 +541,32 @@ export function BuilderMediaPicker({
 export function BuilderMediaEditor({
 	block,
 	courseId,
+	captionsSupported = false,
 	onUpdate,
 }: {
 	block: BuilderBlock;
 	courseId: string;
+	captionsSupported?: boolean;
 	onUpdate: (edit: (block: BuilderBlock) => void) => void;
 }) {
 	const [picker, setPicker] = useState<{ replace?: string } | null>(null),
 		[linkOpen, setLinkOpen] = useState(false),
 		[link, setLink] = useState(''),
 		[error, setError] = useState('');
+	const [captionDraft, setCaptionDraft] = useState('');
+	const [captionLanguage, setCaptionLanguage] = useState('');
+	const [captionError, setCaptionError] = useState('');
+	const [playbackDraft, setPlaybackDraft] = useState({ start: '', end: '', rate: '1' });
+	const [playbackError, setPlaybackError] = useState('');
+	useEffect(() => {
+		setCaptionDraft((block.captions?.cues || []).map(cue => `${cue.start}\t${cue.end}\t${cue.text}`).join('\n'));
+		setCaptionLanguage(block.captions?.language || '');
+		setCaptionError('');
+	}, [block.id, block.captions]);
+	useEffect(() => {
+		setPlaybackDraft({ start: block.playback?.start === undefined ? '' : String(block.playback.start), end: block.playback?.end === undefined ? '' : String(block.playback.end), rate: String(block.playback?.rate ?? 1) });
+		setPlaybackError('');
+	}, [block.id, block.playback?.start, block.playback?.end, block.playback?.rate, block.playback?.loop, block.playback?.muted]);
 	const dragged = useRef<string | null>(null);
 	const images: BuilderImage[] =
 		block.images ||
@@ -732,9 +811,37 @@ export function BuilderMediaEditor({
 								<textarea maxLength={BUILDER_TRANSCRIPT_MAX_LENGTH} rows={6} value={block.transcript || ''} onChange={e => onUpdate(b => { const value=e.target.value; if(value) b.transcript=value; else delete b.transcript; })} />
 							</label>
 							<fieldset className="bd-image-presentation">
+								<legend>Subtitel tersinkron</legend>
+								<p>Masukkan satu cue per baris: waktu mulai (detik), waktu selesai (detik), lalu teks, dipisahkan tab. Cue tidak boleh bertumpuk.</p>
+								<label>Bahasa (opsional, contoh id atau en-US)<input aria-label="Bahasa subtitel" value={captionLanguage} maxLength={6} onChange={e=>setCaptionLanguage(e.target.value)} /></label>
+								<label>Cue subtitel<textarea aria-label="Cue subtitel" rows={7} value={captionDraft} onChange={e=>setCaptionDraft(e.target.value)} /></label>
+								{!captionsSupported && <small>Backend belum mengumumkan dukungan subtitel bertanda waktu.</small>}
+								{captionError && <p role="alert">{captionError}</p>}
+								<div className="bd-inline-actions">
+									<button type="button" className="bd-primary" onClick={()=>{
+										try {
+											const cues = captionDraft.split(/\r?\n/).filter(line=>line.trim()).map(line=>{ const parts=line.split('\t'); if(parts.length!==3 || !/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(parts[0]) || !/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(parts[1])) throw new Error('Gunakan waktu detik numerik dan tiga kolom yang dipisahkan tab.'); return {start:Number(parts[0]),end:Number(parts[1]),text:parts[2]}; });
+											const value = normalizeBuilderCaptions({...(captionLanguage?{language:captionLanguage}:{}),cues});
+											onUpdate(b=>{b.captions=value;}); setCaptionError('');
+										} catch (e) { setCaptionError((e as Error).message || 'Cue subtitel tidak valid.'); }
+									}}>Terapkan cue</button>
+									<button type="button" className="bd-text-button" onClick={()=>{setCaptionDraft((block.captions?.cues || []).map(cue => `${cue.start}\t${cue.end}\t${cue.text}`).join('\n'));setCaptionLanguage(block.captions?.language || '');setCaptionError('');}}>Batalkan draf cue</button>
+									<button type="button" className="bd-text-button" disabled={!block.captions} onClick={()=>{onUpdate(b=>{delete b.captions;});setCaptionDraft('');setCaptionLanguage('');setCaptionError('');}}>Hapus cue</button>
+								</div>
+							</fieldset>
+							<fieldset className="bd-image-presentation">
 								<legend>Pemutaran</legend>
 								<label><input type="checkbox" checked={block.playback?.loop === true} onChange={e => onUpdate(b => { const playback={...b.playback}; if(e.target.checked) playback.loop=true; else delete playback.loop; if(Object.keys(playback).length) b.playback=playback; else delete b.playback; })} /> Ulangi pemutaran</label>
 								<label><input type="checkbox" checked={block.playback?.muted === true} onChange={e => onUpdate(b => { const playback={...b.playback}; if(e.target.checked) playback.muted=true; else delete playback.muted; if(Object.keys(playback).length) b.playback=playback; else delete b.playback; })} /> Mulai tanpa suara</label>
+								<p>Titik waktu memakai detik dari awal media. Kosongkan untuk memakai awal atau akhir asli.</p>
+								<label>Mulai pada detik<input aria-label="Mulai pemutaran pada detik" type="number" min="0" max="86400" step="0.1" value={playbackDraft.start} onChange={e=>setPlaybackDraft(d=>({...d,start:e.target.value}))} /></label>
+								<label>Akhiri pada detik<input aria-label="Akhiri pemutaran pada detik" type="number" min="0" max="86400" step="0.1" value={playbackDraft.end} onChange={e=>setPlaybackDraft(d=>({...d,end:e.target.value}))} /></label>
+								<label>Kecepatan awal<select aria-label="Kecepatan awal pemutaran" value={playbackDraft.rate} onChange={e=>setPlaybackDraft(d=>({...d,rate:e.target.value}))}>{BUILDER_PLAYBACK_RATES.map(rate=><option key={rate} value={rate}>{rate}×</option>)}</select></label>
+								{playbackError && <p role="alert">{playbackError}</p>}
+								<div className="bd-inline-actions">
+					<button type="button" className="bd-primary" onClick={()=>{let value;try{const parseTime=(raw:string)=>{if(raw.trim()==='')return undefined;if(!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(raw.trim()))throw new Error('Masukkan waktu sebagai detik numerik yang valid.');return Number(raw);};const start=parseTime(playbackDraft.start);const end=parseTime(playbackDraft.end);value=normalizeBuilderPlayback({...block.playback,...(start===undefined?{}:{start}),...(end===undefined?{}:{end}),rate:Number(playbackDraft.rate)});}catch(e){setPlaybackError((e as Error).message||'Pengaturan pemutaran tidak valid.');return;}onUpdate(b=>{b.playback={...value,...(b.playback?.loop?{loop:true}:{}),...(b.playback?.muted?{muted:true}:{})};});setPlaybackError('');}}>Terapkan pemutaran</button>
+									<button type="button" className="bd-text-button" onClick={()=>{setPlaybackDraft({start:block.playback?.start===undefined?'':String(block.playback.start),end:block.playback?.end===undefined?'':String(block.playback.end),rate:String(block.playback?.rate??1)});setPlaybackError('');}}>Batalkan draf pemutaran</button>
+								</div>
 								<button type="button" className="bd-text-button" onClick={() => onUpdate(b => { resetBuilderPlayback(b); })}>Reset pemutaran</button>
 							</fieldset>
 						</>

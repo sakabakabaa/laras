@@ -4,6 +4,8 @@ import {
 	useRef,
 	useState,
 	type DragEvent,
+	type PointerEvent as ReactPointerEvent,
+	type CSSProperties,
 } from 'react';
 import { Link, useBlocker, useNavigate, useSearchParams } from 'react-router';
 import { canPasteBuilderStyle, copyBuilderStyle, pasteBuilderStyle, type BuilderStyleClipboard, type BuilderStyleSelection } from '@/lib/builder-style-clipboard';
@@ -42,6 +44,17 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { hasDocumentAppearanceToReset, resetDocumentAppearance } from '@/lib/builder-appearance';
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -60,6 +73,10 @@ import {
 	usesEnhancedAuthoring,
 	hasCustomThemeColors,
 	hasDetailedBorderRadius,
+	hasResponsiveBorderRadius,
+	hasBuilderCaptions,
+	hasBuilderPlaybackDetails,
+	hasBuilderAnchors,
 	type BuilderCapabilityPayload,
 } from '@/lib/builder-capability';
 import { toWibInput, fromWibInput } from '@/lib/scheduled-classes';
@@ -68,8 +85,15 @@ import {
 	appendQuestion,
 	BLOCK_LABELS,
 	builderIssues,
+	hasBuilderVisibility,
+	builderNodeVisibilitySafe,
+	hasBuilderThemePalette,
+	builderAnchors,
+	remapDuplicateBuilderAnchors,
+	builderRichTextValid,
 	builderRequest,
 	encodeBuilderDraft,
+	hasNestedBuilderLists,
 	duplicateActivity,
 	duplicateBlock,
 	activitySummary,
@@ -85,7 +109,11 @@ import {
 	type BuilderEnvelope,
 	type BuilderRecord,
 } from '@/lib/builder-document';
-import { BlockEditor, BuilderCanvasText } from './builder-elements';
+import { BuilderCanvasText } from './builder-elements';
+import { BuilderAnchorScope } from './builder-anchor-scope';
+import { BuilderThemePaletteControl } from './builder-theme-palette-control';
+import { BuilderInspectorDispatch } from './builder-inspector-dispatch';
+import { isBuilderRegistryKind } from '@/lib/builder-element-registry';
 import { BuilderElementInspector } from './builder-element-inspector';
 import { BuilderRunList } from './builder-run';
 import { deliveryRequest } from '@/lib/builder-delivery';
@@ -99,6 +127,8 @@ import {
 	BUILDER_DRAG_TYPE,
 } from './builder-element-library';
 import { BuilderLayoutView } from './builder-layout-view';
+import { builderThemePaletteStyle } from '@/lib/builder-theme';
+import { builderDragEdgeSpeed, builderDragScrollDelta, builderDropTargetFromElement, updateBuilderPointerGesture, type BuilderPointerGesture } from '@/lib/builder-pointer-drag';
 import {
 	BuilderLayoutBreadcrumbs,
 	BuilderLayoutInspector,
@@ -114,6 +144,8 @@ import {
 	insertBlockAtTarget,
 	removeBlockFromLayout,
 	resolveBlockInsertionTarget,
+	resolveLayoutGroupMoveTarget,
+	moveLayoutGroupAtTarget,
 	moveBlockInLayout,
 	moveLayoutItem,
 	reparentLayoutItem,
@@ -167,6 +199,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		[dragging, setDragging] = useState(false),
 		[dropTarget, setDropTarget] = useState(''),
 		[announcement, setAnnouncement] = useState(''),
+		[resetAppearanceOpen, setResetAppearanceOpen] = useState(false),
 		[collapsed, setCollapsed] = useState<string[]>([]),
 		[savedItems, setSavedItems] = useState<{ activityId?: string; groupId?: string } | null>(
 			null,
@@ -191,6 +224,20 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	const customColorsSupportedRef = useRef(false);
 	const detailedBorderRadiusSupportedRef = useRef(false);
 	const [detailedBorderRadiusSupported, setDetailedBorderRadiusSupported] = useState(false);
+	const responsiveBorderRadiusSupportedRef = useRef(false);
+	const [responsiveBorderRadiusSupported, setResponsiveBorderRadiusSupported] = useState(false);
+	const mediaCaptionsSupportedRef = useRef(false);
+	const [mediaCaptionsSupported, setMediaCaptionsSupported] = useState(false);
+	const mediaPlaybackSupportedRef = useRef(false);
+	const [mediaPlaybackSupported, setMediaPlaybackSupported] = useState(false);
+	const nestedRichTextSupportedRef = useRef(false);
+	const [nestedRichTextSupported, setNestedRichTextSupported] = useState(false);
+	const documentAnchorsSupportedRef = useRef(false);
+	const [documentAnchorsSupported, setDocumentAnchorsSupported] = useState(false);
+	const presentationVisibilitySupportedRef = useRef(false);
+	const [presentationVisibilitySupported, setPresentationVisibilitySupported] = useState(false);
+	const themePaletteSupportedRef = useRef(false);
+	const [themePaletteSupported, setThemePaletteSupported] = useState(false);
 	const [recoveryInfo, setRecoveryInfo] = useState<{ at: number; baseRevision?: number } | null>(null);
 	const [publishReview, setPublishReview] = useState(false);
 	const saveQueue = useRef(createBuilderSaveQueue((command) => builderRequest<BuilderRecord>('save', command)));
@@ -199,16 +246,36 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		savingRef = useRef(false),
 		conflictRef = useRef(false),
 		readOnlyRef = useRef(false),
+		lockedRef = useRef(false),
 		past = useRef<BuilderEnvelope[]>([]),
 		future = useRef<BuilderEnvelope[]>([]),
 		activeId = useRef(id),
 		publishCommand = useRef({ revision: 0, id: '' }),
+		pointerGesture = useRef<BuilderPointerGesture | null>(null),
+		pointerDropTarget = useRef(''),
+		workspaceRoot = useRef<HTMLDivElement | null>(null),
+		canvasRoot = useRef<HTMLElement | null>(null),
+		edgeScrollFrame = useRef<number | null>(null),
+		edgeScrollElement = useRef<HTMLElement | null>(null),
+		edgeScrollPoint = useRef<{ x: number; y: number } | null>(null),
+		edgeScrollTime = useRef(0),
 		dragItem = useRef<{
 			elementId?: string;
 			activityId?: string;
 			blockId?: string;
+			groupId?: string;
+			revision?: number;
+			snapshot?: BuilderEnvelope | null;
 		} | null>(null);
 	activeId.current = id;
+	const stopEdgeScroll = () => {
+		if (edgeScrollFrame.current !== null) cancelAnimationFrame(edgeScrollFrame.current);
+		edgeScrollFrame.current = null;
+		edgeScrollElement.current = null;
+		edgeScrollPoint.current = null;
+		edgeScrollTime.current = 0;
+	};
+	useEffect(() => () => { stopEdgeScroll(); pointerGesture.current = null; dragItem.current = null; }, []);
 	const storageKey = `laras-builder:${pb.authStore.record?.id || 'anonymous'}:${id}`;
 	const dirty = Boolean(draft && encode(draft) !== saved);
 	const contextCourseId = draft?.document.context.courseId || '';
@@ -284,11 +351,24 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setLoading(true);
 		setDraft(null);
 		current.current = null;
+		themePaletteSupportedRef.current = false;
+		setThemePaletteSupported(false);
 		layoutLocksSupportedRef.current = false;
 		setLayoutLocksSupported(false);
 		customColorsSupportedRef.current = false;
 		detailedBorderRadiusSupportedRef.current = false;
 		setDetailedBorderRadiusSupported(false);
+		responsiveBorderRadiusSupportedRef.current = false;
+		setResponsiveBorderRadiusSupported(false);
+		mediaCaptionsSupportedRef.current = false;
+		setMediaCaptionsSupported(false);
+		mediaPlaybackSupportedRef.current = false;
+		setMediaPlaybackSupported(false);
+		nestedRichTextSupportedRef.current = false;
+		setNestedRichTextSupported(false);
+		documentAnchorsSupportedRef.current = false;
+		setDocumentAnchorsSupported(false);
+		presentationVisibilitySupportedRef.current = false; setPresentationVisibilitySupported(false);
 		setCustomColorsSupported(false);
 		setStyleClipboard(null);
 		setStyleStatus('');
@@ -308,6 +388,18 @@ export function BuilderWorkspace({ id }: { id: string }) {
 				customColorsSupportedRef.current = r.customColors === true;
 				detailedBorderRadiusSupportedRef.current = r.detailedBorderRadius === true;
 				setDetailedBorderRadiusSupported(r.detailedBorderRadius === true);
+				responsiveBorderRadiusSupportedRef.current = r.responsiveBorderRadius === true;
+				setResponsiveBorderRadiusSupported(r.responsiveBorderRadius === true);
+				mediaCaptionsSupportedRef.current = r.mediaCaptions === true;
+				setMediaCaptionsSupported(r.mediaCaptions === true);
+				mediaPlaybackSupportedRef.current = r.mediaPlayback === true;
+				setMediaPlaybackSupported(r.mediaPlayback === true);
+				nestedRichTextSupportedRef.current = r.nestedRichText === true;
+				setNestedRichTextSupported(r.nestedRichText === true);
+				documentAnchorsSupportedRef.current = r.documentAnchors === true;
+				setDocumentAnchorsSupported(r.documentAnchors === true);
+				presentationVisibilitySupportedRef.current = r.presentationVisibility === true; setPresentationVisibilitySupported(r.presentationVisibility === true);
+				themePaletteSupportedRef.current = r.themePalette === true; setThemePaletteSupported(r.themePalette === true);
 				setCustomColorsSupported(r.customColors === true);
 				const envelope = { document: r.document, privateKeys: r.privateKeys };
 				install(envelope);
@@ -341,6 +433,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		const prior = current.current;
 		const { next, reason } = guardedLayoutEdit(prior, edit, layoutLocksSupportedRef.current);
 		if (!next) { setError(reason); setAnnouncement(reason); return false; }
+		if (!documentAnchorsSupportedRef.current && hasBuilderAnchors(next)) { setError('Backend belum mendukung tautan bagian; perubahan ditahan agar nama jangkar tidak hilang.'); return false; }
+		if (!presentationVisibilitySupportedRef.current && hasBuilderVisibility(next)) { const reason = 'Backend belum mendukung visibilitas presentasi; perubahan ditahan agar data tidak hilang.'; setError(reason); setAnnouncement(reason); return false; }
+		if (!themePaletteSupportedRef.current && hasBuilderThemePalette(next)) { const reason = 'Backend belum mendukung palet tema dokumen; perubahan ditahan agar data tidak hilang.'; setError(reason); setAnnouncement(reason); return false; }
+		if (!builderNodeVisibilitySafe(next)) { const reason = 'Visibilitas ditolak: elemen tersembunyi tidak boleh berisi asesmen, pengakuan wajib, atau jenis elemen yang belum didukung.'; setError(reason); setAnnouncement(reason); return false; }
+		remapDuplicateBuilderAnchors(next);
+		if (!nestedRichTextSupportedRef.current && hasNestedBuilderLists(next)) { setError('Backend belum mendukung daftar bertingkat; perubahan ditahan agar struktur teks tidak hilang.'); return false; }
+		if (!mediaPlaybackSupportedRef.current && hasBuilderPlaybackDetails(next)) { setError('Backend belum mendukung rentang dan kecepatan pemutaran media; perubahan ditahan agar data tidak hilang.'); return false; }
 		if (encode(next) === encode(prior)) return false;
 		past.current = [...past.current.slice(-29), prior];
 		future.current = [];
@@ -363,8 +462,16 @@ export function BuilderWorkspace({ id }: { id: string }) {
 	});
 	const save = useCallback(async () => {
 		if (!current.current || savingRef.current || conflictRef.current) return;
+		if (!themePaletteSupportedRef.current && hasBuilderThemePalette(current.current)) { setError('Backend belum mendukung palet tema dokumen; perubahan ditahan agar warna tidak hilang.'); return; }
+		if (!presentationVisibilitySupportedRef.current && hasBuilderVisibility(current.current)) { setError('Backend belum mendukung visibilitas presentasi; perubahan ditahan agar data tidak hilang.'); return; }
+		if (!builderRichTextValid(current.current)) { setError('Format teks atau kedalaman daftar tidak valid; perbaiki sebelum menyimpan.'); return; }
+		if (!documentAnchorsSupportedRef.current && hasBuilderAnchors(current.current)) { setError('Backend belum mendukung tautan bagian; perubahan ditahan agar nama jangkar tidak hilang.'); return; }
+		if (!mediaCaptionsSupportedRef.current && hasBuilderCaptions(current.current)) { setError('Backend belum mendukung keterangan media bertanda waktu; perubahan ditahan agar data tidak hilang.'); return; }
+		if (!mediaPlaybackSupportedRef.current && hasBuilderPlaybackDetails(current.current)) { setError('Backend belum mendukung rentang dan kecepatan pemutaran media; perubahan ditahan agar data tidak hilang.'); return; }
+		if (!nestedRichTextSupportedRef.current && hasNestedBuilderLists(current.current)) { setError('Backend belum mendukung daftar bertingkat; perubahan ditahan agar struktur teks tidak hilang.'); return; }
 		if (!layoutLocksSupportedRef.current && hasLayoutLockFields(current.current)) { setError(LAYOUT_LOCK_CAPABILITY_REASON); return; }
 		if (!detailedBorderRadiusSupportedRef.current && hasDetailedBorderRadius(current.current)) { setError('Backend belum mendukung garis tepi dan sudut terperinci; perubahan ditahan agar data tidak hilang.'); return; }
+		if (!responsiveBorderRadiusSupportedRef.current && hasResponsiveBorderRadius(current.current)) { setError('Backend belum mendukung garis dan sudut responsif; perubahan ditahan agar data tidak hilang.'); return; }
 		if (readOnlyRef.current) return;
 		if (!navigator.onLine) { setError('Anda sedang offline. Perubahan belum tersimpan di server; coba simpan setelah terhubung.'); return; }
 		const savingId = id;
@@ -466,11 +573,23 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setLoading(true);
 		try {
 			const r = await builderRequest<BuilderRecord>('get', { id });
+			documentAnchorsSupportedRef.current = r.documentAnchors === true;
+			setDocumentAnchorsSupported(r.documentAnchors === true);
+			presentationVisibilitySupportedRef.current = r.presentationVisibility === true; setPresentationVisibilitySupported(r.presentationVisibility === true);
+			themePaletteSupportedRef.current = r.themePalette === true; setThemePaletteSupported(r.themePalette === true);
 			layoutLocksSupportedRef.current = r.layoutLocks === true;
 			setLayoutLocksSupported(r.layoutLocks === true);
 			customColorsSupportedRef.current = r.customColors === true;
 			detailedBorderRadiusSupportedRef.current = r.detailedBorderRadius === true;
 			setDetailedBorderRadiusSupported(r.detailedBorderRadius === true);
+			responsiveBorderRadiusSupportedRef.current = r.responsiveBorderRadius === true;
+			setResponsiveBorderRadiusSupported(r.responsiveBorderRadius === true);
+			mediaCaptionsSupportedRef.current = r.mediaCaptions === true;
+			setMediaCaptionsSupported(r.mediaCaptions === true);
+			mediaPlaybackSupportedRef.current = r.mediaPlayback === true;
+			setMediaPlaybackSupported(r.mediaPlayback === true);
+			nestedRichTextSupportedRef.current = r.nestedRichText === true;
+			setNestedRichTextSupported(r.nestedRichText === true);
 			setCustomColorsSupported(r.customColors === true);
 			install({ document: r.document, privateKeys: r.privateKeys });
 			setSaved(encode({ document: r.document, privateKeys: r.privateKeys }));
@@ -559,19 +678,40 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			];
 		});
 	const locked = conflict || Boolean(recovery);
+	lockedRef.current = locked;
 	// Enhanced capability is server-owned; a denied lecturer gets a fully capable
 	// read-only view instead of a reduced editor that would drop layout/appearance.
 	const enhancedDocument = usesEnhancedAuthoring(draft.document);
 	// Reflect the server decision so enabled lecturers never see a denial notice.
 	const layoutLockFallback = !layoutLocksSupported && hasLayoutLockFields(draft);
-	const readOnly = (capability ? !capability.authoring : false) || layoutLockFallback;
+	const nestedListsFallback = !nestedRichTextSupported && hasNestedBuilderLists(draft);
+	const anchorFallback = !documentAnchorsSupported && hasBuilderAnchors(draft);
+	const themePaletteFallback = !themePaletteSupported && hasBuilderThemePalette(draft);
+	const readOnly = (capability ? !capability.authoring : false) || layoutLockFallback || nestedListsFallback || anchorFallback || themePaletteFallback;
 	readOnlyRef.current = readOnly;
-	const capabilityNotice = capability
+	const capabilityNotice = anchorFallback
+		? 'Backend belum mendukung tautan bagian. Draf ditampilkan hanya-baca agar ID tujuan dan tautan internal tidak hilang.'
+		: themePaletteFallback
+		? 'Backend belum mendukung palet tema dokumen. Draf ditampilkan hanya-baca agar warna tidak hilang.'
+		: nestedListsFallback
+		? 'Backend belum mendukung daftar bertingkat. Draf ditampilkan hanya-baca agar struktur, urutan, dan isi teks tidak hilang.'
+		: capability
 		? enhancedAuthoringNotice(
 				capability,
 				enhancedDocument,
 			)
 		: '';
+	const appearanceResetUnsupported = (!customColorsSupported && hasCustomThemeColors(draft)) || (!detailedBorderRadiusSupported && hasDetailedBorderRadius(draft)) || (!responsiveBorderRadiusSupported && hasResponsiveBorderRadius(draft));
+	const canResetDocumentAppearance = !saving && !locked && !readOnly && !appearanceResetUnsupported && hasDocumentAppearanceToReset(draft);
+	const resetDocumentAppearanceNow = () => {
+		const envelope = current.current;
+		if (!envelope || savingRef.current || conflictRef.current || recovery || readOnlyRef.current ||
+			(!customColorsSupportedRef.current && hasCustomThemeColors(envelope)) ||
+			(!detailedBorderRadiusSupportedRef.current && hasDetailedBorderRadius(envelope)) ||
+			(!responsiveBorderRadiusSupportedRef.current && hasResponsiveBorderRadius(envelope))) return;
+		if (change(resetDocumentAppearance)) setAnnouncement('Tampilan elemen direset. Tata letak, latar khusus, dan palet warna dokumen tetap dipertahankan.');
+		setResetAppearanceOpen(false);
+	};
 	const requestCanvasReveal = (kind: 'group' | 'block', itemId: string) => {
 		const request = { kind, id: itemId, focus: activityDrawer };
 		if (activityDrawer) drawerReveal.current = request;
@@ -662,18 +802,141 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		setAnnouncement('Bagian dihapus. Elemen dan pertanyaan di dalamnya tetap tersimpan.');
 	};
 	const publish = async () => {
-		if (dirty || saving || locked || publishing || !online || readOnly || builderIssues(draft).length) return;
+		if (dirty || saving || locked || publishing || !online || readOnly || builderIssues(draft).length || (!presentationVisibilitySupportedRef.current && hasBuilderVisibility(draft)) || (!themePaletteSupportedRef.current && hasBuilderThemePalette(draft)) || (!responsiveBorderRadiusSupportedRef.current && hasResponsiveBorderRadius(draft)) || (!mediaCaptionsSupportedRef.current && hasBuilderCaptions(draft)) || (!mediaPlaybackSupportedRef.current && hasBuilderPlaybackDetails(draft)) || (!nestedRichTextSupportedRef.current && hasNestedBuilderLists(draft))) return;
 		setPublishing(true); setError('');
 		if (publishCommand.current.revision !== revision) publishCommand.current = { revision, id: uid() };
 		try {
-			const result = await deliveryRequest<{ runId: string }>('publish', { id, baseRevision: revision, commandId: publishCommand.current.id });
+			const hasResponsiveDetails = hasResponsiveBorderRadius(draft);
+			const hasCaptions = hasBuilderCaptions(draft);
+			const hasNestedLists = hasNestedBuilderLists(draft);
+			const hasPlayback = hasBuilderPlaybackDetails(draft);
+			const hasAnchors = hasBuilderAnchors(draft);
+			const hasVisibility = hasBuilderVisibility(draft);
+			const hasThemePalette = hasBuilderThemePalette(draft);
+			const result = await deliveryRequest<{ runId: string }>(hasThemePalette ? 'themePalette:publish' : hasVisibility ? 'presentationVisibility:publish' : hasAnchors ? 'documentAnchors:publish' : hasPlayback ? 'mediaPlayback:publish' : hasNestedLists ? 'nestedLists:publish' : hasCaptions ? 'mediaCaptions:publish' : hasResponsiveDetails ? 'responsiveStyles:publish' : 'publish', { id, baseRevision: revision, commandId: publishCommand.current.id, ...(hasThemePalette ? { themePalette: true } : {}), ...(hasVisibility ? { presentationVisibility: true } : {}), ...(hasAnchors ? { documentAnchors: true } : {}), ...(hasResponsiveDetails ? { responsiveBorderRadius: true } : {}), ...(hasCaptions ? { mediaCaptions: true } : {}), ...(hasNestedLists ? { nestedRichText: true } : {}), ...(hasPlayback ? { mediaPlayback: true } : {}) });
 			navigate('/app/kegiatan/' + result.runId);
 		} catch (failure) {
 			setError((failure as Error).message);
 			setPublishReview(false);
 		} finally { setPublishing(false); }
 	};
+	const resolveCanvasScrollElement = (): HTMLElement | null => {
+		let element = canvasRoot.current;
+		while (element && element !== document.body) {
+			if (!element.classList.contains('bd-builder-sidebar') && !element.classList.contains('bd-inspector')) {
+				const overflowY = getComputedStyle(element).overflowY;
+				if ((overflowY === 'auto' || overflowY === 'scroll') && element.scrollHeight > element.clientHeight) return element;
+			}
+			element = element.parentElement;
+		}
+		// The page is the canvas scroll surface at normal viewport sizes; side panels are siblings.
+		const page = document.scrollingElement as HTMLElement | null;
+		return page && page.scrollHeight > page.clientHeight ? page : null;
+	};
+	const refreshDropTargetAt = (x: number, y: number) => {
+		const root = workspaceRoot.current;
+		if (!root) return;
+		const address = builderDropTargetFromElement(document.elementFromPoint(x, y), root);
+		const key = address ? `${address.activityId}:${address.parentId || 'root'}:${address.beforeId || 'end'}` : '';
+		if (key !== pointerDropTarget.current && address) {
+			pointerDropTarget.current = key;
+			const targetActivity = current.current?.document.activities.find(activity => activity.id === address.activityId);
+			const targetBlock = targetActivity?.blocks.find(block => block.id === address.beforeId);
+			const targetGroup = address.parentId && targetActivity?.layout ? findLayoutGroup(targetActivity.layout, address.parentId) : null;
+			const location = targetBlock ? `sebelum ${BLOCK_LABELS[targetBlock.type] || 'elemen'}` : targetGroup ? `di akhir ${targetGroup.title || 'bagian'}` : 'di akhir kegiatan';
+			setAnnouncement(`Tujuan seret: ${targetActivity?.title || 'kegiatan'}, ${location}.`);
+		} else if (!address) pointerDropTarget.current = '';
+		setDropTarget(currentKey => currentKey === key ? currentKey : key);
+	};
+	const scheduleEdgeScroll = (x: number, y: number) => {
+		edgeScrollPoint.current = { x, y };
+		const canvasBounds = canvasRoot.current?.getBoundingClientRect();
+		const scrollElement = resolveCanvasScrollElement();
+		const bounds = scrollElement?.getBoundingClientRect();
+		if (!canvasBounds || x < canvasBounds.left || x > canvasBounds.right || !scrollElement || !bounds || !builderDragEdgeSpeed(y, bounds.top, bounds.bottom)) { stopEdgeScroll(); return; }
+		edgeScrollElement.current = scrollElement;
+		if (edgeScrollFrame.current !== null) return;
+		edgeScrollTime.current = performance.now();
+		const step = (now: number) => {
+			edgeScrollFrame.current = null;
+			const point = edgeScrollPoint.current;
+			const target = edgeScrollElement.current;
+			const activeCanvas = canvasRoot.current?.getBoundingClientRect();
+			if (!point || !target || !activeCanvas || point.x < activeCanvas.left || point.x > activeCanvas.right || !dragItem.current || lockedRef.current || readOnlyRef.current || conflictRef.current || dragItem.current.revision !== undefined && (revisionRef.current !== dragItem.current.revision || current.current !== dragItem.current.snapshot)) { stopEdgeScroll(); return; }
+			const rect = target.getBoundingClientRect();
+			const speed = builderDragEdgeSpeed(point.y, rect.top, rect.bottom);
+			const delta = builderDragScrollDelta(speed, now - edgeScrollTime.current);
+			edgeScrollTime.current = now;
+			const max = Math.max(0, target.scrollHeight - target.clientHeight);
+			const before = target.scrollTop;
+			target.scrollTop = Math.max(0, Math.min(max, before + delta));
+			if (target.scrollTop !== before) {
+				refreshDropTargetAt(point.x, point.y);
+				edgeScrollFrame.current = requestAnimationFrame(step);
+			} else stopEdgeScroll();
+		};
+		edgeScrollFrame.current = requestAnimationFrame(step);
+	};
 	const finishDrag = () => {
+		stopEdgeScroll();
+		dragItem.current = null;
+		pointerGesture.current = null;
+		setDragging(false);
+		setDropTarget('');
+	};
+	const cancelPointerDrag = () => {
+		if (!pointerGesture.current) return;
+		stopEdgeScroll();
+		pointerGesture.current = null;
+		pointerDropTarget.current = '';
+		dragItem.current = null;
+		setDragging(false);
+		setDropTarget('');
+	};
+	const beginPointerDrag = (event: ReactPointerEvent<HTMLElement>, item: NonNullable<typeof dragItem.current>) => {
+		if (pointerGesture.current && pointerGesture.current.pointerId !== event.pointerId) { cancelPointerDrag(); return; }
+		if ((event.pointerType !== 'touch' && event.pointerType !== 'pen') || event.isPrimary === false || locked || readOnly || recovery || conflict || !current.current) return;
+		const captured = { ...item, revision: revisionRef.current, snapshot: current.current };
+		dragItem.current = captured;
+		pointerGesture.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, activated: false, item: captured, revision: revisionRef.current, snapshot: current.current };
+		try { event.currentTarget.setPointerCapture(event.pointerId); } catch { cancelPointerDrag(); }
+	};
+	const movePointerDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+		const gesture = pointerGesture.current;
+		if (!gesture || gesture.pointerId !== event.pointerId) return;
+		if (!updateBuilderPointerGesture(gesture, event.clientX, event.clientY)) return;
+		if (!dragging) setDragging(true);
+		refreshDropTargetAt(event.clientX, event.clientY);
+		scheduleEdgeScroll(event.clientX, event.clientY);
+	};
+	const finishPointerDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+		const gesture = pointerGesture.current;
+		if (!gesture || gesture.pointerId !== event.pointerId) return;
+		const hit = document.elementFromPoint(event.clientX, event.clientY);
+		const address = builderDropTargetFromElement(hit, workspaceRoot.current!);
+		const activated = gesture.activated;
+		const validSnapshot = current.current === gesture.snapshot && revisionRef.current === gesture.revision && !locked && !readOnlyRef.current && !recovery && !conflict;
+		pointerGesture.current = null;
+		pointerDropTarget.current = '';
+		stopEdgeScroll();
+		if (activated && validSnapshot && address) {
+			const { activityId, beforeId, parentId } = address;
+			if (gesture.item.elementId) addElement(gesture.item.elementId, { activityId, beforeId, parentId });
+			else if (gesture.item.groupId) {
+				const fakeEvent = { preventDefault() {}, stopPropagation() {}, dataTransfer: { getData: () => gesture.item.groupId || '' } } as unknown as DragEvent;
+				dropElement(fakeEvent, activityId, beforeId, parentId);
+			}
+			else {
+				const fakeEvent = { preventDefault() {}, stopPropagation() {}, dataTransfer: { getData: () => gesture.item.blockId || '' } } as unknown as DragEvent;
+				dropElement(fakeEvent, activityId, beforeId, parentId);
+			}
+		}
+		if (activated) {
+			event.preventDefault();
+			if (gesture.item.groupId) {
+				if (!validSnapshot || !address) setAnnouncement('Seret bagian dibatalkan; draf tidak berubah.');
+			} else setAnnouncement(validSnapshot && address ? 'Elemen dipindahkan atau ditambahkan.' : 'Seret dibatalkan; draf tidak berubah.');
+		}
 		dragItem.current = null;
 		setDragging(false);
 		setDropTarget('');
@@ -797,9 +1060,30 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		finishDrag();
 		if (!item || locked || readOnly || recovery || conflict) return;
 		const raw = event.dataTransfer.getData(BUILDER_DRAG_TYPE);
-		if (item.elementId ? raw !== item.elementId : raw !== item.blockId) return;
+		if (item.elementId ? raw !== item.elementId : raw !== (item.groupId || item.blockId)) return;
+		if (item.revision !== undefined && (revisionRef.current !== item.revision || current.current !== item.snapshot)) { setAnnouncement('Draf berubah saat elemen diseret; draf tidak berubah.'); return; }
 		if (item.elementId) {
 			addElement(item.elementId, { activityId, beforeId, parentId });
+			return;
+		}
+		if (item.groupId) {
+			if (!item.activityId || item.activityId !== activityId) { setAnnouncement('Bagian hanya dapat dipindahkan di dalam kegiatan yang sama.'); return; }
+			if (item.revision !== undefined && (revisionRef.current !== item.revision || current.current !== item.snapshot)) { setAnnouncement('Draf berubah saat bagian diseret; draf tidak berubah.'); return; }
+			const source = current.current?.document.activities.find(a => a.id === item.activityId);
+			if (!source || !findLayoutGroup(source.layout!, item.groupId)) return;
+			const target = resolveLayoutGroupMoveTarget(structuredClone(source), beforeId, parentId || null);
+			if (!target) { setAnnouncement('Tujuan bagian tidak valid; draf tidak berubah.'); return; }
+			const preview = structuredClone(source);
+			if (!moveLayoutGroupAtTarget(preview, item.groupId, target)) { setAnnouncement('Tujuan tidak mengubah posisi bagian atau berada di dalam bagiannya sendiri.'); return; }
+			let moved = false;
+			if (!change(next => {
+				const destination = next.document.activities.find(a => a.id === item.activityId);
+				if (destination) moved = moveLayoutGroupAtTarget(destination, item.groupId!, target);
+			})) return;
+			if (!moved) return;
+			setInsertion(null);
+			setAnnouncement('Bagian dan seluruh isinya dipindahkan.');
+			selectGroup(activityId, item.groupId);
 			return;
 		}
 		if (!item.blockId || !item.activityId || item.blockId === beforeId) return;
@@ -846,13 +1130,18 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					(dragging ? ' is-dragging' : '') +
 					(dropTarget === key ? ' is-over' : '')
 				}
+				data-builder-drop-activity={activityId}
+				data-builder-drop-before={beforeId || undefined}
+				data-builder-drop-parent={parentId || undefined}
 				onDragOver={(event) => {
-					if (!dragItem.current || locked) return;
-					event.preventDefault();
-					event.dataTransfer.dropEffect = dragItem.current.elementId
-						? 'copy'
-						: 'move';
+				if (!dragItem.current || locked) return;
+				event.preventDefault();
+				event.dataTransfer.dropEffect = dragItem.current.elementId
+					? 'copy'
+					: 'move';
 					setDropTarget(key);
+					refreshDropTargetAt(event.clientX, event.clientY);
+					scheduleEdgeScroll(event.clientX, event.clientY);
 				}}
 				onDragLeave={() =>
 					setDropTarget((current) => (current === key ? '' : current))
@@ -864,7 +1153,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					disabled={locked}
 					aria-label={
 						beforeId
-							? `Sisipkan elemen sebelum ${BLOCK_LABELS[d.activities.find((a) => a.id === activityId)!.blocks.find((b) => b.id === beforeId)!.type]}`
+							? `Sisipkan elemen sebelum ${(() => { const target = d.activities.find(a => a.id === activityId); const block = target?.blocks.find(b => b.id === beforeId); const group = target?.layout ? findLayoutGroup(target.layout, beforeId) : null; return block ? BLOCK_LABELS[block.type] : group ? (group.kind === 'section' ? 'bagian' : 'kontainer') : 'elemen'; })()}`
 							: 'Tambah elemen di akhir kegiatan'
 					}
 					onClick={() => openElements(activityId, beforeId, parentId)}
@@ -1012,16 +1301,19 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			})()}
 			{activity && (block || selectedGroup) && <BuilderLayoutLockControl activity={activity} nodeId={block?.id || selectedGroup!.id} disabled={locked || readOnly} supported={layoutLocksSupported} onChange={change} />}
 			{block ? (
-				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked} customColorsSupported={customColorsSupported} detailedBorderRadiusSupported={detailedBorderRadiusSupported} onChange={change} />
+				<BuilderElementInspector key={block.id} block={block} envelope={draft} disabled={locked || readOnly} customColorsSupported={customColorsSupported} detailedBorderRadiusSupported={detailedBorderRadiusSupported} responsiveBorderRadiusSupported={responsiveBorderRadiusSupported} presentationVisibilitySupported={presentationVisibilitySupported} captionsSupported={mediaCaptionsSupported} nestedListsSupported={nestedRichTextSupported} onChange={change} />
 			) : selectedGroup && activity ? (
 				<>
 					<BuilderLayoutInspector
 						activity={activity}
 						courseId={contextCourseId}
 						group={selectedGroup}
-						disabled={locked}
+						disabled={locked || readOnly}
 						customColorsSupported={customColorsSupported}
 						detailedBorderRadiusSupported={detailedBorderRadiusSupported}
+						responsiveBorderRadiusSupported={responsiveBorderRadiusSupported}
+						presentationVisibilitySupported={presentationVisibilitySupported}
+						anchorNames={builderAnchors(draft).map(item => item.anchor)}
 						onChange={change}
 						onAddBlock={() =>
 							openElements(activity.id, undefined, selectedGroup.id)
@@ -1142,7 +1434,12 @@ export function BuilderWorkspace({ id }: { id: string }) {
 		</>
 	);
 	return (
-		<div className="bd-workspace" data-history-version={historyVersion}>
+		<BuilderAnchorScope><div ref={workspaceRoot} className="bd-workspace" data-history-version={historyVersion}
+			onPointerMove={movePointerDrag}
+			onPointerUp={finishPointerDrag}
+			onPointerCancel={cancelPointerDrag}
+			onLostPointerCapture={cancelPointerDrag}
+			onKeyDown={event => { if (event.key === 'Escape') cancelPointerDrag(); }}>
 			<header className="bd-topbar">
 				<div className="bd-title-group">
 					<Link
@@ -1178,6 +1475,9 @@ export function BuilderWorkspace({ id }: { id: string }) {
 							{saveLabel}
 						</span>
 					)}
+					<button type="button" className="bd-secondary" disabled={!canResetDocumentAppearance} title={appearanceResetUnsupported ? 'Server belum mendukung semua gaya tersimpan; reset dinonaktifkan agar data tetap aman.' : undefined} onClick={() => setResetAppearanceOpen(true)}>
+						Reset tampilan dokumen
+					</button>
 					<div className="bd-history-actions">
 						<button
 							type="button"
@@ -1340,10 +1640,11 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<button className="bd-secondary" onClick={() => downloadEnvelope(recovery)}>Unduh salinan perangkat</button>
 						<button
 							className="bd-primary"
-							disabled={readOnly || (!layoutLocksSupported && hasLayoutLockFields(recovery)) || (!customColorsSupported && hasCustomThemeColors(recovery)) || (!detailedBorderRadiusSupported && hasDetailedBorderRadius(recovery))}
-							title={!layoutLocksSupported && hasLayoutLockFields(recovery) ? LAYOUT_LOCK_CAPABILITY_REASON : (!customColorsSupported && hasCustomThemeColors(recovery) ? 'Backend belum mendukung pasangan warna tema.' : (!detailedBorderRadiusSupported && hasDetailedBorderRadius(recovery) ? 'Backend belum mendukung garis tepi dan sudut terperinci.' : undefined))}
+								disabled={readOnly || (!presentationVisibilitySupported && hasBuilderVisibility(recovery)) || (!documentAnchorsSupported && hasBuilderAnchors(recovery)) || (!layoutLocksSupported && hasLayoutLockFields(recovery)) || (!customColorsSupported && hasCustomThemeColors(recovery)) || (!detailedBorderRadiusSupported && hasDetailedBorderRadius(recovery)) || (!responsiveBorderRadiusSupported && hasResponsiveBorderRadius(recovery)) || (!mediaCaptionsSupported && hasBuilderCaptions(recovery)) || (!mediaPlaybackSupported && hasBuilderPlaybackDetails(recovery)) || (!nestedRichTextSupported && hasNestedBuilderLists(recovery))}
+							title={!layoutLocksSupported && hasLayoutLockFields(recovery) ? LAYOUT_LOCK_CAPABILITY_REASON : (!customColorsSupported && hasCustomThemeColors(recovery) ? 'Backend belum mendukung pasangan warna tema.' : (!detailedBorderRadiusSupported && hasDetailedBorderRadius(recovery) ? 'Backend belum mendukung garis tepi dan sudut terperinci.' : (!responsiveBorderRadiusSupported && hasResponsiveBorderRadius(recovery) ? 'Backend belum mendukung garis dan sudut responsif.' : undefined)))}
 							onClick={() => {
-								if (readOnlyRef.current || (!layoutLocksSupportedRef.current && hasLayoutLockFields(recovery)) || (!customColorsSupportedRef.current && hasCustomThemeColors(recovery)) || (!detailedBorderRadiusSupportedRef.current && hasDetailedBorderRadius(recovery))) return;
+								if (readOnlyRef.current || (!presentationVisibilitySupportedRef.current && hasBuilderVisibility(recovery)) || (!documentAnchorsSupportedRef.current && hasBuilderAnchors(recovery)) || (!layoutLocksSupportedRef.current && hasLayoutLockFields(recovery)) || (!customColorsSupportedRef.current && hasCustomThemeColors(recovery)) || (!detailedBorderRadiusSupportedRef.current && hasDetailedBorderRadius(recovery)) || (!responsiveBorderRadiusSupportedRef.current && hasResponsiveBorderRadius(recovery)) || (!mediaCaptionsSupportedRef.current && hasBuilderCaptions(recovery)) || (!mediaPlaybackSupportedRef.current && hasBuilderPlaybackDetails(recovery)) || (!nestedRichTextSupportedRef.current && hasNestedBuilderLists(recovery))) return;
+								if (!builderNodeVisibilitySafe(recovery)) { const reason = 'Pemulihan ditolak karena menyembunyikan asesmen atau elemen yang tidak didukung.'; setError(reason); setAnnouncement(reason); return; }
 								const reason = current.current && layoutLockTransitionReason(current.current, recovery, layoutLocksSupportedRef.current);
 								if (reason) { setError(reason); setAnnouncement(reason); return; }
 								if (recoveryInfo?.baseRevision !== revision && !window.confirm('Revisi perangkat dan server berbeda. Muat salinan perangkat ke editor untuk ditinjau sebelum menyimpan?')) return;
@@ -1405,12 +1706,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 								target={libraryGroup ? `Tujuan: ${libraryGroup.title || 'Bagian'}` : `Tujuan: akhir ${activity?.title || 'kegiatan'}`}
 								onAdd={elementId => addElement(elementId, { activityId: activity?.id, beforeId: undefined, parentId: libraryGroup?.id })}
 								onDragStart={(elementId, event) => {
-									dragItem.current = { elementId };
+									dragItem.current = { elementId, revision: revisionRef.current, snapshot: current.current };
 									event.dataTransfer.setData(BUILDER_DRAG_TYPE, elementId);
 									event.dataTransfer.effectAllowed = 'copy';
 									setDragging(true);
 								}}
 								onDragEnd={finishDrag}
+								onPointerStart={(elementId, event) => beginPointerDrag(event, { elementId })}
 							/>
 							<div className="bd-library-layout">
 								<strong>Tata letak</strong>
@@ -1420,7 +1722,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						</> : outlineContents}
 						{authoringTools}
 					</aside>
-					<section className="bd-canvas" aria-label="Isi kegiatan">
+					<section ref={canvasRoot} className={'bd-canvas' + (hasBuilderThemePalette(d) ? ' bd-lesson-theme' : '')} style={builderThemePaletteStyle(d.theme) as CSSProperties} aria-label="Isi kegiatan">
+						<BuilderThemePaletteControl value={d.theme} supported={themePaletteSupported} disabled={locked || readOnly || saving || conflict || Boolean(recovery) || !online} onChange={theme => { if (change(next => { if (theme) next.document.theme = theme; else delete next.document.theme; })) setAnnouncement(theme ? 'Palet tema dokumen diterapkan.' : 'Palet tema standar dipulihkan.'); }} />
 						<BuilderLayoutBreadcrumbs
 							activity={activity}
 							selectedNodeId={selectedNode}
@@ -1439,7 +1742,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						<section className="bd-document-intro">
 							<label>
 								Instruksi umum
-								<BuilderCanvasText block={{id:'general-instructions',type:'instructions',body:d.instructions}} selected onChange={value=>change(next=>{next.document.instructions=value})} />
+							<BuilderCanvasText block={{id:'general-instructions',type:'instructions',body:d.instructions}} selected nestedListsSupported={nestedRichTextSupported} onChange={value=>change(next=>{next.document.instructions=value})} />
 							</label>
 						</section>
 						{d.activities.map((a, i) => (
@@ -1517,13 +1820,15 @@ export function BuilderWorkspace({ id }: { id: string }) {
 								</div>
 								{!collapsed.includes(a.id) && (
 									<>
-										<BuilderLayoutView
-											activity={a}
+						<BuilderLayoutView
+							activity={a}
+							editorMode
 											renderBeforeBlock={(b) =>
 												insertionSlot(a.id, b.id)
 											}
-											renderGroup={(group, children) => (
+								renderGroup={(group, children) => (
 												<>
+													{(() => { const location = layoutItemLocation(a, group.id); return insertionSlot(a.id, group.id, location?.parent?.id); })()}
 													<div className="bd-layout-group-head">
 														<button
 															type="button"
@@ -1546,6 +1851,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															</small>
 														</button>
 														<span className="bd-layout-group-actions">
+														<button type="button" className="bd-icon bd-group-grip" draggable={!locked && !readOnly && !layoutLockState(a, group.id).protectedStructure} disabled={locked || readOnly || layoutLockState(a, group.id).protectedStructure} aria-label={`Seret ${group.kind === 'section' ? 'bagian' : 'kontainer'} ${group.title || ''}`} title={layoutLockState(a, group.id).protectedStructure ? LAYOUT_LOCK_REASON : 'Seret untuk memindahkan seluruh bagian'} onDragStart={event => { event.stopPropagation(); dragItem.current = { activityId: a.id, groupId: group.id, revision: revisionRef.current, snapshot: current.current }; event.dataTransfer.setData(BUILDER_DRAG_TYPE, group.id); event.dataTransfer.effectAllowed = 'move'; setDragging(true); }} onDragEnd={finishDrag} onPointerDown={event => beginPointerDrag(event, { activityId: a.id, groupId: group.id })}><GripVertical size={14} /></button>
 															<button
 																type="button"
 																className="bd-icon"
@@ -1577,7 +1883,8 @@ export function BuilderWorkspace({ id }: { id: string }) {
 												</>
 											)}
 											renderBlock={(b) => {
-												return (
+											const knownInspectorKind = isBuilderRegistryKind((b as { type: string }).type);
+											return (
 												<article
 													className={
 														'bd-block' +
@@ -1599,15 +1906,17 @@ export function BuilderWorkspace({ id }: { id: string }) {
 															<button
 																type="button"
 																className="bd-block-grip"
-																draggable={!locked && !readOnly && !layoutLockState(a, b.id).protectedStructure}
-																disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure}
-																aria-label={`Seret ${BLOCK_LABELS[b.type]}`}
+											draggable={knownInspectorKind && !locked && !readOnly && !layoutLockState(a, b.id).protectedStructure}
+											disabled={!knownInspectorKind || locked || readOnly || layoutLockState(a, b.id).protectedStructure}
+											aria-label={`Seret ${BLOCK_LABELS[b.type] || 'elemen tidak didukung'}`}
 																title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : 'Seret untuk memindahkan elemen'}
 																onDragStart={(event) => {
 																	event.stopPropagation();
 																	dragItem.current = {
-																		activityId: a.id,
-																		blockId: b.id,
+								activityId: a.id,
+								blockId: b.id,
+								revision: revisionRef.current,
+								snapshot: current.current,
 																	};
 																	event.dataTransfer.setData(
 																		BUILDER_DRAG_TYPE,
@@ -1616,18 +1925,19 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																	event.dataTransfer.effectAllowed = 'move';
 																	setDragging(true);
 																}}
-																onDragEnd={finishDrag}
-															>
+											onDragEnd={finishDrag}
+											onPointerDown={(event) => beginPointerDrag(event, { activityId: a.id, blockId: b.id })}
+										>
 																<GripVertical size={15} />
 															</button>
-															{BLOCK_LABELS[b.type]}
+											{BLOCK_LABELS[b.type] || 'Elemen tidak didukung'}
 														</span>
 														<div>
 															{!readOnly && (<>
 															<button
 																className="bd-icon"
 																disabled={
-																	locked || readOnly ||
+												!knownInspectorKind || locked || readOnly ||
 																	questionCount + questionIds(b).length > 500 ||
 																	d.activities.reduce(
 																		(sum, a) => sum + a.blocks.length,
@@ -1651,7 +1961,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																className="bd-move-select"
 																aria-label="Pindahkan elemen ke kegiatan"
 																value=""
-																disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure}
+											disabled={!knownInspectorKind || locked || readOnly || layoutLockState(a, b.id).protectedStructure}
 																title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : undefined}
 																onClick={(e) => e.stopPropagation()}
 																onChange={(e) => {
@@ -1706,7 +2016,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Naikkan elemen"
-															disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure || !canMoveLayoutItem(a, b.id, -1)}
+											disabled={!knownInspectorKind || locked || readOnly || layoutLockState(a, b.id).protectedStructure || !canMoveLayoutItem(a, b.id, -1)}
 															title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : undefined}
 															onClick={() => moveBlockBy(a.id, b.id, -1)}
 															>
@@ -1716,7 +2026,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Turunkan elemen"
-															disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure || !canMoveLayoutItem(a, b.id, 1)}
+											disabled={!knownInspectorKind || locked || readOnly || layoutLockState(a, b.id).protectedStructure || !canMoveLayoutItem(a, b.id, 1)}
 															title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : undefined}
 															onClick={() => moveBlockBy(a.id, b.id, 1)}
 															>
@@ -1726,7 +2036,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 																type="button"
 																className="bd-icon"
 																aria-label="Hapus elemen"
-																disabled={locked || readOnly || layoutLockState(a, b.id).protectedStructure}
+											disabled={!knownInspectorKind || locked || readOnly || layoutLockState(a, b.id).protectedStructure}
 																title={layoutLockState(a, b.id).protectedStructure ? LAYOUT_LOCK_REASON : undefined}
 																onClick={(e) => {
 																	e.stopPropagation();
@@ -1746,15 +2056,16 @@ export function BuilderWorkspace({ id }: { id: string }) {
 													</div>
 															{b.type === 'instructions' || b.type === 'acknowledgement' ? (
 																<BuilderCanvasText
-																	block={b}
-																	selected={selected === b.id}
-																disabled={locked || readOnly}
+												block={b}
+												selected={selected === b.id}
+												nestedListsSupported={nestedRichTextSupported}
+											disabled={locked || readOnly}
 																	onChange={value => change(next => {
 																		const target = next.document.activities.flatMap(activity => activity.blocks).find(item => item.id === b.id);
 											if (target) target.body = value;
 																	})}
 																/>
-															) : <BlockEditor block={b} envelope={draft} onChange={change} />}
+										) : <BuilderInspectorDispatch block={b} envelope={draft} onChange={change} />}
 												</article>
 												);
 											}}
@@ -2003,13 +2314,40 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					</button>
 				</div>
 			)}
-			{publishReview && <BuilderPublishDialog id={id} revision={revision} envelope={draft} busy={publishing} blocked={dirty || saving || locked || readOnly || !online} onClose={() => setPublishReview(false)} onPublish={publish} />}
+			{publishReview && <BuilderPublishDialog id={id} revision={revision} envelope={draft} busy={publishing} blocked={dirty || saving || locked || readOnly || !online || (!presentationVisibilitySupported && hasBuilderVisibility(draft)) || (!themePaletteSupported && hasBuilderThemePalette(draft)) || (!responsiveBorderRadiusSupported && hasResponsiveBorderRadius(draft)) || (!mediaCaptionsSupported && hasBuilderCaptions(draft)) || (!mediaPlaybackSupported && hasBuilderPlaybackDetails(draft)) || (!nestedRichTextSupported && hasNestedBuilderLists(draft))} onClose={() => setPublishReview(false)} onPublish={publish} />}
+			<AlertDialog open={resetAppearanceOpen} onOpenChange={setResetAppearanceOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Reset tampilan seluruh dokumen?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Semua gaya tampilan elemen, bagian, dan kontainer di seluruh kegiatan akan kembali ke tema netral, termasuk warna kustom, garis, sudut, bayangan, dan efek hover. Latar khusus bagian dan latar tablet/ponsel, ruang dalam bagian/kontainer, tata letak responsif, palet warna dokumen, isi teks/media, aset, ID, urutan, penilaian, kunci jawaban, dan penguncian tata letak tetap dipertahankan. Reset palet dokumen tersedia terpisah. Tindakan ini dapat diurungkan sekali.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Batal</AlertDialogCancel>
+						<AlertDialogAction disabled={!canResetDocumentAppearance} onClick={(event) => { event.preventDefault(); resetDocumentAppearanceNow(); }}>Reset tampilan</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 			{savedItems && (
 				<BuilderSavedItems
 					id={id}
 					revision={revision}
 					detailedBorderRadiusSupported={detailedBorderRadiusSupported}
 					detailedStylesInDocument={hasDetailedBorderRadius(draft)}
+					responsiveBorderRadiusSupported={responsiveBorderRadiusSupported}
+					responsiveStylesInDocument={hasResponsiveBorderRadius(draft)}
+					mediaCaptionsInDocument={hasBuilderCaptions(draft)}
+					mediaCaptionsSupported={mediaCaptionsSupported}
+					mediaPlaybackInDocument={hasBuilderPlaybackDetails(draft)}
+					mediaPlaybackSupported={mediaPlaybackSupported}
+					nestedRichTextInDocument={hasNestedBuilderLists(draft)}
+					nestedRichTextSupported={nestedRichTextSupported}
+					documentAnchorsInDocument={hasBuilderAnchors(draft)}
+					documentAnchorsSupported={documentAnchorsSupported}
+					presentationVisibilityInDocument={hasBuilderVisibility(draft)}
+					presentationVisibilitySupported={presentationVisibilitySupported}
+					themePaletteInDocument={hasBuilderThemePalette(draft)}
 					activityId={savedItems.activityId}
 					groupId={savedItems.groupId}
 					dirty={dirty || saving || locked || readOnly}
@@ -2089,12 +2427,13 @@ export function BuilderWorkspace({ id }: { id: string }) {
 						}
 						onAdd={(elementId) => addElement(elementId)}
 						onDragStart={(elementId, event) => {
-							dragItem.current = { elementId };
+							dragItem.current = { elementId, revision: revisionRef.current, snapshot: current.current };
 							event.dataTransfer.setData(BUILDER_DRAG_TYPE, elementId);
 							event.dataTransfer.effectAllowed = 'copy';
 							setDragging(true);
 						}}
 						onDragEnd={finishDrag}
+						onPointerStart={(elementId, event) => beginPointerDrag(event, { elementId })}
 					/>
 				</DialogContent>
 			</Dialog>
@@ -2158,7 +2497,7 @@ export function BuilderWorkspace({ id }: { id: string }) {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-		</div>
+		</div></BuilderAnchorScope>
 	);
 }
 function ArrowRightIcon() {

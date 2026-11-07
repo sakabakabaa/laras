@@ -116,10 +116,32 @@ export function usesEnhancedAuthoring(envelope: unknown): boolean {
 		if (!Array.isArray(blocks)) return false;
 		return blocks.some((block) => {
 			if (!block || typeof block !== 'object') return false;
-			const record = block as { layoutLocked?: unknown; appearance?: unknown; sections?: unknown; images?: unknown; transcript?: unknown; playback?: unknown; body?: { content?: unknown } };
-			return record.layoutLocked !== undefined || record.appearance !== undefined || Array.isArray(record.sections) || record.transcript !== undefined || record.playback !== undefined || (Array.isArray(record.images) && record.images.some((image: any) => image?.presentation !== undefined)) || Boolean(record.body?.content && Array.isArray(record.body.content) && record.body.content.some((node: any) => node?.type === 'heading' || node?.type === 'list_item'));
+			const record = block as { layoutLocked?: unknown; appearance?: unknown; sections?: unknown; images?: unknown; transcript?: unknown; captions?: unknown; playback?: unknown; body?: { content?: unknown } };
+			return record.layoutLocked !== undefined || record.appearance !== undefined || Array.isArray(record.sections) || record.transcript !== undefined || record.captions !== undefined || record.playback !== undefined || (Array.isArray(record.images) && record.images.some((image: any) => image?.presentation !== undefined)) || Boolean(record.body?.content && Array.isArray(record.body.content) && record.body.content.some((node: any) => node?.type === 'heading' || node?.type === 'list_item'));
 		});
 	});
+}
+
+export function hasBuilderCaptions(envelope: unknown): boolean {
+	if (!envelope || typeof envelope !== 'object') return false;
+	const document = (envelope as { document?: unknown }).document ?? envelope;
+	const activities = (document as { activities?: unknown })?.activities;
+	return Array.isArray(activities) && activities.some(activity => Array.isArray((activity as any)?.blocks) && (activity as any).blocks.some((block: any) => block?.captions !== undefined));
+}
+
+export function hasBuilderPlaybackDetails(envelope: unknown): boolean {
+	if (!envelope || typeof envelope !== 'object') return false;
+	const document = (envelope as { document?: unknown }).document ?? envelope;
+	const activities = (document as { activities?: unknown })?.activities;
+	return Array.isArray(activities) && activities.some(activity => Array.isArray((activity as any)?.blocks) && (activity as any).blocks.some((block: any) => block?.playback && ['start', 'end', 'rate'].some(key => Object.hasOwn(block.playback, key))));
+}
+
+export function hasBuilderAnchors(envelope: unknown): boolean {
+	const document = (envelope as { document?: any })?.document ?? envelope as any;
+	const activities = document?.activities;
+	if (!Array.isArray(activities)) return false;
+	const has = (nodes: any[]): boolean => nodes.some(node => node?.kind !== 'block' && (node?.anchor !== undefined || has(node?.children || [])));
+	return activities.some(activity => Array.isArray(activity?.blocks) && activity.blocks.some((block: any) => block?.anchor !== undefined) || activity?.layout && has(activity.layout.nodes || []));
 }
 
 export function hasCustomThemeColors(envelope: unknown): boolean {
@@ -142,7 +164,23 @@ export function hasDetailedBorderRadius(envelope: unknown): boolean {
 	if (!Array.isArray(activities)) return false;
 	const has = (value: unknown): boolean => {
 		if (!value || typeof value !== 'object') return false;
-		if (Object.prototype.hasOwnProperty.call(value, 'borderDetail') || Object.prototype.hasOwnProperty.call(value, 'corners')) return true;
+		if (Object.prototype.hasOwnProperty.call(value, 'borderDetail') || Object.prototype.hasOwnProperty.call(value, 'corners') || Object.prototype.hasOwnProperty.call(value, 'shadow') || Object.prototype.hasOwnProperty.call(value, 'hover')) return true;
+		return Object.values(value).some(has);
+	};
+	return has(activities);
+}
+
+export function hasResponsiveBorderRadius(envelope: unknown): boolean {
+	if (!envelope || typeof envelope !== 'object') return false;
+	const document = (envelope as { document?: unknown }).document ?? envelope;
+	const activities = (document as { activities?: unknown })?.activities;
+	if (!Array.isArray(activities)) return false;
+	const has = (value: unknown): boolean => {
+		if (!value || typeof value !== 'object') return false;
+		if (Object.prototype.hasOwnProperty.call(value, 'responsive')) {
+			const responsive = (value as { responsive?: unknown }).responsive;
+			if (responsive && typeof responsive === 'object' && Object.values(responsive).some(device => device && typeof device === 'object' && (Object.hasOwn(device, 'borderDetail') || Object.hasOwn(device, 'corners')))) return true;
+		}
 		return Object.values(value).some(has);
 	};
 	return has(activities);

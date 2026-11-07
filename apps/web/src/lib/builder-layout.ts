@@ -31,6 +31,8 @@ export function resetResponsiveOverride(group: BuilderLayoutGroup, device: 'tabl
 }
 export type BuilderLayoutBlock = { kind: 'block'; blockId: string };
 export type BuilderLayoutGroup = {
+ presentation?: Partial<Record<'desktop' | 'tablet' | 'mobile', boolean>>;
+	anchor?: string;
 	layoutLocked?: boolean;
 	kind: BuilderLayoutGroupKind;
 	id: string;
@@ -79,6 +81,8 @@ export const LAYOUT_LIMITS = {
 
 export type ResolvedLayoutBlock = { kind: 'block'; block: BuilderBlock };
 export type ResolvedLayoutGroup = {
+ presentation?: Partial<Record<'desktop' | 'tablet' | 'mobile', boolean>>;
+	anchor?: string;
 	kind: BuilderLayoutGroupKind;
 	id: string;
 	title: string;
@@ -365,6 +369,34 @@ export type BuilderBlockInsertionTarget = {
 	index: number;
 };
 
+/** Resolve a sibling slot for moving a complete group subtree. */
+export function resolveLayoutGroupMoveTarget(
+	activity: BuilderActivity,
+	beforeId?: string,
+	parentId: string | null = null,
+): BuilderBlockInsertionTarget | null {
+	if (!activity.layout) return null;
+	const children = groupChildren(activity.layout, parentId);
+	if (!children) return null;
+	if (!beforeId) return { parentId, index: children.length };
+	const before = layoutItemLocation(activity, beforeId);
+	if (!before || (before.parent?.id ?? null) !== parentId) return null;
+	return { parentId, index: before.index };
+}
+
+export function moveLayoutGroupAtTarget(
+	activity: BuilderActivity,
+	groupId: string,
+	target: BuilderBlockInsertionTarget,
+): boolean {
+	const location = layoutItemLocation(activity, groupId);
+	if (!location || location.node.kind === 'block') return false;
+	const sameParent = (location.parent?.id ?? null) === target.parentId;
+	const resultingIndex = sameParent && target.index > location.index ? target.index - 1 : target.index;
+	if (sameParent && resultingIndex === location.index) return false;
+	return moveLayoutGroup(activity, groupId, target.parentId, target.index);
+}
+
 export function resolveBlockInsertionTarget(
 	activity: BuilderActivity,
 	beforeBlockId?: string,
@@ -596,6 +628,8 @@ export function resolveActivityLayout(
 				{
 					kind: node.kind,
 					id: node.id,
+					...(node.anchor ? { anchor: node.anchor } : {}),
+					...(node.presentation ? { presentation: node.presentation } : {}),
 					title: node.title,
 					columns: node.columns,
 					gap: node.gap,

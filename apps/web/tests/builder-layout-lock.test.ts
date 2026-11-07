@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { appendBlock, blankBuilder, builderRequest, builderWriteAction, copyBuilder, duplicateActivity, duplicateBlock, encodeBuilderDraft, insertGroupTemplate, moveBuilderHistory, newActivity, removeBlock, rich, type BuilderEnvelope } from '../src/lib/builder-document';
 import pb from '../src/lib/pocketbase-client';
-import { addLayoutGroup, findLayoutGroup, insertBlockIntoLayout, moveBlockBetweenActivities, moveLayoutItem, removeLayoutGroup, reparentLayoutItem } from '../src/lib/builder-layout';
+import { addLayoutGroup, findLayoutGroup, insertBlockIntoLayout, moveBlockBetweenActivities, moveLayoutItem, removeLayoutGroup, reparentLayoutItem, layoutItemLocation, moveLayoutGroupAtTarget, resolveLayoutGroupMoveTarget } from '../src/lib/builder-layout';
 import { guardedLayoutEdit, hasLayoutLockFields, layoutLockState, layoutLockTransitionReason, LAYOUT_LOCK_CAPABILITY_REASON, LAYOUT_LOCK_REASON } from '../src/lib/builder-layout-lock';
 import { applyBuilderProposal } from '../src/lib/builder-authoring';
 import { usesEnhancedAuthoring } from '../src/lib/builder-capability';
@@ -34,6 +34,28 @@ function fixture() {
 }
 
 describe('shared editor-only layout lock mutation boundary', () => {
+	it('moves intact group subtrees by canonical before/end slots and rejects cycles, no-ops and stale destinations', () => {
+		const { draft, activity, outerId, innerId, otherId, blockId } = fixture();
+		findLayoutGroup(activity.layout!, outerId)!.background = { mode: 'image', asset: { fileId: 'asset0000000001', filename: 'bg.png', version: 3, name: 'Latar' }, fit: 'contain', positionX: 25, positionY: 70 };
+		const before = encodeBuilderDraft(draft);
+		const subtree = structuredClone(layoutItemLocation(activity, outerId)!.node);
+		const target = resolveLayoutGroupMoveTarget(activity, outerId, null)!;
+		expect(moveLayoutGroupAtTarget(activity, otherId, target)).toBe(true);
+		expect(activity.layout!.nodes.map(node => node.kind === 'block' ? node.blockId : node.id)).toEqual([otherId, outerId]);
+		expect(layoutItemLocation(activity, outerId)!.node).toEqual(subtree);
+		expect(findLayoutGroup(activity.layout!, outerId)!.background).toEqual(subtree.kind === 'block' ? undefined : subtree.background);
+		expect(activity.blocks.some(block => block.id === blockId)).toBe(true);
+		const atEnd = resolveLayoutGroupMoveTarget(activity, undefined, null)!;
+		expect(moveLayoutGroupAtTarget(activity, otherId, atEnd)).toBe(true);
+		expect(activity.layout!.nodes.map(node => node.kind === 'block' ? node.blockId : node.id)).toEqual([outerId, otherId]);
+		expect(resolveLayoutGroupMoveTarget(activity, innerId, outerId)).toEqual({ parentId: outerId, index: 0 });
+		const cycleTarget = resolveLayoutGroupMoveTarget(activity, undefined, innerId)!;
+		const cycleDraft = structuredClone(activity);
+		expect(moveLayoutGroupAtTarget(cycleDraft, outerId, cycleTarget)).toBe(false);
+		const stale = resolveLayoutGroupMoveTarget(activity, 'missing-group', null);
+		expect(stale).toBeNull();
+		expect(encodeBuilderDraft(draft)).toBe(before);
+	});
 	it('sends the guarded command and retains the local draft when a rolled-back backend rejects it', async () => {
 		const { draft } = fixture();
 		const before = encodeBuilderDraft(draft);
@@ -331,7 +353,7 @@ describe('accessible controls and actual workspace wiring evidence', () => {
 		const service = readFileSync(new URL('builder-service.js', hooks), 'utf8');
 		expect(service).toContain('layoutLocks: true');
 		expect(service).toContain('customColors: true');
-		expect(service).toContain('/^(layoutLocks|themeColors|detailedStyles):(create|save|saveSnapshot|saveTemplate)$/');
+		expect(service).toContain('/^(layoutLocks|themeColors|themePalette|detailedStyles|responsiveStyles|mediaCaptions|mediaPlayback|nestedLists|documentAnchors|presentationVisibility):(create|save|saveSnapshot|saveTemplate)$/');
 		expect(service).toContain('b.layoutLocked !== undefined');
 	});
 });

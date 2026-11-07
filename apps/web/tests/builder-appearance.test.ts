@@ -72,6 +72,7 @@ describe('builder appearance persistence and rendering', () => {
 				expect(Object.hasOwn(APPEARANCE_OPTIONS[key as keyof BuilderAppearance].values, value)).toBe(true);
 			}
 		}
+		expect(APPEARANCE_FIELDS).not.toContain('customColors');
 		expect(PRESET_APPEARANCE_FIELDS).toEqual(['background', 'color', 'border', 'radius', 'padding']);
 		for (const [name, preset] of Object.entries(BUILDER_APPEARANCE_PRESETS))
 			expect(matchingAppearancePreset(preset.values as BuilderAppearance)).toBe(name);

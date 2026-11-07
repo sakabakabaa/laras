@@ -91,11 +91,12 @@ export const BUILDER_APPEARANCE_PRESETS = {
 	},
 } as const satisfies Record<string, { label: string; values: Partial<BuilderAppearance> }>;
 
+export type BuilderAppearanceField = keyof typeof APPEARANCE_OPTIONS;
 export type BuilderAppearancePreset = keyof typeof BUILDER_APPEARANCE_PRESETS;
 export const PRESET_APPEARANCE_FIELDS = [
 	'background', 'color', 'border', 'radius', 'padding',
 ] as const satisfies readonly (keyof BuilderAppearance)[];
-export const APPEARANCE_FIELDS = Object.keys(APPEARANCE_OPTIONS) as (keyof BuilderAppearance)[];
+export const APPEARANCE_FIELDS = Object.keys(APPEARANCE_OPTIONS) as BuilderAppearanceField[];
 
 export function applyAppearancePreset(
 	appearance: BuilderAppearance | undefined,

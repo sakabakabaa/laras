@@ -15,6 +15,7 @@ Root Compose reads root `.env`. Direct web npm scripts read `apps/web/.env`; bac
 | `BUILD_ID` | [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts) |
 | `BYNARA_API_KEY` | [apps/web/src/lib/course-thumbnail.server.ts](../../apps/web/src/lib/course-thumbnail.server.ts), [docker-compose.local.yml](../../docker-compose.local.yml), [docker-compose.yml](../../docker-compose.yml) |
 | `BYNARA_IMAGE_MODEL` | [apps/web/src/lib/course-thumbnail.server.ts](../../apps/web/src/lib/course-thumbnail.server.ts) |
+| `CODEX_OAUTH_ENABLED` | [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts), [docker-compose.yml](../../docker-compose.yml) — set to `true` to offer the ChatGPT/Codex account provider. Absent or any other value leaves it off. See [codex-oauth-provider](codex-oauth-provider.md). |
 | `ELEVENLABS_API_KEY` | [apps/web/src/lib/elevenlabs-tts.server.ts](../../apps/web/src/lib/elevenlabs-tts.server.ts), [docker-compose.local.yml](../../docker-compose.local.yml), [docker-compose.yml](../../docker-compose.yml) |
 | `ELEVENLABS_TTS_MODEL` | [apps/web/src/lib/elevenlabs-tts.server.ts](../../apps/web/src/lib/elevenlabs-tts.server.ts), [docker-compose.local.yml](../../docker-compose.local.yml), [docker-compose.yml](../../docker-compose.yml) |
 | `ELEVENLABS_VOICE_ID` | [apps/web/src/lib/elevenlabs-tts.server.ts](../../apps/web/src/lib/elevenlabs-tts.server.ts), [docker-compose.local.yml](../../docker-compose.local.yml), [docker-compose.yml](../../docker-compose.yml) |

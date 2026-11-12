@@ -41,6 +41,8 @@ services:
       HROUTER_API_KEY: ${HROUTER_API_KEY:-}
       HROUTER_MODEL: ${HROUTER_MODEL:-gpt-6-luna}
       HROUTER_CONVERSATION_MODEL: ${HROUTER_CONVERSATION_MODEL:-}
+      # Opt-in ChatGPT/Codex account provider. Off unless explicitly enabled.
+      CODEX_OAUTH_ENABLED: ${CODEX_OAUTH_ENABLED:-false}
       TTS_PROVIDER: ${TTS_PROVIDER:-hostinger}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-JBFqnCBsd6RMkjVDRZzb}

@@ -6,7 +6,9 @@
  * anything is saved.
  */
 import logger from '@/lib/logger.server';
-import { collectHostingerText, type ResolvedProvider } from '@/lib/hostinger-model.server';
+import { collectHostingerText } from '@/lib/hostinger-model.server';
+import { collectModel as dispatchModel } from '@/lib/ai/model-client.server';
+import type { ResolvedModel } from '@/lib/ai/providers.server';
 
 const requireEnv = (name: string) => {
 	const value = process.env[name];
@@ -57,7 +59,7 @@ export async function collectModel(
 	prompt: string,
 	images: string[],
 	systemPrompt?: string,
-	resolved?: ResolvedProvider | null,
+	resolved?: ResolvedModel | null,
 ): Promise<string> {
 	return (await collectModelWithProvenance(prompt, images, systemPrompt, resolved)).content;
 }
@@ -68,26 +70,29 @@ export async function collectModel(
  * does not expose them — never invented), and the wall-clock generation
  * duration in milliseconds. Used by the formal-evaluation pipeline to record
  * reproducibility metadata.
+ *
+ * A resolved provider goes through the dispatcher, so an API-key provider and a
+ * Codex/ChatGPT grant both work here. No resolved provider keeps the legacy
+ * deployment-environment call, which is what the formal evaluation pipeline
+ * still uses (see docs/engineering/codex-oauth-provider.md §11).
  */
 export async function collectModelWithProvenance(
 	prompt: string,
 	images: string[],
 	systemPrompt?: string,
-	resolved?: ResolvedProvider | null,
+	resolved?: ResolvedModel | null,
 ): Promise<ModelProvenance> {
 	const startedAt = Date.now();
-	const result = await collectHostingerText({
-		prompt,
-		images: images.slice(0, MAX_IMAGES),
-		resolved,
-		systemPrompt:
-			systemPrompt ||
-			'Anda asisten penilaian dosen dalam Bahasa Indonesia. Bekerja HANYA dari materi yang benar-benar dikirim: teks dan gambar kiriman mahasiswa serta rubrik dosen. Jangan mengarang nilai, kriteria, fakta, atau isi yang tidak ada. Jangan mengarang angka nilai. Balas teks ringkas dan siap tinjau dosen.',
-	});
+	const system =
+		systemPrompt ||
+		'Anda asisten penilaian dosen dalam Bahasa Indonesia. Bekerja HANYA dari materi yang benar-benar dikirim: teks dan gambar kiriman mahasiswa serta rubrik dosen. Jangan mengarang nilai, kriteria, fakta, atau isi yang tidak ada. Jangan mengarang angka nilai. Balas teks ringkas dan siap tinjau dosen.';
+	const result = resolved
+		? await dispatchModel(resolved, { prompt, images: images.slice(0, MAX_IMAGES), systemPrompt: system })
+		: await collectHostingerText({ prompt, images: images.slice(0, MAX_IMAGES), systemPrompt: system });
 	return {
 		content: result.content.trim(),
 		model: result.model,
-		// Hostinger AI Router reports the model identifier it actually used (e.g.
+		// The provider reports the model identifier it actually used (e.g.
 		// `gpt-6-luna`); that identifier IS the provider's revision
 		// reference. Recording 'unknown' here would discard real
 		// provenance the provider handed us.

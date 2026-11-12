@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Cpu, LoaderCircle, Plus, Trash2, Zap } from 'lucide-react';
+import { Cpu, ExternalLink, LoaderCircle, Plus, Trash2, Zap } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
 import { errorMessage, isAbortError } from '@/lib/learning';
 
 type Capabilities = { tools?: boolean; vision?: boolean; json?: boolean; streaming?: boolean };
+
+type CodexConnection = {
+	accountId: string;
+	planType: string;
+	status: 'active' | 'expired' | 'revoked' | 'error';
+	expiresAt: string | null;
+	lastRefresh: string | null;
+	lastError: string;
+};
 
 type Provider = {
 	id: string;
@@ -15,11 +24,20 @@ type Provider = {
 	enabled: boolean;
 	isDefault: boolean;
 	keyMasked: string;
+	connection?: CodexConnection | null;
 };
 
 type Preference = { id: string; surface: string; provider: string; model: string };
 
 type Surface = { id: string; label: string; requires: string[] };
+
+type PendingCodexLogin = {
+	loginId: string;
+	userCode: string;
+	verificationUrl: string;
+	intervalSeconds: number;
+	expiresAt: string;
+};
 
 const authHeaders = () => ({
 	'Content-Type': 'application/json',
@@ -29,34 +47,56 @@ const authHeaders = () => ({
 const errorText = (data: unknown, fallback: string) =>
 	typeof (data as { error?: unknown })?.error === 'string' ? String((data as { error: string }).error) : fallback;
 
+const CONNECTION_LABEL: Record<CodexConnection['status'], string> = {
+	active: 'Terhubung',
+	expired: 'Sesi berakhir — hubungkan ulang',
+	revoked: 'Akses dicabut — hubungkan ulang',
+	error: 'Bermasalah — hubungkan ulang',
+};
+
 /**
  * Phase 1 — per-lecturer model providers.
  *
  * A lecturer registers their own [OI]-compatible provider, tests it, and picks
  * which provider+model serves each surface. Keys are write-only: the list shows
  * a masked `last4` and no response ever returns the secret.
+ *
+ * A Codex/ChatGPT provider is different: it holds an OAuth grant rather than a
+ * key, so it is connected through a device login and can expire. This component
+ * shows its connection state and offers a reconnect, and it never receives token
+ * material — only an opaque account id and a status.
  */
 export function AiModelSection() {
 	const [providers, setProviders] = useState<Provider[]>([]);
 	const [preferences, setPreferences] = useState<Preference[]>([]);
 	const [surfaces, setSurfaces] = useState<Surface[]>([]);
+	const [codexEnabled, setCodexEnabled] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [notice, setNotice] = useState('');
 	const [busy, setBusy] = useState('');
 	const [adding, setAdding] = useState(false);
 	const [form, setForm] = useState({ label: '', baseUrl: 'https://router.hostinger.com/v1', models: '', apiKey: '', isDefault: false });
+	const [codexForm, setCodexForm] = useState({ label: 'Akun Codex', models: '', isDefault: false });
+	const [codexLogin, setCodexLogin] = useState<PendingCodexLogin | null>(null);
 
 	const load = useCallback(async () => {
 		setLoading(true);
 		setError('');
 		try {
 			const res = await fetch('/api/ai-providers', { headers: authHeaders() });
-			const data = (await res.json()) as { providers?: Provider[]; preferences?: Preference[]; surfaces?: Surface[]; error?: string };
+			const data = (await res.json()) as {
+				providers?: Provider[];
+				preferences?: Preference[];
+				surfaces?: Surface[];
+				codexEnabled?: boolean;
+				error?: string;
+			};
 			if (!res.ok) throw new Error(errorText(data, 'Gagal memuat model AI.'));
 			setProviders(data.providers || []);
 			setPreferences(data.preferences || []);
 			setSurfaces(data.surfaces || []);
+			setCodexEnabled(Boolean(data.codexEnabled));
 		} catch (err) {
 			if (!isAbortError(err)) setError(errorMessage(err));
 		} finally {
@@ -67,6 +107,67 @@ export function AiModelSection() {
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	/**
+	 * Polls one pending device login until it resolves.
+	 *
+	 * The browser owns the cadence: the poll endpoint performs a single upstream
+	 * check, so a long login never holds a server request open. The effect tears
+	 * itself down when `codexLogin` clears, which is also how a reconnect restarts
+	 * cleanly.
+	 */
+	useEffect(() => {
+		const active = codexLogin;
+		if (!active) return;
+		let stopped = false;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+
+		const tick = async () => {
+			if (stopped) return;
+			try {
+				const res = await fetch('/api/ai-providers-codex-poll', {
+					method: 'POST',
+					headers: authHeaders(),
+					body: JSON.stringify({ loginId: active.loginId }),
+				});
+				const data = (await res.json()) as { status?: string; error?: string };
+				if (stopped) return;
+				if (!res.ok) {
+					setError(errorText(data, 'Gagal memeriksa status login.'));
+					setCodexLogin(null);
+					return;
+				}
+				if (data.status === 'connected') {
+					setCodexLogin(null);
+					setNotice('Akun Codex terhubung. Pilih provider ini untuk bagian yang Anda inginkan.');
+					await load();
+					return;
+				}
+				if (data.status === 'expired') {
+					setCodexLogin(null);
+					setError('Kode login kedaluwarsa. Mulai login lagi.');
+					return;
+				}
+				if (data.status === 'failed') {
+					setCodexLogin(null);
+					setError(data.error || 'Login akun Codex gagal.');
+					return;
+				}
+			} catch (err) {
+				if (stopped || isAbortError(err)) return;
+				setError(errorMessage(err));
+				setCodexLogin(null);
+				return;
+			}
+			timer = setTimeout(() => void tick(), Math.max(2, active.intervalSeconds) * 1000);
+		};
+
+		timer = setTimeout(() => void tick(), Math.max(2, active.intervalSeconds) * 1000);
+		return () => {
+			stopped = true;
+			if (timer) clearTimeout(timer);
+		};
+	}, [codexLogin, load]);
 
 	const create = async () => {
 		setBusy('create');
@@ -95,6 +196,42 @@ export function AiModelSection() {
 		} finally {
 			setBusy('');
 		}
+	};
+
+	const startCodex = async () => {
+		setBusy('codex-start');
+		setError('');
+		setNotice('');
+		try {
+			const res = await fetch('/api/ai-providers-codex-start', {
+				method: 'POST',
+				headers: authHeaders(),
+				body: JSON.stringify({
+					label: codexForm.label,
+					models: codexForm.models.split(',').map((model) => model.trim()).filter(Boolean),
+					isDefault: codexForm.isDefault,
+				}),
+			});
+			const data = (await res.json()) as { login?: PendingCodexLogin; error?: string };
+			if (!res.ok || !data.login) throw new Error(errorText(data, 'Gagal memulai login akun Codex.'));
+			setCodexLogin(data.login);
+		} catch (err) {
+			setError(errorMessage(err));
+		} finally {
+			setBusy('');
+		}
+	};
+
+	const cancelCodex = async () => {
+		const active = codexLogin;
+		setCodexLogin(null);
+		setNotice('');
+		if (!active) return;
+		await fetch('/api/ai-providers-codex-cancel', {
+			method: 'POST',
+			headers: authHeaders(),
+			body: JSON.stringify({ loginId: active.loginId }),
+		}).catch(() => undefined);
 	};
 
 	const remove = async (provider: Provider) => {
@@ -180,6 +317,65 @@ export function AiModelSection() {
 			)}
 			{notice && <p className="ld-settings-success">{notice}</p>}
 
+			{codexLogin && (
+				<div className="ld-settings-form">
+					<p className="ld-settings-note">
+						Buka halaman verifikasi, masuk dengan akun ChatGPT Anda, lalu masukkan kode ini. Halaman ini
+						menunggu otomatis.
+					</p>
+					<p className="ld-codex-code" aria-label="Kode verifikasi">
+						{codexLogin.userCode}
+					</p>
+					<div className="ld-settings-actions">
+						<a className="ld-outline-action sm" href={codexLogin.verificationUrl} target="_blank" rel="noreferrer noopener">
+							<ExternalLink size={14} /> Buka halaman verifikasi
+						</a>
+						<button type="button" className="ld-outline-action sm" onClick={() => void cancelCodex()}>
+							Batalkan
+						</button>
+					</div>
+					<p className="ld-settings-note">
+						<LoaderCircle size={14} className="spin" /> Menunggu persetujuan…
+					</p>
+				</div>
+			)}
+
+			{!codexLogin && codexEnabled && (
+				<div className="ld-settings-form">
+					<p className="ld-settings-note">
+						Pakai langganan ChatGPT Anda sebagai model. Akun dan kuota Anda sendiri yang dipakai, dan sesi
+						ini bisa dicabut kapan saja dari halaman akun [OI].
+					</p>
+					<label className="ld-settings-field">
+						Nama provider
+						<input
+							value={codexForm.label}
+							onChange={(event) => setCodexForm({ ...codexForm, label: event.target.value })}
+							placeholder="Contoh: Akun Codex saya"
+						/>
+					</label>
+					<label className="ld-settings-field">
+						Model (pisahkan dengan koma)
+						<input
+							value={codexForm.models}
+							onChange={(event) => setCodexForm({ ...codexForm, models: event.target.value })}
+							placeholder="nama model yang tersedia untuk akun Anda"
+						/>
+					</label>
+					<label className="ld-settings-field ld-ai-check">
+						<input
+							type="checkbox"
+							checked={codexForm.isDefault}
+							onChange={(event) => setCodexForm({ ...codexForm, isDefault: event.target.checked })}
+						/>
+						Jadikan provider bawaan
+					</label>
+					<button type="button" className="ld-btn-primary" disabled={busy === 'codex-start'} onClick={() => void startCodex()}>
+						{busy === 'codex-start' ? <LoaderCircle size={14} className="spin" /> : null} Hubungkan akun Codex
+					</button>
+				</div>
+			)}
+
 			{adding && (
 				<div className="ld-settings-form">
 					<label className="ld-settings-field">
@@ -216,32 +412,64 @@ export function AiModelSection() {
 				<p className="ld-settings-note">Belum ada provider. Aplikasi memakai model bawaan server sampai Anda menambahkan satu.</p>
 			) : (
 				<ul className="ld-ai-list">
-					{providers.map((provider) => (
-						<li key={provider.id} className="ld-ai-row">
-							<div className="ld-ai-row-main">
-								<strong>
-									{provider.label}
-									{provider.isDefault && <span className="ld-ai-default">Bawaan</span>}
-								</strong>
-								<dl className="ld-ai-meta">
-									<dt>Endpoint</dt>
-									<dd>{provider.baseUrl}</dd>
-									<dt>Model</dt>
-									<dd>{provider.models.join(', ')}</dd>
-									<dt>Kunci</dt>
-									<dd>{provider.keyMasked || 'tersimpan'}</dd>
-								</dl>
-							</div>
-							<div className="ld-ai-row-actions">
-								<button type="button" className="ld-outline-action sm" disabled={busy === `test-${provider.id}`} onClick={() => void test(provider)}>
-									{busy === `test-${provider.id}` ? <LoaderCircle size={14} className="spin" /> : <Zap size={14} />} Uji
-								</button>
-								<button type="button" className="ld-icon-action sm danger" aria-label={`Hapus ${provider.label}`} disabled={busy === provider.id} onClick={() => void remove(provider)}>
-									<Trash2 size={15} />
-								</button>
-							</div>
-						</li>
-					))}
+					{providers.map((provider) => {
+						const isCodex = provider.kind === 'codex_oauth';
+						const connection = provider.connection || null;
+						const healthy = isCodex ? connection?.status === 'active' : true;
+						return (
+							<li key={provider.id} className="ld-ai-row">
+								<div className="ld-ai-row-main">
+									<strong>
+										{provider.label}
+										{provider.isDefault && <span className="ld-ai-default">Bawaan</span>}
+									</strong>
+									<dl className="ld-ai-meta">
+										<dt>Endpoint</dt>
+										<dd>{isCodex ? 'Akun Codex (chatgpt.com)' : provider.baseUrl}</dd>
+										<dt>Model</dt>
+										<dd>{provider.models.join(', ')}</dd>
+										{isCodex ? (
+											<>
+												<dt>Akun</dt>
+												<dd>{connection?.accountId ? `••••${connection.accountId.slice(-6)}` : 'belum terhubung'}</dd>
+												<dt>Status</dt>
+												<dd>{connection ? CONNECTION_LABEL[connection.status] : 'belum terhubung'}</dd>
+											</>
+										) : (
+											<>
+												<dt>Kunci</dt>
+												<dd>{provider.keyMasked || 'tersimpan'}</dd>
+											</>
+										)}
+									</dl>
+									{isCodex && !healthy && (
+										<p className="ld-settings-note">
+											Provider ini tidak akan dipakai sampai akun dihubungkan ulang lewat tombol di atas.
+										</p>
+									)}
+								</div>
+								<div className="ld-ai-row-actions">
+									<button
+										type="button"
+										className="ld-outline-action sm"
+										disabled={busy === `test-${provider.id}`}
+										onClick={() => void test(provider)}
+									>
+										{busy === `test-${provider.id}` ? <LoaderCircle size={14} className="spin" /> : <Zap size={14} />} Uji
+									</button>
+									<button
+										type="button"
+										className="ld-icon-action sm danger"
+										aria-label={`Hapus ${provider.label}`}
+										disabled={busy === provider.id}
+										onClick={() => void remove(provider)}
+									>
+										<Trash2 size={15} />
+									</button>
+								</div>
+							</li>
+						);
+					})}
 				</ul>
 			)}
 
@@ -259,11 +487,18 @@ export function AiModelSection() {
 									onChange={(event) => void choose(surface, event.target.value)}
 								>
 									<option value="">Bawaan server (env)</option>
-									{providers.map((provider) => (
-										<option key={provider.id} value={provider.id}>
-											{provider.label} — {provider.models[0]}
-										</option>
-									))}
+									{providers.map((provider) => {
+										// A Codex grant cannot run tool calls, so it must not be
+										// selectable for a surface that requires them.
+										const unsupported =
+											provider.kind === 'codex_oauth' && surface.requires.includes('tools');
+										return (
+											<option key={provider.id} value={provider.id} disabled={unsupported}>
+												{provider.label} — {provider.models[0]}
+												{unsupported ? ' (tidak didukung)' : ''}
+											</option>
+										);
+									})}
 								</select>
 							</label>
 						);

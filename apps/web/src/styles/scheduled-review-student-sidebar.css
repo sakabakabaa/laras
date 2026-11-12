@@ -1,7 +1,6 @@
-.sr-review-grid{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr) minmax(0,300px);gap:16px;align-items:start}
-.sr-students,.sr-answer-area,.sr-grading{border:1px solid var(--ss-border);border-radius:16px;background:var(--ss-panel);min-width:0}
-.sr-students{position:sticky;top:80px;max-height:calc(100dvh - 105px);overflow:auto;padding:14px;display:grid;grid-template-rows:auto minmax(0,1fr);align-content:stretch}
-.sr-student-tools{padding:0 0 12px;border-bottom:1px solid var(--ss-border);position:sticky;top:0;background:var(--ss-panel);z-index:1;display:grid;gap:8px}
+.sr-students,.sr-answer-area{border:1px solid var(--ss-border);border-radius:16px;background:var(--ss-panel);min-width:0}
+.sr-students{padding:14px;display:grid;grid-template-rows:auto minmax(0,1fr);align-content:stretch}
+.sr-student-tools{padding:0 0 12px;border-bottom:1px solid var(--ss-border);background:var(--ss-panel);display:grid;gap:8px}
 .sr-student-tools select{margin-top:0;font-size:12px;min-height:36px;padding:7px 9px}
 .sr-student-tools .ss-search{padding:0 9px}
 .sr-student-tools .ss-search input{font-size:12px;min-height:36px}
@@ -13,4 +12,3 @@
 :root.dark .sr-students li>button[aria-current=true]{background:rgba(201,52,43,.10);border-color:rgba(201,52,43,.28)}
 .sr-students li strong{font-size:12px;font-weight:650;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4}
 .sr-students li small{font-size:11px;display:block;color:var(--ss-muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(min-width:1600px){.ss-workspace .sr-review-grid{grid-template-columns:minmax(0,280px) minmax(330px,1fr) 300px}}

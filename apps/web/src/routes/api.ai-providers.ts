@@ -9,6 +9,7 @@
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import { authenticateUser } from '@/lib/context-retrieval.server';
 import { AI_SURFACES, createProvider, deleteProvider, listPreferences, listProviders } from '@/lib/ai/providers.server';
+import { isCodexOAuthEnabled } from '@/lib/ai/codex-oauth.server';
 
 const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
 const message = (error: unknown, fallback: string) => (error instanceof Error ? error.message : fallback);
@@ -21,7 +22,9 @@ const handler = withApi(async ({ request }) => {
 
 	if (request.method === 'GET') {
 		const [providers, preferences] = await Promise.all([listProviders(ownerId), listPreferences(ownerId)]);
-		return json({ providers, preferences, surfaces: AI_SURFACES });
+		// `codexEnabled` is an operator switch, not a per-lecturer one: the UI hides
+		// the connect button entirely when the deployment has not opted in.
+		return json({ providers, preferences, surfaces: AI_SURFACES, codexEnabled: isCodexOAuthEnabled() });
 	}
 
 	if (request.method === 'POST') {

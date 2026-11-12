@@ -7,16 +7,28 @@
  * change, never a code change.
  *
  * Secrets are decrypted here and only here; nothing returned by the list/create
- * helpers contains a key, only a masked `last4`.
+ * helpers contains a key, only a masked `last4`. A Codex provider has no key at
+ * all: its grant is read from `ai_provider_codex_auth` when a call is made.
+ *
+ * Import direction matters. This module may import `codex-oauth.server` (grants)
+ * and `model-client.server` (dispatch), but neither of those may import it:
+ * `target.ts` holds the shared types so the dispatcher stays a leaf consumer.
  */
 import { createHash } from 'node:crypto';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
-import type { ProviderConfig } from './openai-compatible.server';
 import { decryptSecret, encryptSecret, maskSecret, secretLast4 } from './secrets.server';
+import {
+	codexConnectionFor,
+	CODEX_CHATGPT_BASE_URL,
+	forgetCodexGrant,
+	isCodexOAuthEnabled,
+	type CodexConnection,
+} from './codex-oauth.server';
+import type { Capabilities, ResolvedModel } from './target';
+
+export type { Capabilities, ResolvedModel };
 
 export type AiSurface = 'assistant' | 'evaluation' | 'lesson_plan' | 'practice' | 'rps_import' | 'student_help';
-
-export type Capabilities = { tools: boolean; vision: boolean; json: boolean; streaming: boolean };
 
 export type SurfaceDescriptor = {
 	id: AiSurface;
@@ -56,12 +68,6 @@ export type PreferenceRecord = {
 	model: string;
 };
 
-export type ResolvedModel = ProviderConfig & {
-	source: 'preference' | 'default' | 'env';
-	capabilities: Capabilities;
-	configVersion: string;
-};
-
 export type ProviderView = {
 	id: string;
 	label: string;
@@ -72,6 +78,8 @@ export type ProviderView = {
 	enabled: boolean;
 	isDefault: boolean;
 	keyMasked: string;
+	/** Present only for `codex_oauth`: connection state, never token material. */
+	connection?: CodexConnection | null;
 };
 
 const FULL_CAPABILITIES: Capabilities = { tools: true, vision: true, json: true, streaming: true };
@@ -109,6 +117,7 @@ const envProvider = (): ResolvedModel | null => {
 	const baseUrl = process.env.HROUTER_BASE_URL || DEFAULT_BASE_URL;
 	const model = process.env.HROUTER_MODEL || DEFAULT_MODEL;
 	return {
+		kind: 'openai_compatible',
 		providerId: 'env',
 		providerLabel: 'Bawaan server',
 		baseUrl,
@@ -129,25 +138,57 @@ const secretFor = async (providerId: string): Promise<string | null> => {
 	return ciphertext ? decryptSecret(ciphertext) : null;
 };
 
+/**
+ * Capabilities a Codex/ChatGPT grant can actually serve.
+ *
+ * `tools` is false on purpose: Laras only asks for text and JSON, never for the
+ * Codex agent loop, so the `assistant` surface must not select this provider.
+ */
+const CODEX_CAPABILITIES: Capabilities = { tools: false, vision: true, json: true, streaming: true };
+
 const toResolved = async (
 	provider: ProviderRecord,
 	model: string,
 	surface: AiSurface,
 	source: 'preference' | 'default',
 ): Promise<ResolvedModel> => {
-	const apiKey = await secretFor(provider.id);
-	if (!apiKey) throw new Error(`Kunci API untuk "${provider.label}" belum tersimpan.`);
 	const selected = model || provider.models[0] || '';
 	if (!selected) throw new Error(`Provider "${provider.label}" belum memiliki model.`);
+	const capabilities = assertCapabilities(
+		provider.kind === 'codex_oauth' ? { ...CODEX_CAPABILITIES, ...(provider.capabilities || {}) } : provider.capabilities || {},
+		surface,
+		provider.label,
+	);
+	const configVersion = configVersionOf(provider.id, provider.baseUrl, selected);
+
+	if (provider.kind === 'codex_oauth') {
+		// No credential is loaded here. The grant is fetched and refreshed at call
+		// time, so resolution stays cheap and a dead grant fails at the call with
+		// a reconnect message instead of mid-resolution.
+		return {
+			kind: 'codex_oauth',
+			providerId: provider.id,
+			providerLabel: provider.label,
+			baseUrl: provider.baseUrl || CODEX_CHATGPT_BASE_URL,
+			model: selected,
+			source,
+			capabilities,
+			configVersion,
+		};
+	}
+
+	const apiKey = await secretFor(provider.id);
+	if (!apiKey) throw new Error(`Kunci API untuk "${provider.label}" belum tersimpan.`);
 	return {
+		kind: 'openai_compatible',
 		providerId: provider.id,
 		providerLabel: provider.label,
 		baseUrl: provider.baseUrl,
 		apiKey,
 		model: selected,
 		source,
-		capabilities: assertCapabilities(provider.capabilities || {}, surface, provider.label),
-		configVersion: configVersionOf(provider.id, provider.baseUrl, selected),
+		capabilities,
+		configVersion,
 	};
 };
 
@@ -224,23 +265,42 @@ export const resolveModelForCourse = async (
 	}
 };
 
+/**
+ * Validates the parts every provider kind shares: a display label and a model
+ * list. Exported so the Codex login route rejects a bad label or model list
+ * before it contacts the identity provider.
+ */
+export const validateProviderIdentity = (input: { label?: unknown; models?: unknown }): { label: string; models: string[] } => {
+	const label = typeof input.label === 'string' ? input.label.trim() : '';
+	const models = Array.isArray(input.models)
+		? input.models.filter((model): model is string => typeof model === 'string' && model.trim().length > 0).map((model) => model.trim())
+		: [];
+	if (!label || label.length > 60) throw new Error('Nama provider wajib diisi (maksimal 60 karakter).');
+	if (models.length === 0 || models.length > 20) throw new Error('Isi 1–20 nama model.');
+	return { label, models };
+};
+
 const validateProviderInput = (input: {
 	label?: unknown;
 	baseUrl?: unknown;
 	models?: unknown;
 	apiKey?: unknown;
 }): { label: string; baseUrl: string; models: string[]; apiKey: string } => {
-	const label = typeof input.label === 'string' ? input.label.trim() : '';
+	const { label, models } = validateProviderIdentity(input);
 	const baseUrl = typeof input.baseUrl === 'string' ? input.baseUrl.trim().replace(/\/+$/, '') : '';
 	const apiKey = typeof input.apiKey === 'string' ? input.apiKey.trim() : '';
-	const models = Array.isArray(input.models)
-		? input.models.filter((model): model is string => typeof model === 'string' && model.trim().length > 0).map((model) => model.trim())
-		: [];
-	if (!label || label.length > 60) throw new Error('Nama provider wajib diisi (maksimal 60 karakter).');
 	if (!/^https?:\/\/[^\s]+$/i.test(baseUrl)) throw new Error('Base URL harus berupa http(s)://…');
 	if (apiKey.length < 8) throw new Error('Kunci API terlalu pendek.');
-	if (models.length === 0 || models.length > 20) throw new Error('Isi 1–20 nama model.');
 	return { label, baseUrl, models, apiKey };
+};
+
+/** A provider can hold at most one default, so a new default demotes the rest. */
+const clearOtherDefaults = async (ownerId: string): Promise<void> => {
+	const existing = await pocketbaseAdmin.listRecords<ProviderRecord>('ai_providers', {
+		filter: `owner="${ownerId}" && isDefault=true`,
+		perPage: 50,
+	});
+	await Promise.all(existing.items.map((row) => pocketbaseAdmin.updateRecord('ai_providers', row.id, { isDefault: false })));
 };
 
 /** Providers owned by one lecturer, with masked keys only. */
@@ -255,6 +315,18 @@ export const listProviders = async (ownerId: string): Promise<ProviderView[]> =>
 		perPage: 100,
 	});
 	const last4ByProvider = new Map(secrets.items.map((row) => [row.provider, row.last4]));
+	// Connection state is read per Codex provider. It carries no token material,
+	// only account id, plan, status and expiry, so the list can render it.
+	const connections = new Map<string, CodexConnection | null>();
+	for (const row of rows.items) {
+		if (row.kind !== 'codex_oauth') continue;
+		try {
+			connections.set(row.id, await codexConnectionFor(row.id));
+		} catch {
+			// A read failure must not hide the provider; it shows as unconnected.
+			connections.set(row.id, null);
+		}
+	}
 	return rows.items.map((row) => ({
 		id: row.id,
 		label: row.label,
@@ -265,6 +337,7 @@ export const listProviders = async (ownerId: string): Promise<ProviderView[]> =>
 		enabled: row.enabled !== false,
 		isDefault: Boolean(row.isDefault),
 		keyMasked: maskSecret(last4ByProvider.get(row.id) || ''),
+		...(row.kind === 'codex_oauth' ? { connection: connections.get(row.id) ?? null } : {}),
 	}));
 };
 
@@ -277,13 +350,7 @@ export const createProvider = async (
 	const capabilities = (input.capabilities && typeof input.capabilities === 'object' ? input.capabilities : {}) as Partial<Capabilities>;
 	const isDefault = input.isDefault === true;
 
-	if (isDefault) {
-		const existing = await pocketbaseAdmin.listRecords<ProviderRecord>('ai_providers', {
-			filter: `owner="${ownerId}" && isDefault=true`,
-			perPage: 50,
-		});
-		await Promise.all(existing.items.map((row) => pocketbaseAdmin.updateRecord('ai_providers', row.id, { isDefault: false })));
-	}
+	if (isDefault) await clearOtherDefaults(ownerId);
 
 	const provider = await pocketbaseAdmin.createRecord<ProviderRecord>('ai_providers', {
 		owner: ownerId,
@@ -314,10 +381,54 @@ export const createProvider = async (
 	};
 };
 
-/** Deletes a provider, its secret and its preferences. Ownership is enforced. */
+/**
+ * Creates a `codex_oauth` provider row. Called only after a device login has
+ * actually issued a grant, so a provider always starts connected.
+ *
+ * There is no API key and no `ai_provider_secrets` row: the grant lives in
+ * `ai_provider_codex_auth`, written by `pollCodexLogin`.
+ */
+export const createCodexProvider = async (
+	ownerId: string,
+	input: { label?: unknown; models?: unknown; isDefault?: unknown },
+): Promise<ProviderView> => {
+	if (!isCodexOAuthEnabled()) throw new Error('Login akun Codex belum diaktifkan di server ini.');
+	const { label, models } = validateProviderIdentity(input);
+	const isDefault = input.isDefault === true;
+	if (isDefault) await clearOtherDefaults(ownerId);
+
+	const provider = await pocketbaseAdmin.createRecord<ProviderRecord>('ai_providers', {
+		owner: ownerId,
+		label,
+		kind: 'codex_oauth',
+		baseUrl: CODEX_CHATGPT_BASE_URL,
+		models,
+		capabilities: CODEX_CAPABILITIES,
+		enabled: true,
+		isDefault,
+	});
+	return {
+		id: provider.id,
+		label: provider.label,
+		kind: provider.kind,
+		baseUrl: provider.baseUrl,
+		models: provider.models,
+		capabilities: CODEX_CAPABILITIES,
+		enabled: true,
+		isDefault,
+		keyMasked: '',
+		connection: null,
+	};
+};
+
+/** Deletes a provider, its secret, its Codex grant and its preferences. Ownership is enforced. */
 export const deleteProvider = async (ownerId: string, providerId: string): Promise<void> => {
 	const provider = await pocketbaseAdmin.getRecord<ProviderRecord>('ai_providers', providerId);
 	if (provider.owner !== ownerId) throw new Error('Provider bukan milik Anda.');
+	if (provider.kind === 'codex_oauth') {
+		// Revoke upstream where possible and always drop local ciphertext.
+		await forgetCodexGrant(providerId);
+	}
 	const secrets = await pocketbaseAdmin.listRecords<{ id: string }>('ai_provider_secrets', {
 		filter: `provider="${providerId}"`,
 		perPage: 20,
@@ -376,9 +487,11 @@ export const testProvider = async (
 	const provider = await pocketbaseAdmin.getRecord<ProviderRecord>('ai_providers', providerId);
 	if (provider.owner !== ownerId) throw new Error('Provider bukan milik Anda.');
 	const resolved = await toResolved(provider, model || provider.models[0] || '', 'practice', 'default');
-	const { collectChatCompletion } = await import('./openai-compatible.server');
+	// Imported lazily: `model-client` is the dispatcher, and it must not be a
+	// static dependency of the registry that it resolves against.
+	const { collectModel } = await import('./model-client.server');
 	const started = Date.now();
-	const result = await collectChatCompletion(resolved, {
+	const result = await collectModel(resolved, {
 		prompt: 'Balas tepat satu kata: OK',
 		timeoutMs: 20_000,
 	});

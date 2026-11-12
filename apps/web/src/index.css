@@ -4696,6 +4696,8 @@ summary:focus-visible,
 .ld-ai-grid small{font:500 11px var(--body);color:#667085}
 .ld-ai-check{display:flex;flex-direction:row;align-items:center;gap:9px}
 .ld-ai-check input{height:16px;width:16px;accent-color:var(--red)}
+/* Device-login code: large, monospace, selectable — it is typed on another device. */
+.ld-codex-code{margin:10px 0 0;padding:14px 18px;border:1px dashed #D0D5DD;border-radius:12px;background:#F9FAFB;font:700 24px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;color:#172033;text-align:center;user-select:all}
 /* Manajemen Berkas — navigation (phase 1 + 2) */
 .flb-page{display:flex;flex-direction:column;gap:16px}
 .flb-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}

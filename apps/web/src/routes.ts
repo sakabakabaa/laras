@@ -112,6 +112,9 @@ export default [
 	route('api/student-assistant', 'routes/api.student-assistant.ts'),
 	route('api/ai-providers', 'routes/api.ai-providers.ts'),
 	route('api/ai-providers-test', 'routes/api.ai-providers-test.ts'),
+	route('api/ai-providers-codex-start', 'routes/api.ai-providers-codex-start.ts'),
+	route('api/ai-providers-codex-poll', 'routes/api.ai-providers-codex-poll.ts'),
+	route('api/ai-providers-codex-cancel', 'routes/api.ai-providers-codex-cancel.ts'),
 	route('api/ai-model-prefs', 'routes/api.ai-model-prefs.ts'),
 	route('api/*', 'routes/api.$.ts'),
 ] satisfies RouteConfig;

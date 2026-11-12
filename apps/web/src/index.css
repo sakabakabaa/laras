@@ -4628,8 +4628,34 @@ summary:focus-visible,
 @media(max-width:640px){.ld-attendance-table-wrap{overflow:visible}.ld-attendance-table{min-width:0}.ld-attendance-table thead{display:none}.ld-attendance-table tbody tr{display:grid;grid-template-columns:1fr;gap:8px;padding:14px;border:1px solid #E4E7EC;border-radius:12px;margin-bottom:10px}.ld-attendance-table tbody td{display:flex;align-items:flex-start;gap:10px;padding:0;border:0;width:auto}.ld-attendance-table tbody td:before{content:attr(data-label);font:700 12px var(--body);letter-spacing:.06em;text-transform:uppercase;color:#667085;min-width:64px;flex:none;padding-top:6px}.ld-att-td-name{font-weight:600}.ld-att-buttons{flex-wrap:wrap}.ld-att-btn-label{display:inline}.ld-att-btn{padding:0 12px}}
 
 /* ── Settings page ───────────────────────────────────────── */
-.ld-settings{display:grid;gap:16px;max-width:820px}
+/* Settings: a section list on the left, one section on the right.
+   Only one panel is shown at a time, so the page no longer stacks seven. */
+.ld-settings-shell{display:grid;grid-template-columns:210px minmax(0,1fr);gap:32px;align-items:start;max-width:1180px}
+.ld-settings-nav{display:grid;gap:20px;padding-top:2px}
+.ld-settings-nav-label{margin:0 0 7px;padding:0 11px;font:700 10.5px var(--body);letter-spacing:.07em;text-transform:uppercase;color:#98A2B3}
+.ld-settings-nav ul{list-style:none;margin:0;padding:0;display:grid;gap:1px}
+.ld-settings-nav a{display:block;padding:8px 11px;border-radius:8px;font:600 13.5px/1.4 var(--body);color:#475467;text-decoration:none;transition:background .12s,color .12s}
+.ld-settings-nav a:hover{background:#F6F7F9;color:#172033}
+.ld-settings-nav a:focus-visible{outline:2px solid #7F1D16;outline-offset:2px}
+.ld-settings-nav a[aria-current=page]{background:#FFF4F2;color:#7F1D16;box-shadow:inset 2px 0 0 #7F1D16}
+.ld-settings{display:grid;gap:16px;min-width:0}
+.ld-settings>[hidden]{display:none}
 .ld-settings-panel{padding:22px 24px 20px}
+@media(max-width:900px){
+  .ld-settings-shell{grid-template-columns:minmax(0,1fr);gap:18px}
+  .ld-settings-nav{display:flex;flex-wrap:wrap;gap:6px;padding:0}
+  .ld-settings-nav-block{display:contents}
+  .ld-settings-nav-label{display:none}
+  .ld-settings-nav ul{display:contents}
+  .ld-settings-nav a{padding:7px 12px;border:1px solid #E4E7EC;background:#fff;font-size:12.5px}
+  .ld-settings-nav a[aria-current=page]{box-shadow:none;border-color:#F0C9C2}
+}
+:root.dark .ld-settings-nav-label{color:#7A8595}
+:root.dark .ld-settings-nav a{color:#A7B1BE}
+:root.dark .ld-settings-nav a:hover{background:#1B2129;color:#E6EAF0}
+:root.dark .ld-settings-nav a[aria-current=page]{background:#352522;color:#F2B8AE}
+:root.dark .ld-settings-nav a[aria-current=page]{box-shadow:inset 2px 0 0 #C9342B}
+:root.dark .ld-settings-nav a{border-color:#2A3138}
 .ld-settings-panel .ld-card-head{display:block;margin-bottom:0}
 .ld-settings-panel .ld-card-head>div{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .ld-settings-panel .ld-eyebrow{display:block;line-height:1.2;color:#667085}

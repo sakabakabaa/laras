@@ -38,7 +38,6 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const [settingsMode,setSettingsMode]=useState<'ungraded'|'points'|'rubric'>('ungraded'),[maxPoints,setMaxPoints]=useState('10');
   const [criteria,setCriteria]=useState<CriterionDraft[]>([{id:'clarity',label:'Kejelasan',maxPoints:'10'}]);
   const [compact,setCompact]=useState(true);
-  const bar=useRef<HTMLDivElement>(null);
   const student=state.report.find(r=>personKey(r)===studentKey)||state.report[0];
   const activity=activities.find(a=>a.id===activityId)||activities[0];
   const attempt=attempts.find(a=>a.student===student?.student&&a.activity===activity?.id);
@@ -80,14 +79,14 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
     };
     window.addEventListener('keydown',onKeyDown);return()=>window.removeEventListener('keydown',onKeyDown);
   });
-  const prefersReduced=()=>typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rememberDensity=(next:boolean)=>{setCompact(next);try{localStorage.setItem(DENSITY_KEY,next?'compact':'full');}catch{/* storage blocked */}};
   const guard=()=>!unsaved||window.confirm('Perubahan penilaian belum disimpan. Buang perubahan dan lanjutkan?');
-  const reveal=()=>{requestAnimationFrame(()=>bar.current?.scrollIntoView({block:'start'}));};
+  // Selecting a student or activity never scrolls the page: the review surface is a
+  // plain document, so the lecturer keeps their own scroll position.
   const select=(nextStudent:string,nextActivity=activity?.id||'',afterSave=false)=>{
     if(nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow)&&nextActivity===activity?.id){setExpandedActivity(nextActivity);return true;}
     if(!afterSave&&!guard())return false;
-    loadSettings();const sameStudent=nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow);setStudentKey(nextStudent);setActivityId(nextActivity);setExpandedActivity(nextActivity);setMessage('');if(sameStudent)requestAnimationFrame(()=>document.getElementById(`review-activity-${nextActivity}`)?.scrollIntoView({block:'start',behavior:prefersReduced()?'auto':'smooth'}));else reveal();onSelectionChange?.({student:nextStudent,activity:nextActivity});return true;
+    loadSettings();setStudentKey(nextStudent);setActivityId(nextActivity);setExpandedActivity(nextActivity);setMessage('');onSelectionChange?.({student:nextStudent,activity:nextActivity});return true;
   };
   const showError=(error:unknown)=>{setFailed(true);setMessage((error as Error).message||'Perubahan belum dapat disimpan. Coba lagi.');};
   const criteriaPayload=criteria.map(c=>({id:c.id,label:c.label.trim(),maxPoints:Number(c.maxPoints)}));
@@ -159,11 +158,10 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
       <div className="evx-stat"><span className="evx-stat-ico amber"><Clock3 size={16}/></span><div><strong>{pendingCount}</strong><span>Perlu dinilai</span></div></div>
       <div className="evx-stat"><span className="evx-stat-ico green"><CheckCheck size={16}/></span><div><strong>{tally.reviewed}</strong><span>Sudah ditinjau</span></div></div>
       <div className="evx-stat quiet"><div><strong>{autoCount}</strong><span>Dinilai otomatis</span></div></div>
-      <div className="evx-pager"><button type="button" aria-label="Mahasiswa sebelumnya" disabled={activeIndex<=0||busy} onClick={()=>step(-1)}><ArrowLeft size={16}/></button><span>{activeIndex<0?0:activeIndex+1} dari {visible.length}</span><button type="button" aria-label="Mahasiswa berikutnya" disabled={activeIndex<0||activeIndex>=visible.length-1||busy} onClick={()=>step(1)}><ArrowRight size={16}/></button></div>
     </div>
     <div className="sr-toolbar"><div><h2>Jawaban & nilai</h2><p>{tally.reviewed} dari {tally.manual} kiriman ditinjau{tally.auto>0?` · ${tally.auto} dinilai otomatis`:''}</p></div><div className="sr-toolbar-actions">{tally.pending>0&&queue&&<button className="ss-button ss-button-small ss-button-primary" disabled={busy} onClick={()=>select(queue.student,queue.activity)}>Perlu nilai {tally.pending}<ArrowRight size={15}/></button>}<span className="sr-review-progress" aria-label={`${tally.reviewed} dari ${tally.manual} ditinjau`}><span style={{width:`${tally.manual?tally.reviewed/tally.manual*100:0}%`}}/></span></div></div>
     {!canGrade&&<p className="sr-notice"><Clock3 size={17}/>Jawaban dapat dipantau sekarang. Penilaian dan penerbitan tersedia setelah kelas selesai.</p>}
-    <div className="sr-review-bar" ref={bar}>
+    <div className="sr-review-bar">
       <div className="sr-review-bar-person">{student?<><span className="ss-avatar">{student.name.split(/\s+/).slice(0,2).map(n=>n[0]).join('')}</span><span><strong>{student.name}</strong><small>{student.nim||'NIM belum tersedia'}</small></span></>:<strong>Belum ada mahasiswa</strong>}</div>
       <div className="sr-review-bar-score">{typeof displayedScore==='number'?<><span className="sr-score-value">{displayedScore}</span><span className="sr-score-unit">/ 100</span></>:<span className="sr-score-value sr-score-empty">—</span>}<small>{activity?gradingModeLabel(activity):'Tidak ada kegiatan'}</small></div>
       <div className="sr-review-bar-counts">{cards.length?<><span className="sr-verdict-count is-correct" title="Benar"><Check size={14}/>{cardTally.correct}</span><span className="sr-verdict-count is-wrong" title="Salah"><X size={14}/>{cardTally.wrong}</span><span className="sr-verdict-count is-manual" title="Perlu dinilai atau belum dijawab"><Minus size={14}/>{cardTally.manual+cardTally.ungraded}</span></>:<span className="sr-verdict-count is-manual">Belum ada jawaban</span>}</div>
@@ -200,8 +198,10 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
            {a.kind==='exit_ticket'&&typeof own?.answers.feedback==='string'&&own.answers.feedback.trim()&&<section className="sr-exit-feedback"><h4>Masukan untuk pembelajaran</h4><p>{own.answers.feedback}</p><small>Masukan mahasiswa · tidak dinilai</small></section>}
            </div>
            <section id={`review-assessment-${a.id}`} hidden={expandedActivity!==a.id} className={`sr-grading-section sr-activity-assessment${sectionSelected?' is-current':''}`} aria-label={`Penilaian kegiatan ${a.title}`}>
-          <header><div className="sr-assessment-card-title"><button type="button" onClick={()=>select(personKey(student||{student:'',roster:''} as ClassReportRow),a.id)}><span>{index+1}. {a.title}</span><small>{gradingModeLabel(a)}</small></button><span className={`sr-review-status ${!own?'sr-status-missing':sectionAuto?'sr-status-auto':'sr-status-'+ownStatus}`}>{!own?'Belum mengirim':sectionAuto?sectionApproved?'Disetujui':'Perlu disetujui':ASSESSMENT_LABELS[ownStatus]}</span></div>{sectionSelected&&<button className="ss-icon-button" aria-label="Pengaturan penilaian kegiatan" disabled={sectionAuto||busy} onClick={()=>{setFailed(false);setMessage('');setSettingsOpen(true);}}><Settings2 size={17}/></button>}</header>
-          {ownScore!==undefined&&<strong className="sr-grading-section-score">{ownScore} <small>/ 100</small></strong>}
+           {/* The activity header above already names the activity, its mode and its
+               review status; repeating them here only added a second column of the
+               same words. This header carries just the panel's own control. */}
+           {sectionSelected&&!sectionAuto&&<header className="sr-assessment-tools"><button className="ss-icon-button" aria-label="Pengaturan penilaian kegiatan" disabled={busy} onClick={()=>{setFailed(false);setMessage('');setSettingsOpen(true);}}><Settings2 size={17}/></button></header>}
           {sectionAuto?<><p>{ownAssessment?.answerOverrides&&Object.keys(ownAssessment.answerOverrides).length?`Penilaian otomatis · ${Object.keys(ownAssessment.answerOverrides).length} jawaban disesuaikan`:own?'Penilaian otomatis dihitung dari kunci jawaban.':'Penilaian otomatis belum tersedia.'}</p><button type="button" className="ss-button ss-button-primary" disabled={!own||typeof own.score!=='number'||!canGrade||busy||sectionApproved} onClick={()=>void approveAutoScoreFor(own,ownAssessment)}>{busy?'Menyimpan…':sectionApproved?'Nilai disetujui':'Setujui nilai otomatis'}</button></>:sectionSelected?(!sectionSettings?<div className="sr-configure"><h4>Atur penilaian kegiatan</h4><p>Pilih poin, rubrik, atau umpan balik tanpa nilai. Pengaturan berlaku untuk seluruh mahasiswa pada kegiatan ini.</p><button className="ss-button" disabled={!canGrade||busy} onClick={()=>setSettingsOpen(true)}>Atur penilaian</button></div>:<>
             {own&&<>{sectionSettings.mode==='points'&&<label className="sr-points">Nilai<div><input type="number" min="0" max={sectionSettings.maxPoints} step="any" disabled={!canGrade||busy} value={draft.points} onChange={e=>setDraft(d=>({...d,points:e.target.value}))}/><span>/ {sectionSettings.maxPoints}</span></div></label>}{sectionSettings.mode==='rubric'&&<fieldset className="sr-rubric-scores"><legend>Nilai per kriteria</legend>{sectionSettings.criteria.map(c=><label key={c.id}><span>{c.label}<small>Maks. {c.maxPoints}</small></span><input aria-label={`Nilai ${c.label}`} type="number" min="0" max={c.maxPoints} step="any" disabled={!canGrade||busy} value={draft.criterionScores[c.id]??''} onChange={e=>setDraft(d=>({...d,criterionScores:{...d.criterionScores,[c.id]:e.target.value}}))}/></label>)}<p>Total <strong>{sectionSettings.criteria.reduce((sum,c)=>sum+Number(draft.criterionScores[c.id]||0),0)} / {sectionSettings.maxPoints}</strong></p></fieldset>}
             <label className="sr-feedback">Umpan balik<textarea rows={5} placeholder="Tulis komentar untuk mahasiswa..." maxLength={10000} disabled={!canGrade||busy} value={draft.feedback} onChange={e=>setDraft(d=>({...d,feedback:e.target.value}))}/></label><p className="sr-draft-hint">{dirty?'Perubahan belum disimpan.':ownAssessment?'Penilaian tersimpan.':'Belum ada penilaian tersimpan.'}</p>

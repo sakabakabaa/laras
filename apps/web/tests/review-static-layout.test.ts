@@ -37,6 +37,41 @@ describe('review layout is static', () => {
 	});
 });
 
+describe('review stylesheets carry no superseded or unreadable rules', () => {
+	it('defines the review grid once, on the element that actually owns it', () => {
+		const session = stylesheet('scheduled-session-workspace.css');
+		const sidebar = stylesheet('scheduled-review-student-sidebar.css');
+		// The base rule only establishes the grid; the columns live on the
+		// `.sr-workspace` rule that outranks it.
+		expect(session).toContain('.sr-review-grid{display:grid;align-items:start}');
+		expect(session).toMatch(/\.sr-workspace \.sr-review-grid\{grid-template-columns:/);
+		// The competing base rule and the `.ss-workspace` variants never applied.
+		expect(sidebar).not.toContain('sr-review-grid');
+		expect(session).not.toContain('.ss-workspace .sr-review-grid');
+	});
+
+	it('keeps every font size in the review workspace at 10px or above', () => {
+		const session = stylesheet('scheduled-session-workspace.css');
+		expect(session).not.toMatch(/font-size:9px/);
+	});
+
+	it('does not style the removed grading-panel family', () => {
+		for (const name of reviewStyles) {
+			const css = stylesheet(name);
+			expect(css, name).not.toMatch(/\.sr-grading[^-\w]/);
+			expect(css, name).not.toContain('sr-grading-header');
+			expect(css, name).not.toContain('sr-grading-mode');
+			expect(css, name).not.toContain('sr-grade-context');
+		}
+	});
+
+	it('sizes the grading panel call to action at body size', () => {
+		const session = stylesheet('scheduled-session-workspace.css');
+		expect(session).toContain('.sr-configure h4{font-size:14px}');
+		expect(session).toContain('.sr-configure p{font-size:12px');
+	});
+});
+
 const state: any = {
 	owner: true,
 	session: {id: 'session'},

@@ -89,6 +89,9 @@ services:
       ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-JBFqnCBsd6RMkjVDRZzb}
       ELEVENLABS_TTS_MODEL: ${ELEVENLABS_TTS_MODEL:-eleven_flash_v2_5}
       AGENT_CREDENTIAL_KEY: ${AGENT_CREDENTIAL_KEY:-}
+      # Opt-in: ChatGPT/Codex account as a model provider (lib/ai/codex-oauth.server.ts).
+      # Defaults to false so nothing changes until an operator turns it on.
+      CODEX_OAUTH_ENABLED: ${CODEX_OAUTH_ENABLED:-false}
       PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:?Set PB_SUPERUSER_EMAIL in the deployment .env}
       PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?Set PB_SUPERUSER_PASSWORD in the deployment .env}
     networks:

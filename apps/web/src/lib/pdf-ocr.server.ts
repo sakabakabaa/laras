@@ -54,10 +54,14 @@ const countPages = async (file: string): Promise<number> => {
 
 export const ocrPdf = async (
 	buffer: Buffer,
-	options: { maxPages?: number; dpi?: number } = {},
+	options: { maxPages?: number; scaleTo?: number } = {},
 ): Promise<PdfOcrResult> => {
 	const maxPages = options.maxPages ?? 10;
-	const dpi = options.dpi ?? 150;
+	// A full page at 150 dpi can be 4000x6500 px (~9 MB PNG, ~12 MB base64) and
+	// the vision provider rejects images that large, so OCR silently failed on
+	// exactly the scans that needed it most. Bound the long edge instead of the
+	// resolution: a page then stays ~1 MB and readable.
+	const scaleTo = options.scaleTo ?? 1800;
 	const dir = await mkdtemp(path.join(tmpdir(), 'laras-pdf-'));
 
 	try {
@@ -69,7 +73,7 @@ export const ocrPdf = async (
 
 		await run(
 			'pdftoppm',
-			['-png', '-r', String(dpi), '-f', '1', '-l', String(limit), pdfPath, path.join(dir, 'page')],
+			['-png', '-scale-to', String(scaleTo), '-f', '1', '-l', String(limit), pdfPath, path.join(dir, 'page')],
 			{ timeout: 120_000, maxBuffer: 64 * 1024 * 1024 },
 		);
 

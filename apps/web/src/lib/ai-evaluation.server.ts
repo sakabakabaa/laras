@@ -266,6 +266,7 @@ async function runEvaluation(input: {
 		// Drive pointer. Read the attachments into the evidence text so the model
 		// reviews the work instead of a filename — extraction never guesses.
 		let evidenceText = studentText;
+		let usedAttachment = false;
 		if (!isSpeaking && (submission.files || []).length > 0) {
 			try {
 				const extracted = await extractStoredFiles({
@@ -276,6 +277,7 @@ async function runEvaluation(input: {
 				});
 				const attachmentText = extracted.text.trim();
 				if (attachmentText) {
+					usedAttachment = true;
 					evidenceText = [studentText, `[ISI LAMPIRAN]\n${attachmentText}`]
 						.filter(Boolean)
 						.join('\n\n')
@@ -380,6 +382,9 @@ async function runEvaluation(input: {
 				: '',
 			isSpeaking
 				? 'Catatan: bukti utama adalah transkripsi audio. Setiap temuan wajib mengutip substring PERSIS dari transkripsi di atas.'
+				: '',
+			!isSpeaking && usedAttachment
+				? 'Catatan: teks kiriman di atas berasal dari transkripsi lembar kerja peserta. Tulisan yang tercetak pada lembar (instruksi tugas, judul, label kolom, nama peserta) BUKAN jawaban peserta — jangan dinilai dan jangan dikutip sebagai temuan. Nilai hanya kalimat yang ditulis peserta sendiri.'
 				: '',
 			isSpeaking
 				? 'Audio asli tidak diberikan. Jangan menilai pelafalan, intonasi, tempo, atau kelancaran dari transkripsi. Jika dugaan kesalahan mungkin berasal dari pengenalan ucapan, minta verifikasi dosen dan jangan pastikan itu kesalahan peserta.'

@@ -19,6 +19,7 @@
  * official evaluation.
  */
 import logger from '@/lib/logger.server';
+import { ocrPdf } from '@/lib/pdf-ocr.server';
 import { collectModel, storedFileUrl } from '@/lib/task-assist.server';
 import {
 	parseListeningConfig,
@@ -34,6 +35,8 @@ const IMAGE_EXT = /\.(jpe?g|png|webp)$/i;
 const PDF_EXT = /\.pdf$/i;
 const AUDIO_VIDEO_EXT = /\.(mp3|wav|ogg|m4a|aac|mp4|webm|ogv|mov|mkv)$/i;
 const MAX_PDF_BYTES = 25 * 1024 * 1024;
+/** Below this, a PDF text layer is a scan (page markers only) and needs OCR. */
+const MIN_TEXT_LAYER_CHARS = 80;
 const MAX_OCR_IMAGES = 5;
 
 const pocketbaseUrl = () => process.env.POCKETBASE_URL || 'http://localhost:8090';
@@ -149,14 +152,24 @@ export async function extractStoredFiles(input: {
 			const parser = new PDFParse({ data: new Uint8Array(buffer) });
 			try {
 				const result = (await parser.getText()) as { text?: string; total?: number };
-				const text = result?.text || '';
+				// pdf-parse emits "-- 1 of 6 --" separators; they are not content.
+				const text = (result?.text || '').replace(/^--\s*\d+\s+of\s+\d+\s*--\s*$/gm, '').trim();
 				pages += result?.total || 0;
-				if (text.trim()) {
+				if (text.length >= MIN_TEXT_LAYER_CHARS) {
 					parts.push(`[DOKUMEN: ${clip(doc, 80)}]\n${clip(text, 12000)}`);
 				} else {
-					unreadable.push(
-						`PDF “${clip(doc, 80)}” tidak memuat teks yang bisa dibaca (mungkin hasil pindaian). Isi tidak ditebak.`,
-					);
+					// A scanned PDF has no usable text layer: render the pages and
+					// read them with the vision model instead of declaring it empty.
+					const ocr = await ocrPdf(buffer, { maxPages: 5 });
+					const ocrText = ocr.text.trim();
+					if (ocr.ok && ocrText) {
+						pages = pages || ocr.pages;
+						parts.push(`[DOKUMEN PINDAI: ${clip(doc, 80)}]\n${clip(ocrText, 12000)}`);
+					} else {
+						unreadable.push(
+							`PDF “${clip(doc, 80)}” tidak memuat teks yang bisa dibaca (mungkin hasil pindaian). Isi tidak ditebak.`,
+						);
+					}
 				}
 			} finally {
 				await parser.destroy().catch(() => {});

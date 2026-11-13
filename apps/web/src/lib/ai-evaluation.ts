@@ -293,6 +293,12 @@ export function parseStructuredFindings(
 		if (!note) continue;
 		const quote = typeof f.quote === 'string' ? f.quote.trim() : '';
 		const anchor = resolveAnchor(quote, text);
+		// A quote that is not an exact substring of the participant's own text
+		// cannot be highlighted in the panel and is usually the model paraphrasing
+		// the scan. Keep the finding (its note is still useful) but demote it to a
+		// general finding: no invented quote, no bogus offset. The model's original
+		// output stays on the row's rawOutput for reproducibility.
+		const verifiedQuote = anchor.anchorValid ? quote : '';
 		let criterion = '';
 		if (typeof f.criterion === 'string' && f.criterion.trim() && criteria.length > 0) {
 			const label = f.criterion.trim().toLowerCase();
@@ -308,7 +314,7 @@ export function parseStructuredFindings(
 		const confidence = clampConfidence(f.confidence);
 		out.push({
 			severity: f.severity,
-			quote,
+			quote: verifiedQuote,
 			note: note.slice(0, 600),
 			evidence: typeof f.evidence === 'string' ? f.evidence.trim().slice(0, 600) : '',
 			criterion,
@@ -320,8 +326,8 @@ export function parseStructuredFindings(
 			explanation: typeof f.explanation === 'string' ? f.explanation.trim().slice(0, 1000) : '',
 			...(confidence != null ? { confidence } : {}),
 			anchorValid: anchor.anchorValid,
-			quoteStart: anchor.quoteStart,
-			quoteEnd: anchor.quoteEnd,
+			quoteStart: verifiedQuote ? anchor.quoteStart : null,
+			quoteEnd: verifiedQuote ? anchor.quoteEnd : null,
 			anchorAmbiguous: anchor.anchorAmbiguous,
 		});
 	}

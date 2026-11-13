@@ -1572,8 +1572,17 @@ function DraftRunStatus() {
 		ctx.row.status === 'ready' &&
 		(ctx.ready?.result === 'insufficient' || parseFindings(ctx.ready?.findings).length === 0)
 	) {
+		// The run finished but produced nothing to review. Without the stored
+		// explanation this looked like a silently broken checker, so always show
+		// why (model summary or recorded reason) before offering a re-run.
+		const why = (ctx.ready?.reason || ctx.ready?.summary || '').trim();
 		return (
 			<div className="aev-draft-status">
+				<p className="aev-note warn" role="status">
+					<Info size={13} /> Draf AI selesai tanpa temuan{when ? ` (${when})` : ''}.{' '}
+					{why ||
+						'Kiriman ini belum memuat bukti yang bisa dinilai. Minta peserta menuliskan jawabannya langsung, lalu minta draf ulang.'}
+				</p>
 				<button type="button" className="ld-outline-action sm" onClick={ctx.regenerate} disabled={ctx.regenerating}>
 					{ctx.regenerating ? <LoaderCircle size={13} className="spin" /> : <RotateCcw size={13} />} Minta draf AI ulang
 				</button>

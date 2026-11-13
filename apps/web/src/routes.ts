@@ -58,6 +58,7 @@ export default [
 	route('api/task-assist', 'routes/api.task-assist.ts'),
 	route('api/feedback', 'routes/api.feedback.ts'),
 	route('api/evaluation-draft', 'routes/api.evaluation-draft.ts'),
+	route('api/submission-content-refresh', 'routes/api.submission-content-refresh.ts'),
 	route('api/evaluation-participants', 'routes/api.evaluation-participants.ts'),
 	route('api/evaluation-review', 'routes/api.evaluation-review.ts'),
 	route('api/evaluation-annotation', 'routes/api.evaluation-annotation.ts'),

@@ -28,6 +28,7 @@ import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { collectModelWithProvenance, imageFilenames, storedFileUrl } from '@/lib/task-assist.server';
 import { extractStoredFiles } from '@/lib/feedback.server';
+import { isPointerOnlyContent } from '@/lib/submission-content.server';
 import {
 	cpmkOfSubCpmk,
 	retrieveContextBundle,
@@ -260,6 +261,7 @@ async function runEvaluation(input: {
 					.slice(0, MAX_IMAGES)
 					.map((filename) => storedFileUrl(collection, recordId, filename));
 		const structured = isSpeaking ? '' : renderStructuredAnswers(assignment, submission.taskAnswers);
+		const hasFiles = (submission.files || []).length > 0;
 
 		// Attached files are the actual answer for many submissions (a scanned
 		// PDF or a photo of handwritten work), and the stored text may be only a
@@ -267,7 +269,11 @@ async function runEvaluation(input: {
 		// reviews the work instead of a filename — extraction never guesses.
 		let evidenceText = studentText;
 		let usedAttachment = false;
-		if (!isSpeaking && (submission.files || []).length > 0) {
+		// Stored content is usually the answer text already (typed by the student,
+		// or transcribed from the scan by the content refresh). Only pay for
+		// re-extraction when it is a pointer note, empty, or too short to review.
+		const needsExtraction = isPointerOnlyContent(studentText) || studentText.trim().length < 200;
+		if (!isSpeaking && hasFiles && needsExtraction) {
 			try {
 				const extracted = await extractStoredFiles({
 					collection,
@@ -383,7 +389,7 @@ async function runEvaluation(input: {
 			isSpeaking
 				? 'Catatan: bukti utama adalah transkripsi audio. Setiap temuan wajib mengutip substring PERSIS dari transkripsi di atas.'
 				: '',
-			!isSpeaking && usedAttachment
+			!isSpeaking && (usedAttachment || hasFiles)
 				? 'Catatan: teks kiriman di atas berasal dari transkripsi lembar kerja peserta. Tulisan yang tercetak pada lembar (instruksi tugas, judul, label kolom, nama peserta) BUKAN jawaban peserta — jangan dinilai dan jangan dikutip sebagai temuan. Nilai hanya kalimat yang ditulis peserta sendiri.'
 				: '',
 			isSpeaking

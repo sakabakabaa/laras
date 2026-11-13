@@ -27,6 +27,7 @@ import { createResearchSnapshot } from '@/lib/evaluation-snapshot.server';
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { collectModelWithProvenance, imageFilenames, storedFileUrl } from '@/lib/task-assist.server';
+import { extractStoredFiles } from '@/lib/feedback.server';
 import {
 	cpmkOfSubCpmk,
 	retrieveContextBundle,
@@ -260,6 +261,31 @@ async function runEvaluation(input: {
 					.map((filename) => storedFileUrl(collection, recordId, filename));
 		const structured = isSpeaking ? '' : renderStructuredAnswers(assignment, submission.taskAnswers);
 
+		// Attached files are the actual answer for many submissions (a scanned
+		// PDF or a photo of handwritten work), and the stored text may be only a
+		// Drive pointer. Read the attachments into the evidence text so the model
+		// reviews the work instead of a filename — extraction never guesses.
+		let evidenceText = studentText;
+		if (!isSpeaking && (submission.files || []).length > 0) {
+			try {
+				const extracted = await extractStoredFiles({
+					collection,
+					recordId,
+					files: submission.files,
+					kind: kind || undefined,
+				});
+				const attachmentText = extracted.text.trim();
+				if (attachmentText) {
+					evidenceText = [studentText, `[ISI LAMPIRAN]\n${attachmentText}`]
+						.filter(Boolean)
+						.join('\n\n')
+						.slice(0, MAX_TEXT_CHARS * 2);
+				}
+			} catch (error) {
+				logger.error('evaluation attachment extraction failed', error);
+			}
+		}
+
 		if (isSpeaking) {
 			// No transcript yet (still processing, failed, or never requested):
 			// record an explicit insufficient state — never a guess. The
@@ -274,7 +300,7 @@ async function runEvaluation(input: {
 				});
 				return;
 			}
-		} else if (!studentText && images.length === 0 && !structured && !submission.link) {
+		} else if (!evidenceText && images.length === 0 && !structured && !submission.link) {
 			await pocketbaseAdmin.updateRecord('ai_evaluations', evalId, {
 				status: 'ready',
 				result: 'insufficient',
@@ -344,8 +370,8 @@ async function runEvaluation(input: {
 			'KIRIMAN PESERTA:',
 			isSpeaking
 				? `Transkripsi audio peserta (hasil pengenalan otomatis, mungkin memuat kesalahan):\n"""\n${studentText}\n"""`
-				: studentText
-					? `Teks kiriman:\n"""\n${studentText}\n"""`
+				: evidenceText
+					? `Teks kiriman dan isi lampiran:\n"""\n${evidenceText}\n"""`
 					: 'Teks kiriman: (kosong)',
 			structured ? `Jawaban terstruktur:\n${structured}` : '',
 			submission.link ? `Tautan kiriman: ${submission.link}` : '',
@@ -393,7 +419,7 @@ async function runEvaluation(input: {
 			.join('\n');
 
 		const researchSnapshot = createResearchSnapshot({
-			studentText, structuredAnswers: structured,
+			studentText: evidenceText, structuredAnswers: structured,
 			task: { id: assignment.id, title: assignment.title, shape: assignment.shape,
 				instructions: assignment.instructions || '', requirements: assignment.requirements || '',
 				groupInfo: assignment.groupInfo || '', taskConfig: assignment.taskConfig, levelGuide },
@@ -412,12 +438,12 @@ async function runEvaluation(input: {
 
 		// Phase 5 — research provenance: which input sources this run consumed.
 		// Recorded honestly from the actual inputs; never invented.
-		const usedStudentText = !!studentText;
+		const usedStudentText = !!evidenceText;
 		const usedImages = images.length > 0;
 		const usedCourseMaterial = !!material;
 		const usedRubric = criteria.length > 0;
 		const usedCefr = !!levelGuide;
-		const inputTextHash = sha256(studentText || '');
+		const inputTextHash = sha256(evidenceText || '');
 		const provenanceBase = {
 			model: 'unknown',
 			modelVersion: 'unknown',
@@ -456,7 +482,7 @@ async function runEvaluation(input: {
 			return;
 		}
 
-		const draft = raw ? validateDraft(raw, studentText, criteria) : null;
+		const draft = raw ? validateDraft(raw, evidenceText, criteria) : null;
 		const rawOutput = raw.slice(0, 100000);
 		const provenance = {
 			...provenanceBase,

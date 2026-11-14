@@ -52,6 +52,7 @@ import {
 	parseTranscriptConfidence,
 	REVIEW_STATUS_LABEL,
 	SEVERITY_LABEL,
+	sliceSegments,
 	type AiEvaluationRow,
 	type EvalSeverity,
 	type ResearchProvenance,
@@ -144,26 +145,6 @@ function speakerOf(line: string) {
 	const match = line.match(/^([A-ZÄÖÜ][A-Za-zÄÖÜäöüß.'-]{0,18})\s*:\s+([\s\S]+)$/);
 	if (!match) return null;
 	return { name: match[1], rest: match[2], prefix: line.length - match[2].length };
-}
-
-function sliceSegments(segments: MarkedSegment[], start: number, end: number) {
-	let pos = 0;
-	const parts: MarkedSegment[] = [];
-	for (const segment of segments) {
-		const segStart = pos;
-		const segEnd = pos + segment.text.length;
-		pos = segEnd;
-		const from = Math.max(segStart, start);
-		const to = Math.min(segEnd, end);
-		if (to > from) {
-			parts.push({
-				text: segment.text.slice(from - segStart, to - segStart),
-				severity: segment.severity,
-				findingIndex: segment.findingIndex,
-			});
-		}
-	}
-	return parts;
 }
 
 function shortCriterionLabel(label: string): string {

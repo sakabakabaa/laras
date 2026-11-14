@@ -109,6 +109,15 @@ describe('stored scheduled AI drafts', () => {
 			data: { class: 'cls00001', activity: 'act00001', attempt: 'att00001', student: 'stu00001', status: 'ready', attemptRevision: 2, settingsRevision: 4 },
 		});
 		expect((db.created[0].data.draft as { criterionScores: Record<string, number> }).criterionScores).toEqual({ g: 70, i: 90 });
+		// Findings keep severity and are anchored to the answer they quote.
+		const answer = 'Liebe Anna, ich komme heute nicht zu Arbeit.';
+		const stored = db.created[0].data.draft as { findings: Record<string, unknown>[]; answers: unknown[] };
+		expect(stored.findings[0]).toMatchObject({
+			severity: 'major', quote: 'zu Arbeit', note: 'Gunakan "zur Arbeit".', correction: 'zur Arbeit', errorDescription: 'Artikel fehlt',
+			anchorValid: true, anchorAmbiguous: false, quoteStart: answer.indexOf('zu Arbeit'), itemId: 'w', answerIndex: 0,
+			answerStart: answer.indexOf('zu Arbeit'), answerEnd: answer.indexOf('zu Arbeit') + 9,
+		});
+		expect(stored.answers).toEqual([{ itemId: 'w', answerIndex: 0, length: answer.length }]);
 	});
 
 	it('updates the existing record on regeneration and uses provisional criteria only without settings', async () => {

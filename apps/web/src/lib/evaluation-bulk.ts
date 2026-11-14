@@ -56,11 +56,11 @@ function authHeaders(): Record<string, string> {
 }
 
 /** Asks the server for an AI draft for one submission (same route as "Minta draf AI"). */
-export async function requestDraft(submissionId: string): Promise<boolean> {
+export async function requestDraft(submissionId: string, force = false): Promise<boolean> {
 	const response = await fetch('/api/evaluation-draft', {
 		method: 'POST',
 		headers: authHeaders(),
-		body: JSON.stringify({ submissionId }),
+		body: JSON.stringify(force ? { submissionId, force: true } : { submissionId }),
 	});
 	if (!response.ok) return false;
 	const body = (await response.json().catch(() => ({}))) as { status?: string };
@@ -88,13 +88,18 @@ export async function waitForDrafts(submissionIds: string[], timeoutMs = 180_000
 	}
 }
 
-/** Requests AI drafts for every given submission, a few at a time. */
+/**
+ * Requests AI drafts for every given submission, a few at a time. With
+ * `force` (regenerate stale drafts) the existing draft is replaced; the
+ * lecturer's saved review is kept by the server.
+ */
 export function runAiForAll(
 	submissionIds: string[],
 	onProgress: (progress: WaveProgress) => void,
 	shouldStop: () => boolean,
+	options: { force?: boolean } = {},
 ) {
-	return runInWaves(submissionIds, { size: 3, request: requestDraft, settle: (ids) => waitForDrafts(ids), onProgress, shouldStop });
+	return runInWaves(submissionIds, { size: 3, request: (id) => requestDraft(id, options.force === true), settle: (ids) => waitForDrafts(ids), onProgress, shouldStop });
 }
 
 export type BatchPublishResponse = {

@@ -13,7 +13,7 @@
 import { validatedRubric, rubricTotal } from '@/lib/evaluation-rubric';
 import { parseStructuredFindings, type EvalFinding } from '@/lib/ai-evaluation';
 import { lessonContextOf } from '@/lib/ai-evaluation.server';
-import { cefrLevelGuide, extractCefrLevel } from '@/lib/cefr-level';
+import { cefrLevelForCourse, cefrLevelGuide } from '@/lib/cefr-level';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { collectModelWithProvenance } from '@/lib/task-assist.server';
 import logger from '@/lib/logger.server';
@@ -182,14 +182,14 @@ export function composeLiveFeedback(input: { summary: string; findings: EvalFind
 export async function authorizeLiveSession(
 	userId: string,
 	sessionId: string,
-): Promise<{ courseCode: string } | { error: LiveDraftFailure }> {
+): Promise<{ courseCode: string; courseTitle: string } | { error: LiveDraftFailure }> {
 	try {
 		const session = await pocketbaseAdmin.getRecord<{ course?: string }>('class_sessions', sessionId);
-		const course = await pocketbaseAdmin.getRecord<{ owner?: string; code?: string }>('courses', session.course || '');
+		const course = await pocketbaseAdmin.getRecord<{ owner?: string; code?: string; title?: string }>('courses', session.course || '');
 		if (course.owner !== userId) {
 			return { error: { status: 403, message: 'Hanya dosen pemilik mata kuliah yang dapat meminta draf AI.' } };
 		}
-		return { courseCode: course.code || '' };
+		return { courseCode: course.code || '', courseTitle: course.title || '' };
 	} catch {
 		return { error: { status: 404, message: 'Pertemuan tidak ditemukan.' } };
 	}
@@ -201,16 +201,16 @@ export async function draftLiveAnswerReview(
 ): Promise<{ draft: LiveDraft } | { error: LiveDraftFailure }> {
 	const authorized = await authorizeLiveSession(userId, input.sessionId);
 	if ('error' in authorized) return authorized;
-	return generateLiveDraft(input, authorized.courseCode);
+	return generateLiveDraft(input, { code: authorized.courseCode, title: authorized.courseTitle });
 }
 
 /** Runs the model for an already-authorized request. Nothing is stored here. */
 export async function generateLiveDraft(
 	input: LiveDraftInput,
-	courseCode: string,
+	course: string | { code?: string; title?: string },
 ): Promise<{ draft: LiveDraft } | { error: LiveDraftFailure }> {
 	const lessonContext = await lessonContextOf({ session: input.sessionId, subCpmk: '' });
-	const levelGuide = cefrLevelGuide(extractCefrLevel(courseCode));
+	const levelGuide = cefrLevelGuide(typeof course === 'string' ? cefrLevelForCourse({ code: course }) : cefrLevelForCourse(course));
 	const prompt = buildLivePrompt(input, { levelGuide, lessonContext });
 	let raw = '';
 	try {

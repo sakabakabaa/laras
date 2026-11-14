@@ -32,6 +32,10 @@ export type ScheduledAiDraftRecord = {
 		/** Present on drafts with inline anchors: how much of each answer the AI read. */
 		answers?: ScheduledAiCheckedAnswer[];
 		truncated?: boolean;
+		/** CEFR level the AI was calibrated to (absent/empty when none was known). */
+		cefrLevel?: string;
+		/** Whether a rubric was sent to the AI. */
+		usedRubric?: boolean;
 	};
 	error?: string;
 	updated?: string;

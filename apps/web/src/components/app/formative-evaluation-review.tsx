@@ -852,8 +852,8 @@ export function FormativeReviewAnswer() {
 				</span>
 			</footer>
 			<p className="fas-legend">
-				<mark className="aev-mark minor">kuning</mark> saran AI
-				<mark className="aev-mark major">merah</mark> perlu diperbaiki AI
+				<mark className="aev-mark major">merah</mark> kesalahan berarti
+				<mark className="aev-mark minor">kuning</mark> saran kecil
 				<mark className="aev-mark minor lecturer">garis</mark> catatan dosen
 			</p>
 		</div>

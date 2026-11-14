@@ -21,6 +21,7 @@
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { authenticateUser } from '@/lib/context-retrieval.server';
+import { staleFlagFor } from '@/lib/ai-evaluation-stale.server';
 import type { Assignment } from '@/lib/assignments';
 import {
 	EVALUATION_SUMMARY_FIELDS,
@@ -68,6 +69,10 @@ export const action = withApi(async ({ request }) => {
 		owner: string;
 		status: string;
 		transcriptStatus?: string;
+		content?: string;
+		files?: string[];
+		transcript?: string;
+		updated?: string;
 		expand?: { owner?: { name?: string; nim?: string; email?: string } };
 	}>('assignment_submissions', {
 		filter: `assignment="${assignmentId}"`,
@@ -99,7 +104,12 @@ export const action = withApi(async ({ request }) => {
 		const latest = new Map<string, EvaluationRowLike>();
 		for (const row of rows) if (!latest.has(row.submission)) latest.set(row.submission, row);
 		for (const row of result.items) {
-			const { publish: _publish, ...summary } = summarizeEvaluation({ assignment, submission: row, row: latest.get(row.id) });
+			const { publish: _publish, ...summary } = summarizeEvaluation({
+				assignment,
+				submission: row,
+				row: latest.get(row.id),
+				stale: staleFlagFor({ assignment, submission: row, row: latest.get(row.id) }),
+			});
 			aiSummaries[row.id] = summary;
 		}
 	} catch {

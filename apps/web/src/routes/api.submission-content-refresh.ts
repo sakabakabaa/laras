@@ -75,7 +75,23 @@ export const action = withApi(async ({ request }) => {
 			submissionId,
 			status: result.status,
 		};
-		if (body.regenerate === true && result.status === 'refreshed') {
+		// A re-read overwrites the text the draft was made from. Regenerate (force,
+		// which keeps the lecturer's review) when a draft already exists or when
+		// asked, so a refresh never leaves a stale draft behind.
+		if (result.status === 'refreshed' && body.regenerate !== false) {
+			const hadDraft =
+				body.regenerate === true ||
+				(
+					await pocketbaseAdmin.listRecords('ai_evaluations', {
+						filter: `submission="${submissionId}"`,
+						perPage: 1,
+						fields: 'id',
+					})
+				).items.length > 0;
+			if (!hadDraft) {
+				outcomes.push(outcome);
+				continue;
+			}
 			const queued = await queueEvaluationDraft({ assignment, submissionId, force: true });
 			outcome.evaluation = queued.status;
 		}

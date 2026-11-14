@@ -91,7 +91,10 @@ export type AttemptMarks =
 	/** The answer changed after the draft was made: no marks are shown. */
 	| {status: 'stale'}
 	/** `legacy`: an older draft without anchors — quotes located best-effort, never green. */
-	| {status: 'ready'; legacy: boolean; cards: Record<string, CardMarks>};
+	| {status: 'ready'; legacy: boolean; cards: Record<string, CardMarks>; meta: DraftMeta};
+
+/** What the AI draft was based on, when the draft recorded it (undefined on older drafts). */
+export type DraftMeta = {cefrLevel?: string; usedRubric?: boolean};
 
 const severityOf = (value: unknown): EvalSeverity => (value === 'major' ? 'major' : 'minor');
 
@@ -121,7 +124,7 @@ const toEval = (finding: ScheduledAiFinding, quote: string, start: number): Eval
  * attempt's written answer cards (id + the student's original answer).
  */
 export function scheduledAttemptMarks(
-	record: {attempt: string; status: string; attemptRevision: number; draft?: {findings?: ScheduledAiFinding[]; answers?: ScheduledAiCheckedAnswer[]}} | undefined,
+	record: {attempt: string; status: string; attemptRevision: number; draft?: {findings?: ScheduledAiFinding[]; answers?: ScheduledAiCheckedAnswer[]; cefrLevel?: string; usedRubric?: boolean}} | undefined,
 	attempt: Pick<ScheduledAttempt, 'id' | 'revision'> | undefined,
 	cards: {id: string; answer: string}[],
 ): AttemptMarks {
@@ -129,6 +132,7 @@ export function scheduledAttemptMarks(
 	if (record.attemptRevision !== attempt.revision) return {status: 'stale'};
 	const findings = Array.isArray(record.draft?.findings) ? record.draft.findings : [];
 	const checkedAnswers = record.draft?.answers;
+	const meta: DraftMeta = {cefrLevel: record.draft?.cefrLevel, usedRubric: record.draft?.usedRubric};
 	const out: Record<string, CardMarks> = {};
 	if (Array.isArray(checkedAnswers)) {
 		for (const card of cards) {
@@ -155,7 +159,7 @@ export function scheduledAttemptMarks(
 			const length = read && typeof read.length === 'number' ? Math.max(0, read.length) : 0;
 			out[card.id] = {findings: marks, checked: consistent && length > 0 ? {start: lead, end: Math.min(text.length, lead + length)} : null};
 		}
-		return {status: 'ready', legacy: false, cards: out};
+		return {status: 'ready', legacy: false, cards: out, meta};
 	}
 	// Older draft: no anchors were stored. A quote is placed only where it occurs
 	// exactly once across all of the attempt's answers; nothing is ever green.
@@ -167,5 +171,5 @@ export function scheduledAttemptMarks(
 		if (hits.length !== 1 || occurrences(hits[0].answer, quote) !== 1) continue;
 		out[hits[0].id]?.findings.push(toEval(finding, quote, hits[0].answer.indexOf(quote)));
 	}
-	return {status: 'ready', legacy: true, cards: out};
+	return {status: 'ready', legacy: true, cards: out, meta};
 }

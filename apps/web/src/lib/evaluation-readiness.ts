@@ -9,6 +9,7 @@
  * lecturer sees when opening the submission in the review panel: the saved
  * review when there is one, otherwise the AI recommendations.
  */
+import { aiScoreNotice, SETUP_NOTICE_TEXT, type AiScoreNotice } from '@/lib/evaluation-setup';
 import { matchCriterion, validatedRubric } from '@/lib/evaluation-rubric';
 import { parseAssessmentDraft } from '@/lib/assessment-draft';
 import {
@@ -42,11 +43,14 @@ export type EvaluationRowLike = {
 	publishedAt?: string;
 	finalScore?: number | null;
 	summary?: string;
+	result?: string;
+	inputTextHash?: string;
+	generatedAt?: string | null;
 };
 
 /** PocketBase `fields` list for loading only what the summary needs (skips generation history). */
 export const EVALUATION_SUMMARY_FIELDS =
-	'id,submission,status,findings,reviewFindings,reviewCriterionScores,reviewDraft,reviewedAt,rubricBreakdown,rubricScores,scoringVersion,recommendedScore,publishedAt,finalScore,summary';
+	'id,submission,status,findings,reviewFindings,reviewCriterionScores,reviewDraft,reviewedAt,rubricBreakdown,rubricScores,scoringVersion,recommendedScore,publishedAt,finalScore,summary,result,inputTextHash,generatedAt';
 
 export type EvaluationAiState = 'none' | 'pending' | 'failed' | 'ai' | 'lecturer' | 'published';
 
@@ -60,6 +64,10 @@ export type EvaluationAiSummary = {
 	blocker: string;
 	/** AI findings still waiting for review in the working copy. */
 	pendingFindings: number;
+	/** The draft was generated from text that differs from the current submission text. */
+	stale: boolean;
+	/** Why no real AI score exists (setup gap or suspicious 0); null when the score is usable. */
+	scoreNotice: AiScoreNotice;
 };
 
 export type PublishInput = {
@@ -113,15 +121,23 @@ export function summarizeEvaluation(input: {
 	assignment: { shape?: string | null; taskConfig?: unknown };
 	submission: SubmissionLike;
 	row: EvaluationRowLike | null | undefined;
+	/** Computed server-side (ai-evaluation-stale.server); default false. */
+	stale?: boolean;
 }): EvaluationAiSummary & { publish: PublishInput | null } {
 	const { assignment, submission, row } = input;
+	const stale = Boolean(input.stale);
 	const criteria = rubricCriteriaOf(assignment);
+	const scoreNotice = row
+		? aiScoreNotice({ assignment, recommendedScore: row.recommendedScore, summary: row.summary, reviewed: Boolean(row.reviewedAt) })
+		: null;
 	const notReady = (state: EvaluationAiState, blocker: string, score: number | null = null, pendingFindings = 0) => ({
 		state,
 		score,
 		ready: false,
 		blocker,
 		pendingFindings,
+		stale,
+		scoreNotice,
 		publish: null,
 	});
 	if (!row || !row.status) return notReady('none', 'Belum ada draf AI.');
@@ -148,6 +164,15 @@ export function summarizeEvaluation(input: {
 	if (speakingTranscriptUnavailable(assignment.shape || '', submission.transcriptStatus || '')) {
 		return notReady(state, 'Transkripsi belum siap.', score, pendingFindings);
 	}
+	if (stale) return notReady(state, 'Teks berubah setelah draf AI dibuat. Buat ulang draf AI.', score, pendingFindings);
+	if (!reviewed && draft?.finalScore == null && scoreNotice) {
+		return notReady(
+			state,
+			scoreNotice.kind === 'setup' ? SETUP_NOTICE_TEXT(scoreNotice.reason) : 'Skor AI 0 perlu dicek dosen.',
+			score,
+			pendingFindings,
+		);
+	}
 	if (reviewed && pendingFindings > 0) {
 		return notReady(state, 'Draf dosen masih memiliki temuan AI yang belum ditinjau.', score, pendingFindings);
 	}
@@ -163,6 +188,8 @@ export function summarizeEvaluation(input: {
 		ready: true,
 		blocker: '',
 		pendingFindings,
+		stale,
+		scoreNotice,
 		publish: {
 			findings: approved,
 			criterionScores,
@@ -174,8 +201,9 @@ export function summarizeEvaluation(input: {
 }
 
 /** Compact list label for a submission's AI/grading state ('' when nothing to show). */
-export function aiStateLabel(summary: Pick<EvaluationAiSummary, 'state' | 'score'> | null | undefined): string {
+export function aiStateLabel(summary: Pick<EvaluationAiSummary, 'state' | 'score'> & { stale?: boolean; scoreNotice?: AiScoreNotice } | null | undefined): string {
 	if (!summary) return '';
+	if (summary.stale && (summary.state === 'ai' || summary.state === 'lecturer')) return 'AI usang';
 	switch (summary.state) {
 		case 'pending':
 			return 'AI…';
@@ -184,6 +212,7 @@ export function aiStateLabel(summary: Pick<EvaluationAiSummary, 'state' | 'score
 		case 'lecturer':
 			return 'Draf dosen';
 		case 'ai':
+			if (summary.scoreNotice) return summary.scoreNotice.kind === 'setup' ? 'Skor AI tidak dihitung' : 'AI 0 dicek';
 			return summary.score == null ? 'Draf AI' : `AI ${summary.score}`;
 		default:
 			return '';

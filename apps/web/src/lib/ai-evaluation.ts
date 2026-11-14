@@ -750,6 +750,34 @@ export type MarkedSegment = {
  * that do not match the text produce no mark (they were already dropped
  * server-side, this is defence in depth).
  */
+/**
+ * Where a finding's quote lies in the CURRENT text, or null when it cannot be
+ * anchored (no quote, invalid/ambiguous anchor, or the quote is no longer
+ * there). Stored offsets are trusted only while they still slice to the quote;
+ * otherwise the quote must occur exactly once. A quote that is absent is never
+ * guessed at, so text that changed after the draft cannot get a wrong mark.
+ */
+export function locateQuote(
+	finding: Pick<EvalFinding, 'quote' | 'anchorValid' | 'anchorAmbiguous' | 'quoteStart' | 'quoteEnd'>,
+	text: string,
+): { start: number; end: number } | null {
+	const quote = (finding.quote || '').trim();
+	if (!quote || quote.length > 300) return null;
+	if (finding.anchorValid === false || finding.anchorAmbiguous) return null;
+	if (typeof finding.quoteStart === 'number' && finding.quoteStart >= 0) {
+		const end = typeof finding.quoteEnd === 'number' ? finding.quoteEnd : finding.quoteStart + quote.length;
+		if (text.slice(finding.quoteStart, end).trim() === quote) return { start: finding.quoteStart, end };
+	}
+	const first = text.indexOf(quote);
+	if (first === -1 || text.indexOf(quote, first + 1) !== -1) return null;
+	return { start: first, end: first + quote.length };
+}
+
+/** True when the finding has a quote that is marked on `text`. */
+export function findingAnchoredIn(finding: Parameters<typeof locateQuote>[0], text: string): boolean {
+	return locateQuote(finding, text) !== null;
+}
+
 export function buildMarkedSegments(text: string, findings: EvalFinding[]): MarkedSegment[] {
 	type Match = { start: number; end: number; index: number; severity: EvalSeverity };
 	const matches: Match[] = [];
@@ -761,15 +789,9 @@ export function buildMarkedSegments(text: string, findings: EvalFinding[]): Mark
 		// Old findings without anchor fields fall back to indexOf (backward compat).
 		if (finding.anchorValid === false) return;
 		if (finding.anchorAmbiguous) return;
-		let start: number;
-		if (typeof finding.quoteStart === 'number' && finding.quoteStart >= 0) {
-			start = finding.quoteStart;
-		} else {
-			const found = text.indexOf(quote);
-			if (found === -1) return;
-			start = found;
-		}
-		const end = typeof finding.quoteEnd === 'number' ? finding.quoteEnd : start + quote.length;
+		const located = locateQuote(finding, text);
+		if (!located) return;
+		const { start, end } = located;
 		matches.push({ start, end, index, severity: finding.severity });
 	});
 	matches.sort((a, b) => a.start - b.start || b.end - a.end);

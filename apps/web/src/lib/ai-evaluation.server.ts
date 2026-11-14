@@ -21,14 +21,13 @@ import { validatedRubric, rubricTotal } from './evaluation-rubric';
  *   read it (owner-only PocketBase rules).
  * - Latihan formatif is never evaluated — no final submission, no grade.
  */
-import { createHash } from 'crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { createResearchSnapshot } from '@/lib/evaluation-snapshot.server';
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { collectModelWithProvenance, imageFilenames, storedFileUrl } from '@/lib/task-assist.server';
 import { extractStoredFiles } from '@/lib/feedback.server';
-import { isPointerOnlyContent } from '@/lib/submission-content.server';
+import { draftCurrency, generationExtractsAttachments, MAX_TEXT_CHARS, sha256Hex, studentTextOf } from '@/lib/ai-evaluation-stale.server';
 import { answerTextFromExtraction } from '@/lib/ocr-clean';
 import {
 	cpmkOfSubCpmk,
@@ -38,7 +37,8 @@ import {
 	type RetrievalScope,
 } from '@/lib/context-retrieval.server';
 import { activityTypeOf, type Assignment } from '@/lib/assignments';
-import { cefrLevelGuide, extractCefrLevel } from '@/lib/cefr-level';
+import { MISSING_SOURCE_REASON, scoreSetupProblem, SETUP_NOTICE_TEXT } from '@/lib/evaluation-setup';
+import { cefrLevelForCourse, cefrLevelGuide } from '@/lib/cefr-level';
 import {
 	parseListeningConfig,
 	parseQuizConfig,
@@ -70,7 +70,6 @@ type SubmissionRow = {
 type EvalRow = { id: string; status: string; generatedAt?: string | null; generationHistory?: Record<string, unknown>[]; [key: string]: unknown };
 
 const MAX_IMAGES = 5;
-const MAX_TEXT_CHARS = 12000;
 
 /**
  * Phase 5 — research provenance version constants. Bump these when the prompt
@@ -82,7 +81,7 @@ export const AI_EVALUATION_SYSTEM_PROMPT_VERSION = 'german-gfl-feedback-v3-passa
 export const RESEARCH_SCHEMA_VERSION = 2;
 
 /** SHA-256 hex hash of a text, for reproducibility without storing the full input. */
-const sha256 = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex');
+const sha256 = sha256Hex;
 
 const SYSTEM_PROMPT = [
 	'Anda asisten draf evaluasi dosen untuk tulisan Bahasa Jerman sebagai bahasa asing (GFL — German as a Foreign Language).',
@@ -293,12 +292,8 @@ async function runEvaluation(input: {
 		// Phase 4 — for speaking tasks the approved Whisper transcript is the
 		// evidence text the model reviews and the lecturer annotates. Written
 		// content, structured answers, and photos are not the speaking evidence.
-		const transcriptText = isSpeaking
-			? (submission.transcript || '').slice(0, MAX_TEXT_CHARS)
-			: '';
-		const studentText = isSpeaking
-			? transcriptText
-			: (submission.content || '').slice(0, MAX_TEXT_CHARS);
+		const studentText = studentTextOf(submission, isSpeaking);
+		const transcriptText = isSpeaking ? studentText : '';
 		const images = isSpeaking
 			? []
 			: imageFilenames(submission.files)
@@ -316,8 +311,7 @@ async function runEvaluation(input: {
 		// Stored content is usually the answer text already (typed by the student,
 		// or transcribed from the scan by the content refresh). Only pay for
 		// re-extraction when it is a pointer note, empty, or too short to review.
-		const needsExtraction = isPointerOnlyContent(studentText) || studentText.trim().length < 200;
-		if (!isSpeaking && hasFiles && needsExtraction) {
+		if (generationExtractsAttachments(studentText, hasFiles, isSpeaking)) {
 			try {
 				const extracted = await extractStoredFiles({
 					collection,
@@ -363,6 +357,12 @@ async function runEvaluation(input: {
 			return;
 		}
 
+		// Setup check: a Textkorrektur task without its source text cannot be
+		// scored (the AI never saw the text being corrected). The model still runs
+		// so language findings stay available, but no numeric score is stored.
+		const setupProblem = scoreSetupProblem(assignment);
+		const missingSource = !isSpeaking && kind === 'writing' && setupProblem === MISSING_SOURCE_REASON;
+
 		// ── Optional grounding: lecturer-approved course material only ──
 		let bundle: ContextBundle | null = null;
 		try {
@@ -381,11 +381,11 @@ async function runEvaluation(input: {
 		const criteria = rubricCriteriaOf(assignment);
 		let levelGuide = '';
 		try {
-			const course = await pocketbaseAdmin.getRecord<{ code?: string }>('courses', assignment.course);
+			const course = await pocketbaseAdmin.getRecord<{ code?: string; title?: string }>('courses', assignment.course);
 			// The draft prompt is always German-as-a-foreign-language, so the CEFR
 			// calibration applies to every reviewed shape (case study, portfolio,
 			// group project, ...), not only the language-skills builders.
-			levelGuide = cefrLevelGuide(extractCefrLevel(course.code || ''));
+			levelGuide = cefrLevelGuide(cefrLevelForCourse(course));
 		} catch {
 			/* no course code — safe fallback, existing behavior unchanged */
 		}
@@ -447,6 +447,9 @@ async function runEvaluation(input: {
 				: '',
 			truncated
 				? `Catatan: kiriman peserta lebih panjang dari batas ${MAX_TEXT_CHARS} karakter dan dipotong. Hanya bagian di atas yang ditinjau — jangan menyimpulkan apa pun tentang bagian yang tidak terlihat (mis. "tidak ada kesimpulan"), dan sebutkan di ringkasan bahwa penilaian hanya mencakup bagian awal.`
+				: '',
+			missingSource
+				? 'Catatan: teks sumber yang harus dikoreksi peserta TIDAK tersedia. Beri hanya temuan bahasa pada kalimat peserta; jangan menilai kelengkapan koreksi. Isi "recommendedScore" dengan null dan "rubricBreakdown" dengan [].'
 				: '',
 			!hasWeightedRubric
 				? 'Catatan: tidak ada kriteria rubrik berbobot, jadi sistem tidak menghitung skor. Isi "recommendedScore" dengan null dan "rubricBreakdown" dengan [].'
@@ -590,7 +593,7 @@ async function runEvaluation(input: {
 		// criterion exactly once: no total is computed. Say so instead of leaving
 		// a "ready" draft with a silently missing score.
 		const scoreNote =
-			hasWeightedRubric && draft.recommendedScore == null
+			hasWeightedRubric && !missingSource && draft.recommendedScore == null
 				? ' Skor rekomendasi tidak dihitung: rincian rubrik AI belum mencakup semua kriteria berbobot. Nilai manual diperlukan.'
 				: '';
 		await pocketbaseAdmin.updateRecord('ai_evaluations', evalId, {
@@ -598,9 +601,10 @@ async function runEvaluation(input: {
 			result: 'sufficient',
 			rawOutput,
 			findings: draft.findings,
-			recommendedScore: draft.recommendedScore,
-			rubricBreakdown: draft.rubricBreakdown,
+			recommendedScore: missingSource ? null : draft.recommendedScore,
+			rubricBreakdown: missingSource ? [] : draft.rubricBreakdown,
 			summary: draft.summary,
+			...(missingSource ? { reason: SETUP_NOTICE_TEXT(setupProblem) } : {}),
 			bundleId: material ? material.bundleId : '',
 			citations,
 			// ai_evaluations.contextNote is capped at 500 characters by the schema:
@@ -706,11 +710,19 @@ async function prepareEvaluationDraft(input: {
 			}
 			const generatedAt = existing.generatedAt ? Date.parse(existing.generatedAt) : NaN;
 			const submittedAt = Date.parse(submission.updated || submission.created);
+			// Skip only a draft that is still current. A stored-hash comparison
+			// beats timestamps: a changed text regenerates, an unchanged one does
+			// not (a status bump after generation is not a content change). When
+			// currency is unknown (no comparable hash) the old timestamp rule applies.
+			const currency = draftCurrency({
+				row: existing as { status?: string; inputTextHash?: string; generatedAt?: string | null; findings?: unknown },
+				submission,
+				isSpeaking: taskKindForShape(input.assignment.shape) === 'speaking',
+			});
+			const hashCurrent = currency === 'current' && typeof existing.inputTextHash === 'string' && existing.inputTextHash !== '';
 			if (
-				!input.force && existing.status === 'ready' &&
-				Number.isFinite(generatedAt) &&
-				Number.isFinite(submittedAt) &&
-				generatedAt >= submittedAt
+				!input.force && existing.status === 'ready' && currency !== 'stale' &&
+				(hashCurrent || (Number.isFinite(generatedAt) && Number.isFinite(submittedAt) && generatedAt >= submittedAt))
 			) {
 				return { queued: false, status: 'ready', reason: 'Draf evaluasi sudah tersedia.' };
 			}

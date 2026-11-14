@@ -1,13 +1,13 @@
 /**
  * Read-only inline AI marks on a student's text, the same colouring Tugas
- * uses: green = checked with no finding, yellow = minor, red = major. Hover
+ * uses: green underline = not flagged by the AI (current draft only), yellow = minor, red = major, grey = illegible. Hover
  * or keyboard focus on a yellow/red passage shows the finding. The text is
  * never altered; findings are laid over it via `buildMarkedSegments`.
  */
 import {useId} from 'react';
+import {lineGreenEligible, OK_TITLE, splitUnreadable, UNREADABLE_LABEL} from '@/lib/ai-marks';
 import {buildMarkedSegments, SEVERITY_LABEL, sliceSegments, type EvalFinding, type MarkedSegment} from '@/lib/ai-evaluation';
 
-const OK_LABEL = 'Tidak ada temuan pada bagian ini';
 
 type Part = MarkedSegment & {ok?: boolean};
 
@@ -44,6 +44,16 @@ function linesOf(text: string): {start: number; text: string}[] {
 	}
 	lines.push({start, text: text.slice(start)});
 	return lines;
+}
+
+/** Illegible OCR segment: grey with a dashed outline, never green. */
+export function UnreadableMark({text}: {text: string}) {
+	return (
+		<mark className="aev-mark unreadable" title={UNREADABLE_LABEL}>
+			{text}
+			<span className="sr-only"> ({UNREADABLE_LABEL})</span>
+		</mark>
+	);
 }
 
 function FindingMark({finding, text}: {finding: EvalFinding; text: string}) {
@@ -102,15 +112,20 @@ export function MarkedText({
 										if (part.severity && part.findingIndex != null && findings[part.findingIndex]) {
 											return <FindingMark key={partIndex} finding={findings[part.findingIndex]} text={part.text} />;
 										}
-										if (part.ok && part.text.trim()) {
-											return (
-												<mark key={partIndex} className="aev-mark ok" title={OK_LABEL}>
-													{part.text}
-													<span className="sr-only">{OK_LABEL}</span>
-												</mark>
-											);
-										}
-										return <span key={partIndex}>{part.text}</span>;
+										const okLine = part.ok && lineGreenEligible(line.text);
+										return splitUnreadable(part.text).map((piece, pieceIndex) => {
+											const key = `${partIndex}-${pieceIndex}`;
+											if (piece.unreadable) return <UnreadableMark key={key} text={piece.text} />;
+											if (okLine && piece.text.trim()) {
+												return (
+													<mark key={key} className="aev-mark ok" title={OK_TITLE}>
+														{piece.text}
+														<span className="sr-only"> ({OK_TITLE})</span>
+													</mark>
+												);
+											}
+											return <span key={key}>{piece.text}</span>;
+										});
 									})
 								: ' '}
 						</span>
@@ -125,13 +140,14 @@ export function MarkedText({
 export function MarkLegend({ok = true}: {ok?: boolean}) {
 	return (
 		<p className="fas-legend sr-mark-legend">
+			<mark className="aev-mark major">merah</mark> kesalahan berarti
+			<mark className="aev-mark minor">kuning</mark> saran kecil
 			{ok && (
 				<>
-					<mark className="aev-mark ok">hijau</mark> tidak ada temuan
+					<mark className="aev-mark ok">garis hijau</mark> tidak ditandai AI
 				</>
 			)}
-			<mark className="aev-mark minor">kuning</mark> saran kecil
-			<mark className="aev-mark major">merah</mark> kesalahan berarti
+			<mark className="aev-mark unreadable">abu-abu</mark> tidak terbaca
 		</p>
 	);
 }

@@ -22,6 +22,7 @@ import { authenticateUser } from '@/lib/context-retrieval.server';
 import { loadEvaluationTargetForUser } from '@/lib/evaluation-review.server';
 import { publishEvaluation } from '@/lib/evaluation-publish.server';
 import { EVALUATION_SUMMARY_FIELDS, summarizeEvaluation, type BatchPublishItem, type EvaluationRowLike } from '@/lib/evaluation-readiness';
+import { STALE_SUBMISSION_FIELDS, staleFlagFor } from '@/lib/ai-evaluation-stale.server';
 import { activityTypeOf, type Assignment } from '@/lib/assignments';
 
 const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
@@ -54,10 +55,10 @@ export const action = withApi(async ({ request }) => {
 	if (activityTypeOf(assignment) === 'formative') return apiError(422, 'Evaluasi hanya berlaku untuk Tugas formal.');
 
 	const submissions = (
-		await pocketbaseAdmin.listRecords<{ id: string; status: string; transcriptStatus?: string }>('assignment_submissions', {
+		await pocketbaseAdmin.listRecords<{ id: string; status: string; transcriptStatus?: string; content?: string; files?: string[]; transcript?: string; updated?: string }>('assignment_submissions', {
 			filter: `assignment="${assignmentId}" && (status="submitted" || status="late")`,
 			perPage: 1000,
-			fields: 'id,status,transcriptStatus',
+			fields: STALE_SUBMISSION_FIELDS,
 		})
 	).items.filter((s) => !only || only.has(s.id));
 	if (submissions.length > MAX_BATCH) return apiError(422, `Maksimal ${MAX_BATCH} kiriman per penerbitan.`);
@@ -76,7 +77,12 @@ export const action = withApi(async ({ request }) => {
 	const results: BatchPublishItem[] = [];
 	let skipped = 0;
 	for (const submission of submissions) {
-		const summary = summarizeEvaluation({ assignment, submission, row: latest.get(submission.id) });
+		const summary = summarizeEvaluation({
+			assignment,
+			submission,
+			row: latest.get(submission.id),
+			stale: staleFlagFor({ assignment, submission, row: latest.get(submission.id) }),
+		});
 		if (!summary.ready || !summary.publish) {
 			// Only report items the lecturer explicitly asked for; the rest are simply not ready yet.
 			if (only) results.push({ submissionId: submission.id, ok: false, error: summary.blocker });

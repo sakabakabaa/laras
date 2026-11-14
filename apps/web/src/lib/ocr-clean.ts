@@ -1,0 +1,36 @@
+/**
+ * Cleaning for text extracted from a participant's attachment (scanned PDF or
+ * photo), so what is stored and shown as "the submission" is the participant's
+ * work and not the scanner's or the extractor's own furniture.
+ */
+
+/** Scanner app watermarks stamped on every page of a phone scan. */
+const WATERMARK_PHRASE =
+	/(?:dipindai dengan|dipindai menggunakan|scanned with|scanned by|diambil dengan)\s+(?:camscanner|cam scanner|adobe scan|microsoft lens|office lens|genius scan|scanner pro)|\bcs\s+camscanner\b/gi;
+
+/** Removes scanner watermarks, whether on a line of their own or trailing a line of text. */
+export function stripScannerWatermarks(text: string): string {
+	return (text || '')
+		.split('\n')
+		.map((line) => line.replace(WATERMARK_PHRASE, '').replace(/[ \t]+$/g, ''))
+		.join('\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
+}
+
+/**
+ * Extraction headers such as `[DOKUMEN PINDAI: file.pdf]`, `[LAMPIRAN GAMBAR: x.jpg]`
+ * and `[Halaman 2]` tell the extractor which file a block came from. They are not
+ * the participant's words and must not become line 1 of the stored answer.
+ */
+const EXTRACTION_MARKER =
+	/^[ \t]*\[(?:DOKUMEN(?: PINDAI)?: [^\]\n]*|LAMPIRAN GAMBAR: [^\]\n]*|Halaman \d+)\][ \t]*$/gm;
+
+export function stripExtractionMarkers(text: string): string {
+	return (text || '').replace(EXTRACTION_MARKER, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/** Answer text for storage and review: no extraction headers, no scanner watermarks. */
+export function answerTextFromExtraction(text: string): string {
+	return stripScannerWatermarks(stripExtractionMarkers(text));
+}

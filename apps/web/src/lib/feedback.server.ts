@@ -20,7 +20,7 @@
  */
 import logger from '@/lib/logger.server';
 import { ocrPdf } from '@/lib/pdf-ocr.server';
-import { stripScannerWatermarks } from '@/lib/ocr-clean';
+import { clipKeepLines, stripScannerWatermarks } from '@/lib/ocr-clean';
 import { collectModel, storedFileUrl } from '@/lib/task-assist.server';
 import {
 	parseListeningConfig,
@@ -158,7 +158,7 @@ export async function extractStoredFiles(input: {
 				const text = (result?.text || '').replace(/^--\s*\d+\s+of\s+\d+\s*--\s*$/gm, '').trim();
 				pages += result?.total || 0;
 				if (text.length >= MIN_TEXT_LAYER_CHARS) {
-					parts.push(`[DOKUMEN: ${clip(doc, 80)}]\n${clip(text, 12000)}`);
+					parts.push(`[DOKUMEN: ${clip(doc, 80)}]\n${clipKeepLines(text, 12000)}`);
 				} else {
 					// A scanned PDF has no usable text layer: render the pages and
 					// read them with the vision model instead of declaring it empty.
@@ -166,7 +166,7 @@ export async function extractStoredFiles(input: {
 					const ocrText = stripScannerWatermarks(ocr.text);
 					if (ocr.ok && ocrText) {
 						pages = pages || ocr.pages;
-						parts.push(`[DOKUMEN PINDAI: ${clip(doc, 80)}]\n${clip(ocrText, 12000)}`);
+						parts.push(`[DOKUMEN PINDAI: ${clip(doc, 80)}]\n${clipKeepLines(ocrText, 12000)}`);
 					} else {
 						unreadable.push(
 							`PDF “${clip(doc, 80)}” tidak memuat teks yang bisa dibaca (mungkin hasil pindaian). Isi tidak ditebak.`,
@@ -193,7 +193,7 @@ export async function extractStoredFiles(input: {
 				!/tidak ada gambar/i.test(transcript);
 			if (readable) {
 				parts.push(
-					`[LAMPIRAN GAMBAR: ${batch.map((name) => clip(name, 80)).join(', ')}]\n${clip(transcript, 8000)}`,
+					`[LAMPIRAN GAMBAR: ${batch.map((name) => clip(name, 80)).join(', ')}]\n${clipKeepLines(transcript, 8000)}`,
 				);
 			} else {
 				unreadable.push(imageUnreadable(batch[0] || 'lampiran'));

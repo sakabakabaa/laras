@@ -25,9 +25,30 @@ export function stripScannerWatermarks(text: string): string {
  */
 const EXTRACTION_MARKER =
 	/^[ \t]*\[(?:DOKUMEN(?: PINDAI)?: [^\]\n]*|LAMPIRAN GAMBAR: [^\]\n]*|Halaman \d+)\][ \t]*$/gm;
+/** Page markers can end up inline when earlier extraction flattened line breaks. */
+const INLINE_PAGE_MARKER = /\[Halaman \d+\][ \t]*/g;
 
 export function stripExtractionMarkers(text: string): string {
-	return (text || '').replace(EXTRACTION_MARKER, '').replace(/\n{3,}/g, '\n\n').trim();
+	return (text || '')
+		.replace(EXTRACTION_MARKER, '')
+		.replace(INLINE_PAGE_MARKER, '')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
+}
+
+/**
+ * Trims and bounds extracted text WITHOUT flattening it: line breaks are the
+ * participant's own (and what the review panel numbers and anchors to), so only
+ * runs of spaces and excess blank lines are normalized.
+ */
+export function clipKeepLines(value: string | undefined | null, max: number): string {
+	const text = (value || '')
+		.replace(/\r\n?/g, '\n')
+		.replace(/[ \t\f\v]+/g, ' ')
+		.replace(/ ?\n ?/g, '\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
+	return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
 /** Answer text for storage and review: no extraction headers, no scanner watermarks. */
@@ -42,10 +63,8 @@ export function answerTextFromExtraction(text: string): string {
  */
 export function hasExtractionArtifacts(text: string): boolean {
 	const value = text || '';
-	WATERMARK_PHRASE.lastIndex = 0;
-	EXTRACTION_MARKER.lastIndex = 0;
-	const found = WATERMARK_PHRASE.test(value) || EXTRACTION_MARKER.test(value);
-	WATERMARK_PHRASE.lastIndex = 0;
-	EXTRACTION_MARKER.lastIndex = 0;
+	for (const pattern of [WATERMARK_PHRASE, EXTRACTION_MARKER, INLINE_PAGE_MARKER]) pattern.lastIndex = 0;
+	const found = WATERMARK_PHRASE.test(value) || EXTRACTION_MARKER.test(value) || INLINE_PAGE_MARKER.test(value);
+	for (const pattern of [WATERMARK_PHRASE, EXTRACTION_MARKER, INLINE_PAGE_MARKER]) pattern.lastIndex = 0;
 	return found;
 }

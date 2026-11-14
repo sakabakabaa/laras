@@ -1,7 +1,7 @@
 import pb from '@/lib/pocketbase-client';
 
 const BATCH = 4;
-export type RefreshOutcome = { refreshed: number; unreadable: number; failed: number; skipped: number };
+export type RefreshOutcome = { refreshed: number; unreadable: number; failed: number; skipped: number; regenerated: number };
 
 /**
  * Re-reads the given submissions' attachments with the answer-only OCR, a few at
@@ -13,7 +13,7 @@ export async function refreshSubmissionText(
 	ids: string[],
 	onProgress?: (done: number, total: number) => void,
 ): Promise<RefreshOutcome> {
-	const total: RefreshOutcome = { refreshed: 0, unreadable: 0, failed: 0, skipped: 0 };
+	const total: RefreshOutcome = { refreshed: 0, unreadable: 0, failed: 0, skipped: 0, regenerated: 0 };
 	for (let index = 0; index < ids.length; index += BATCH) {
 		const batch = ids.slice(index, index + BATCH);
 		const response = await fetch('/api/submission-content-refresh', {
@@ -25,13 +25,16 @@ export async function refreshSubmissionText(
 			body: JSON.stringify({ assignmentId, ids: batch, force: true }),
 		});
 		const data = (await response.json().catch(() => ({}))) as {
-			outcomes?: { status: string }[];
+			outcomes?: { status: string; evaluation?: string }[];
 			message?: string;
 			error?: string;
 		};
 		if (!response.ok) throw new Error(data.message || data.error || 'Teks kiriman gagal diperbarui.');
 		for (const outcome of data.outcomes || []) {
-			if (outcome.status === 'refreshed') total.refreshed += 1;
+			if (outcome.status === 'refreshed') {
+				total.refreshed += 1;
+				if (outcome.evaluation === 'pending') total.regenerated += 1;
+			}
 			else if (outcome.status === 'unreadable') total.unreadable += 1;
 			else if (outcome.status === 'failed') total.failed += 1;
 			else total.skipped += 1;

@@ -9,6 +9,7 @@
  * read from the stored records, never from the request body.
  */
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
+import { cefrLevelForCourse } from '@/lib/cefr-level';
 import { generateLiveDraft, parseLiveDraftInput, type LiveDraft, type LiveDraftFailure } from '@/lib/live-answer-review.server';
 import { referenceItemsOf, writtenEntriesOf, writtenItemsOf, type ScheduledAiDraftRecord } from '@/lib/scheduled-grading';
 import { anchorDraftFindings } from '@/lib/scheduled-answer-marks';
@@ -40,16 +41,16 @@ const fail = (status: number, message: string): { error: LiveDraftFailure } => (
 export async function authorizeScheduledClass(
 	userId: string,
 	sessionId: string,
-): Promise<{ cls: ClassRecord; courseCode: string } | { error: LiveDraftFailure }> {
+): Promise<{ cls: ClassRecord; courseCode: string; courseTitle: string } | { error: LiveDraftFailure }> {
 	if (!SAFE_RECORD_ID.test(sessionId)) return fail(422, 'Pertemuan tidak valid.');
 	try {
 		const session = await pocketbaseAdmin.getRecord<{ course?: string }>('class_sessions', sessionId);
-		const course = await pocketbaseAdmin.getRecord<{ owner?: string; code?: string }>('courses', session.course || '');
+		const course = await pocketbaseAdmin.getRecord<{ owner?: string; code?: string; title?: string }>('courses', session.course || '');
 		const list = await pocketbaseAdmin.listRecords<ClassRecord>('scheduled_classes', { filter: `session="${sessionId}"`, perPage: 1 });
 		const cls = list.items[0];
 		if (!cls) return fail(404, 'Kelas terjadwal tidak ditemukan.');
 		if (course.owner !== userId && cls.owner !== userId) return fail(403, 'Hanya dosen pemilik kelas yang dapat memakai asisten penilaian.');
-		return { cls, courseCode: course.code || '' };
+		return { cls, courseCode: course.code || '', courseTitle: course.title || '' };
 	} catch {
 		return fail(404, 'Pertemuan tidak ditemukan.');
 	}
@@ -120,7 +121,7 @@ export async function draftScheduledAttempt(
 	if (!SAFE_RECORD_ID.test(attemptId)) return fail(422, 'Jawaban tidak valid.');
 	const authorized = await authorizeScheduledClass(userId, sessionId);
 	if ('error' in authorized) return authorized;
-	const { cls, courseCode } = authorized;
+	const { cls, courseCode, courseTitle } = authorized;
 	const ended = cls.status === 'closed' || cls.status === 'reviewed' || (cls.status === 'scheduled' && Date.parse(cls.endsAt || '') <= Date.now());
 	if (!ended) {
 		// Phase is enforced again on save; drafting during the class is not offered.
@@ -157,7 +158,7 @@ export async function draftScheduledAttempt(
 		attemptRevision: attempt.revision,
 		settingsRevision: settings?.revision || 0,
 	};
-	const result = await generateLiveDraft(parsed.input, courseCode);
+	const result = await generateLiveDraft(parsed.input, { code: courseCode, title: courseTitle });
 	if ('error' in result) {
 		try {
 			await upsertDraft(existing, { ...base, status: 'failed', error: result.error.message.slice(0, 500), draft: {} });
@@ -180,6 +181,8 @@ export async function draftScheduledAttempt(
 		findings: anchored.findings,
 		answers: anchored.answers,
 		truncated: result.draft.truncated,
+		cefrLevel: cefrLevelForCourse({ code: courseCode, title: courseTitle }) || '',
+		usedRubric: criteria.length > 0,
 	};
 	try {
 		await upsertDraft(existing, { ...base, status: 'ready', error: '', draft: stored });

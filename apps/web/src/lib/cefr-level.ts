@@ -34,6 +34,16 @@ export function extractCefrLevel(courseCode: string): string | null {
 	return (CEFR_LEVELS as readonly string[]).includes(level) ? level : null;
 }
 
+/**
+ * CEFR level of a course: the code first ("A1 JR241"), then the title
+ * ("VERSTEHEN A1"). Production codes are often "JR241" with the level only in
+ * the title. There is no dedicated course field for the level.
+ */
+export function cefrLevelForCourse(course: { code?: string | null; title?: string | null } | null | undefined): string | null {
+	if (!course) return null;
+	return extractCefrLevel(course.code || '') || extractCefrLevel(course.title || '');
+}
+
 const CEFR_DESCRIPTION: Record<CefrLevel, string> = {
 	A1: 'A1 (Pemula) — kosakata dan kalimat sangat sederhana; ekspresi sehari-hari dasar dan frasa pendek.',
 	A2: 'A2 (Dasar) — kalimat sederhana dan rutin pada topik familiar sehari-hari; deskripsi langsung dan singkat.',
@@ -62,7 +72,7 @@ export function cefrLevelGuide(level: string | null): string {
  * types. Returns '' for non-language tasks or codes without a CEFR level, so
  * the guide never leaks into unrelated evaluation.
  */
-export function languageLevelGuide(assignment: Assignment, courseCode: string): string {
+export function languageLevelGuide(assignment: Assignment, course: string | { code?: string | null; title?: string | null }): string {
 	if (!taskKindForShape(assignment.shape)) return '';
-	return cefrLevelGuide(extractCefrLevel(courseCode));
+	return cefrLevelGuide(typeof course === 'string' ? extractCefrLevel(course) : cefrLevelForCourse(course));
 }

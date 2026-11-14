@@ -2,7 +2,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {describe, expect, it} from 'vitest';
 import {parseStructuredFindings, type EvalFinding} from '../src/lib/ai-evaluation';
-import {anchorDraftFindings, scheduledAttemptMarks, type ScheduledAiFinding} from '../src/lib/scheduled-answer-marks';
+import {anchorDraftFindings, scheduledAttemptMarks, type AttemptMarks, type ScheduledAiFinding} from '../src/lib/scheduled-answer-marks';
 import {ScheduledWrittenAnswer} from '../src/components/app/scheduled-written-answer';
 import type {ResponseVerdictCard} from '../src/lib/session-review-verdict';
 
@@ -66,7 +66,7 @@ describe('scheduledAttemptMarks', () => {
 	it('drops a mark and the green range when stored offsets no longer match the text', () => {
 		const stored = anchorDraftFindings(verified([raw('zu Schule')]), answers);
 		const marks = scheduledAttemptMarks(record(stored.findings, stored.answers), attempt, [{id: 'a', answer: 'Ich ging in die Schule.'}]);
-		expect(marks).toEqual({status: 'ready', legacy: false, cards: {a: {findings: [], checked: null}}});
+		expect(marks).toEqual({status: 'ready', legacy: false, cards: {a: {findings: [], checked: null}}, meta: {cefrLevel: undefined, usedRubric: undefined}});
 	});
 
 	it('shows nothing for a changed answer, a failed draft or another attempt', () => {
@@ -103,7 +103,7 @@ describe('scheduled written answer marks', () => {
 		const stored = anchorDraftFindings(findings, [{id: 'a', answer: text}]);
 		const marks = scheduledAttemptMarks(record(stored.findings, stored.answers), attempt, [card]);
 		const html = renderToStaticMarkup(createElement(ScheduledWrittenAnswer, {card, marks}));
-		expect(html).toContain('class="aev-mark ok" title="Tidak ada temuan pada bagian ini">Ich gehe ');
+		expect(html).toContain('class="aev-mark ok" title="tidak ditandai AI">Ich gehe ');
 		expect(html).toMatch(/class="aev-mark major" tabindex="0" aria-describedby="[^"]+">zu Schule<span class="sr-only"> \(Kesalahan berarti\)/);
 		expect(html).toContain('class="aev-mark minor"');
 		expect(html).toContain('<span class="aev-chip major">Kesalahan berarti</span>');
@@ -111,7 +111,9 @@ describe('scheduled written answer marks', () => {
 		expect(html).toContain('Koreksi: <span lang="de">Korrektur</span>');
 		expect(html).toContain('Penjelasan');
 		expect(html).toContain('<span class="evx-ln" aria-hidden="true">2</span>');
-		expect(html).toContain('tidak ada temuan');
+		expect(html).toContain('tidak ditandai AI');
+		expect(html).toContain('tidak terbaca');
+		expect(html).not.toContain('tidak ada temuan');
 		expect(html).toContain('saran kecil');
 		expect(html).toContain('kesalahan berarti');
 		expect(html).not.toContain('Buat ulang draf AI untuk warna lengkap');
@@ -131,5 +133,37 @@ describe('scheduled written answer marks', () => {
 		const stale = renderToStaticMarkup(createElement(ScheduledWrittenAnswer, {card, marks: scheduledAttemptMarks(record([], [], 1), attempt, [card])}));
 		expect(stale).not.toContain('aev-mark');
 		expect(stale).toContain('Jawaban berubah setelah draf AI dibuat');
+	});
+});
+
+describe('honest colours', () => {
+	const mk = (answer: string, checked = true) => {
+		const card: ResponseVerdictCard = {id: 'a', number: 1, prompt: 'P', answer, verdict: 'manual'};
+		const marks: AttemptMarks = {status: 'ready', legacy: false, meta: {}, cards: {a: {findings: [], checked: checked ? {start: 0, end: answer.length} : null}}};
+		return renderToStaticMarkup(createElement(ScheduledWrittenAnswer, {card, marks}));
+	};
+
+	it('paints green on a current draft with zero findings', () => {
+		expect(mk('Ich gehe heute in die Schule.')).toContain('class="aev-mark ok"');
+	});
+
+	it('never paints [tidak terbaca] green: it is grey with an sr-only label', () => {
+		const html = mk('Ich gehe [tidak terbaca] heute nach Hause.');
+		expect(html).toContain('class="aev-mark unreadable" title="tidak terbaca">[tidak terbaca]');
+		expect(html).toContain('<span class="sr-only"> (tidak terbaca)</span>');
+		expect(html).not.toMatch(/aev-mark ok"[^>]*>[^<]*\[tidak terbaca\]/);
+	});
+
+	it('skips green on short header-like lines', () => {
+		const html = mk('Übung 3\nName: Anna\nIch gehe heute in die Schule.');
+		expect(html).not.toMatch(/ok"[^>]*>Übung/);
+		expect(html.match(/class="aev-mark ok" title/g)?.length).toBe(1);
+	});
+
+	it('shows no green for a stale draft', () => {
+		const card: ResponseVerdictCard = {id: 'a', number: 1, prompt: 'P', answer: 'Ich gehe heute in die Schule.', verdict: 'manual'};
+		const html = renderToStaticMarkup(createElement(ScheduledWrittenAnswer, {card, marks: {status: 'stale'}}));
+		expect(html).not.toContain('aev-mark ok');
+		expect(html).toContain('Teks terbaru ✗');
 	});
 });

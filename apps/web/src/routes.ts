@@ -61,6 +61,7 @@ export default [
 	route('api/live-answer-review', 'routes/api.live-answer-review.ts'),
 	route('api/submission-content-refresh', 'routes/api.submission-content-refresh.ts'),
 	route('api/evaluation-participants', 'routes/api.evaluation-participants.ts'),
+	route('api/evaluation-stale', 'routes/api.evaluation-stale.ts'),
 	route('api/evaluation-review', 'routes/api.evaluation-review.ts'),
 	route('api/evaluation-annotation', 'routes/api.evaluation-annotation.ts'),
 	route('api/evaluation-missed-error', 'routes/api.evaluation-missed-error.ts'),

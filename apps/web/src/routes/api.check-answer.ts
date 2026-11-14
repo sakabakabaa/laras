@@ -44,7 +44,7 @@ import {
 	interactionMetaOf,
 	type CheckResponsePayload,
 } from '@/lib/check-types';
-import { cefrLevelGuide, extractCefrLevel } from '@/lib/cefr-level';
+import { cefrLevelForCourse, cefrLevelGuide } from '@/lib/cefr-level';
 
 type Body = {
 	action?: string;
@@ -430,8 +430,8 @@ async function runCheck(input: {
 	let levelGuide = '';
 	if (kind) {
 		try {
-			const course = await pocketbaseAdmin.getRecord<{ code?: string }>('courses', assignment.course);
-			levelGuide = cefrLevelGuide(extractCefrLevel(course.code || ''));
+			const course = await pocketbaseAdmin.getRecord<{ code?: string; title?: string }>('courses', assignment.course);
+			levelGuide = cefrLevelGuide(cefrLevelForCourse(course));
 		} catch {
 			/* no course code — safe fallback, existing behavior unchanged */
 		}

@@ -66,7 +66,7 @@ import {
 } from '@/components/app/formative-evaluation-review';
 import { TranscriptPanel } from '@/components/app/task-workspaces/transcript-panel';
 import type { TranscriptStatus } from '@/lib/transcription';
-import { extractCefrLevel } from '@/lib/cefr-level';
+import { cefrLevelForCourse } from '@/lib/cefr-level';
 import { taskKindForShape } from '@/lib/task-types';
 import {
 	AiEvaluationAnswer,
@@ -191,7 +191,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	const [ownerMap, setOwnerMap] = useState<Record<string, { name: string; nim: string; email: string }>>({});
 	const [aiSummaries, setAiSummaries] = useState<Record<string, EvaluationAiSummary>>({});
 	// Bulk actions: "Jalankan AI untuk semua" progress and "Terbitkan yang siap".
-	const [bulkAi, setBulkAi] = useState<(WaveProgress & { running: boolean }) | null>(null);
+	const [bulkAi, setBulkAi] = useState<(WaveProgress & { running: boolean; regenerating?: boolean }) | null>(null);
 	const stopBulkAi = useRef(false);
 	const [publishBatchOpen, setPublishBatchOpen] = useState(false);
 	const [publishingBatch, setPublishingBatch] = useState(false);
@@ -391,6 +391,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				`Selesai: ${result.refreshed} diperbarui` +
 					(result.unreadable ? `, ${result.unreadable} tidak terbaca (tetap seperti semula)` : '') +
 					(result.failed ? `, ${result.failed} gagal` : '') +
+					(result.regenerated ? `. Draf AI dibuat ulang untuk ${result.regenerated} kiriman yang sudah punya draf` : '') +
 					'.',
 			);
 			invalidate('assignment_submissions');
@@ -408,6 +409,8 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	);
 	// Bulk AI: final, ungraded submissions with no usable AI draft yet.
 	const needsAi = pending.filter((p) => p.enrolled && (!p.ai || p.ai.state === 'none' || p.ai.state === 'failed'));
+	// Drafts generated from text that has since changed (server-computed).
+	const staleDrafts = pending.filter((p) => p.enrolled && p.ai?.stale && (p.ai.state === 'ai' || p.ai.state === 'lecturer'));
 	const readyToPublish = pending.filter((p) => p.enrolled && p.ai?.ready);
 	const readyFromAi = readyToPublish.filter((p) => p.ai?.state === 'ai');
 	const runBulkAi = async () => {
@@ -420,6 +423,19 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 			() => stopBulkAi.current,
 		);
 		setBulkAi({ ...result, running: false });
+		void reload();
+	};
+	const runBulkStale = async () => {
+		if (bulkAi?.running || staleDrafts.length === 0) return;
+		stopBulkAi.current = false;
+		setBulkAi({ done: 0, total: staleDrafts.length, failed: 0, running: true, regenerating: true });
+		const result = await runAiForAll(
+			staleDrafts.map((p) => p.enrolled!.id),
+			(progress) => setBulkAi({ ...progress, running: true, regenerating: true }),
+			() => stopBulkAi.current,
+			{ force: true },
+		);
+		setBulkAi({ ...result, running: false, regenerating: true });
 		void reload();
 	};
 	const publishReady = async () => {
@@ -529,8 +545,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	const formative = activityTypeOf(assignment) === 'formative';
 	navRef.current = { filtered, activeKey: active?.key ?? null, formative };
 	const isSpeaking = assignment.shape === 'speaking' || assignment.shape === 'conversation';
-	const cefr =
-		course?.code && taskKindForShape(assignment.shape) ? extractCefrLevel(course.code) : null;
+	const cefr = course && taskKindForShape(assignment.shape) ? cefrLevelForCourse(course) : null;
 	// Batch 4: sync state against the parent Tugas formal (loaded via expand).
 	const parentRecord = assignment.expand?.parentAssignment;
 	const syncState =
@@ -626,6 +641,17 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 							>
 								{bulkAi?.running ? <LoaderCircle size={14} className="spin" /> : <Sparkles size={14} />} Jalankan AI untuk semua ({needsAi.length})
 							</button>
+							{staleDrafts.length > 0 ? (
+								<button
+									type="button"
+									className="ld-outline-action sm"
+									disabled={Boolean(bulkAi?.running)}
+									title="Teks berubah setelah draf AI dibuat. Buat ulang draf AI tiga kiriman sekaligus. Review dosen yang tersimpan tidak dihapus."
+									onClick={() => void runBulkStale()}
+								>
+									{bulkAi?.running && bulkAi.regenerating ? <LoaderCircle size={14} className="spin" /> : <Sparkles size={14} />} Buat ulang draf usang ({staleDrafts.length})
+								</button>
+							) : null}
 							<button
 								type="button"
 								className="ld-outline-action sm"
@@ -728,8 +754,8 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 					<div>
 						<strong>
 							{bulkAi.running
-								? `Menjalankan AI: ${bulkAi.done} dari ${bulkAi.total} kiriman selesai…`
-								: `AI selesai untuk ${bulkAi.done - bulkAi.failed} dari ${bulkAi.total} kiriman${bulkAi.failed ? `, ${bulkAi.failed} gagal diminta` : ''}.`}
+								? `${bulkAi.regenerating ? 'Membuat ulang draf usang' : 'Menjalankan AI'}: ${bulkAi.done} dari ${bulkAi.total} kiriman selesai…`
+								: `${bulkAi.regenerating ? 'Draf diperbarui' : 'AI selesai'} untuk ${bulkAi.done - bulkAi.failed} dari ${bulkAi.total} kiriman${bulkAi.failed ? `, ${bulkAi.failed} gagal diminta` : ''}.`}
 						</strong>
 						<span>
 							{bulkAi.running
@@ -860,7 +886,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 					<span>
 						Latihan formatif tanpa pengumpulan final dan tanpa nilai resmi. Riwayat Cek jawaban
 						adalah umpan baliknya. Tidak ada nilai yang disimpan untuk latihan ini.
-						{cefr ? ` Pemeriksaan dikalibrasi ke CEFR ${cefr} pada kode mata kuliah.` : ''}
+						{cefr ? ` Pemeriksaan dikalibrasi ke CEFR ${cefr} pada kode atau judul mata kuliah.` : ''}
 					</span>
 				</p>
 			)}

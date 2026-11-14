@@ -27,12 +27,17 @@ import {
 	FlaskConical,
 	Highlighter,
 	LoaderCircle,
+	Sparkles,
 	MessageSquare,
 	Send,
 	Trash2,
 	X,
 } from 'lucide-react';
+import { Link } from 'react-router';
+import { MarkLegend } from '@/components/app/grading/marked-text';
 import pb from '@/lib/pocketbase-client';
+import { greenAllowed, lineGreenEligible, OK_TITLE, splitUnreadable, UNREADABLE_LABEL } from '@/lib/ai-marks';
+import { aiScoreNotice, SETUP_NOTICE_TEXT } from '@/lib/evaluation-setup';
 import { parseAssessmentDraft } from '@/lib/assessment-draft';
 import { useUnsavedWork } from '@/hooks/use-unsaved-work';
 import '@/styles/assessment-clarity.css';
@@ -41,6 +46,7 @@ import type { Assignment } from '@/lib/assignments';
 import { letterGrade } from '@/lib/assignments';
 import {
 	buildMarkedSegments,
+	findingAnchoredIn,
 	deriveAiReviewFindings,
 	normalizeReviewFindings,
 	type MarkedSegment,
@@ -199,6 +205,10 @@ type ReviewContextValue = {
 	visible: ReviewFinding[];
 	rejected: ReviewFinding[];
 	marked: ReviewFinding[];
+	/** How many leading entries of `marked` are real findings (the rest is the pending-mark preview). */
+	markableCount: number;
+	/** The draft was generated from text that differs from the current text. */
+	stale: boolean;
 	segments: ReturnType<typeof buildMarkedSegments> | null;
 	dirty: boolean;
 	saving: boolean;
@@ -366,6 +376,7 @@ export function AiEvaluationReviewProvider({
 	const [publishError, setPublishError] = useState('');
 	const [publishNotice, setPublishNotice] = useState('');
 	const [regenerating, setRegenerating] = useState(false);
+	const [stale, setStale] = useState(false);
 	const [aiStalled, setAiStalled] = useState(false);
 	const [pollEpoch, setPollEpoch] = useState(0);
 	const [activeFindingId, setActiveFindingId] = useState<string | null>(null);
@@ -406,6 +417,26 @@ export function AiEvaluationReviewProvider({
 	const activeRecordKey = useRef(recordKey);
 	activeRecordKey.current = recordKey;
 
+	// Staleness is computed server-side (hash of the text the draft was made
+	// from vs the current text); the browser never sees the hash comparison.
+	const refreshStale = useCallback(async (key: string, isReady: boolean) => {
+		if (!isReady || !key) {
+			setStale(false);
+			return;
+		}
+		try {
+			const res = await fetch('/api/evaluation-stale', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pb.authStore.token}` },
+				body: JSON.stringify({ submissionId: key }),
+			});
+			const body = (await res.json().catch(() => ({}))) as { stale?: boolean };
+			if (activeRecordKey.current === key) setStale(res.ok && body.stale === true);
+		} catch {
+			/* unknown: keep the marks as they are */
+		}
+	}, []);
+
 	const load = useCallback(async () => {
 		if (!filter) {
 			setRow(null);
@@ -416,6 +447,7 @@ export function AiEvaluationReviewProvider({
 			const found = await pb.collection('ai_evaluations').getFirstListItem<AiEvaluationRow>(filter);
 			if (activeRecordKey.current !== recordKey) return;
 			setRow(found);
+			void refreshStale(recordKey || '', found.status === 'ready');
 			if (draftLoadedKey.current !== recordKey || resyncFromSaved.current) {
 				draftLoadedKey.current = recordKey || '';
 				const draft = parseAssessmentDraft(found.reviewDraft);
@@ -435,10 +467,11 @@ export function AiEvaluationReviewProvider({
 		} catch {
 			if (activeRecordKey.current !== recordKey) return;
 			setRow(null);
+			setStale(false);
 		} finally {
 			if (activeRecordKey.current === recordKey) setLoading(false);
 		}
-	}, [filter, recordKey]);
+	}, [filter, recordKey, refreshStale]);
 
 	useEffect(() => {
 		draftLoadedKey.current = '';
@@ -613,7 +646,10 @@ export function AiEvaluationReviewProvider({
 				},
 			]
 		: [];
-	const marked = [...visible, ...markPreview];
+	// A stale draft's findings describe other text: only the lecturer's own
+	// marks (made on the current text) stay on the answer.
+	const markable = stale ? visible.filter((f) => f.source === 'lecturer') : visible;
+	const marked = [...markable, ...markPreview];
 	const segments =
 		content && marked.some((finding) => finding.quote) ? buildMarkedSegments(content, marked) : null;
 	const preparing = Boolean(
@@ -1005,6 +1041,8 @@ export function AiEvaluationReviewProvider({
 		visible,
 		rejected,
 		marked,
+		markableCount: markable.length,
+		stale,
 		segments,
 		dirty,
 		saving,
@@ -1245,7 +1283,7 @@ export function AnswerScript({
 	onApprove: (id: string) => void;
 	onReject: (id: string) => void;
 	onRemove: (id: string) => void;
-	/** True once an AI draft exists, so unmarked lines can be shown as checked-correct. */
+	/** True only for a ready, current draft: unmarked sentences get the subtle green underline ("tidak ditandai AI"). */
 	checked: boolean;
 	readOnly?: boolean;
 }) {
@@ -1334,15 +1372,27 @@ export function AnswerScript({
 							{shown.map((part, partIndex) => {
 								if (!part.text) return null;
 								if (!part.severity || part.findingIndex == null) {
-									if (checked && part.text.trim()) {
-									return (
-										<mark key={partIndex} className="aev-mark ok" title="Tidak ada temuan pada bagian ini">
-											{part.text}
-											<span className="sr-only">Tidak ada temuan pada bagian ini</span>
-										</mark>
-									);
-								}
-								return <span key={partIndex}>{part.text}</span>;
+									const okLine = checked && lineGreenEligible(shown.map((p) => p.text).join(''));
+									return splitUnreadable(part.text).map((piece, pieceIndex) => {
+										const key = `${partIndex}-${pieceIndex}`;
+										if (piece.unreadable) {
+											return (
+												<mark key={key} className="aev-mark unreadable" title={UNREADABLE_LABEL}>
+													{piece.text}
+													<span className="sr-only"> ({UNREADABLE_LABEL})</span>
+												</mark>
+											);
+										}
+										if (okLine && piece.text.trim()) {
+											return (
+												<mark key={key} className="aev-mark ok" title={OK_TITLE}>
+													{piece.text}
+													<span className="sr-only"> ({OK_TITLE})</span>
+												</mark>
+											);
+										}
+										return <span key={key}>{piece.text}</span>;
+									});
 								}
 								const finding = marked[part.findingIndex];
 								const pending = part.findingIndex >= visibleCount;
@@ -1457,50 +1507,34 @@ function dropPrefix(parts: MarkedSegment[], prefix: number) {
 	return out;
 }
 
-/** Compact summary of AI findings that have no on-text quote, shown directly
- *  under the answer so the lecturer can approve/reject them without leaving
- *  the answer view — mirrors the formative practice review. */
+/**
+ * "Temuan tanpa posisi (N)": AI findings that cannot be marked on the current
+ * text, listed under the answer with the same approve/reject controls as the
+ * marked ones. That covers general findings (no quote) and findings whose quote
+ * is no longer found (invalid or ambiguous anchor, or the text changed).
+ */
 function UnanchoredFindings() {
 	const ctx = useReview();
-	const [open, setOpen] = useState<EvalSeverity | null>(null);
 	if (!ctx) return null;
-	const unanchored = ctx.visible.filter((f) => f.source === 'ai' && !f.quote);
+	const unanchored = ctx.visible.filter((f) => f.source === 'ai' && !findingAnchoredIn(f, ctx.content));
 	if (unanchored.length === 0) return null;
-	const minors = unanchored.filter((f) => f.severity === 'minor');
-	const majors = unanchored.filter((f) => f.severity === 'major');
-	const shown = open === 'minor' ? minors : open === 'major' ? majors : [];
 	return (
-		<div className="fer-pills">
-			<div className="fer-pill-row" role="group" aria-label="Temuan tidak tertaut ke teks">
-				{minors.length > 0 && (
-					<button
-						type="button"
-						className={`fer-pill minor${open === 'minor' ? ' open' : ''}`}
-						aria-expanded={open === 'minor'}
-						onClick={() => setOpen(open === 'minor' ? null : 'minor')}
-					>
-						<AlertTriangle size={14} /> {minors.length} saran
-					</button>
-				)}
-				{majors.length > 0 && (
-					<button
-						type="button"
-						className={`fer-pill major${open === 'major' ? ' open' : ''}`}
-						aria-expanded={open === 'major'}
-						onClick={() => setOpen(open === 'major' ? null : 'major')}
-					>
-						<AlertCircle size={14} /> {majors.length} perlu perbaikan
-					</button>
-				)}
-			</div>
-			{open && shown.length > 0 && (
-				<ul className="fer-pill-list" aria-label={open === 'minor' ? 'Daftar saran' : 'Daftar yang perlu diperbaiki'}>
-					{shown.map((f) => (
-						<li key={f.id}>
-							<p>{f.note}</p>
-							{ctx.rejectingId === f.id ? (
-								<RejectReasonFields id={f.id} />
-							) : (
+		<section className="aev-unanchored fer-pills" aria-label="Temuan tanpa posisi">
+			<h4>Temuan tanpa posisi ({unanchored.length})</h4>
+			<ul className="fer-pill-list">
+				{unanchored.map((f) => (
+					<li key={f.id}>
+						<span className={`aev-chip ${f.severity}`}>{f.severity === 'major' ? 'Perlu diperbaiki' : 'Saran'}</span>
+						{f.quote && (
+							<>
+								<blockquote lang="de">{f.quote}</blockquote>
+								<p className="aev-unanchored-note">kutipan tidak ditemukan di teks saat ini</p>
+							</>
+						)}
+						<p>{f.note}</p>
+						{ctx.rejectingId === f.id ? (
+							<RejectReasonFields id={f.id} />
+						) : (
 							<div className="aevr-item-actions">
 								{f.status !== 'approved' && (
 									<button type="button" className="approve" onClick={() => ctx.updateFinding(f.id, { status: 'approved', rejectReason: '' })}>
@@ -1514,11 +1548,72 @@ function UnanchoredFindings() {
 									</button>
 								)}
 							</div>
-							)}
-						</li>
-					))}
-				</ul>
-			)}
+						)}
+					</li>
+				))}
+			</ul>
+		</section>
+	);
+}
+
+/** Banner and "Buat ulang AI" for a draft generated from text that has since changed. */
+function StaleBanner() {
+	const ctx = useReview();
+	if (!ctx || !ctx.stale || !ctx.ready) return null;
+	return (
+		<div className="aev-stale-banner" role="status">
+			<AlertTriangle size={14} />
+			<span>Teks berubah setelah draf AI dibuat. Tanda AI disembunyikan.</span>
+			<button type="button" className="ld-outline-action sm" onClick={ctx.regenerate} disabled={ctx.regenerating}>
+				{ctx.regenerating ? <LoaderCircle size={13} className="spin" /> : <Sparkles size={13} />} Buat ulang AI
+			</button>
+		</div>
+	);
+}
+
+/** Why there is no real AI score (task incomplete, or a suspicious 0), with a link to fix the task. */
+function ScoreSetupNote() {
+	const ctx = useReview();
+	if (!ctx || !ctx.ready) return null;
+	const notice = aiScoreNotice({
+		assignment: ctx.assignment,
+		recommendedScore: ctx.ready.recommendedScore,
+		summary: ctx.ready.summary,
+		reviewed: Boolean(ctx.row?.reviewedAt),
+	});
+	if (!notice) return null;
+	return (
+		<p className="aev-setup-note" role="status">
+			<AlertTriangle size={14} />{' '}
+			{notice.kind === 'setup'
+				? SETUP_NOTICE_TEXT(notice.reason)
+				: 'Skor AI 0 perlu dicek: AI mungkin tidak dapat menilai tugas ini (mis. teks sumber hilang). Jangan anggap ini nilai nyata.'}{' '}
+			<Link to={`/app/tugas/buat?edit=${ctx.assignment.id}`}>Ubah tugas</Link>
+		</p>
+	);
+}
+
+/** Compact provenance chips above the answer: what the AI draft was based on. */
+function ContextChips() {
+	const ctx = useReview();
+	if (!ctx || !ctx.ready || !ctx.provenance) return null;
+	const p = ctx.provenance;
+	const recorded = Boolean(p.promptVersion);
+	const note = recorded ? '' : ' (draf lama: sumber tidak tercatat)';
+	const chips: { label: string; on: boolean; tip: string }[] = [
+		{ label: 'Teks terbaru', on: !ctx.stale, tip: ctx.stale ? 'Teks kiriman berubah setelah draf AI dibuat.' : 'Draf AI dibuat dari teks kiriman yang sekarang.' },
+		{ label: 'Foto dilihat', on: p.usedImages, tip: `Apakah AI menerima foto pekerjaan.${note}` },
+		{ label: ctx.cefrLevel && p.usedCefr ? `CEFR ${ctx.cefrLevel}` : 'CEFR', on: p.usedCefr, tip: `Apakah AI disesuaikan dengan tingkat CEFR mata kuliah (dibaca dari kode atau judul mata kuliah).${note}` },
+		{ label: 'Materi', on: p.usedCourseMaterial, tip: `Apakah AI memakai materi mata kuliah yang disetujui dosen.${note}` },
+		{ label: 'Rubrik', on: p.usedRubric, tip: `Apakah AI menerima rubrik tugas.${note}` },
+	];
+	return (
+		<div className="aev-chips" role="list" aria-label="Dasar draf AI">
+			{chips.map((chip) => (
+				<span key={chip.label} role="listitem" className={`aev-chip-ctx ${chip.on ? 'on' : ''}`} title={chip.tip}>
+					{chip.label} {chip.on ? '✓' : '✗'}
+				</span>
+			))}
 		</div>
 	);
 }
@@ -1532,7 +1627,7 @@ function aiDraftOf(ctx: ReviewContextValue): GradingAiDraft | null {
 	if (!ctx.hasRecord) return null;
 	const when = ctx.row?.generatedAt ? stamp(ctx.row.generatedAt) : '';
 	const proposal = {
-		score: ctx.ready?.recommendedScore ?? null,
+		score: ctx.ready && aiScoreNotice({ assignment: ctx.assignment, recommendedScore: ctx.ready.recommendedScore, summary: ctx.ready.summary, reviewed: Boolean(ctx.row?.reviewedAt) }) ? null : (ctx.ready?.recommendedScore ?? null),
 		criterionScores: ctx.ready
 			? Object.fromEntries(
 					validatedRubric(parseRubric(ctx.ready.rubricBreakdown), ctx.criteria).map((entry) => [
@@ -2557,6 +2652,12 @@ export function AiEvaluationAnswer() {
 
 	return (
 		<div className="aev-answer">
+			<ContextChips />
+			<StaleBanner />
+			<ScoreSetupNote />
+			{ctx.ready && ctx.ready.result !== 'insufficient' && (
+				<MarkLegend ok={greenAllowed({ ready: true, stale: ctx.stale })} />
+			)}
 			{markPopup && createPortal(<div ref={popupRef} className="aev-markbar aev-selection-tools" style={markPopup} role="toolbar" aria-label={t('aevr.markTextAria')}>
 				<span className="aev-markbar-label">
 					<Highlighter size={14} /> {t('aevr.markText')}
@@ -2634,17 +2735,17 @@ export function AiEvaluationAnswer() {
 				content={content}
 				segments={segments}
 				marked={marked}
-				visibleCount={visible.length}
+				visibleCount={ctx.markableCount}
 				activeId={ctx.activeFindingId}
 				onFocus={ctx.focusFinding}
 				onApprove={(id) => ctx.updateFinding(id, { status: 'approved', rejectReason: '' })}
 				onReject={(id) => ctx.startReject(id)}
 				onRemove={ctx.removeFinding}
-				checked={Boolean(
-					ctx.ready &&
-					ctx.ready.result !== 'insufficient' &&
-					parseFindings(ctx.ready.findings).length > 0,
-				)}
+				checked={greenAllowed({
+					ready: Boolean(ctx.ready),
+					stale: ctx.stale,
+					insufficient: ctx.ready?.result === 'insufficient',
+				})}
 			/>
 			<UnanchoredFindings />
 			<FindingsUnderText />

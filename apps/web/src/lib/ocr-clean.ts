@@ -34,3 +34,18 @@ export function stripExtractionMarkers(text: string): string {
 export function answerTextFromExtraction(text: string): string {
 	return stripScannerWatermarks(stripExtractionMarkers(text));
 }
+
+/**
+ * True when stored answer text still carries what this module strips: an
+ * extractor header or a scanner watermark. Those submissions were read before
+ * the answer-only OCR and are worth re-reading.
+ */
+export function hasExtractionArtifacts(text: string): boolean {
+	const value = text || '';
+	WATERMARK_PHRASE.lastIndex = 0;
+	EXTRACTION_MARKER.lastIndex = 0;
+	const found = WATERMARK_PHRASE.test(value) || EXTRACTION_MARKER.test(value);
+	WATERMARK_PHRASE.lastIndex = 0;
+	EXTRACTION_MARKER.lastIndex = 0;
+	return found;
+}

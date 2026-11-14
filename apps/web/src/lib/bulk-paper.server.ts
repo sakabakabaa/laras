@@ -12,6 +12,7 @@
  */
 import { collectModel } from '@/lib/task-assist.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
+import { queueEvaluationDraft } from '@/lib/ai-evaluation.server';
 import type { Assignment } from '@/lib/assignments';
 import { matchStudent, newRowId, type PaperEntry, type RosterStudent } from '@/lib/bulk-paper';
 
@@ -160,6 +161,9 @@ async function fetchImageBytes(imageId: string, imageFile: string): Promise<Blob
  * (content + scan replaced, status set to submitted/late); grade fields are
  * left untouched for the lecturer to (re-)grade through the normal flow.
  */
+/** Drafts started right after a bulk paper submit; the rest are prepared on demand. */
+const MAX_BACKGROUND_DRAFTS = 25;
+
 export async function createPaperSubmissions(
 	assignment: Assignment,
 	entries: PaperEntry[],
@@ -171,6 +175,7 @@ export async function createPaperSubmissions(
 
 	const imageCache = new Map<string, Blob>();
 	const outcomes: SubmitOutcome[] = [];
+	const savedSubmissionIds: string[] = [];
 
 	for (const entry of entries) {
 		const match = matchStudent(entry, roster);
@@ -213,13 +218,17 @@ export async function createPaperSubmissions(
 				fd.append('files', blob, entry.imageFile);
 			}
 
+			let savedId = '';
 			if (existingRec) {
-				await pocketbaseAdmin.updateRecord('assignment_submissions', existingRec.id, fd);
+				const saved = await pocketbaseAdmin.updateRecord<{ id: string }>('assignment_submissions', existingRec.id, fd);
+				savedId = saved?.id || existingRec.id;
 			} else {
 				fd.append('assignment', assignment.id);
 				fd.append('owner', student.id);
-				await pocketbaseAdmin.createRecord('assignment_submissions', fd);
+				const saved = await pocketbaseAdmin.createRecord<{ id: string }>('assignment_submissions', fd);
+				savedId = saved?.id || '';
 			}
+			if (savedId) savedSubmissionIds.push(savedId);
 
 			// The staged scan has been attached — remove the temp image record.
 			if (entry.imageId) {
@@ -234,6 +243,13 @@ export async function createPaperSubmissions(
 		} catch {
 			outcomes.push({ id: entry.id, ok: false, reason: 'Gagal menyimpan kiriman.' });
 		}
+	}
+
+	// Prepare AI evaluation drafts in the background for paper submissions, like
+	// every other final submission. Each draft is a model call, so only the first
+	// batch starts now; the lecturer's evaluation page prepares the rest on open.
+	for (const submissionId of savedSubmissionIds.slice(0, MAX_BACKGROUND_DRAFTS)) {
+		void queueEvaluationDraft({ assignment, submissionId });
 	}
 
 	return outcomes;

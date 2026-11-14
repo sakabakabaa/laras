@@ -37,7 +37,7 @@ import {
 	type RetrievalScope,
 } from '@/lib/context-retrieval.server';
 import { activityTypeOf, type Assignment } from '@/lib/assignments';
-import { languageLevelGuide } from '@/lib/cefr-level';
+import { cefrLevelGuide, extractCefrLevel } from '@/lib/cefr-level';
 import {
 	parseListeningConfig,
 	parseQuizConfig,
@@ -173,6 +173,50 @@ async function scopeOfAssignment(assignment: Assignment): Promise<RetrievalScope
 		cpmk: await cpmkOfSubCpmk(assignment.subCpmk || ''),
 		assignment: assignment.id,
 	};
+}
+
+const clipLine = (value: unknown, max = 500): string =>
+	typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, max) : '';
+
+/**
+ * Lecturer-authored teaching context for the assignment: the linked class
+ * session (topic, learning indicator, material) and its Sub-CPMK / CPMK. This is
+ * stored course data, not model output, so it is safe to show the model as
+ * "what was taught"; anything missing is simply left out. Never throws.
+ */
+export async function lessonContextOf(assignment: Assignment): Promise<string> {
+	const lines: string[] = [];
+	const add = (label: string, value: unknown, max?: number) => {
+		const text = clipLine(value, max);
+		if (text) lines.push(`- ${label}: ${text}`);
+	};
+	try {
+		if (assignment.session) {
+			const session = await pocketbaseAdmin.getRecord<Record<string, unknown>>('class_sessions', assignment.session);
+			add('Pertemuan', [session.week ? `Minggu ${session.week}` : '', session.title].filter(Boolean).join(' — '));
+			add('Topik pertemuan', session.topic);
+			add('Indikator capaian', session.learningIndicator);
+			add('Materi yang diajarkan', session.learningMaterial);
+		}
+	} catch {
+		/* session unavailable — leave it out */
+	}
+	try {
+		if (assignment.subCpmk) {
+			const sub = await pocketbaseAdmin.getRecord<Record<string, unknown>>('sub_cpmk', assignment.subCpmk);
+			add('Sub-CPMK', `${clipLine(sub.code, 40)} ${clipLine(sub.description)}`);
+			const cpmkId = typeof sub.cpmk === 'string' ? sub.cpmk : '';
+			if (cpmkId) {
+				const cpmk = await pocketbaseAdmin.getRecord<Record<string, unknown>>('cpmk', cpmkId);
+				add('CPMK terkait', `${clipLine(cpmk.code, 40)} ${clipLine(cpmk.description)}`);
+			}
+		}
+	} catch {
+		/* outcome unavailable — leave it out */
+	}
+	return lines.length
+		? `KONTEKS PEMBELAJARAN (data dosen tentang apa yang diajarkan; gunakan untuk menilai kesesuaian isi dan kosakata/struktur yang diharapkan, bukan sebagai aturan bahasa):\n${lines.join('\n')}`
+		: '';
 }
 
 type ValidatedDraft = {
@@ -338,10 +382,18 @@ async function runEvaluation(input: {
 		let levelGuide = '';
 		try {
 			const course = await pocketbaseAdmin.getRecord<{ code?: string }>('courses', assignment.course);
-			levelGuide = languageLevelGuide(assignment, course.code || '');
+			// The draft prompt is always German-as-a-foreign-language, so the CEFR
+			// calibration applies to every reviewed shape (case study, portfolio,
+			// group project, ...), not only the language-skills builders.
+			levelGuide = cefrLevelGuide(extractCefrLevel(course.code || ''));
 		} catch {
 			/* no course code — safe fallback, existing behavior unchanged */
 		}
+		const lessonContext = await lessonContextOf(assignment);
+		const truncated = isSpeaking
+			? (submission.transcript || '').length > MAX_TEXT_CHARS
+			: (submission.content || '').length > MAX_TEXT_CHARS;
+		const hasWeightedRubric = criteria.some((c) => c.weight > 0);
 		const materialLines = material
 			? material.sources
 					.map((source) => {
@@ -368,9 +420,10 @@ async function runEvaluation(input: {
 			`Ketentuan: ${assignment.requirements || '(tidak ada)'}`,
 			assignment.groupInfo ? `Ketentuan kelompok: ${assignment.groupInfo}` : '',
 			levelGuide,
+			lessonContext,
 			criteria.length > 0
 				? `Rubrik dosen (nilai per kriteria 0–100):\n${criteria.map((c) => `- [criterionId=${c.id}] ${c.label}${c.weight ? ` (bobot relatif ${c.weight})` : ''}`).join('\n')}`
-				: 'Rubrik dosen: (belum ada kriteria tersimpan — jika memberi rincian, gunakan aspek yang jelas berbasis ketentuan tugas, maksimal 5 aspek)',
+				: 'Rubrik dosen: (belum ada kriteria tersimpan — jangan membuat kriteria sendiri; beri temuan dan ringkasan saja)',
 			'',
 			'MATERI KONTEKS YANG DISETUJUI DOSEN:',
 			materialLines,
@@ -391,6 +444,12 @@ async function runEvaluation(input: {
 				: '',
 			!isSpeaking && (usedAttachment || hasFiles)
 				? 'Catatan: teks kiriman di atas berasal dari transkripsi lembar kerja peserta. Tulisan yang tercetak pada lembar (instruksi tugas, judul, label kolom, nama peserta) BUKAN jawaban peserta — jangan dinilai dan jangan dikutip sebagai temuan. Nilai hanya kalimat yang ditulis peserta sendiri.'
+				: '',
+			truncated
+				? `Catatan: kiriman peserta lebih panjang dari batas ${MAX_TEXT_CHARS} karakter dan dipotong. Hanya bagian di atas yang ditinjau — jangan menyimpulkan apa pun tentang bagian yang tidak terlihat (mis. "tidak ada kesimpulan"), dan sebutkan di ringkasan bahwa penilaian hanya mencakup bagian awal.`
+				: '',
+			!hasWeightedRubric
+				? 'Catatan: tidak ada kriteria rubrik berbobot, jadi sistem tidak menghitung skor. Isi "recommendedScore" dengan null dan "rubricBreakdown" dengan [].'
 				: '',
 			isSpeaking
 				? 'Audio asli tidak diberikan. Jangan menilai pelafalan, intonasi, tempo, atau kelancaran dari transkripsi. Jika dugaan kesalahan mungkin berasal dari pengenalan ucapan, minta verifikasi dosen dan jangan pastikan itu kesalahan peserta.'
@@ -527,6 +586,13 @@ async function runEvaluation(input: {
 		}
 
 		const citations: ContextCitation[] = material ? material.citations : [];
+		// A rubric exists but the model's breakdown did not cover every weighted
+		// criterion exactly once: no total is computed. Say so instead of leaving
+		// a "ready" draft with a silently missing score.
+		const scoreNote =
+			hasWeightedRubric && draft.recommendedScore == null
+				? ' Skor rekomendasi tidak dihitung: rincian rubrik AI belum mencakup semua kriteria berbobot. Nilai manual diperlukan.'
+				: '';
 		await pocketbaseAdmin.updateRecord('ai_evaluations', evalId, {
 			status: 'ready',
 			result: 'sufficient',
@@ -537,12 +603,17 @@ async function runEvaluation(input: {
 			summary: draft.summary,
 			bundleId: material ? material.bundleId : '',
 			citations,
-			contextNote: material
-				? `Konteks materi disetujui: ${material.sources.length} sumber, ${material.sectionCount} bagian (bundel ${material.bundleId}).`
-				: `Tidak ada materi konteks yang disetujui untuk mata kuliah ini — temuan hanya berbasis ketentuan tugas dan rubrik. ${bundle?.reason || ''}`.slice(
-						0,
-						500,
-					),
+			// ai_evaluations.contextNote is capped at 500 characters by the schema:
+			// the warnings are kept whole and the material description yields room.
+			contextNote: (() => {
+				const warnings =
+					(truncated ? ` Kiriman dipotong pada ${MAX_TEXT_CHARS} karakter; bagian akhir tidak ditinjau.` : '') +
+					scoreNote;
+				const base = material
+					? `Konteks materi disetujui: ${material.sources.length} sumber, ${material.sectionCount} bagian (bundel ${material.bundleId}).`
+					: `Tidak ada materi konteks yang disetujui untuk mata kuliah ini — temuan hanya berbasis ketentuan tugas dan rubrik. ${bundle?.reason || ''}`;
+				return base.slice(0, Math.max(0, 500 - warnings.length)) + warnings;
+			})(),
 			...provenance,
 			generatedAt: now(),
 		});

@@ -10,7 +10,8 @@
  *
  * Permission: the caller must be the lecturer who owns the assignment, or
  * the enrolled student who owns the submission. Public participants have no
- * account — their drafts are queued server-side by /api/public-submit.
+ * account, so their drafts are lecturer-triggered only (the evaluation page
+ * backfills a missing draft when the lecturer opens the submission).
  *
  * The draft itself is a lecturer-only recommendation: no grade, feedback, or
  * status is ever written to the submission, and nothing is published.

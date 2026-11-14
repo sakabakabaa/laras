@@ -17,6 +17,7 @@
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { extractStoredFiles } from '@/lib/feedback.server';
+import { answerTextFromExtraction } from '@/lib/ocr-clean';
 
 /** Below this, the extraction is a page marker or a stray line, not an answer. */
 const MIN_ANSWER_CHARS = 120;
@@ -73,7 +74,8 @@ export async function refreshSubmissionContent(input: {
 			files,
 			...(input.kind ? { kind: input.kind } : {}),
 		});
-		const text = extracted.text.replace(/\n{3,}/g, '\n\n').trim().slice(0, MAX_ANSWER_CHARS);
+		// Store the answer, not the extractor's file headers or the scanner's watermark.
+		const text = answerTextFromExtraction(extracted.text).slice(0, MAX_ANSWER_CHARS);
 		if (text.length < MIN_ANSWER_CHARS) {
 			return {
 				submissionId: input.submissionId,

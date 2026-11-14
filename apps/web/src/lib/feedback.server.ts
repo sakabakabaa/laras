@@ -20,6 +20,7 @@
  */
 import logger from '@/lib/logger.server';
 import { ocrPdf } from '@/lib/pdf-ocr.server';
+import { stripScannerWatermarks } from '@/lib/ocr-clean';
 import { collectModel, storedFileUrl } from '@/lib/task-assist.server';
 import {
 	parseListeningConfig,
@@ -95,7 +96,8 @@ export function parseExtracted(value: unknown): ExtractedContent | null {
 
 const IMAGE_READ_PROMPT = [
 	'Bacalah gambar jawaban mahasiswa yang terlampir.',
-	'Transkripsikan setiap teks yang benar-benar terbaca.',
+	'Transkripsikan HANYA jawaban yang ditulis atau diketik mahasiswa sendiri.',
+	'JANGAN menyalin teks bawaan lembar kerja atau soal (judul, nomor bab, instruksi, perintah soal, label kolom atau isian, teks cetak) dan jangan menyalin watermark atau cap aplikasi pemindai seperti "Dipindai dengan CamScanner". Jika jawaban mengisi sebuah kolom, tulis isinya saja.',
 	'Jika gambar bukan tulisan (diagram, foto, logo, tangkapan layar, atau ilustrasi), jelaskan isi visual yang benar-benar terlihat dalam beberapa kalimat.',
 	'Bagian kabur atau tidak terbaca tulis persis sebagai [tidak terbaca]. Jangan menebak huruf, kata, atau isi yang tidak terlihat.',
 	'Jika gambar sama sekali tidak dapat dilihat, balas hanya: [tidak terbaca]',
@@ -160,8 +162,8 @@ export async function extractStoredFiles(input: {
 				} else {
 					// A scanned PDF has no usable text layer: render the pages and
 					// read them with the vision model instead of declaring it empty.
-					const ocr = await ocrPdf(buffer, { maxPages: 5 });
-					const ocrText = ocr.text.trim();
+					const ocr = await ocrPdf(buffer, { maxPages: 5, purpose: 'answer' });
+					const ocrText = stripScannerWatermarks(ocr.text);
 					if (ocr.ok && ocrText) {
 						pages = pages || ocr.pages;
 						parts.push(`[DOKUMEN PINDAI: ${clip(doc, 80)}]\n${clip(ocrText, 12000)}`);
@@ -184,7 +186,7 @@ export async function extractStoredFiles(input: {
 		const batch = images.slice(0, MAX_OCR_IMAGES);
 		const urls = batch.map((f) => storedFileUrl(input.collection, input.recordId, f));
 		try {
-			const transcript = await collectModel(IMAGE_READ_PROMPT, urls);
+			const transcript = stripScannerWatermarks(await collectModel(IMAGE_READ_PROMPT, urls));
 			const readable =
 				transcript.trim() &&
 				!/^\[tidak terbaca\]$/i.test(transcript.trim()) &&

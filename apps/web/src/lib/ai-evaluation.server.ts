@@ -29,6 +29,7 @@ import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { collectModelWithProvenance, imageFilenames, storedFileUrl } from '@/lib/task-assist.server';
 import { extractStoredFiles } from '@/lib/feedback.server';
 import { isPointerOnlyContent } from '@/lib/submission-content.server';
+import { answerTextFromExtraction } from '@/lib/ocr-clean';
 import {
 	cpmkOfSubCpmk,
 	retrieveContextBundle,
@@ -324,7 +325,7 @@ async function runEvaluation(input: {
 					files: submission.files,
 					kind: kind || undefined,
 				});
-				const attachmentText = extracted.text.trim();
+				const attachmentText = answerTextFromExtraction(extracted.text);
 				if (attachmentText) {
 					usedAttachment = true;
 					evidenceText = [studentText, `[ISI LAMPIRAN]\n${attachmentText}`]

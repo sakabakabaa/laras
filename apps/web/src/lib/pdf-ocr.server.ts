@@ -30,6 +30,22 @@ const OCR_PROMPT =
 const OCR_SYSTEM =
 	'Anda mesin OCR untuk dokumen akademik. Keluarkan hanya teks yang benar-benar terlihat. Jangan mengarang isi.';
 
+/**
+ * Participant work is often a printed worksheet with the answers written or
+ * typed into it, scanned by a phone app. Reading "all visible text" returns the
+ * worksheet's own title, instructions, field labels and the scanner watermark as
+ * if the participant had written them, so the lecturer reviews (and the AI
+ * quotes) text nobody answered. This prompt reads only the participant's part.
+ */
+const ANSWER_OCR_PROMPT =
+	'Halaman ini adalah pekerjaan mahasiswa. Tulis HANYA jawaban yang ditulis atau diketik mahasiswa sendiri, apa adanya, dalam urutan baca. ' +
+	'JANGAN menyalin teks bawaan lembar kerja atau soal: judul, nomor bab, instruksi, perintah soal, label kolom atau isian (mis. "Name:", "Datum:"), ' +
+	'dan teks yang jelas dicetak. Jangan menyalin watermark atau cap aplikasi pemindai (mis. "Dipindai dengan CamScanner"), nomor halaman, atau logo. ' +
+	'Jika jawaban mengisi sebuah kolom, tulis isinya saja tanpa label kolom. ' +
+	'Pertahankan bahasa aslinya, ejaan mahasiswa (jangan dibetulkan), dan baris baru antar paragraf. ' +
+	'Bagian yang tidak terbaca tulis persis [tidak terbaca]; jangan menebak. Jangan menambahkan komentar atau terjemahan. ' +
+	'Jika halaman tidak memuat jawaban mahasiswa, balas tepat: TIDAK ADA TEKS';
+
 export type PdfOcrResult = {
 	/** True when at least one page produced readable text. */
 	ok: boolean;
@@ -54,8 +70,14 @@ const countPages = async (file: string): Promise<number> => {
 
 export const ocrPdf = async (
 	buffer: Buffer,
-	options: { maxPages?: number; scaleTo?: number } = {},
+	options: {
+		maxPages?: number;
+		scaleTo?: number;
+		/** `material` (default) reads the whole page; `answer` reads only the participant's own writing. */
+		purpose?: 'material' | 'answer';
+	} = {},
 ): Promise<PdfOcrResult> => {
+	const prompt = options.purpose === 'answer' ? ANSWER_OCR_PROMPT : OCR_PROMPT;
 	const maxPages = options.maxPages ?? 10;
 	// A full page at 150 dpi can be 4000x6500 px (~9 MB PNG, ~12 MB base64) and
 	// the vision provider rejects images that large, so OCR silently failed on
@@ -93,7 +115,7 @@ export const ocrPdf = async (
 		for (const [index, name] of pages.entries()) {
 			const png = await readFile(path.join(dir, name));
 			const result = await collectHostingerText({
-				prompt: OCR_PROMPT,
+				prompt,
 				systemPrompt: OCR_SYSTEM,
 				images: [`data:image/png;base64,${png.toString('base64')}`],
 				timeoutMs: 120_000,

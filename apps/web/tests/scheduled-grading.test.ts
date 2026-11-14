@@ -34,7 +34,7 @@ const rubric: GradingSetting = {id: 'set', activity: 'essay', revision: 2, mode:
 const essay = {id: 'essay', kind: 'assignment', title: 'E-Mail', minutes: 10, required: true, startsAt: '', endsAt: '', worksheet: {items: [{id: 'w', prompt: 'Schreiben Sie.', type: 'text'}, {id: 'x', prompt: 'Wählen Sie.', type: 'select', options: ['A', 'B']}], answerKey: {version: 1, items: {w: {mode: 'reference', modelAnswer: 'Liebe Anna, ...', rubric: 'Anrede, Nachricht, Gruß'}, x: {mode: 'exact', accepted: ['A'], points: 1}}}}} as ScheduledActivity;
 const quiz = {id: 'quiz', kind: 'quiz', title: 'Kuis', minutes: 5, required: true, startsAt: '', endsAt: '', questions: [{id: 'q', text: 'Pick', options: ['A', 'B'], correctIndex: 0, points: 1}]} as unknown as ScheduledActivity;
 const essayAttempt = {id: 'att1', activity: 'essay', student: 's1', revision: 3, status: 'submitted', complete: true, savedAt: '', finalizedAt: '', answers: {responses: {w: 'Hallo Anna, ich komme.', x: 'A'}}} as ScheduledAttempt;
-const aiRecord: ScheduledAiDraftRecord = {attempt: 'att1', activity: 'essay', status: 'ready', attemptRevision: 3, settingsRevision: 2, draft: {suggestedScore: 85, criterionScores: {g: 80, i: 90}, feedback: 'Gut. Achten Sie auf den Gruß.', findings: [{quote: 'ich komme', note: 'Kalimat terlalu singkat.'}]}};
+const aiRecord: ScheduledAiDraftRecord = {attempt: 'att1', activity: 'essay', status: 'ready', attemptRevision: 3, settingsRevision: 2, draft: {suggestedScore: 85, criterionScores: {g: 80, i: 90}, summary: 'Gut.', feedback: 'Gut. Achten Sie auf den Gruß.', findings: [{quote: 'ich komme', note: 'Kalimat terlalu singkat.', correction: 'ich komme heute'}]}};
 
 describe('scheduled grading adapter', () => {
 	it('spreads 100 points over suggested criteria by weight and keeps safe ids', () => {
@@ -79,7 +79,12 @@ describe('scheduled grading adapter', () => {
 
 	it('turns a stored AI draft into the starting draft and panel status', () => {
 		const settings = effectiveSettings(rubric);
-		expect(draftFromAi(settings, aiRecord)).toEqual({feedback: 'Gut. Achten Sie auf den Gruß.', points: '', criterionScores: {g: '4.8', i: '3.6'}});
+		// Student-facing feedback: the summary plus ONLY approved findings (the stored `feedback` text is never used).
+		expect(draftFromAi(settings, aiRecord)).toEqual({feedback: 'Gut.', points: '', criterionScores: {g: '4.8', i: '3.6'}});
+		const approved = draftFromAi(settings, aiRecord, [{id: 'ai-0', quote: 'ich komme', status: 'approved'}]);
+		expect(approved.feedback).toBe('Gut.\n\n• “ich komme” → ich komme heute: Kalimat terlalu singkat.');
+		expect(draftFromAi(settings, aiRecord, [{id: 'ai-0', quote: 'ich komme', status: 'rejected', rejectReason: 'salah'}]).feedback).toBe('Gut.');
+		expect(draftFromAi(settings, aiRecord, [{id: 'ai-0', quote: 'other text', status: 'approved'}]).feedback).toBe('Gut.');
 		expect(draftFromAi(effectiveSettings(undefined), aiRecord).points).toBe('85');
 		expect(panelAiDraft(aiRecord, settings, {requesting: false, error: '', hasWritten: true})).toMatchObject({status: 'ready', score: 85, criterionScores: {g: 80, i: 90}});
 		expect(panelAiDraft(undefined, settings, {requesting: false, error: '', hasWritten: true})?.status).toBe('none');

@@ -27,6 +27,8 @@ import {
 	type EffectiveSettings,
 	type ScheduledAiDraftRecord,
 } from '@/lib/scheduled-grading';
+import { ScheduledFindingsReview, type ScheduledFindingControls } from '../scheduled-findings-review';
+import { pendingNotice } from '@/lib/scheduled-finding-review';
 import { GradingPanel, mergeAiFeedback, type GradingPanelProps } from './grading-panel';
 import '@/styles/assessment-clarity.css';
 
@@ -42,6 +44,8 @@ export type ScheduledGradingPanelProps = {
 	draft: GradeDraftState;
 	onDraftChange: (draft: GradeDraftState) => void;
 	dirty: boolean;
+	/** Approve / reject controls for the AI findings of this answer (absent without a ready AI draft). */
+	review?: ScheduledFindingControls;
 	aiRecord?: ScheduledAiDraftRecord;
 	aiRequesting: boolean;
 	aiError: string;
@@ -159,7 +163,12 @@ export function scheduledGradingPanelProps(
 			)}
 		</div>
 	);
-	const findings = ai?.status === 'ready' ? (aiRecord?.draft.findings || []).slice(0, 6) : [];
+	const reviewed = ai?.status === 'ready' && props.review ? props.review.findings : [];
+	// Findings not tied to one answer card are listed here; anchored ones sit under their answer.
+	const general = reviewed.filter((f) => !f.itemId);
+	const notice = pendingNotice(reviewed);
+	// Without review controls (read-only use) the plain list of AI findings stays.
+	const plain = ai?.status === 'ready' && !props.review ? (aiRecord?.draft.findings || []).slice(0, 6) : [];
 	const canPublish = (status === 'ready' || status === 'published') && !props.dirty;
 
 	return {
@@ -215,10 +224,11 @@ export function scheduledGradingPanelProps(
 		onApplyAi:
 			aiRecord?.status === 'ready'
 				? () => {
-						const proposal = draftFromAi(settings, aiRecord);
+						const proposal = draftFromAi(settings, aiRecord, draft.reviewFindings);
 						props.onDraftChange({
 							feedback: mergeAiFeedback(draft.feedback, proposal.feedback, 10000),
 							points: draft.points.trim() ? draft.points : proposal.points,
+							...(draft.reviewFindings ? { reviewFindings: draft.reviewFindings } : {}),
 							criterionScores: { ...proposal.criterionScores, ...Object.fromEntries(Object.entries(draft.criterionScores).filter(([, v]) => v !== '')) },
 						});
 					}
@@ -257,13 +267,13 @@ export function scheduledGradingPanelProps(
 			icon: <ArrowRight size={14} />,
 		},
 		disabledReasons: blockers,
-		children: findings.length ? (
+		children: plain.length ? (
 			<details className="evx-block sr-ai-findings">
 				<summary>
-					<Sparkles size={13} /> Temuan AI ({findings.length})
+					<Sparkles size={13} /> Temuan AI ({plain.length})
 				</summary>
 				<ul>
-					{findings.map((finding, index) => (
+					{plain.map((finding, index) => (
 						<li key={index}>
 							{finding.quote ? <q lang="de">{finding.quote}</q> : <em>Umum</em>} — {finding.note}
 							{finding.correction ? (
@@ -277,7 +287,24 @@ export function scheduledGradingPanelProps(
 				{aiRecord?.draft.truncated ? <p className="evx-muted">Jawaban panjang dipotong; hanya bagian awal yang ditinjau.</p> : null}
 				<p className="evx-muted">Usulan AI. Periksa sebelum dipakai; nilai resmi tetap keputusan dosen.</p>
 			</details>
-		) : undefined,
+		) :
+			reviewed.length || notice ? (
+				<>
+					{notice && (
+						<p className="sr-pending-notice" role="status">
+							<Sparkles size={13} aria-hidden="true" /> {notice}. Tetap dapat disimpan; temuan yang belum ditinjau tidak masuk ke umpan balik mahasiswa.
+						</p>
+					)}
+					{props.review && general.length > 0 && <ScheduledFindingsReview findings={general} controls={props.review} heading="Temuan AI umum" />}
+					{props.review && reviewed.length > general.length && props.review.onApproveAll && reviewed.some((f) => f.status === 'pending') && general.length === 0 && (
+						<button type="button" className="ld-outline-action sm" disabled={props.review.disabled} onClick={props.review.onApproveAll}>
+							Setujui semua temuan ({reviewed.filter((f) => f.status === 'pending').length})
+						</button>
+					)}
+					{aiRecord?.draft.truncated ? <p className="evx-muted">Jawaban panjang dipotong; hanya bagian awal yang ditinjau.</p> : null}
+					{aiRecord?.draft.verifyFailed ? <p className="evx-muted">Verifikasi AI gagal: semua temuan berstatus mungkin dan tanpa skor.</p> : null}
+				</>
+			) : undefined,
 		footer:
 			status === 'ready' || status === 'published' ? (
 				<div className="sr-publish" aria-live="polite">

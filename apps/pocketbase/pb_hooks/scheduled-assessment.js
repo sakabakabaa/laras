@@ -36,7 +36,26 @@ function validateGrade(settings, scores, points) {
   if (Object.keys(scores).some(id=>!Object.prototype.hasOwnProperty.call(ids,id))) bad('Skor rubrik tidak valid.');
   return {points:total,criterionScores:clean};
 }
+// Lecturer decisions on AI findings: [{id:'ai-<n>',quote,status:'approved'|'rejected',rejectReason?}]. Pending findings are simply absent.
+function validateReviewFindings(value) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 40) bad('Tinjauan temuan tidak valid.');
+  const seen = Object.create(null), out = [];
+  for (const row of value) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) bad('Tinjauan temuan tidak valid.');
+    if (typeof row.id !== 'string' || !/^ai-\d{1,3}$/.test(row.id) || seen[row.id]) bad('Tinjauan temuan tidak valid.');
+    if (row.status !== 'approved' && row.status !== 'rejected') bad('Status temuan tidak valid.');
+    if (row.quote !== undefined && (typeof row.quote !== 'string' || row.quote.length > 300)) bad('Kutipan temuan tidak valid.');
+    if (row.rejectReason !== undefined && (typeof row.rejectReason !== 'string' || row.rejectReason.length > 600)) bad('Alasan penolakan terlalu panjang.');
+    seen[row.id] = true;
+    const clean = {id:row.id,quote:row.quote||'',status:row.status};
+    if (row.status === 'rejected' && row.rejectReason && row.rejectReason.trim()) clean.rejectReason = row.rejectReason.trim();
+    out.push(clean);
+  }
+  if (JSON.stringify(out).length > 20000) bad('Tinjauan temuan terlalu besar.');
+  return out;
+}
 function studentPublished(value) {
   return {attempt:value.attempt,activity:value.activity,points:value.points,maxPoints:value.maxPoints,feedback:value.feedback,publishedAt:value.publishedAt};
 }
-module.exports = {assertGradable, validateSettings, validateGrade, studentPublished};
+module.exports = {assertGradable, validateReviewFindings, validateSettings, validateGrade, studentPublished};

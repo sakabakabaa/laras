@@ -293,3 +293,18 @@
 :root.dark .sr-finalize-result { background: #153d2e; border-color: #1f5a43; }
 :root.dark .sr-finalize-result.is-error { background: #452825; border-color: #6b3a35; }
 @media (max-width: 640px) { .sr-finalize-list > li { grid-template-columns: auto 1fr; } .sr-finalize-list > li > button { grid-column: 2; justify-self: start; } }
+
+/* Per-finding review of AI findings (Kelas terjadwal). */
+.aev-mark.rejected { background: #eaecf0; color: #667085; border: 0; }
+:root.dark .aev-mark.rejected { background: #2a3138; color: #9aa6b6; }
+.aev-mark.approved { box-shadow: inset 0 -2px 0 #12b76a; }
+.aev-mark-pop-note.rejected { color: #667085; }
+.sr-findings { display: grid; gap: 6px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--ss-border); border-radius: 10px; background: var(--ss-soft); font-size: 12px; line-height: 1.6; }
+.sr-findings > ul, .sr-findings .aev-group-items { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.sr-findings-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.sr-finding { display: grid; gap: 4px; }
+.sr-finding.is-rejected .sr-finding-text { color: #667085; }
+.sr-finding-reject { display: flex; flex-wrap: wrap; gap: 6px; }
+.sr-finding-reject input { flex: 1 1 200px; min-width: 0; padding: 4px 8px; border: 1px solid var(--ss-border); border-radius: 8px; font-size: 12px; background: transparent; color: inherit; }
+.sr-pending-notice { display: flex; align-items: center; gap: 6px; margin: 6px 0; padding: 6px 10px; border-radius: 8px; background: #fffaeb; color: #a15c07; font-size: 12px; }
+:root.dark .sr-pending-notice { background: #3d311e; color: #ebc183; }

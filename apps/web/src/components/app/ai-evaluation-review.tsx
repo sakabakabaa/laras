@@ -39,6 +39,7 @@ import pb from '@/lib/pocketbase-client';
 import { findMarkerInsensitive, greenAllowed, lineGreenEligible } from '@/lib/ai-marks';
 import { aiScoreNotice, SETUP_NOTICE_TEXT } from '@/lib/evaluation-setup';
 import { parseAssessmentDraft } from '@/lib/assessment-draft';
+import { aiDraftBaseline, canResetToFreshDraft, regenerationLanded, type ReviewBaseline } from '@/lib/ai-review-baseline';
 import { useUnsavedWork } from '@/hooks/use-unsaved-work';
 import '@/styles/assessment-clarity.css';
 import { useT } from '@/lib/i18n';
@@ -398,6 +399,12 @@ export function AiEvaluationReviewProvider({
     const criterionScoresTouched = useRef(false);
 	const draftLoadedKey = useRef('');
 	const currentDraftFingerprint = useRef('');
+	// After "Buat ulang AI" the NEW draft is the baseline `dirty` compares against
+	// (nothing of it is saved yet), so switching students does not warn about
+	// unsaved work the lecturer never made.
+	const [freshBaseline, setFreshBaseline] = useState<ReviewBaseline | null>(null);
+	const awaitingRegen = useRef(false);
+	const regenFrom = useRef<string | null>(null);
 
 	// Phase 4 — lecturer-only research items for this evaluation: human missed
 	// errors (AI false negatives) and AI-finding research annotations. Loaded
@@ -483,6 +490,8 @@ export function AiEvaluationReviewProvider({
 		setLoading(true);
 		setRow(null);
         setWorking(null);
+        setFreshBaseline(null);
+        awaitingRegen.current = false;
         setCriterionScores({});
         criterionScoresTouched.current = false;
 		setResearchItems({ annotations: {}, missedErrors: [] });
@@ -594,6 +603,22 @@ export function AiEvaluationReviewProvider({
 	// otherwise the AI recommendations laid in as 'pending'. Once the
 	// lecturer has reviewed AI items, their copy is authoritative — a
 	// regenerated draft never clobbers their decisions.
+	// A regeneration that just landed replaces the working copy and the dirty
+	// baseline (only while the lecturer has saved nothing for this submission).
+	useEffect(() => {
+		if (!awaitingRegen.current || loading || !row) return;
+		if (!regenerationLanded(row, regenFrom.current)) return;
+		awaitingRegen.current = false;
+		const stored = normalizeReviewFindings(parseReviewFindings(row.reviewFindings), criteria);
+		if (!canResetToFreshDraft(row, stored.length)) return;
+		const base = aiDraftBaseline(row, criteria);
+		mergedSig.current = JSON.stringify([stored, parseFindings(row.findings), row.reviewedAt]);
+		criterionScoresTouched.current = false;
+		setWorking(base.findings);
+		setCriterionScores(base.scores);
+		setFreshBaseline(base);
+	}, [row, loading, criteria]);
+
 	useEffect(() => {
 		if (loading || !row) return;
 		if (row.status !== 'ready' && row.status !== 'failed') return;
@@ -663,10 +688,13 @@ export function AiEvaluationReviewProvider({
 	);
 	const saved = row ? normalizeReviewFindings(parseReviewFindings(row.reviewFindings), criteria) : [];
 	const savedDraft = parseAssessmentDraft(row?.reviewDraft);
-	const initialFindings = row?.reviewedAt || saved.length ? saved : deriveAiReviewFindings(parseFindings(row?.findings), criteria);
+	const savedAnything = Boolean(row?.reviewedAt) || saved.length > 0;
+	const initialFindings = row?.reviewedAt || saved.length ? saved : freshBaseline ? freshBaseline.findings : deriveAiReviewFindings(parseFindings(row?.findings), criteria);
 	const initialScores = row?.reviewedAt || (row?.reviewCriterionScores && Object.keys(row.reviewCriterionScores).length)
 		? row?.reviewCriterionScores || {}
-		: row?.scoringVersion === 4 && row.rubricScores
+		: freshBaseline && !savedAnything
+			? freshBaseline.scores
+			: row?.scoringVersion === 4 && row.rubricScores
 			? Object.fromEntries(((row.rubricScores as RubricScores).rows || []).map(entry => [entry.id, entry.score]))
 			: Object.fromEntries(validatedRubric(parseRubric(row?.rubricBreakdown), criteria).map(entry => [matchCriterion(entry, criteria)!.id!, entry.score]));
 	const savedOverride = savedDraft ? savedDraft.finalScore : row?.publishedAt ? row.finalScore : null;
@@ -890,6 +918,8 @@ export function AiEvaluationReviewProvider({
 	const regenerate = async () => {
 		if (!recordKey || !participant) return;
 		setRegenerating(true);
+		regenFrom.current = row?.generatedAt ?? null;
+		awaitingRegen.current = true;
 		try {
 			const response = await fetch('/api/evaluation-draft', {
 				method: 'POST',
@@ -906,6 +936,7 @@ export function AiEvaluationReviewProvider({
             setNotice('Evaluasi AI baru diminta menggunakan rubrik dan materi terbaru.');
 			await load();
 		} catch (error) {
+			awaitingRegen.current = false;
             setSaveError(error instanceof Error ? error.message : 'Permintaan evaluasi gagal.');
 		} finally {
 			setRegenerating(false);

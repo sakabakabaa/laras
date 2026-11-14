@@ -17,6 +17,10 @@ import {
 	UNREADABLE_LABEL,
 } from '@/lib/ai-marks';
 import {buildMarkedSegments, SEVERITY_LABEL, sliceSegments, type EvalFinding, type MarkedSegment} from '@/lib/ai-evaluation';
+import type {MarkFinding} from '@/lib/scheduled-answer-marks';
+
+/** Approve / reject / undo of one finding from its mark (Kelas terjadwal review). */
+export type MarkReviewHandler = (reviewId: string, action: 'approve' | 'reject' | 'reset') => void;
 
 
 type Part = MarkedSegment & {ok?: boolean};
@@ -118,15 +122,25 @@ export function renderAnswerPieces(text: string, okLine: boolean, keyPrefix: str
 	});
 }
 
-function FindingMark({finding, text}: {finding: EvalFinding; text: string}) {
+const STATUS_LABEL = {pending: 'Menunggu tinjauan', approved: 'Disetujui dosen', rejected: 'Ditolak'} as const;
+
+function FindingMark({finding, text, onReview}: {finding: MarkFinding; text: string; onReview?: MarkReviewHandler}) {
 	const id = useId();
+	const status = finding.reviewStatus;
+	const rejected = status === 'rejected';
+	// Rejected marks stay visible but grey; a "maybe" certainty is dashed; approved is solid.
+	const className = rejected
+		? 'aev-mark rejected'
+		: `aev-mark ${finding.severity}${finding.certainty === 'mungkin' ? ' maybe' : ''}${status === 'approved' ? ' approved' : ''}`;
 	return (
-		<mark className={`aev-mark ${finding.severity}`} tabIndex={0} aria-describedby={id}>
+		<mark className={className} tabIndex={0} aria-describedby={id}>
 			<OcrBracketsHidden text={text} />
-			<span className="sr-only"> ({SEVERITY_LABEL[finding.severity]})</span>
+			<span className="sr-only"> ({SEVERITY_LABEL[finding.severity]}{status ? `, ${STATUS_LABEL[status]}` : ''})</span>
 			<span className="aev-mark-pop sr-mark-pop" role="tooltip" id={id} lang="id">
 				<span className="aev-mark-pop-head">
 					<span className={`aev-chip ${finding.severity}`}>{SEVERITY_LABEL[finding.severity]}</span>
+					{finding.certainty && <span className={`aev-cert ${finding.certainty}`}>{finding.certainty}</span>}
+					{status && <span className={`aevr-status ${status}`}>{STATUS_LABEL[status]}</span>}
 					{finding.imageChecked && <span className="aev-img-checked">dicek di foto</span>}
 				</span>
 				{finding.note && <span className="aev-mark-pop-note">{finding.note}</span>}
@@ -136,6 +150,26 @@ function FindingMark({finding, text}: {finding: EvalFinding; text: string}) {
 					</span>
 				)}
 				{finding.explanation && finding.explanation !== finding.note && <span className="aev-mark-pop-note">{finding.explanation}</span>}
+				{rejected && finding.reviewReason && <span className="aev-mark-pop-note rejected">Alasan: {finding.reviewReason}</span>}
+				{onReview && finding.reviewId && status && (
+					<span className="aev-mark-pop-actions">
+						{status !== 'approved' && (
+							<button type="button" className="approve" onClick={() => onReview(finding.reviewId!, 'approve')}>
+								Setujui
+							</button>
+						)}
+						{status !== 'rejected' && (
+							<button type="button" className="reject" onClick={() => onReview(finding.reviewId!, 'reject')}>
+								Tolak
+							</button>
+						)}
+						{status !== 'pending' && (
+							<button type="button" onClick={() => onReview(finding.reviewId!, 'reset')}>
+								Batalkan
+							</button>
+						)}
+					</span>
+				)}
 			</span>
 		</mark>
 	);
@@ -152,9 +186,12 @@ export function MarkedText({
 	label,
 	lang,
 	className = '',
+	onReview,
 }: {
 	text: string;
-	findings?: EvalFinding[];
+	findings?: (EvalFinding | MarkFinding)[];
+	/** When set, marks that carry a review id show Setujui / Tolak / Batalkan in their popover. */
+	onReview?: MarkReviewHandler;
 	/** Text range the AI read in full; unmarked text inside it is shown green. */
 	checked?: {start: number; end: number} | null;
 	label?: string;
@@ -173,7 +210,7 @@ export function MarkedText({
 							{line.text
 								? parts.map((part, partIndex) => {
 										if (part.severity && part.findingIndex != null && findings[part.findingIndex]) {
-											return <FindingMark key={partIndex} finding={findings[part.findingIndex]} text={part.text} />;
+											return <FindingMark key={partIndex} finding={findings[part.findingIndex]} text={part.text} onReview={onReview} />;
 										}
 										const okLine = !!part.ok && lineGreenEligible(line.text);
 										return renderAnswerPieces(part.text, okLine, String(partIndex));
@@ -188,11 +225,17 @@ export function MarkedText({
 }
 
 /** Colour key, same wording as the Tugas review. */
-export function MarkLegend({ok = true}: {ok?: boolean}) {
+export function MarkLegend({ok = true, review = false}: {ok?: boolean; review?: boolean}) {
 	return (
 		<p className="fas-legend sr-mark-legend">
 			<mark className="aev-mark major">merah</mark> kesalahan berarti
 			<mark className="aev-mark minor">kuning</mark> saran kecil
+			{review && (
+				<>
+					<mark className="aev-mark minor maybe">putus-putus</mark> mungkin
+					<mark className="aev-mark rejected">abu-abu</mark> ditolak dosen
+				</>
+			)}
 			{ok && (
 				<>
 					<mark className="aev-mark ok">garis hijau</mark> tidak ditandai AI

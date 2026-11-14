@@ -44,6 +44,7 @@ const parsedInput = () => {
 };
 
 beforeEach(() => {
+	process.env.AI_EVAL_TWO_PASS = '0';
 	state.courseOwner = 'f1';
 	state.model.mockReset();
 });
@@ -107,7 +108,8 @@ describe('validateLiveDraft', () => {
 		expect(draft.findings.find((f) => f.note === 'Erfunden')?.quote).toBe('');
 		expect(draft.suggestedScore).toBe(70);
 		expect(draft.criterionScores).toEqual({ g: 60, w: 80 });
-		expect(draft.feedback).toContain('nicht zur Arbeit kommen');
+		// Student-facing feedback never lists findings at draft time (only approved ones are added later).
+		expect(draft.feedback).toBe('Gute Anrede, Präposition prüfen.');
 	});
 	it('gives no score when the breakdown misses a criterion', () => {
 		const partial = model({ rubricBreakdown: [{ criterionId: 'g', criterion: 'Grammatik', score: 60, note: '' }] });

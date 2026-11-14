@@ -183,7 +183,7 @@ describe('parseStructuredFindings — six research scenarios', () => {
 	// 4. INVALID QUOTE — the model's quote is not in the student text. The
 	//    finding is PRESERVED as an invalid-anchor finding (anchorValid=false),
 	//    never silently turned into an empty quote or dropped.
-	it('4. invalid quote: preserved with anchorValid=false, not dropped', () => {
+	it('4. invalid quote: finding kept but demoted to a general finding (empty quote), anchorValid=false', () => {
 		const text = 'Ich lerne Deutsch seit zwei Jahren.';
 		const findings = parseStructuredFindings(
 			[
@@ -202,7 +202,7 @@ describe('parseStructuredFindings — six research scenarios', () => {
 		const f = findings[0]!;
 		expect(f.anchorValid).toBe(false);
 		expect(f.quoteStart).toBeNull();
-		expect(f.quote).toBe('seit drei Jahren'); // original quote preserved
+		expect(f.quote).toBe(''); // unverified quote is never shown; original stays in rawOutput
 		expect(f.category).toBe('Lexicon');
 	});
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import { Link } from 'react-router';
 import {
 	AlertTriangle,
@@ -80,7 +81,7 @@ export function StudentResultView({
 	const letter = graded && submission.grade != null ? studentGradeLabel(submission.grade) : '';
 	const week = assignment.expand?.session?.week;
 	const courseBadge = (course.code || course.title || t('student.common.course')).toUpperCase();
-	const answer = submission.content || '';
+	const answer = stripOcrMarkers(submission.content || '');
 	const collected = formatStamp(submission.updated, locale);
 	const gradedAt = formatStamp(submission.gradedAt || submission.updated, locale);
 	const deadline = assignment.deadline ? formatStamp(assignment.deadline, locale) || deadlineLabel(assignment.deadline) : '';
@@ -114,7 +115,7 @@ export function StudentResultView({
 				return (await response.json()) as { recommendations?: StudentRecommendation[] };
 			})
 			.then((data) => {
-				if (alive) setApiRecs(data?.recommendations ?? null);
+				if (alive) setApiRecs(data?.recommendations ? data.recommendations.map((item) => ({ ...item, note: stripOcrMarkers(item.note), quote: stripOcrMarkers(item.quote) })) : null);
 			})
 			.catch(() => {
 				/* fall back to the stored feedback */

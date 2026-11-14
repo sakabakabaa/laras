@@ -16,6 +16,7 @@
  * modified; the publish snapshot is kept on the `ai_evaluations` row and the
  * official grade/feedback is written to the submission.
  */
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { validateReviewFindings, type EvaluationTarget, type TargetError } from '@/lib/evaluation-review.server';
 import {
@@ -64,7 +65,7 @@ export function composeFeedback(input: { findings: ReviewFinding[]; note: string
 	if (input.note) lines.push('', input.note);
 	if (lines.length === 0) lines.push('Tidak ada catatan perbaikan khusus.');
 	lines.push('', 'Dinilai dan dipublikasikan oleh dosen pengampu.');
-	return lines.join('\n').slice(0, 5000);
+	return stripOcrMarkers(lines.join('\n')).slice(0, 5000);
 }
 
 /** Validates and publishes one evaluation. Returns an error instead of throwing on validation failures. */

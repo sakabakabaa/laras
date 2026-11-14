@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import pb from '@/lib/pocketbase-client';
 import {
 	studentRecommendationText,
@@ -57,8 +58,8 @@ export function StudentPublishedFeedback({
 					{items.map((item, index) => (
 						<li key={`${item.note}-${index}`} className={item.severity}>
 							<em>{item.severity === 'major' ? 'Perlu diperbaiki' : 'Saran'}</em>
-							<p>{item.note}</p>
-							{item.quote ? <blockquote>“{item.quote}”</blockquote> : null}
+							<p>{stripOcrMarkers(item.note)}</p>
+							{item.quote ? <blockquote>“{stripOcrMarkers(item.quote)}”</blockquote> : null}
 						</li>
 					))}
 				</ul>

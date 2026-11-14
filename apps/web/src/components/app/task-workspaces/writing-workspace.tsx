@@ -1,4 +1,5 @@
 import { useT, useLanguage, localeOf } from '@/lib/i18n';
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -110,7 +111,7 @@ function SingleQuestionWriting({
 	const t = useT();
 	const config: WritingConfig = useMemo(() => parseWritingConfig(assignment.taskConfig), [assignment]);
 	const saved = useMemo(() => parseTaskAnswers(submission?.taskAnswers), [submission]);
-	const [text, setText] = useState(submission?.content || '');
+	const [text, setText] = useState(stripOcrMarkers(submission?.content || ''));
 	const [group, setGroup] = useState(submission?.group || '');
 	const [link] = useState(submission?.link || '');
 	// Kept filenames from a previous save: documents first, then images in the

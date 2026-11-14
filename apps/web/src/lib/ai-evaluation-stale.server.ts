@@ -14,6 +14,9 @@
  *  4. If it differs but generation may have appended attachment OCR
  *     ("[ISI LAMPIRAN]": files present and text short/pointer), the stored
  *     hash is not comparable without re-running OCR. Fall to the fallback.
+ *     Since OCR text is now saved into `submission.content` when generation reads
+ *     the attachments, the hash normally matches rule 2 afterwards; rule 4 only
+ *     covers drafts made before that or when saving the OCR text failed.
  *  5. Fallback (no hash, or not comparable): stale ONLY when the submission was
  *     updated after the draft was generated AND the draft has findings with
  *     quotes and none of those quotes occurs in the current text. Anything

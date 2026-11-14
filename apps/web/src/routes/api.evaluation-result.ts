@@ -4,6 +4,7 @@
  * numeric scores. Lecturer review state, grades, and the submission are not
  * changed.
  */
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { authenticateUser } from '@/lib/context-retrieval.server';
@@ -50,8 +51,8 @@ export const action = withApi(async ({ request }) => {
 				.filter((finding) => isCountedFinding(finding.status) && finding.note.trim())
 				.map((finding) => ({
 					severity: finding.severity,
-					note: finding.note.trim(),
-					quote: finding.quote.trim(),
+					note: stripOcrMarkers(finding.note.trim()),
+					quote: stripOcrMarkers(finding.quote.trim()),
 				}));
 		}
 	} catch {

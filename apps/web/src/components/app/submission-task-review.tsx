@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import {
 	CheckCircle2,
 	Clock,
@@ -397,7 +398,7 @@ function WritingReview({
 				})}
 			</ol>
 		) : (
-			submission.content && <p className="tsr-text">{submission.content}</p>
+			submission.content && <p className="tsr-text">{stripOcrMarkers(submission.content)}</p>
 		)}
 			{docs.length > 0 && (
 				<div className="asg-sub-files">

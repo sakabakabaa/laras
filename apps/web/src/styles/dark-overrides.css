@@ -1212,6 +1212,8 @@
 :root.dark .aev-mark.major{background:rgba(248,113,113,.14)}
 :root.dark .aev-mark.ok{background:transparent;color:inherit;text-decoration-color:#34D399}
 :root.dark .aev-mark.unreadable{background:rgba(148,163,184,.12);color:#94A3B8;outline-color:#64748B}
+:root.dark .aev-mark.uncertain{background:transparent;color:inherit;text-decoration-color:#94A3B8}
+:root.dark .aev-img-checked{color:#6CE9A6;background:rgba(18,183,106,.12);border-color:rgba(18,183,106,.4)}
 :root.dark .aev-chip-ctx{background:#12161C;border-color:#2A3340;color:#B6C0CD}
 :root.dark .aev-chip-ctx.on{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35);color:#6EE7B7}
 :root.dark .aev-chip-ctx.warn,:root.dark .aev-stale-banner,:root.dark .aev-setup-note{background:rgba(180,83,9,.16);border-color:rgba(251,191,36,.35);color:#FBBF24}

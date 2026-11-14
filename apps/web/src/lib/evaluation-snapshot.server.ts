@@ -28,6 +28,8 @@ export function createResearchSnapshot(input: {
  images: string[]; link: string; promptVersion: string; systemPromptVersion: string;
  providerConfig: { provider: string; model: string; modelVersion?: string; [key: string]: unknown };
  buildId?: string;
+ /** How many ⟦uncertain⟧ OCR words the evaluated text carried (only recorded for OCR-derived text). */
+ ocrUncertainCount?: number;
 }) {
  const task = clone(input.task);
  const rubric = clone(input.rubric);
@@ -47,6 +49,7 @@ export function createResearchSnapshot(input: {
   studentText: input.studentText, structuredAnswers: input.structuredAnswers,
   task, rubric, userPrompt: input.userPrompt, systemPrompt: input.systemPrompt,
   images: [...input.images], link: input.link,
+  ...(typeof input.ocrUncertainCount === 'number' ? { ocrUncertainCount: input.ocrUncertainCount } : {}),
   promptVersion: input.promptVersion, systemPromptVersion: input.systemPromptVersion,
   providerConfig,
   hashes: {

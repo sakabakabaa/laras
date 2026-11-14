@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import { Link } from 'react-router';
 import { ArrowRight, CheckCircle2, Repeat, Sparkles } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
@@ -94,7 +95,7 @@ export function EnrolledAnswerSheet({
 	const [pendingClip, setPendingClip] = useState<RecordedClip | null>(null);
 	const [nim, setNim] = useState('');
 	const [group, setGroup] = useState(submission?.group || '');
-	const [content, setContent] = useState(submission?.content || '');
+	const [content, setContent] = useState(stripOcrMarkers(submission?.content || ''));
 	const [link, setLink] = useState(submission?.link || '');
 	const [files, setFiles] = useState<File[]>([]);
 	const [busy, setBusy] = useState(false);

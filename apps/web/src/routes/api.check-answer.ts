@@ -41,32 +41,14 @@ import {
 import {
 	checkMaxOf,
 	enrolledIdentityKey,
-	identityOf,
 	interactionMetaOf,
-	publicIdentityComplete,
 	type CheckResponsePayload,
-	type PublicCheckIdentity,
 } from '@/lib/check-types';
-import {
-	continuationMatches,
-	findPublicAssignment,
-	findPublicRow,
-	publicFileUrl,
-	randomContinuationCode,
-	type PublicSubmissionRow,
-} from '@/lib/public-drafts.server';
 import { cefrLevelGuide, extractCefrLevel } from '@/lib/cefr-level';
 
 type Body = {
 	action?: string;
 	assignmentId?: string;
-	token?: string;
-	participantName?: string;
-	nim?: string;
-	groupName?: string;
-	members?: string;
-	/** Public participants: continuation code protecting their draft. */
-	continuationToken?: string;
 	response?: CheckResponsePayload;
 	focus?: string;
 	/** OCR-first image flow: student-reviewed OCR text + confirmation. */
@@ -150,13 +132,6 @@ async function authUser(request: Request) {
 	return { pb, user } as const;
 }
 
-const identityBody = (body: Body): PublicCheckIdentity => ({
-	participantName: (body.participantName || '').trim(),
-	nim: (body.nim || '').trim(),
-	groupName: (body.groupName || '').trim(),
-	members: (body.members || '').trim(),
-});
-
 const listAttempts = (assignmentId: string, identityKey: string) =>
 	pocketbaseAdmin.listRecords<AttemptRow>('check_attempts', {
 		perPage: 200,
@@ -188,10 +163,8 @@ const attemptSummary = (row: AttemptRow) => {
  *   per participant per assignment (lecturer-configurable).
  * - `history` — the participant's own check history + remaining checks.
  *
- * Works for authenticated students (identity = account) and public-link
- * participants (identity = required name + NIM / group fields, verified
- * against earlier attempts on return). Official grading stays with the
- * lecturer; every check is recorded for lecturer review.
+ * Works for authenticated students (identity = account). Official grading
+ * stays with the lecturer; every check is recorded for lecturer review.
  */
 type CheckRequest = {
 	body: Body;
@@ -234,12 +207,6 @@ async function readCheckRequest(request: Request): Promise<CheckRequest | Respon
 	return {
 		body: {
 			action: String(form.get('action') || ''),
-			token: String(form.get('token') || ''),
-			participantName: String(form.get('participantName') || ''),
-			nim: String(form.get('nim') || ''),
-			groupName: String(form.get('groupName') || ''),
-			members: String(form.get('members') || ''),
-			continuationToken: String(form.get('continuationToken') || ''),
 			focus: String(form.get('focus') || ''),
 			ocrText: String(form.get('ocrText') || ''),
 			ocrRaw: String(form.get('ocrRaw') || ''),
@@ -261,10 +228,10 @@ export const action = withApi(async ({ request }) => {
 	const act = body.action?.trim();
 
 	if (act === 'check') {
-		return body.token ? publicCheck(body, parsed.uploads, parsed.keptFiles) : enrolledCheck(request, body);
+		return enrolledCheck(request, body);
 	}
 	if (act === 'history') {
-		return body.token ? publicHistory(body) : enrolledHistory(request, body);
+		return enrolledHistory(request, body);
 	}
 	return apiError(422, 'Aksi tidak dikenal (check atau history).');
 });
@@ -274,7 +241,7 @@ export const action = withApi(async ({ request }) => {
 async function runCheck(input: {
 	assignment: Assignment;
 	identityKey: string;
-	channel: 'enrolled' | 'public';
+	channel: 'enrolled';
 	participantName: string;
 	submission: AssignmentSubmission | null;
 	response: CheckResponsePayload;
@@ -282,7 +249,7 @@ async function runCheck(input: {
 	previous: { attempt: number; area: string }[];
 	cachedExtracted: unknown;
 	/** Where the participant's stored files live (public draft row / submission). */
-	fileSource?: { collection: 'public_submissions' | 'assignment_submissions'; recordId: string } | null;
+	fileSource?: { collection: 'assignment_submissions'; recordId: string } | null;
 	/** Stored file names available to this check (uploads already persisted). */
 	storedFiles?: string[];
 	/** OCR-first image flow: student-reviewed OCR text + confirmation flag. */
@@ -756,257 +723,5 @@ async function enrolledHistory(request: Request, body: Body) {
 		checkEnabled: assignment.checkEnabled !== false,
 		attempts: rows.items.map(attemptSummary),
 		lastResponse: (last?.responseSnapshot as CheckResponsePayload | undefined) ?? null,
-	});
-}
-
-// ── Public-link participant ───────────────────────────────────
-
-async function storePublicCheckFiles(
-	assignment: Assignment,
-	identity: PublicCheckIdentity,
-	identityKey: string,
-	row: PublicSubmissionRow | null,
-	response: CheckResponsePayload,
-	uploads: File[],
-	keptFiles: string[],
-): Promise<PublicSubmissionRow | null> {
-	const hasUpload = uploads.length > 0;
-	const keptSent = keptFiles.length > 0 || hasUpload;
-	if (!hasUpload && !row?.files?.length && !keptSent) return row;
-	const code = row?.continuationToken || randomContinuationCode();
-	const kept = keptSent ? keptFiles : row?.files || [];
-	const fd = new FormData();
-	if (!row) {
-		fd.set('assignment', assignment.id);
-		fd.set('participantName', identity.participantName.slice(0, 200));
-		fd.set('nim', identity.nim.slice(0, 40));
-		fd.set('groupName', identity.groupName.slice(0, 200));
-		fd.set('members', identity.members.slice(0, 2000));
-		fd.set('identityKey', identityKey.slice(0, 120));
-		fd.set('status', 'draft');
-		fd.set('continuationToken', code);
-	}
-	fd.set('content', (response.content || '').slice(0, 10000));
-	if (response.link) fd.set('link', response.link);
-	if (response.answers) fd.set('taskAnswers', JSON.stringify({ answers: response.answers }));
-	for (const name of kept) fd.append('files', name);
-	for (const file of uploads) fd.append('files', file, file.name);
-	if (row) {
-		return pocketbaseAdmin.updateRecord<PublicSubmissionRow>('public_submissions', row.id, fd);
-	}
-	return pocketbaseAdmin.createRecord<PublicSubmissionRow>('public_submissions', fd);
-}
-
-async function publicCheck(body: Body, uploads: File[] = [], keptFiles: string[] = []) {
-	const assignment = await findPublicAssignment(body.token || '');
-	if (!assignment) return apiError(404, 'Tugas tidak ditemukan atau tautan publik dimatikan.');
-	if (assignment.checkEnabled === false && (assignment.checkMax || 0) > 0) {
-		return apiError(422, 'Dosen belum mengaktifkan Cek jawaban untuk tugas ini.');
-	}
-	// Phase 1 — enforce the student AI assistance policy server-side for
-	// public-link participants too. The same capability gate applies.
-	const publicCheckPolicy = resolveAssignmentPolicy(assignment);
-	const publicCapDecision = authorizeCapabilities(publicCheckPolicy, CHECK_ANSWER_CAPABILITIES);
-	if (!publicCapDecision.ok) return apiError(publicCapDecision.status, publicCapDecision.message);
-	// Latihan formatif: repeatable practice stays open — no deadline and no
-	// final submission closes it (matches the public form's behavior).
-	const formative = activityTypeOf(assignment) === 'formative';
-	if (!formative && isPastDeadline(assignment.deadline)) {
-		return apiError(422, 'Batas waktu sudah lewat. Pemeriksaan ditutup.');
-	}
-
-	const identity = identityBody(body);
-	if (!publicIdentityComplete(assignment.mode, identity)) {
-		return apiError(
-			422,
-			assignment.mode === 'collaborative'
-				? 'Isi nama lengkap, nama kelompok, dan daftar anggota sebelum memeriksa jawaban.'
-				: 'Isi nama lengkap dan NIM / nomor mahasiswa sebelum memeriksa jawaban.',
-		);
-	}
-
-	const identityKey = identityOf(assignment.mode, identity.nim, identity.groupName);
-	const row = await findPublicRow(assignment.id, identityKey);
-	if (!formative && row && row.status !== 'draft') {
-		return apiError(
-			422,
-			'Identitas ini sudah mengumpulkan — Cek jawaban sudah ditutup. Menunggu penilaian dosen.',
-		);
-	}
-	// A saved draft is protected by its continuation code: only the code
-	// holder may keep checking (and spending) this identity's check quota.
-	if (row && !continuationMatches(row, body.continuationToken)) {
-		return apiError(
-			403,
-			'Draf identitas ini dilindungi kode lanjutan. Buka draf Anda lewat tautan/kode lanjutan yang Anda simpan, lalu periksa jawaban lagi.',
-		);
-	}
-
-	const rows = await listAttempts(assignment.id, identityKey);
-	// Legacy (pre-draft) attempts: verify identity on return by name match.
-	const first = rows.items[0];
-	if (
-		!row &&
-		first &&
-		first.participantName.trim().toLowerCase() !== identity.participantName.toLowerCase()
-	) {
-		return apiError(
-			403,
-			'Nama tidak cocok dengan riwayat pemeriksaan identitas ini. Gunakan nama yang sama saat pemeriksaan pertama.',
-		);
-	}
-
-	const response = {
-		...(body.response || { kind: 'generic' }),
-	} as CheckResponsePayload;
-	let stored: PublicSubmissionRow | null = row;
-	const wantsFiles = uploads.length > 0 || keptFiles.length > 0 || (row?.files?.length || 0) > 0;
-	if (wantsFiles) {
-		try {
-			stored = await storePublicCheckFiles(
-				assignment,
-				identity,
-				identityKey,
-				row,
-				response,
-				uploads,
-				keptFiles,
-			);
-		} catch (error) {
-			logger.error('public check file store failed', error);
-			return apiError(422, 'Berkas tidak dapat disimpan untuk diperiksa. Coba unggah ulang.');
-		}
-	}
-	const storedNames = stored?.files || [];
-	if (storedNames.length) {
-		response.attachments = storedNames.map((name) => ({ name }));
-	}
-
-	const result = await runCheck({
-		assignment,
-		identityKey,
-		channel: 'public',
-		participantName: identity.participantName,
-		submission: null,
-		response,
-		focus: (body.focus || '').trim().slice(0, 500),
-		previous: rows.items.map((r) => ({ attempt: r.attempt, area: r.area })),
-		cachedExtracted: wantsFiles ? null : rows.items[rows.items.length - 1]?.extracted,
-		fileSource: stored ? { collection: 'public_submissions', recordId: stored.id } : null,
-		storedFiles: storedNames,
-		ocrText: body.ocrText,
-		ocrRaw: body.ocrRaw,
-		ocrConfirmed: body.ocrConfirmed,
-		explicit: body.explicitCorrection,
-		previousAttempt: rows.items[rows.items.length - 1]
-			? {
-					id: rows.items[rows.items.length - 1].id,
-					responseSnapshot: rows.items[rows.items.length - 1].responseSnapshot,
-				}
-			: null,
-	});
-	if (result instanceof Response) {
-		if (!stored?.continuationToken) return result;
-		const failed = (await result.json().catch(() => ({ error: 'Pemeriksaan gagal.' }))) as Record<
-			string,
-			unknown
-		>;
-		return json(
-			{
-				...failed,
-				continuationToken: stored.continuationToken,
-				files: (stored.files || []).map((name) => ({
-					name,
-					url: publicFileUrl(stored.id, name),
-				})),
-			},
-			{ status: result.status },
-		);
-	}
-
-	// First check for this identity: create the protected draft row so the
-	// participant receives a continuation code and every later access to this
-	// identity's draft, feedback, and quota requires it.
-	let code = stored?.continuationToken || '';
-	if (!stored) {
-		code = randomContinuationCode();
-		try {
-			await pocketbaseAdmin.createRecord('public_submissions', {
-				assignment: assignment.id,
-				participantName: identity.participantName.slice(0, 200),
-				nim: identity.nim.slice(0, 40),
-				groupName: identity.groupName.slice(0, 200),
-				members: identity.members.slice(0, 2000),
-				identityKey: identityKey.slice(0, 120),
-				content: (response.content || '').slice(0, 10000),
-				...(response.link ? { link: response.link } : {}),
-				...(response.answers ? { taskAnswers: { answers: response.answers } } : {}),
-				status: 'draft',
-				continuationToken: code,
-			});
-		} catch (error) {
-			// The check itself already succeeded and is recorded; without the
-			// draft row the participant simply continues on the identity path.
-			logger.error('public check draft row failed', error);
-			code = '';
-		}
-	}
-	return json({
-		...result.payload,
-		...(code ? { continuationToken: code } : {}),
-		...(stored
-			? {
-					files: (stored.files || []).map((name) => ({
-						name,
-						url: publicFileUrl(stored.id, name),
-					})),
-				}
-			: {}),
-	});
-}
-
-async function publicHistory(body: Body) {
-	const assignment = await findPublicAssignment(body.token || '');
-	if (!assignment) return apiError(404, 'Tugas tidak ditemukan atau tautan publik dimatikan.');
-
-	const identity = identityBody(body);
-	if (!publicIdentityComplete(assignment.mode, identity)) {
-		return json({
-			used: 0,
-			max: checkMaxOf(assignment),
-			checkEnabled: assignment.checkEnabled !== false,
-			attempts: [],
-			lastResponse: null,
-		});
-	}
-	const identityKey = identityOf(assignment.mode, identity.nim, identity.groupName);
-	const row = await findPublicRow(assignment.id, identityKey);
-	// A saved draft (or submission) is protected by its continuation code.
-	if (row && !continuationMatches(row, body.continuationToken)) {
-		return apiError(
-			403,
-			'Draf identitas ini dilindungi kode lanjutan. Buka draf Anda lewat tautan/kode lanjutan yang Anda simpan untuk melihat riwayat pemeriksaan.',
-		);
-	}
-	const rows = await listAttempts(assignment.id, identityKey);
-	const first = rows.items[0];
-	if (
-		!row &&
-		first &&
-		first.participantName.trim().toLowerCase() !== identity.participantName.toLowerCase()
-	) {
-		return apiError(
-			403,
-			'Nama tidak cocok dengan riwayat pemeriksaan identitas ini. Gunakan nama yang sama saat pemeriksaan pertama.',
-		);
-	}
-	const last = rows.items[rows.items.length - 1];
-	return json({
-		used: rows.items.length,
-		max: checkMaxOf(assignment),
-		checkEnabled: assignment.checkEnabled !== false,
-		attempts: rows.items.map(attemptSummary),
-		lastResponse: (last?.responseSnapshot as CheckResponsePayload | undefined) ?? null,
-		...(row?.continuationToken ? { continuationToken: row.continuationToken } : {}),
 	});
 }

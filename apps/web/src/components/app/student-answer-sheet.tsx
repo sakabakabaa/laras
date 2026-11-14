@@ -46,7 +46,7 @@ export type SheetInfo = { label: string; value: string };
 const STEP_KEYS = ['identity', 'answer', 'review', 'send'] as const;
 
 /**
- * Student answer sheet chrome shared by enrolled tasks and public links.
+ * Student answer sheet chrome shared by enrolled tasks.
  * It only lays out the existing draft / Cek jawaban / submit actions — it
  * does not grade, publish, or store a second submission.
  */

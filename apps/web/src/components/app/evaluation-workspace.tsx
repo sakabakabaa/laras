@@ -74,26 +74,6 @@ import { AssignmentForm } from '@/components/app/assignment-form';
 import { BulkPaperInput } from '@/components/app/bulk-paper-input';
 import { useT } from '@/lib/i18n';
 
-type PublicRow = {
-	id: string;
-	assignment: string;
-	participantName: string;
-	nim: string;
-	groupName: string;
-	members: string;
-	identityKey: string;
-	content: string;
-	files: string[];
-	link: string;
-	status: string;
-	grade: number | null;
-	feedback: string;
-	autoScore: number | null;
-	created: string;
-	linkedUser?: string;
-	linkedSubmission?: string;
-};
-
 type AttemptRow = {
 	id: string;
 	identityKey: string;
@@ -107,11 +87,8 @@ type AttemptRow = {
 	created: string;
 };
 
-type Channel = 'enrolled' | 'public';
-
 type Participant = {
 	key: string;
-	channel: Channel;
 	name: string;
 	detail: string;
 	status: string;
@@ -124,8 +101,6 @@ type Participant = {
 	autoScore: number | null;
 	identityKey: string;
 	enrolled?: AssignmentSubmission;
-	publicId?: string;
-	linked?: boolean;
 	transcript: string;
 	transcriptStatus: TranscriptStatus;
 	transcriptError: string;
@@ -168,20 +143,15 @@ function ocrOf(extracted: unknown) {
 	};
 }
 
-function publicFileUrl(row: PublicRow, name: string) {
-	return pb.files.getURL(row, name);
-}
-
 /**
  * Focused lecturer evaluation for one assignment: context, counts, participant
  * list, answer + attachments, formative Cek jawaban history, and the official
- * grade. Enrolled and public rows stay labeled and separate.
+ * grade.
  */
 export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) {
 	const [assignment, setAssignment] = useState<Assignment | null>(null);
 	const [course, setCourse] = useState<Course | null>(null);
 	const [subs, setSubs] = useState<AssignmentSubmission[]>([]);
-	const [pubs, setPubs] = useState<PublicRow[]>([]);
 	const [attempts, setAttempts] = useState<AttemptRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
@@ -223,17 +193,13 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	);
 
 	const reload = async () => {
-		const [assignmentRow, subRows, pubRows, attemptRows] = await Promise.all([
+		const [assignmentRow, subRows, attemptRows] = await Promise.all([
 			pb.collection('assignments').getOne<Assignment>(assignmentId, {
 				expand: 'session,subCpmk,parentAssignment',
 			}),
 			pb.collection('assignment_submissions').getFullList<AssignmentSubmission>({
 				filter: pb.filter('assignment = {:id}', { id: assignmentId }),
 				expand: 'owner',
-				sort: '-created',
-			}),
-			pb.collection('public_submissions').getFullList<PublicRow>({
-				filter: pb.filter('assignment = {:id}', { id: assignmentId }),
 				sort: '-created',
 			}),
 			pb.collection('check_attempts').getFullList<AttemptRow>({
@@ -245,7 +211,6 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 		setAssignment(assignmentRow);
 		setCourse(courseRow);
 		setSubs(subRows);
-		setPubs(pubRows);
 		setAttempts(attemptRows);
 		// Resolve enrolled owners' display identity (name + NIM) server-side.
 		// The `users` viewRule blocks expanding other students' owner records
@@ -363,7 +328,6 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 					: ownerEmail || 'Identitas belum tersedia';
 			return {
 				key: `e:${s.id}`,
-				channel: 'enrolled',
 				name,
 				detail,
 				status: s.status || 'submitted',
@@ -383,30 +347,8 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				transcriptConfidence: s.transcriptConfidence,
 			};
 		});
-		const publicRows: Participant[] = pubs.filter(s => !s.linkedSubmission || !subs.some(row => row.id === s.linkedSubmission)).map((s) => ({
-			key: `p:${s.id}`,
-			channel: 'public',
-			name: s.participantName || 'Peserta publik',
-			detail: s.groupName ? `Kelompok ${s.groupName}` : s.nim ? `NIM ${s.nim}` : 'Peserta publik',
-			status: s.status || 'submitted',
-			grade: s.grade,
-			feedback: s.feedback || '',
-			content: s.content || '',
-			link: s.link || '',
-			files: (s.files || []).map((name) => ({ name, url: publicFileUrl(s, name) })),
-			created: s.created,
-			autoScore: s.autoScore,
-			identityKey: s.identityKey,
-			publicId: s.id,
-			linked: Boolean(s.linkedSubmission),
-			transcript: '',
-			transcriptStatus: '',
-			transcriptError: '',
-			transcriptFile: '',
-			transcriptConfidence: null,
-		}));
-		return [...enrolled, ...publicRows];
-	}, [subs, pubs, ownerMap]);
+		return enrolled;
+	}, [subs, ownerMap]);
 
 	const collected = participants.filter((p) => p.status !== 'draft');
 	const graded = collected.filter((p) => p.status === 'graded');
@@ -513,8 +455,6 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	const filterOptions: { value: string; label: string }[] = formative
 		? [
 				{ value: 'all', label: 'Semua' },
-				{ value: 'enrolled', label: 'Terdaftar' },
-				{ value: 'public', label: 'Publik' },
 				{ value: 'checked', label: 'Sudah memeriksa' },
 				{ value: 'unchecked', label: 'Belum memeriksa' },
 			]
@@ -523,8 +463,6 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				{ value: 'pending', label: 'Belum dinilai' },
 				{ value: 'graded', label: 'Sudah dinilai' },
 				{ value: 'late', label: 'Terlambat' },
-				{ value: 'enrolled', label: 'Terdaftar' },
-				{ value: 'public', label: 'Publik' },
 			];
 
 	const countOf = (value: string) =>
@@ -750,9 +688,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 					participant={
 						!formative && active
 							? {
-									channel: active.channel,
 									enrolledId: active.enrolled?.id,
-									publicId: active.publicId,
 									status: active.status,
 								}
 							: null
@@ -771,7 +707,6 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				}
 					onPublished={() => {
 						invalidate('assignment_submissions');
-						invalidate('public_submissions');
 						void reload();
 					}}
 					onDirtyChange={reportReviewDirty}
@@ -789,7 +724,6 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 					enabled={formative && !!active}
 					assignmentId={assignment.id}
 					identityKey={active?.identityKey || ''}
-					channel={active?.channel || 'enrolled'}
 					submissionId={active?.enrolled?.id}
 					content={active?.content || ''}
 					feedback={activeAttempts[activeAttempts.length - 1]?.feedback || ''}
@@ -882,8 +816,8 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 										<span className="cw-student-avatar">{p.name.charAt(0).toUpperCase()}</span>
 										<span>
 											<strong>{p.name}</strong>
-										<small title={`${p.channel === 'public' ? 'Peserta publik' : 'Mahasiswa'}${p.detail ? ` · ${p.detail}` : ''} · ${stamp(p.created)}`}>
-											{p.channel === 'public' ? 'Publik' : p.detail || 'Mahasiswa'} · {new Date(p.created).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+										<small title={`Mahasiswa${p.detail ? ` · ${p.detail}` : ''} · ${stamp(p.created)}`}>
+											{p.detail || 'Mahasiswa'} · {new Date(p.created).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
 										</small>
 										</span>
 										<em>
@@ -897,13 +831,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 														? 'Draf'
 														: '—'}
 										</em>
-										{p.linked && (
-											<span className="asg-tag linked" title="Jawaban publik ditautkan ke akun mahasiswa">
-												Tertaut
-											</span>
-										)}
 										<span className={`asg-tag sub-${p.status || 'submitted'}`}>
-											{p.channel === 'public' ? 'Publik · ' : ''}
 											{SUBMISSION_STATUS_LABEL[p.status as SubmissionStatus] || p.status}
 										</span>
 									</button>
@@ -923,7 +851,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 								<div>
 									<h2>{active.name}</h2>
 									<p>
-										{active.detail || (active.channel === 'public' ? 'Peserta publik' : 'Mahasiswa')}
+										{active.detail || 'Mahasiswa'}
 
 										{' · '}{SUBMISSION_STATUS_LABEL[active.status as SubmissionStatus] || active.status}
 										{' · '}{stamp(active.created)}
@@ -978,8 +906,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 													<ExternalLink size={12} /> {active.link}
 												</a>
 											)}
-											{active.channel === 'enrolled' &&
-											active.enrolled &&
+											{active.enrolled &&
 											active.transcriptStatus !== 'ready' &&
 											(active.transcriptStatus || active.files.some((f) => AUDIO_RE.test(f.name))) ? (
 												<TranscriptPanel
@@ -990,8 +917,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 													initialFile={active.transcriptFile}
 												/>
 											) : null}
-											{active.channel === 'enrolled' &&
-											active.enrolled &&
+											{active.enrolled &&
 											active.transcriptStatus === 'ready' ? (
 												<AiEvaluationAnswer />
 											) : null}
@@ -1119,7 +1045,6 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 					onClose={() => setBulkOpen(false)}
 					onSubmitted={() => {
 						invalidate('assignment_submissions');
-						invalidate('public_submissions');
 						void reload();
 					}}
 				/>
@@ -1223,10 +1148,6 @@ function matchesFilter(p: Participant, value: string, checkedKeys: Set<string>) 
 			return p.status === 'graded';
 		case 'late':
 			return p.status === 'late';
-		case 'public':
-			return p.channel === 'public';
-		case 'enrolled':
-			return p.channel === 'enrolled';
 		case 'checked':
 			return checkedKeys.has(p.identityKey);
 		case 'unchecked':

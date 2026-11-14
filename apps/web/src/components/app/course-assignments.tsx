@@ -1004,7 +1004,6 @@ function SubmitForm({
 			{assignment.status === 'published' && !finallySubmitted && (
 				<CheckAnswerPanel
 					assignment={assignment}
-					channel="enrolled"
 					buildResponse={() => ({ kind: 'generic', content, link })}
 					onApplyOcrText={(t) => setContent(t)}
 				/>

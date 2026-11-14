@@ -9,7 +9,7 @@ import type { Course, CourseRosterEntry } from '@/lib/learning';
  * Returns per-roster-entry account & enrollment status for a mata kuliah the
  * signed-in lecturer owns: whether a student account exists for the NIM,
  * whether it is enrolled, the first-login password-change flag, the recovery
- * email + verification state, and how many public-link answers are linked.
+ * email + verification state.
  *
  * Faculty-only and ownership-verified. POST (not GET) because the response is
  * per-user (the lecturer's own roster) and must not be edge-cached.
@@ -29,7 +29,6 @@ type StatusEntry = {
 	mustChangePassword: boolean;
 	recoveryEmail: string;
 	recoveryEmailVerified: boolean;
-	linkedPublicCount: number;
 	language: string;
 };
 
@@ -90,25 +89,6 @@ export const action = withApi(async ({ request }) => {
 	});
 	const enrolledIds = new Set(enrollments.items.map((e) => e.owner));
 
-	const linkedCount = new Map<string, number>();
-	const assignments = await pocketbaseAdmin.listRecords<{ id: string }>('assignments', {
-		perPage: 500,
-		filter: `course="${esc(courseId)}"`,
-	});
-	if (assignments.items.length > 0) {
-		const assignFilter = assignments.items
-			.map((a) => `assignment="${esc(a.id)}"`)
-			.join(' || ');
-		const pubs = await pocketbaseAdmin.listRecords<{ linkedUser?: string }>(
-			'public_submissions',
-			{ perPage: 500, filter: `(${assignFilter})` },
-		);
-		for (const p of pubs.items) {
-			const lu = p.linkedUser as string | undefined;
-			if (lu) linkedCount.set(lu, (linkedCount.get(lu) ?? 0) + 1);
-		}
-	}
-
 	const entries: StatusEntry[] = roster.items.map((r) => {
 		const nim = r.nim.trim();
 		const acct = userByNim.get(nim);
@@ -127,7 +107,6 @@ export const action = withApi(async ({ request }) => {
 			mustChangePassword: acct?.mustChangePassword ?? false,
 			recoveryEmail: acct?.recoveryEmail ?? '',
 			recoveryEmailVerified: acct?.recoveryEmailVerified ?? false,
-			linkedPublicCount: acct ? (linkedCount.get(acct.id) ?? 0) : 0,
 			language: acct?.language ?? '',
 		};
 	});

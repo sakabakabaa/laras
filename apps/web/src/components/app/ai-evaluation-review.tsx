@@ -103,11 +103,8 @@ import {
 import { projectBlindResearchItems, assertBlindResearchRound, type BlindResearchLoad } from '@/lib/research-rater-client';
 
 export type EvaluatedParticipant = {
-	channel: 'enrolled' | 'public';
-	/** The assignment_submissions row id (enrolled channel). */
+	/** The assignment_submissions row id. */
 	enrolledId?: string;
-	/** The public_submissions row id (public channel). */
-	publicId?: string;
 	status: string;
 };
 
@@ -403,17 +400,8 @@ export function AiEvaluationReviewProvider({
 	const [researchLoadError, setResearchLoadError] = useState('');
 	const [researchLoading, setResearchLoading] = useState(false);
 
-	const relationField = participant
-		? participant.channel === 'enrolled'
-			? 'submission'
-			: 'publicSubmission'
-		: '';
-	const recordKey = participant
-		? participant.channel === 'enrolled'
-			? participant.enrolledId
-			: participant.publicId
-		: '';
-	const filter = recordKey ? `${relationField}="${recordKey}"` : '';
+	const recordKey = participant ? participant.enrolledId : '';
+	const filter = recordKey ? `submission="${recordKey}"` : '';
 	const activeRecordKey = useRef(recordKey);
 	activeRecordKey.current = recordKey;
 
@@ -499,7 +487,7 @@ export function AiEvaluationReviewProvider({
 			const res = await fetch('/api/evaluation-annotation', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ intent: 'load', ...(participant.channel === 'enrolled' ? { submissionId: recordKey } : { publicSubmissionId: recordKey }), round }),
+				body: JSON.stringify({ intent: 'load', submissionId: recordKey, round }),
 			});
 			const data = (await res.json().catch(() => ({}))) as BlindResearchLoad & { message?: string; error?: string; assignedRound?: 0 | 1 | 2 };
 			if (!res.ok) throw new Error(data.message || data.error || 'Akses rater ditolak atau respons tidak valid.');
@@ -534,9 +522,7 @@ export function AiEvaluationReviewProvider({
 				Authorization: `Bearer ${token}`,
 			},
 			body: JSON.stringify(
-				participant.channel === 'enrolled'
-					? { submissionId: recordKey }
-					: { publicSubmissionId: recordKey },
+				{ submissionId: recordKey },
 			),
 		})
 			.then(() => load())
@@ -834,9 +820,7 @@ export function AiEvaluationReviewProvider({
 					Authorization: `Bearer ${pb.authStore.token}`,
 				},
 				body: JSON.stringify(
-					participant.channel === 'enrolled'
-						? { submissionId: recordKey, force: true }
-						: { publicSubmissionId: recordKey, force: true },
+					{ submissionId: recordKey, force: true },
 				),
 			});
             const result = await response.json();
@@ -866,9 +850,7 @@ export function AiEvaluationReviewProvider({
 					Authorization: `Bearer ${pb.authStore.token}`,
 				},
 				body: JSON.stringify(
-					participant.channel === 'enrolled'
-						? { submissionId: recordKey, findings: items, criterionScores, reviewDraft }
-						: { publicSubmissionId: recordKey, findings: items, criterionScores, reviewDraft },
+					{ submissionId: recordKey, findings: items, criterionScores, reviewDraft },
 				),
 			});
 			const data = (await res.json().catch(() => ({}))) as {
@@ -912,9 +894,7 @@ export function AiEvaluationReviewProvider({
 					Authorization: `Bearer ${pb.authStore.token}`,
 				},
 				body: JSON.stringify({
-					...(participant.channel === 'enrolled'
-						? { submissionId: recordKey }
-						: { publicSubmissionId: recordKey }),
+					...({ submissionId: recordKey }),
                     findings: items,
                     criterionScores,
 					finalScore: overrideValid ? finalScore : null,
@@ -962,9 +942,7 @@ export function AiEvaluationReviewProvider({
 				Authorization: `Bearer ${pb.authStore.token}`,
 			},
 			body: JSON.stringify({
-				...(participant.channel === 'enrolled'
-					? { submissionId: recordKey }
-					: { publicSubmissionId: recordKey }),
+				...({ submissionId: recordKey }),
 				round: researchRound,
 				quote: draft.quote,
 				referenceCategory: draft.referenceCategory,
@@ -990,7 +968,7 @@ export function AiEvaluationReviewProvider({
 				'Content-Type': 'application/json',
 				...(pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {}),
 			},
-			body: JSON.stringify({ id, ...(recordKey ? (participant?.channel === 'enrolled' ? { submissionId: recordKey } : { publicSubmissionId: recordKey }) : {}), round: researchRound }),
+			body: JSON.stringify({ id, ...(recordKey ? { submissionId: recordKey } : {}), round: researchRound }),
 		});
 		const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
 		if (!res.ok) {
@@ -1637,14 +1615,12 @@ function ResearchAnnotationSection({
 	fingerprint,
 	evaluationId,
 	submissionId,
-	publicSubmissionId,
 	annotation,
 	onSaved,
 }: {
 	fingerprint: string;
 	evaluationId: string;
 	submissionId: string;
-	publicSubmissionId: string;
 	annotation: ResearchAnnotation;
 	onSaved: (a: ResearchAnnotation) => void;
 }) {
@@ -1687,7 +1663,7 @@ function ResearchAnnotationSection({
 					...(pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {}),
 				},
 				body: JSON.stringify({
-					...(submissionId ? { submissionId } : { publicSubmissionId }),
+					submissionId,
 					findingFingerprint: fingerprint,
 					round,
 					errorPresent: draft.errorPresent,
@@ -1971,7 +1947,6 @@ function FindingsUnderText() {
 	const evaluationId = ctx.row?.id ?? '';
 	const originalFindings = ctx.ready ? parseFindings(ctx.ready.findings) : [];
 	const submissionId = ctx.row?.submission ?? '';
-	const publicSubmissionId = ctx.row?.publicSubmission ?? '';
 	const words = ctx.content.trim() ? ctx.content.trim().split(/\s+/).length : 0;
 	const anchored = ctx.visible.filter((f) => f.quote);
 	return (
@@ -2122,7 +2097,6 @@ function FindingsUnderText() {
 													fingerprint={fingerprint}
 													evaluationId={evaluationId}
 													submissionId={submissionId}
-													publicSubmissionId={publicSubmissionId}
 													annotation={annotations[fingerprint] ?? EMPTY_ANNOTATION}
 													onSaved={(a) => ctx.setResearchAnnotation(fingerprint, a)}
 												/>

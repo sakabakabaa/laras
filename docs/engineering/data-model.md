@@ -8,7 +8,7 @@ PocketBase stores collection records in SQLite and files in its data directory. 
 |---|---|---|
 | Identity and enrollment | users, courses, enrollments, course_roster, course_sections | Users and course membership; roster entries and authenticated accounts are distinct |
 | Academic plan | cpl, cpmk, sub_cpmk, topics, assessments, class_sessions, collaborative_tasks | CPL → CPMK → Sub-CPMK and week/session planning |
-| Assignments | assignments, assignment_submissions, public_submissions, task_answer_keys | Task configuration, enrolled/public answers and marking |
+| Assignments | assignments, assignment_submissions, task_answer_keys | Task configuration, student answers and marking |
 | Materials | file_library, file_extractions, file_versions, file_contexts, context_sections, context_suggestions, context_retrievals | File identity/version, extracted text, reviewed mappings, retrieved evidence |
 | AI assessment | ai_evaluations, ai_feedback_items | AI draft, lecturer review and research annotation evidence |
 | Feedback/research | check_attempts, ai_feedback, formative_reviews, feedback_revisions, feedback_uptake, research_rater_assignments, personalization_logs | Feedback history, revision uptake and rater workflow; legacy names are not proof of active usage |
@@ -20,7 +20,7 @@ PocketBase stores collection records in SQLite and files in its data directory. 
 
 ## Relationships and important distinctions
 
-A course owns its academic plan and sessions. Assignments link to course, session and Sub-CPMK; task-specific rubric/configuration is nested in JSON. Submissions link to assignment and student owner. Public submissions have a separate identity/linking path. AI evaluations link to the assignment and either enrolled or public submission, and have lecturer-private ownership rules. Do not use an ungraded record's default numeric grade as an actual lecturer zero.
+A course owns its academic plan and sessions. Assignments link to course, session and Sub-CPMK; task-specific rubric/configuration is nested in JSON. Submissions link to assignment and student owner. AI evaluations link to the assignment and the enrolled submission, and have lecturer-private ownership rules. Do not use an ungraded record's default numeric grade as an actual lecturer zero.
 
 Files link to course and optional academic/session scope. Extraction and context records refer to a file version. A restored file and its mappings must remain version-consistent. Context section suitability is the retrieval approval boundary; file context draft state is not equivalent to rejection of all its sections.
 
@@ -124,26 +124,75 @@ Lecturer review fields, AI raw/provenance snapshots and published feedback repre
 | [apps/pocketbase/pb_migrations/1791451100_agent_task_events.js](../../apps/pocketbase/pb_migrations/1791451100_agent_task_events.js) | `action`, `agent_task_events`, `agent_tasks`, `created`, `owner`, `revision`, `status`, `task`, `users` |
 | [apps/pocketbase/pb_migrations/1791530000_session_lesson_plans.js](../../apps/pocketbase/pb_migrations/1791530000_session_lesson_plans.js) | `assistant_lesson_plans`, `class_sessions`, `created`, `lesson_plan_revisions`, `origin`, `owner`, `revision`, `session`, `snapshot`, `status`, `users` |
 | [apps/pocketbase/pb_migrations/1791540000_create_student_conversation_reflections.js](../../apps/pocketbase/pb_migrations/1791540000_create_student_conversation_reflections.js) | `course`, `courses`, `created`, `language`, `level`, `owner`, `reflection`, `scenario`, `student_conversation_reflections`, `transcript`, `updated`, `users` |
+| [apps/pocketbase/pb_migrations/1791560000_gradebook_chapters.js](../../apps/pocketbase/pb_migrations/1791560000_gradebook_chapters.js) | `chapters` |
+| [apps/pocketbase/pb_migrations/1791570000_class_cohort_multiyear.js](../../apps/pocketbase/pb_migrations/1791570000_class_cohort_multiyear.js) | `angkatan`, `course_roster`, `course_sections`, `semester` |
+| [apps/pocketbase/pb_migrations/1791580000_berkas_multi_course.js](../../apps/pocketbase/pb_migrations/1791580000_berkas_multi_course.js) | `file_library` |
 | [apps/pocketbase/pb_migrations/1791620000_submission_revision_workflow.js](../../apps/pocketbase/pb_migrations/1791620000_submission_revision_workflow.js) | `assignment_submissions`, `assignments` |
+| [apps/pocketbase/pb_migrations/1791700000_ai_model_settings.js](../../apps/pocketbase/pb_migrations/1791700000_ai_model_settings.js) | `ai_model_prefs`, `ai_provider_secrets`, `ai_providers`, `capabilities`, `ciphertext`, `created`, `enabled`, `kind`, `label`, `model`, `models`, `owner`, `provider`, `surface`, `updated`, `users` |
+| [apps/pocketbase/pb_migrations/1791700200_file_library_nav_index.js](../../apps/pocketbase/pb_migrations/1791700200_file_library_nav_index.js) | `file_library`, `kind` |
+| [apps/pocketbase/pb_migrations/1791700300_context_section_excerpts.js](../../apps/pocketbase/pb_migrations/1791700300_context_section_excerpts.js) | `context_sections`, `excerpt` |
+| [apps/pocketbase/pb_migrations/1791700400_assessment_review_draft.js](../../apps/pocketbase/pb_migrations/1791700400_assessment_review_draft.js) | `ai_evaluations` |
+| [apps/pocketbase/pb_migrations/1791700500_ai_codex_oauth.js](../../apps/pocketbase/pb_migrations/1791700500_ai_codex_oauth.js) | `ai_codex_logins`, `ai_provider_codex_auth`, `ai_providers`, `ciphertext`, `created`, `models`, `owner`, `provider`, `status`, `updated`, `users` |
+| [apps/pocketbase/pb_migrations/1791800000_add_student_help_surface.js](../../apps/pocketbase/pb_migrations/1791800000_add_student_help_surface.js) | `ai_model_prefs` |
+| [apps/pocketbase/pb_migrations/1791900000_gradebook_releases.js](../../apps/pocketbase/pb_migrations/1791900000_gradebook_releases.js) | `complete`, `components`, `course`, `courses`, `created`, `grade_publications`, `grade_release_items`, `grade_releases`, `override`, `owner`, `reason`, `release`, `revision`, `status`, `student`, `summary`, `updated`, `users` |
+| [apps/pocketbase/pb_migrations/1791900100_gradebook_operations.js](../../apps/pocketbase/pb_migrations/1791900100_gradebook_operations.js) | `action`, `actor`, `courses`, `created`, `grade_change_events`, `grade_change_items`, `grade_change_sets`, `grade_entries`, `payload`, `position`, `result`, `reverts`, `revision`, `snapshot`, `source`, `status`, `updated`, `users` |
+| [apps/pocketbase/pb_migrations/1793000000_scheduled_classes.js](../../apps/pocketbase/pb_migrations/1793000000_scheduled_classes.js) | `action`, `answers`, `complete`, `created`, `detail`, `instructions`, `kind`, `minutes`, `position`, `required`, `revision`, `score`, `snapshot`, `status`, `title`, `updated` |
+| [apps/pocketbase/pb_migrations/1793000001_scheduled_class_rate_limit.js](../../apps/pocketbase/pb_migrations/1793000001_scheduled_class_rate_limit.js) | Settings, dynamic reference or other schema operation |
+| [apps/pocketbase/pb_migrations/1793000002_scheduled_class_academic_links.js](../../apps/pocketbase/pb_migrations/1793000002_scheduled_class_academic_links.js) | `scheduled_class_activities`, `scheduled_classes` |
+| [apps/pocketbase/pb_migrations/1793000003_private_library_downloads.js](../../apps/pocketbase/pb_migrations/1793000003_private_library_downloads.js) | `file_library` |
+| [apps/pocketbase/pb_migrations/1793000004_beim_arzt_lesson_videos.js](../../apps/pocketbase/pb_migrations/1793000004_beim_arzt_lesson_videos.js) | Settings, dynamic reference or other schema operation |
+| [apps/pocketbase/pb_migrations/1793100000_public_app_url_and_smtp_settings.js](../../apps/pocketbase/pb_migrations/1793100000_public_app_url_and_smtp_settings.js) | Settings, dynamic reference or other schema operation |
+| [apps/pocketbase/pb_migrations/1793101000_laras_email_identity.js](../../apps/pocketbase/pb_migrations/1793101000_laras_email_identity.js) | Settings, dynamic reference or other schema operation |
+| [apps/pocketbase/pb_migrations/1793200000_scheduled_assessments.js](../../apps/pocketbase/pb_migrations/1793200000_scheduled_assessments.js) | `created`, `criteria`, `feedback`, `mode`, `points`, `published`, `revision`, `scheduled_assessments`, `scheduled_grading_settings`, `status`, `updated` |
+| [apps/pocketbase/pb_migrations/1793200100_scheduled_assessment_answer_overrides.js](../../apps/pocketbase/pb_migrations/1793200100_scheduled_assessment_answer_overrides.js) | `scheduled_assessments` |
+| [apps/pocketbase/pb_migrations/1793424000_builder_drafts.js](../../apps/pocketbase/pb_migrations/1793424000_builder_drafts.js) | `builder_documents`, `builder_private_keys`, `created`, `document`, `keys`, `kind`, `revision`, `title`, `updated` |
+| [apps/pocketbase/pb_migrations/1793500000_builder_saved_items.js](../../apps/pocketbase/pb_migrations/1793500000_builder_saved_items.js) | `builder_saved_items`, `created`, `envelope`, `kind`, `revision`, `title` |
+| [apps/pocketbase/pb_migrations/1793500100_builder_delivery.js](../../apps/pocketbase/pb_migrations/1793500100_builder_delivery.js) | `answers`, `closed`, `content`, `created`, `keys`, `kind`, `manual`, `released`, `revision`, `title`, `updated` |
+| [apps/pocketbase/pb_migrations/1793500200_builder_import_jobs.js](../../apps/pocketbase/pb_migrations/1793500200_builder_import_jobs.js) | `attempts`, `builder_import_jobs`, `created`, `report`, `settings`, `status`, `updated` |
+| [apps/pocketbase/pb_migrations/1793500300_builder_draft_delete.js](../../apps/pocketbase/pb_migrations/1793500300_builder_draft_delete.js) | `builder_documents`, `deleted` |
+| [apps/pocketbase/pb_migrations/1793600000_remove_public_submissions.js](../../apps/pocketbase/pb_migrations/1793600000_remove_public_submissions.js) | `ai_evaluations`, `public_submissions` |
 
 The names column is a literal scan and includes field names in collection definitions. It is a search aid, not a table list.
 
 ## Backend hooks
 
+- [apps/pocketbase/pb_hooks/account-email.js](../../apps/pocketbase/pb_hooks/account-email.js)
 - [apps/pocketbase/pb_hooks/agent-tasks.pb.js](../../apps/pocketbase/pb_hooks/agent-tasks.pb.js)
+- [apps/pocketbase/pb_hooks/attendance-student-link.js](../../apps/pocketbase/pb_hooks/attendance-student-link.js)
 - [apps/pocketbase/pb_hooks/attendance-student-link.pb.js](../../apps/pocketbase/pb_hooks/attendance-student-link.pb.js)
+- [apps/pocketbase/pb_hooks/builder-delivery.js](../../apps/pocketbase/pb_hooks/builder-delivery.js)
+- [apps/pocketbase/pb_hooks/builder-delivery.pb.js](../../apps/pocketbase/pb_hooks/builder-delivery.pb.js)
+- [apps/pocketbase/pb_hooks/builder-domain.js](../../apps/pocketbase/pb_hooks/builder-domain.js)
+- [apps/pocketbase/pb_hooks/builder-import-service.js](../../apps/pocketbase/pb_hooks/builder-import-service.js)
+- [apps/pocketbase/pb_hooks/builder-import.pb.js](../../apps/pocketbase/pb_hooks/builder-import.pb.js)
 - [apps/pocketbase/pb_hooks/builder-mailer.pb.js](../../apps/pocketbase/pb_hooks/builder-mailer.pb.js)
+- [apps/pocketbase/pb_hooks/builder-service.js](../../apps/pocketbase/pb_hooks/builder-service.js)
+- [apps/pocketbase/pb_hooks/builder.pb.js](../../apps/pocketbase/pb_hooks/builder.pb.js)
+- [apps/pocketbase/pb_hooks/course-term-guard.js](../../apps/pocketbase/pb_hooks/course-term-guard.js)
+- [apps/pocketbase/pb_hooks/course-term-guard.pb.js](../../apps/pocketbase/pb_hooks/course-term-guard.pb.js)
 - [apps/pocketbase/pb_hooks/custom-migrations-cmd.pb.js](../../apps/pocketbase/pb_hooks/custom-migrations-cmd.pb.js)
 - [apps/pocketbase/pb_hooks/external-dashboard.pb.js](../../apps/pocketbase/pb_hooks/external-dashboard.pb.js)
+- [apps/pocketbase/pb_hooks/gradebook-commands.pb.js](../../apps/pocketbase/pb_hooks/gradebook-commands.pb.js)
 - [apps/pocketbase/pb_hooks/grouped-assessment.js](../../apps/pocketbase/pb_hooks/grouped-assessment.js)
 - [apps/pocketbase/pb_hooks/grouped-assessment.pb.js](../../apps/pocketbase/pb_hooks/grouped-assessment.pb.js)
 - [apps/pocketbase/pb_hooks/lesson-plans.pb.js](../../apps/pocketbase/pb_hooks/lesson-plans.pb.js)
 - [apps/pocketbase/pb_hooks/logs-forwarder.pb.js](../../apps/pocketbase/pb_hooks/logs-forwarder.pb.js)
+- [apps/pocketbase/pb_hooks/mail-links.js](../../apps/pocketbase/pb_hooks/mail-links.js)
 - [apps/pocketbase/pb_hooks/participation.pb.js](../../apps/pocketbase/pb_hooks/participation.pb.js)
 - [apps/pocketbase/pb_hooks/password-reset-send.pb.js](../../apps/pocketbase/pb_hooks/password-reset-send.pb.js)
+- [apps/pocketbase/pb_hooks/private-library-files.pb.js](../../apps/pocketbase/pb_hooks/private-library-files.pb.js)
 - [apps/pocketbase/pb_hooks/recovery-email-verify.pb.js](../../apps/pocketbase/pb_hooks/recovery-email-verify.pb.js)
 - [apps/pocketbase/pb_hooks/revisions.js](../../apps/pocketbase/pb_hooks/revisions.js)
 - [apps/pocketbase/pb_hooks/revisions.pb.js](../../apps/pocketbase/pb_hooks/revisions.pb.js)
+- [apps/pocketbase/pb_hooks/scheduled-assessment.js](../../apps/pocketbase/pb_hooks/scheduled-assessment.js)
+- [apps/pocketbase/pb_hooks/scheduled-class-academic.js](../../apps/pocketbase/pb_hooks/scheduled-class-academic.js)
+- [apps/pocketbase/pb_hooks/scheduled-classes-domain.js](../../apps/pocketbase/pb_hooks/scheduled-classes-domain.js)
+- [apps/pocketbase/pb_hooks/scheduled-classes-jobs.js](../../apps/pocketbase/pb_hooks/scheduled-classes-jobs.js)
+- [apps/pocketbase/pb_hooks/scheduled-classes-service.js](../../apps/pocketbase/pb_hooks/scheduled-classes-service.js)
+- [apps/pocketbase/pb_hooks/scheduled-classes.pb.js](../../apps/pocketbase/pb_hooks/scheduled-classes.pb.js)
+- [apps/pocketbase/pb_hooks/scheduled-lesson-domain.js](../../apps/pocketbase/pb_hooks/scheduled-lesson-domain.js)
+- [apps/pocketbase/pb_hooks/section-membership.js](../../apps/pocketbase/pb_hooks/section-membership.js)
+- [apps/pocketbase/pb_hooks/section-membership.pb.js](../../apps/pocketbase/pb_hooks/section-membership.pb.js)
 - [apps/pocketbase/pb_hooks/session-completion.js](../../apps/pocketbase/pb_hooks/session-completion.js)
 - [apps/pocketbase/pb_hooks/session-completion.pb.js](../../apps/pocketbase/pb_hooks/session-completion.pb.js)
 - [apps/pocketbase/pb_hooks/users-send-verification.pb.js](../../apps/pocketbase/pb_hooks/users-send-verification.pb.js)

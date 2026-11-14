@@ -7,8 +7,7 @@
  * mutates any academic record or context approval state.
  *
  * Contract:
- * - Input:  `{ assignmentId }` (authenticated student/lecturer) or
- *   `{ token }` (public-link participant, no account).
+ * - Input:  `{ assignmentId }` (authenticated student/lecturer).
  * - Scope:  the assignment's Mata kuliah, Sesi, Sub-CPMK (+ its CPMK).
  * - Sources: only Phase 4 sections marked suitable for AI context, on files
  *   the requester may read (server-side file-access filter), documents only,
@@ -20,11 +19,10 @@
  *   `insufficient` result with an Indonesian reason when no approved readable
  *   source exists — never a guess.
  * - Audit: recorded in `context_retrievals` under the assignment's lecturer
- *   owner; students and public participants can never read audit rows.
+ *   owner; students can never read audit rows.
  */
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import type { Assignment } from '@/lib/assignments';
-import { findPublicAssignment } from '@/lib/public-drafts.server';
 import {
 	authenticateUser,
 	cpmkOfSubCpmk,
@@ -34,7 +32,7 @@ import {
 
 const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
 
-type Body = { assignmentId?: string; token?: string };
+type Body = { assignmentId?: string };
 
 /** Scope of one assignment: its course, session, Sub-CPMK, and the CPMK above it. */
 async function scopeOfAssignment(assignment: Assignment): Promise<RetrievalScope> {
@@ -51,22 +49,6 @@ export const action = withApi(async ({ request }) => {
 	if (request.method !== 'POST') return apiError(405, 'Method not allowed');
 
 	const body = await readJsonBody<Body>(request);
-
-	// ── Public-link participant: identity is the link token, no account ──
-	if (body.token) {
-		const assignment = await findPublicAssignment(body.token.trim());
-		if (!assignment) return apiError(404, 'Tugas tidak ditemukan atau tautan publik dimatikan.');
-		if (assignment.status !== 'published') {
-			return apiError(422, 'Tugas tidak sedang diterbitkan.');
-		}
-		const bundle = await retrieveContextBundle({
-			feature: 'check',
-			scope: await scopeOfAssignment(assignment),
-			requester: { id: '', role: 'public', label: 'public-link' },
-			ownerLecturerId: assignment.owner,
-		});
-		return json(bundle);
-	}
 
 	// ── Authenticated student / lecturer ────────────────────────────────
 	const auth = await authenticateUser(request);

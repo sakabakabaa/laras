@@ -35,7 +35,7 @@ test('authorization storage failure never falls back to owner permissions', asyn
  db.listRecords.mockRejectedValue(new Error('synthetic unavailable'));
  expect(await loadResearchTarget(request, { submissionId: 'sub00000000001', round: 2 })).toMatchObject({ error: { status: 503 } });
 });
-test.each([{ submissionId: 'bad id' }, { submissionId: 'sub00000000001', publicSubmissionId: 'pub00000000001' }, { submissionId: ' sub00000000001' }])('malformed or ambiguous target IDs are rejected', async (body) => {
+test.each([{ submissionId: 'bad id' }, { submissionId: ' sub00000000001' }, {}])('malformed or missing target IDs are rejected', async (body) => {
  expect(await loadResearchTarget(request, { ...body, round: 2 })).toMatchObject({ error: { status: 422 } });
 });
 test('Rater 2 adds their original without modifying Rater 1', async () => {

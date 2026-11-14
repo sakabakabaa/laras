@@ -20,7 +20,7 @@ Authenticated `POST /api/evaluation-annotation`:
 {"intent":"load","submissionId":"<submission-record-id>","round":2}
 ```
 
-Use `publicSubmissionId` instead of `submissionId` for the public channel, never both. IDs are validated literally (no whitespace repair). The result contains `ok`, `round`, `evaluationId`, `content`, parsed AI `findings`, and projected `items`.
+Use `submissionId`. IDs are validated literally (no whitespace repair). The result contains `ok`, `round`, `evaluationId`, `content`, parsed AI `findings`, and projected `items`.
 
 - Independent rounds see only their own account/round entries in `items[].raterJudgments`, never flat shared judgment fields or another rater's note, identity, or reference answer.
 - Other raters' human missed-error rows are omitted entirely for independent readers.

@@ -3,7 +3,6 @@
  * workflow. Server-only helpers live in `check-answer.server.ts`; this file
  * must stay importable from components.
  */
-import type { AssignmentMode } from '@/lib/assignments';
 
 /** The participant's current response, sent for a formative check. */
 export type CheckResponsePayload = {
@@ -31,14 +30,6 @@ export type CheckResponsePayload = {
 	 * which attachment was examined.
 	 */
 	attachments?: { name: string }[];
-};
-
-/** Public-link participant identity (same required fields as public submit). */
-export type PublicCheckIdentity = {
-	participantName: string;
-	nim: string;
-	groupName: string;
-	members: string;
 };
 
 /** Default maximum checks per participant when the lecturer left it unset. */
@@ -134,30 +125,9 @@ export function checkMaxOf(assignment: { checkMax?: number | null }): number {
 		: DEFAULT_CHECK_MAX;
 }
 
-/**
- * Stable identity key per assignment participant — the exact same formula as
- * the public submit flow so checks and submissions share one identity.
- */
-export function identityOf(mode: AssignmentMode | string, nim: string, groupName: string) {
-	if (mode === 'collaborative') return `g:${groupName.trim().toLowerCase()}`;
-	return `n:${nim.trim().toLowerCase()}`;
-}
-
 /** Enrolled identity key (one per signed-in student account). */
 export function enrolledIdentityKey(userId: string) {
 	return `u:${userId}`;
-}
-
-/** True when the public identity fields satisfy the public-submit rules. */
-export function publicIdentityComplete(
-	mode: AssignmentMode | string,
-	identity: PublicCheckIdentity,
-) {
-	if (identity.participantName.trim().length < 3) return false;
-	if (mode === 'collaborative') {
-		return identity.groupName.trim().length >= 2 && identity.members.trim().length >= 3;
-	}
-	return /^[A-Za-z0-9./-]{4,40}$/.test(identity.nim.trim());
 }
 
 /**

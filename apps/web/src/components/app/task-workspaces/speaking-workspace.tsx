@@ -328,7 +328,6 @@ export function SpeakingWorkspace({
 			{!closed && !finallySubmitted && (
 				<CheckAnswerPanel
 					assignment={assignment}
-					channel="enrolled"
 					buildResponse={() => ({ kind: 'speaking', content, link })}
 					onApplyOcrText={(t) => setContent(t)}
 				/>

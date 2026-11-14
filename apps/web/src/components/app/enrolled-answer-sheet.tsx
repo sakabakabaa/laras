@@ -129,9 +129,6 @@ export function EnrolledAnswerSheet({
 		...(deadlineText === t('worksheet.noDeadline')
 			? []
 			: [{ label: deadlineText }]),
-		...(submission?.linkedFromPublic
-			? [{ label: 'Ditautkan dari publik', tone: 'green' as const }]
-			: []),
 	];
 	// attachments now point at file_library (Berkas) records. Each carries the
 	// stored binary filename in `file`; there is no link/url kind.
@@ -147,9 +144,6 @@ export function EnrolledAnswerSheet({
 		{ label: 'Format jawaban', value: kind === 'speaking' ? 'Rekaman audio' : specialized ? 'Sesuai jenis tugas' : 'Teks atau file' },
 		{ label: t('worksheet.deadline'), value: deadlineText },
 		{ label: 'Bobot nilai', value: formative ? 'Tidak dinilai' : 'Dinilai dosen' },
-		...(submission?.linkedFromPublic
-			? [{ label: 'Sumber jawaban', value: 'Ditautkan dari pengumpulan publik (NIM cocok)' }]
-			: []),
 	];
 	const tips = formative
 		? [
@@ -789,7 +783,6 @@ export function EnrolledAnswerSheet({
 					) : (
 						<CheckAnswerPanel
 							assignment={assignment}
-							channel="enrolled"
 							buildResponse={() => ({ kind: 'generic', content, link })}
 							onApplyOcrText={(text) => setContent(text)}
 						/>
@@ -804,7 +797,6 @@ export function EnrolledAnswerSheet({
 					<div className="spk-ai">
 						<CheckAnswerPanel
 							assignment={assignment}
-							channel="enrolled"
 							hideCount
 							buildResponse={() => ({ kind: 'speaking', content, link })}
 						/>

@@ -25,7 +25,6 @@ type Body = {
 	reviewDraft?: unknown;
     criterionScores?: Record<string, number>;
 	submissionId?: string;
-	publicSubmissionId?: string;
 	findings?: unknown;
 };
 
@@ -52,7 +51,7 @@ export const action = withApi(async ({ request }) => {
         Object.values(reviewCriterionScores).some(v => typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 100))
         return apiError(422, 'Skor kriteria harus antara 0 dan 100.');
 
-	const relationField = target.channel === 'enrolled' ? 'submission' : 'publicSubmission';
+	const relationField = 'submission';
 	const now = new Date().toISOString();
 
 	const existing = (
@@ -92,9 +91,7 @@ export const action = withApi(async ({ request }) => {
 		...(reviewDraft ? { reviewDraft } : {}),
 		reviewedAt: now,
 		generatedAt: now,
-		...(target.channel === 'enrolled'
-			? { submission: target.recordId, publicSubmission: '' }
-			: { submission: '', publicSubmission: target.recordId }),
+		submission: target.recordId,
 	});
 	return json({ ok: true, saved: findings.length, omitted });
 });

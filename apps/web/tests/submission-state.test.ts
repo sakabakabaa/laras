@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isCollectedSubmission, isOfficiallyGraded, needsGrading, mergeSubmissionChannels } from '@/lib/submission-state';
+import { isCollectedSubmission, isOfficiallyGraded, needsGrading } from '@/lib/submission-state';
 import { buildCourseAnalytics, type CourseAnalyticsInput } from '@/lib/course-analytics';
 import { componentScore, type GradeComponent } from '@/lib/gradebook';
 import type { AssignmentSubmission } from '@/lib/assignments';
@@ -17,9 +17,6 @@ function fixture(studentId?: string): CourseAnalyticsInput {
 }
 
 describe('official grading state across surfaces', () => {
- it('counts linked public answers only once and keeps an unlinked guest', () => {
-  expect(mergeSubmissionChannels([{id:'enrolled'}], [{id:'copy',linkedSubmission:'enrolled'},{id:'guest'}])).toEqual([{id:'enrolled'},{id:'guest'}]);
- });
  it('includes returned work in the pending queue and excludes drafts', () => {
   expect(needsGrading({ status: 'revision' })).toBe(true);
   expect(needsGrading({ status: 'draft' })).toBe(false);
@@ -48,12 +45,6 @@ describe('official grading state across surfaces', () => {
   expect(model.subCpmk[0].percent).toBeNull();
   expect(model.alerts.map(a => a.id)).toEqual(['own-grading']);
   expect(model.alerts.every(a => !a.action?.includes('mahasiswa'))).toBe(true);
- });
- it('includes public work in the lecturer grading queue while keeping roster collection scoped', () => {
-  const input=fixture(); input.publicSubmissions=[{id:'guest',assignment:'task',owner:'',status:'submitted',grade:0,created:'',updated:''}];
-  const model=buildCourseAnalytics(input);
-  expect(model.submittedCount).toBe(4); expect(model.graded).toBe(1); expect(model.collected).toBe(3);
-  expect(model.alerts.find(a=>a.id==='ungraded')?.title).toContain('3 submission');
  });
  it('links missing personal work to the student workspace even before any submission exists', () => {
   const model = buildCourseAnalytics(fixture('new-student'));

@@ -578,7 +578,6 @@ function SingleQuestionWriting({
 			<ReviewSlot aside={asideChecks}>
 				<CheckAnswerPanel
 					assignment={assignment}
-					channel="enrolled"
 					buildResponse={() => ({
 						kind: 'writing',
 						content: text,
@@ -1728,7 +1727,6 @@ function MultiQuestionWriting({
 			<ReviewSlot aside={asideChecks}>
 				<CheckAnswerPanel
 					assignment={assignment}
-					channel="enrolled"
 					buildResponse={() => ({
 						kind: 'writing',
 						content: combined,

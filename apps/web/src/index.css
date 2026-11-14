@@ -3718,10 +3718,6 @@ html:has(.ld-layout),html:has(.ld-layout) body{height:100%;overflow:hidden}
 .link-pub-reason.muted{color:#667085}
 .link-pub-reason.warn{color:#8A6500}
 .link-pub-reason.err{color:#E11D48}
-.roster-activate-linked{display:flex;gap:12px;align-items:flex-start;background:#ECFDF5;border:1px solid #D1FAE5;border-radius:12px;padding:14px 16px;margin-bottom:16px;color:#047857}
-.roster-activate-linked svg{flex:none;margin-top:1px}
-.roster-activate-linked strong{display:block;font:700 13px var(--body);color:#047857}
-.roster-activate-linked span{display:block;font-size:12px;line-height:1.55;color:#047857;margin-top:3px}
 
 /* ── Phase 5: roster status badges & password reset ──────── */
 .roster-status-stack{display:flex;flex-wrap:wrap;gap:5px}

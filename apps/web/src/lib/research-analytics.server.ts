@@ -35,7 +35,6 @@ const str = (value: unknown): string => (typeof value === 'string' ? value : '')
 type EvaluationRecord = {
 	id: string;
 	submission: string;
-	publicSubmission: string;
 	model: string;
 	modelVersion: string;
 	promptVersion: string;
@@ -97,7 +96,6 @@ async function loadEvaluations(evalIds: string[]): Promise<Map<string, Evaluatio
 			map.set(id, {
 				id: row.id,
 				submission: str(row.submission),
-				publicSubmission: str(row.publicSubmission),
 				model: str(row.model),
 				modelVersion: str(row.modelVersion),
 				promptVersion: str(row.promptVersion),

@@ -172,8 +172,7 @@ export function isAuthorizedExporter(
 /**
  * Assigns stable pseudonymous participant ids (P001, P002, …) in order of
  * first appearance. The input `keys` are the real participant keys (e.g. a
- * student user id, or `public:<submissionId>` for anonymous public
- * participants); the returned map is the only place the real key appears and
+ * student user id); the returned map is the only place the real key appears and
  * it is never serialized into the export.
  */
 export function assignParticipantIds(keys: string[]): Map<string, string> {
@@ -339,7 +338,6 @@ type RawItem = Record<string, unknown>;
 type EvaluationRecord = {
 	id: string;
 	submission: string;
-	publicSubmission: string;
 	model: string;
 	modelVersion: string;
 	promptVersion: string;
@@ -609,8 +607,7 @@ export function resolveAiItemFields(
 
 /**
  * The real participant key for one feedback item — the enrolled student's
- * user id when available, otherwise a deterministic `public:<submissionId>`
- * key for an anonymous public participant. This key is NEVER exported; it is
+ * user id when available, otherwise a deterministic `anon:` key. This key is NEVER exported; it is
  * only fed to `assignParticipantIds` to produce the pseudonymous P00x id.
  */
 function participantKeyFor(
@@ -622,9 +619,6 @@ function participantKeyFor(
 	if (submissionId) {
 		const owner = submissions.get(submissionId)?.owner;
 		if (owner) return owner;
-	}
-	if (evaluation && evaluation.publicSubmission) {
-		return `public:${evaluation.publicSubmission}`;
 	}
 	return `anon:${str(item.id)}`;
 }
@@ -816,20 +810,13 @@ export async function buildResearchExport(
 	const evaluationPayloads = Array.from(evaluations.values()).map((evaluation) => {
 		const submissionId = evaluation.submission;
 		const owner = submissionId ? submissions.get(submissionId)?.owner : '';
-		const participantKey = owner
-			? owner
-			: evaluation.publicSubmission
-				? `public:${evaluation.publicSubmission}`
-				: `anon:${evaluation.id}`;
+		const participantKey = owner ? owner : `anon:${evaluation.id}`;
 		const provenance = serializeSnapshotProvenance(evaluation);
 		return {
 			id: pseudo.pseudonymize('evaluation', evaluation.id),
 			participantId: pseudo.pseudonymize('participant', participantKey),
-			submissionId: pseudo.pseudonymize(
-				'submission',
-				evaluation.submission || evaluation.publicSubmission,
-			),
-			channel: evaluation.submission ? 'enrolled' : 'public',
+			submissionId: pseudo.pseudonymize('submission', evaluation.submission),
+			channel: 'enrolled',
 			provenance: {
 				model: evaluation.model || 'unknown',
 				modelVersion: evaluation.modelVersion || 'unknown',

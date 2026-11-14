@@ -34,7 +34,7 @@ import type {
 } from '@/lib/learning';
 
 export type ContextFeature = 'check' | 'insights' | 'material';
-export type RequesterRole = 'faculty' | 'student' | 'public';
+export type RequesterRole = 'faculty' | 'student';
 export type SourceKind = 'document' | 'image' | 'audio' | 'video' | 'other';
 
 /** Academic scope a retrieval runs against (all ids are PocketBase record ids). */
@@ -46,7 +46,7 @@ export type RetrievalScope = {
 	assignment?: string;
 };
 
-/** Who is asking. `id` is empty for public-link participants (no account). */
+/** Who is asking. */
 export type Requester = { id: string; role: RequesterRole; label: string };
 
 /** Per-feature contract. Frozen — never shared or mutated across features. */

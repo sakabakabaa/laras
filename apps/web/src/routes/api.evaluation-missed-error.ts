@@ -19,7 +19,7 @@ import {
 
 export const action = withApi(async ({ request }) => {
 	if (request.method === 'DELETE') {
-		const body = await readJsonBody<{ id?: unknown; submissionId?: unknown; publicSubmissionId?: unknown; round?: unknown }>(request);
+		const body = await readJsonBody<{ id?: unknown; submissionId?: unknown; round?: unknown }>(request);
 		const id = typeof body.id === 'string' ? body.id : '';
 		if (!id) return apiError(422, 'id wajib.');
 		const result = await deleteMissedErrorAnnotation(request, id, body);

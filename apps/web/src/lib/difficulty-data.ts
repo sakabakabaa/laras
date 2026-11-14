@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import pb from '@/lib/pocketbase-client';
 import type { Assignment } from '@/lib/assignments';
 
-export type DifficultyChannel = 'enrolled' | 'public';
-
 export type DifficultyAttempt = {
 	id: string;
 	assignment: string;
@@ -16,13 +14,6 @@ export type DifficultyAttempt = {
 };
 
 type SubRow = { id: string; assignment: string; owner: string; status: string };
-type PubRow = { id: string; assignment: string; identityKey: string; status: string };
-
-export function channelOf(a: { channel: string; identityKey: string }): DifficultyChannel {
-	if (a.channel === 'public') return 'public';
-	if (a.channel === 'enrolled') return 'enrolled';
-	return a.identityKey.startsWith('u:') ? 'enrolled' : 'public';
-}
 
 /**
  * Loads the lecturer's formative Cek jawaban aggregate: check attempts scoped
@@ -46,7 +37,7 @@ export function useDifficultyData(assignments: Assignment[]) {
 		setAttempts(null);
 		void (async () => {
 			try {
-				const [attemptRows, subRows, pubRows] = await Promise.all([
+				const [attemptRows, subRows] = await Promise.all([
 					pb.collection('check_attempts').getFullList<DifficultyAttempt>({
 						fields: 'id,assignment,channel,attempt,level,area,identityKey,created',
 						sort: 'created',
@@ -54,16 +45,13 @@ export function useDifficultyData(assignments: Assignment[]) {
 					pb.collection('assignment_submissions').getFullList<SubRow>({
 						fields: 'id,assignment,owner,status',
 					}),
-					pb.collection('public_submissions').getFullList<PubRow>({
-						fields: 'id,assignment,identityKey,status',
-					}),
 				]);
 				if (!alive) return;
 				const ids = new Set(assignments.map((a) => a.id));
-				setAttempts(attemptRows.filter((a) => ids.has(a.assignment)));
+				// Only signed-in students' checks count (identity keys `u:<userId>`).
+				setAttempts(attemptRows.filter((a) => ids.has(a.assignment) && a.identityKey.startsWith('u:')));
 				const map = new Map<string, string>();
 				for (const s of subRows) map.set(`u:${s.owner}`, s.status || 'draft');
-				for (const p of pubRows) if (p.identityKey) map.set(p.identityKey, p.status || 'draft');
 				setStatusByKey(map);
 			} catch {
 				if (alive) {

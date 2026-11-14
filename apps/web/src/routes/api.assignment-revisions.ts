@@ -24,7 +24,7 @@ export const action=withApi(async({request})=>{
    owner:task.owner,course:task.course,session:task.session,subCpmk:task.subCpmk,title:`Revisi — ${task.title}`,mode:task.mode,shape:task.shape,activityType:'formal',status:'published',
    revisionOf:task.id,revisionWorkflow:{source:'laras',feedbackChannel:'in_app',confirmedBy:auth.user.id,confirmedAt:new Date().toISOString()},
    instructions:'Revisi jawaban tugas asal berdasarkan feedback yang sudah diterbitkan dosen. Jelaskan perbaikan pada refleksi singkat.',requirements:task.requirements,
-   taskConfig:revisionConfig,attachments:task.attachments||[],deadline:body.deadline||'',publicEnabled:false,allowRevision:false,assessmentGroup:'excluded',
+   taskConfig:revisionConfig,attachments:task.attachments||[],deadline:body.deadline||'',allowRevision:false,assessmentGroup:'excluded',
   });
   return json({assignmentId:revision.id});
  }

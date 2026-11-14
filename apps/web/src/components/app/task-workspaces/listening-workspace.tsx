@@ -310,7 +310,6 @@ export function ListeningWorkspace({
 
 			<CheckAnswerPanel
 				assignment={assignment}
-				channel="enrolled"
 				buildResponse={() => ({ kind: 'listening', answers })}
 			/>
 

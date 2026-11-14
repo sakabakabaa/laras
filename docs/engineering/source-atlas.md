@@ -54,15 +54,15 @@ Imported by: [apps/web/src/components/app/assistant-panel.tsx](../../apps/web/sr
 
 Source: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx)
 
-Exports: `AiEvaluationAnswer`, `AiEvaluationPanel`, `AiEvaluationReviewProvider`, `EvaluatedParticipant`, `EvaluationStatusBadge`.
+Exports: `AiEvaluationAnswer`, `AiEvaluationPanel`, `AiEvaluationReviewProvider`, `AnswerScript`, `EvaluatedParticipant`, `EvaluationStatusBadge`.
 
-Local dependencies: [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/evaluation-rubric.ts](../../apps/web/src/lib/evaluation-rubric.ts), [apps/web/src/lib/evaluation-scoring.ts](../../apps/web/src/lib/evaluation-scoring.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/research-annotation.ts](../../apps/web/src/lib/research-annotation.ts), [apps/web/src/lib/research-rater-client.ts](../../apps/web/src/lib/research-rater-client.ts).
+Local dependencies: [apps/web/src/hooks/use-unsaved-work.ts](../../apps/web/src/hooks/use-unsaved-work.ts), [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assessment-draft.ts](../../apps/web/src/lib/assessment-draft.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/evaluation-rubric.ts](../../apps/web/src/lib/evaluation-rubric.ts), [apps/web/src/lib/evaluation-scoring.ts](../../apps/web/src/lib/evaluation-scoring.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/research-annotation.ts](../../apps/web/src/lib/research-annotation.ts), [apps/web/src/lib/research-rater-client.ts](../../apps/web/src/lib/research-rater-client.ts), [apps/web/src/styles/assessment-clarity.css](../../apps/web/src/styles/assessment-clarity.css).
 
 Package imports: `lucide-react`, `react`, `react-dom`.
 
 Literal database references: `ai_evaluations`.
 
-Imported by: [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx).
+Imported by: [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/submission-revision-context.tsx](../../apps/web/src/components/app/submission-revision-context.tsx).
 
 ## components/app/analytics-index.tsx
 
@@ -100,7 +100,7 @@ Local dependencies: [apps/web/src/components/app/agent-dock.tsx](../../apps/web/
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
-Imported by: [apps/web/src/components/app/assignment-editor-page.tsx](../../apps/web/src/components/app/assignment-editor-page.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/components/app/student-work-page.tsx](../../apps/web/src/components/app/student-work-page.tsx), [apps/web/src/routes/analytics.tsx](../../apps/web/src/routes/analytics.tsx), [apps/web/src/routes/app.asisten.tsx](../../apps/web/src/routes/app.asisten.tsx), [apps/web/src/routes/app.berkas.$fileId.tsx](../../apps/web/src/routes/app.berkas.$fileId.tsx), [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx), [apps/web/src/routes/app.coming.$slug.tsx](../../apps/web/src/routes/app.coming.$slug.tsx), [apps/web/src/routes/app.onboarding.tsx](../../apps/web/src/routes/app.onboarding.tsx), [apps/web/src/routes/app.pengaturan.tsx](../../apps/web/src/routes/app.pengaturan.tsx), [apps/web/src/routes/app.penilaian.tsx](../../apps/web/src/routes/app.penilaian.tsx), [apps/web/src/routes/app.riset.tsx](../../apps/web/src/routes/app.riset.tsx), [apps/web/src/routes/app.tugas.$assignmentId.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.tsx), [apps/web/src/routes/app.tugas.insights.tsx](../../apps/web/src/routes/app.tugas.insights.tsx), [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx), [apps/web/src/routes/kalender.tsx](../../apps/web/src/routes/kalender.tsx).
+Imported by: [apps/web/src/components/app/assignment-editor-page.tsx](../../apps/web/src/components/app/assignment-editor-page.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/components/app/student-work-page.tsx](../../apps/web/src/components/app/student-work-page.tsx), [apps/web/src/routes/analytics.tsx](../../apps/web/src/routes/analytics.tsx), [apps/web/src/routes/app.asisten.tsx](../../apps/web/src/routes/app.asisten.tsx), [apps/web/src/routes/app.berkas.$fileId.tsx](../../apps/web/src/routes/app.berkas.$fileId.tsx), [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx), [apps/web/src/routes/app.builder-import.tsx](../../apps/web/src/routes/app.builder-import.tsx), [apps/web/src/routes/app.builder-new.tsx](../../apps/web/src/routes/app.builder-new.tsx), [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx), [apps/web/src/routes/app.builder-run.tsx](../../apps/web/src/routes/app.builder-run.tsx), [apps/web/src/routes/app.builder.tsx](../../apps/web/src/routes/app.builder.tsx), [apps/web/src/routes/app.coming.$slug.tsx](../../apps/web/src/routes/app.coming.$slug.tsx), [apps/web/src/routes/app.onboarding.tsx](../../apps/web/src/routes/app.onboarding.tsx), [apps/web/src/routes/app.pengaturan.tsx](../../apps/web/src/routes/app.pengaturan.tsx), [apps/web/src/routes/app.penilaian.tsx](../../apps/web/src/routes/app.penilaian.tsx), [apps/web/src/routes/app.riset.tsx](../../apps/web/src/routes/app.riset.tsx), [apps/web/src/routes/app.scheduled-classes.tsx](../../apps/web/src/routes/app.scheduled-classes.tsx), [apps/web/src/routes/app.scheduled-session.tsx](../../apps/web/src/routes/app.scheduled-session.tsx), [apps/web/src/routes/app.tugas.$assignmentId.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.tsx), [apps/web/src/routes/app.tugas.insights.tsx](../../apps/web/src/routes/app.tugas.insights.tsx), [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx), [apps/web/src/routes/kalender.tsx](../../apps/web/src/routes/kalender.tsx).
 
 ## components/app/assignment-ai-policy.tsx
 
@@ -214,6 +214,358 @@ Package imports: `lucide-react`, `react`.
 
 Imported by: [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-student-panel.tsx](../../apps/web/src/components/app/task-workspaces/speaking-student-panel.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx).
 
+## components/app/builder/builder-anchor-control.tsx
+
+Source: [apps/web/src/components/app/builder/builder-anchor-control.tsx](../../apps/web/src/components/app/builder/builder-anchor-control.tsx)
+
+Exports: `BuilderAnchorControl`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-element-inspector.tsx](../../apps/web/src/components/app/builder/builder-element-inspector.tsx), [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx).
+
+## components/app/builder/builder-anchor-scope.tsx
+
+Source: [apps/web/src/components/app/builder/builder-anchor-scope.tsx](../../apps/web/src/components/app/builder/builder-anchor-scope.tsx)
+
+Exports: `BuilderAnchorScope`, `builderAnchorHref`, `builderAnchorId`, `useBuilderAnchorHref`, `useBuilderAnchorId`, `useBuilderAnchorPrefix`.
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx), [apps/web/src/components/app/builder/builder-richtext-view.tsx](../../apps/web/src/components/app/builder/builder-richtext-view.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-appearance-controls.tsx
+
+Source: [apps/web/src/components/app/builder/builder-appearance-controls.tsx](../../apps/web/src/components/app/builder/builder-appearance-controls.tsx)
+
+Exports: `BuilderAppearanceControls`.
+
+Local dependencies: [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-element-inspector.tsx](../../apps/web/src/components/app/builder/builder-element-inspector.tsx), [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx).
+
+## components/app/builder/builder-assignment-card.tsx
+
+Source: [apps/web/src/components/app/builder/builder-assignment-card.tsx](../../apps/web/src/components/app/builder/builder-assignment-card.tsx)
+
+Exports: `BuilderAssignmentCard`.
+
+Local dependencies: [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/components/card-cta.tsx](../../apps/web/src/components/card-cta.tsx), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/published-listings.ts](../../apps/web/src/lib/published-listings.ts).
+
+Package imports: `lucide-react`.
+
+Imported by: [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx).
+
+## components/app/builder/builder-authoring-tools.tsx
+
+Source: [apps/web/src/components/app/builder/builder-authoring-tools.tsx](../../apps/web/src/components/app/builder/builder-authoring-tools.tsx)
+
+Exports: `useBuilderAuthoringTools`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/lib/builder-authoring.ts](../../apps/web/src/lib/builder-authoring.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-import.ts](../../apps/web/src/lib/builder-import.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts), [apps/web/src/lib/scheduled-class-ai-client.ts](../../apps/web/src/lib/scheduled-class-ai-client.ts), [apps/web/src/lib/scheduled-class-ai.ts](../../apps/web/src/lib/scheduled-class-ai.ts).
+
+Package imports: `lucide-react`, `react`, `react-router`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-capability-notice.tsx
+
+Source: [apps/web/src/components/app/builder/builder-capability-notice.tsx](../../apps/web/src/components/app/builder/builder-capability-notice.tsx)
+
+Exports: `BuilderCapabilityNotice`, `useBuilderCapability`.
+
+Local dependencies: [apps/web/src/lib/builder-capability.ts](../../apps/web/src/lib/builder-capability.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx).
+
+## components/app/builder/builder-class-start.tsx
+
+Source: [apps/web/src/components/app/builder/builder-class-start.tsx](../../apps/web/src/components/app/builder/builder-class-start.tsx)
+
+Exports: `BuilderClassStart`.
+
+Local dependencies: [apps/web/src/components/ui/select.tsx](../../apps/web/src/components/ui/select.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Package imports: `lucide-react`, `react`, `react-router`.
+
+Literal database references: `class_sessions`, `courses`.
+
+Imported by: [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx).
+
+## components/app/builder/builder-classroom-blocks.tsx
+
+Source: [apps/web/src/components/app/builder/builder-classroom-blocks.tsx](../../apps/web/src/components/app/builder/builder-classroom-blocks.tsx)
+
+Exports: `BuilderClassroomMatching`, `BuilderClassroomQuestions`, `matchingPictures`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/components/app/scheduled-card-matching.tsx](../../apps/web/src/components/app/scheduled-card-matching.tsx), [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx).
+
+## components/app/builder/builder-draft-card.tsx
+
+Source: [apps/web/src/components/app/builder/builder-draft-card.tsx](../../apps/web/src/components/app/builder/builder-draft-card.tsx)
+
+Exports: `BuilderDraftCard`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
+
+Package imports: `lucide-react`, `react-router`.
+
+Imported by: [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx).
+
+## components/app/builder/builder-element-inspector.tsx
+
+Source: [apps/web/src/components/app/builder/builder-element-inspector.tsx](../../apps/web/src/components/app/builder/builder-element-inspector.tsx)
+
+Exports: `BuilderElementInspector`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-anchor-control.tsx](../../apps/web/src/components/app/builder/builder-anchor-control.tsx), [apps/web/src/components/app/builder/builder-appearance-controls.tsx](../../apps/web/src/components/app/builder/builder-appearance-controls.tsx), [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/builder/builder-inspector-dispatch.tsx](../../apps/web/src/components/app/builder/builder-inspector-dispatch.tsx), [apps/web/src/components/app/builder/builder-visibility-control.tsx](../../apps/web/src/components/app/builder/builder-visibility-control.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-element-registry.ts](../../apps/web/src/lib/builder-element-registry.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-element-library.tsx
+
+Source: [apps/web/src/components/app/builder/builder-element-library.tsx](../../apps/web/src/components/app/builder/builder-element-library.tsx)
+
+Exports: `BUILDER_DRAG_TYPE`, `BUILDER_ELEMENTS`, `BuilderElementBucket`, `BuilderElementLibrary`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-element-registry.ts](../../apps/web/src/lib/builder-element-registry.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-elements.tsx
+
+Source: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx)
+
+Exports: `BlockEditor`, `BuilderCanvasText`, `BuilderPreview`, `KeyInspector`, `canvasTextKeyboardAction`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-anchor-scope.tsx](../../apps/web/src/components/app/builder/builder-anchor-scope.tsx), [apps/web/src/components/app/builder/builder-classroom-blocks.tsx](../../apps/web/src/components/app/builder/builder-classroom-blocks.tsx), [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx), [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/components/app/builder/builder-richtext-view.tsx](../../apps/web/src/components/app/builder/builder-richtext-view.tsx), [apps/web/src/components/app/scheduled-card-matching.tsx](../../apps/web/src/components/app/scheduled-card-matching.tsx), [apps/web/src/components/app/scheduled-lesson.tsx](../../apps/web/src/components/app/scheduled-lesson.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts), [apps/web/src/lib/builder-theme.ts](../../apps/web/src/lib/builder-theme.ts), [apps/web/src/lib/scheduled-lesson.ts](../../apps/web/src/lib/scheduled-lesson.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-authoring-tools.tsx](../../apps/web/src/components/app/builder/builder-authoring-tools.tsx), [apps/web/src/components/app/builder/builder-element-inspector.tsx](../../apps/web/src/components/app/builder/builder-element-inspector.tsx), [apps/web/src/components/app/builder/builder-inspector-dispatch.tsx](../../apps/web/src/components/app/builder/builder-inspector-dispatch.tsx), [apps/web/src/components/app/builder/builder-journey-preview.tsx](../../apps/web/src/components/app/builder/builder-journey-preview.tsx), [apps/web/src/components/app/builder/builder-run.tsx](../../apps/web/src/components/app/builder/builder-run.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-entry.tsx
+
+Source: [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx)
+
+Exports: `BuilderDraftList`, `BuilderNew`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-capability-notice.tsx](../../apps/web/src/components/app/builder/builder-capability-notice.tsx), [apps/web/src/components/app/builder/builder-class-start.tsx](../../apps/web/src/components/app/builder/builder-class-start.tsx), [apps/web/src/components/app/builder/builder-draft-card.tsx](../../apps/web/src/components/app/builder/builder-draft-card.tsx), [apps/web/src/components/ui/alert-dialog.tsx](../../apps/web/src/components/ui/alert-dialog.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-import.ts](../../apps/web/src/lib/builder-import.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/styles/builder-draft-list.css](../../apps/web/src/styles/builder-draft-list.css).
+
+Package imports: `lucide-react`, `react`, `react-router`.
+
+Literal database references: `class_sessions`, `courses`.
+
+Imported by: [apps/web/src/components/app/scheduled-sessions-index.tsx](../../apps/web/src/components/app/scheduled-sessions-index.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/routes/app.builder-new.tsx](../../apps/web/src/routes/app.builder-new.tsx).
+
+## components/app/builder/builder-group-background-controls.tsx
+
+Source: [apps/web/src/components/app/builder/builder-group-background-controls.tsx](../../apps/web/src/components/app/builder/builder-group-background-controls.tsx)
+
+Exports: `BuilderGroupBackgroundControls`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx).
+
+## components/app/builder/builder-inspector-dispatch.tsx
+
+Source: [apps/web/src/components/app/builder/builder-inspector-dispatch.tsx](../../apps/web/src/components/app/builder/builder-inspector-dispatch.tsx)
+
+Exports: `BUILDER_INSPECTOR_ROUTES`, `BuilderInspectorDispatch`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-element-registry.ts](../../apps/web/src/lib/builder-element-registry.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-element-inspector.tsx](../../apps/web/src/components/app/builder/builder-element-inspector.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-journey-preview.tsx
+
+Source: [apps/web/src/components/app/builder/builder-journey-preview.tsx](../../apps/web/src/components/app/builder/builder-journey-preview.tsx)
+
+Exports: `BuilderJourneyPreview`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/student-classroom-ui.tsx](../../apps/web/src/components/app/student-classroom-ui.tsx), [apps/web/src/components/app/student-preview-dock.tsx](../../apps/web/src/components/app/student-preview-dock.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-preview-policy.ts](../../apps/web/src/lib/builder-preview-policy.ts), [apps/web/src/lib/session-clock.ts](../../apps/web/src/lib/session-clock.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx).
+
+## components/app/builder/builder-layout-lock-control.tsx
+
+Source: [apps/web/src/components/app/builder/builder-layout-lock-control.tsx](../../apps/web/src/components/app/builder/builder-layout-lock-control.tsx)
+
+Exports: `BuilderLayoutLockControl`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout-lock.ts](../../apps/web/src/lib/builder-layout-lock.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-layout-panels.tsx
+
+Source: [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx)
+
+Exports: `BuilderLayoutBreadcrumbs`, `BuilderLayoutInspector`, `BuilderLayoutNavigator`, `addLayoutGroupToActivity`, `removeLayoutGroupFromActivity`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-anchor-control.tsx](../../apps/web/src/components/app/builder/builder-anchor-control.tsx), [apps/web/src/components/app/builder/builder-appearance-controls.tsx](../../apps/web/src/components/app/builder/builder-appearance-controls.tsx), [apps/web/src/components/app/builder/builder-group-background-controls.tsx](../../apps/web/src/components/app/builder/builder-group-background-controls.tsx), [apps/web/src/components/app/builder/builder-navigator-title.tsx](../../apps/web/src/components/app/builder/builder-navigator-title.tsx), [apps/web/src/components/app/builder/builder-visibility-control.tsx](../../apps/web/src/components/app/builder/builder-visibility-control.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout-lock.ts](../../apps/web/src/lib/builder-layout-lock.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts), [apps/web/src/lib/builder-navigator.ts](../../apps/web/src/lib/builder-navigator.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-layout-view.tsx
+
+Source: [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx)
+
+Exports: `BuilderLayoutView`, `layoutGroupClassName`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-anchor-scope.tsx](../../apps/web/src/components/app/builder/builder-anchor-scope.tsx), [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts), [apps/web/src/styles/builder-appearance.css](../../apps/web/src/styles/builder-appearance.css), [apps/web/src/styles/builder-responsive.css](../../apps/web/src/styles/builder-responsive.css).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/builder/builder-saved-items.tsx](../../apps/web/src/components/app/builder/builder-saved-items.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-media.tsx
+
+Source: [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx)
+
+Exports: `BuilderMediaEditor`, `BuilderMediaPicker`, `BuilderMediaResolver`, `BuilderMediaView`, `safeBuilderUrl`, `useBuilderAssetUrl`.
+
+Local dependencies: [apps/web/src/components/ui/dialog.tsx](../../apps/web/src/components/ui/dialog.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Literal database references: `file_library`, `file_versions`.
+
+Imported by: [apps/web/src/components/app/builder/builder-classroom-blocks.tsx](../../apps/web/src/components/app/builder/builder-classroom-blocks.tsx), [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/builder/builder-group-background-controls.tsx](../../apps/web/src/components/app/builder/builder-group-background-controls.tsx), [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx), [apps/web/src/components/app/builder/builder-run.tsx](../../apps/web/src/components/app/builder/builder-run.tsx).
+
+## components/app/builder/builder-navigator-title.tsx
+
+Source: [apps/web/src/components/app/builder/builder-navigator-title.tsx](../../apps/web/src/components/app/builder/builder-navigator-title.tsx)
+
+Exports: `BuilderNavigatorTitle`.
+
+Local dependencies: [apps/web/src/lib/builder-navigator.ts](../../apps/web/src/lib/builder-navigator.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx).
+
+## components/app/builder/builder-publish-dialog.tsx
+
+Source: [apps/web/src/components/app/builder/builder-publish-dialog.tsx](../../apps/web/src/components/app/builder/builder-publish-dialog.tsx)
+
+Exports: `BuilderPublishDialog`, `builderPublishWarnings`.
+
+Local dependencies: [apps/web/src/components/ui/dialog.tsx](../../apps/web/src/components/ui/dialog.tsx), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+
+Package imports: `react`, `react-router`.
+
+Literal database references: `class_sessions`, `course_sections`, `courses`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-richtext-view.tsx
+
+Source: [apps/web/src/components/app/builder/builder-richtext-view.tsx](../../apps/web/src/components/app/builder/builder-richtext-view.tsx)
+
+Exports: `BuilderRichTextView`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-anchor-scope.tsx](../../apps/web/src/components/app/builder/builder-anchor-scope.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx).
+
+## components/app/builder/builder-run.tsx
+
+Source: [apps/web/src/components/app/builder/builder-run.tsx](../../apps/web/src/components/app/builder/builder-run.tsx)
+
+Exports: `BuilderRun`, `BuilderRunList`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/session-clock.ts](../../apps/web/src/lib/session-clock.ts).
+
+Package imports: `react`, `react-router`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/routes/app.builder-run.tsx](../../apps/web/src/routes/app.builder-run.tsx).
+
+## components/app/builder/builder-saved-items.tsx
+
+Source: [apps/web/src/components/app/builder/builder-saved-items.tsx](../../apps/web/src/components/app/builder/builder-saved-items.tsx)
+
+Exports: `BuilderSavedItems`, `insertActivityTemplate`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx), [apps/web/src/components/ui/dialog.tsx](../../apps/web/src/components/ui/dialog.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-style-actions.tsx
+
+Source: [apps/web/src/components/app/builder/builder-style-actions.tsx](../../apps/web/src/components/app/builder/builder-style-actions.tsx)
+
+Exports: `BuilderStyleActions`.
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-theme-palette-control.tsx
+
+Source: [apps/web/src/components/app/builder/builder-theme-palette-control.tsx](../../apps/web/src/components/app/builder/builder-theme-palette-control.tsx)
+
+Exports: `BuilderThemePaletteControl`.
+
+Local dependencies: [apps/web/src/components/ui/dialog.tsx](../../apps/web/src/components/ui/dialog.tsx), [apps/web/src/lib/builder-theme.ts](../../apps/web/src/lib/builder-theme.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## components/app/builder/builder-visibility-control.tsx
+
+Source: [apps/web/src/components/app/builder/builder-visibility-control.tsx](../../apps/web/src/components/app/builder/builder-visibility-control.tsx)
+
+Exports: `BuilderVisibilityControl`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-element-inspector.tsx](../../apps/web/src/components/app/builder/builder-element-inspector.tsx), [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx).
+
+## components/app/builder/builder-workspace.tsx
+
+Source: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx)
+
+Exports: `BuilderWorkspace`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-anchor-scope.tsx](../../apps/web/src/components/app/builder/builder-anchor-scope.tsx), [apps/web/src/components/app/builder/builder-authoring-tools.tsx](../../apps/web/src/components/app/builder/builder-authoring-tools.tsx), [apps/web/src/components/app/builder/builder-element-inspector.tsx](../../apps/web/src/components/app/builder/builder-element-inspector.tsx), [apps/web/src/components/app/builder/builder-element-library.tsx](../../apps/web/src/components/app/builder/builder-element-library.tsx), [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/builder/builder-inspector-dispatch.tsx](../../apps/web/src/components/app/builder/builder-inspector-dispatch.tsx), [apps/web/src/components/app/builder/builder-layout-lock-control.tsx](../../apps/web/src/components/app/builder/builder-layout-lock-control.tsx), [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx), [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx), [apps/web/src/components/app/builder/builder-publish-dialog.tsx](../../apps/web/src/components/app/builder/builder-publish-dialog.tsx), [apps/web/src/components/app/builder/builder-run.tsx](../../apps/web/src/components/app/builder/builder-run.tsx), [apps/web/src/components/app/builder/builder-saved-items.tsx](../../apps/web/src/components/app/builder/builder-saved-items.tsx), [apps/web/src/components/app/builder/builder-style-actions.tsx](../../apps/web/src/components/app/builder/builder-style-actions.tsx), [apps/web/src/components/app/builder/builder-theme-palette-control.tsx](../../apps/web/src/components/app/builder/builder-theme-palette-control.tsx), [apps/web/src/components/ui/alert-dialog.tsx](../../apps/web/src/components/ui/alert-dialog.tsx), [apps/web/src/components/ui/dialog.tsx](../../apps/web/src/components/ui/dialog.tsx), [apps/web/src/components/ui/dropdown-menu.tsx](../../apps/web/src/components/ui/dropdown-menu.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts), [apps/web/src/lib/builder-authoring.ts](../../apps/web/src/lib/builder-authoring.ts), [apps/web/src/lib/builder-capability.ts](../../apps/web/src/lib/builder-capability.ts), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-element-registry.ts](../../apps/web/src/lib/builder-element-registry.ts), [apps/web/src/lib/builder-layout-lock.ts](../../apps/web/src/lib/builder-layout-lock.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts), [apps/web/src/lib/builder-navigator.ts](../../apps/web/src/lib/builder-navigator.ts), [apps/web/src/lib/builder-pointer-drag.ts](../../apps/web/src/lib/builder-pointer-drag.ts), [apps/web/src/lib/builder-save.ts](../../apps/web/src/lib/builder-save.ts), [apps/web/src/lib/builder-style-clipboard.ts](../../apps/web/src/lib/builder-style-clipboard.ts), [apps/web/src/lib/builder-theme.ts](../../apps/web/src/lib/builder-theme.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Package imports: `lucide-react`, `react`, `react-router`.
+
+Literal database references: `class_sessions`, `courses`.
+
+Imported by: [apps/web/src/routes/app.builder.tsx](../../apps/web/src/routes/app.builder.tsx).
+
 ## components/app/bulk-paper-input.tsx
 
 Source: [apps/web/src/components/app/bulk-paper-input.tsx](../../apps/web/src/components/app/bulk-paper-input.tsx)
@@ -256,7 +608,7 @@ Source: [apps/web/src/components/app/conversation-practice.tsx](../../apps/web/s
 
 Exports: `ConversationPractice`.
 
-Local dependencies: [apps/web/src/components/ui/button.tsx](../../apps/web/src/components/ui/button.tsx), [apps/web/src/lib/conversation-vad.ts](../../apps/web/src/lib/conversation-vad.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/components/ui/button.tsx](../../apps/web/src/components/ui/button.tsx), [apps/web/src/lib/conversation-vad.ts](../../apps/web/src/lib/conversation-vad.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/practice-i18n.ts](../../apps/web/src/lib/practice-i18n.ts).
 
 Package imports: `lucide-react`, `react`.
 
@@ -268,7 +620,7 @@ Source: [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/co
 
 Exports: `CourseAnalytics`.
 
-Local dependencies: [apps/web/src/components/app/practice-mascot.tsx](../../apps/web/src/components/app/practice-mascot.tsx), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/course-analytics.ts](../../apps/web/src/lib/course-analytics.ts), [apps/web/src/lib/course-sections.ts](../../apps/web/src/lib/course-sections.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/styles/course-analytics.css](../../apps/web/src/styles/course-analytics.css).
+Local dependencies: [apps/web/src/components/app/practice-mascot.tsx](../../apps/web/src/components/app/practice-mascot.tsx), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/course-analytics.ts](../../apps/web/src/lib/course-analytics.ts), [apps/web/src/lib/course-sections.ts](../../apps/web/src/lib/course-sections.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/styles/course-analytics.css](../../apps/web/src/styles/course-analytics.css).
 
 Package imports: `lucide-react`, `react`, `react-router`, `recharts`.
 
@@ -308,7 +660,7 @@ Source: [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/co
 
 Exports: `CourseDashboard`.
 
-Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/data/academic-calendar.ts](../../apps/web/src/data/academic-calendar.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/assistant-quick-send.ts](../../apps/web/src/lib/assistant-quick-send.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/course-thumb.ts](../../apps/web/src/lib/course-thumb.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/data/academic-calendar.ts](../../apps/web/src/data/academic-calendar.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/assistant-quick-send.ts](../../apps/web/src/lib/assistant-quick-send.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/course-thumb.ts](../../apps/web/src/lib/course-thumb.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/submission-state.ts](../../apps/web/src/lib/submission-state.ts).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
@@ -322,7 +674,7 @@ Source: [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/compo
 
 Exports: `CourseDetail`.
 
-Local dependencies: [apps/web/src/components/app/assistant-page-context-provider.tsx](../../apps/web/src/components/app/assistant-page-context-provider.tsx), [apps/web/src/components/app/attendance-manager.tsx](../../apps/web/src/components/app/attendance-manager.tsx), [apps/web/src/components/app/char-meter.tsx](../../apps/web/src/components/app/char-meter.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-form.tsx](../../apps/web/src/components/app/course-form.tsx), [apps/web/src/components/app/course-info.tsx](../../apps/web/src/components/app/course-info.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-settings.tsx](../../apps/web/src/components/app/course-settings.tsx), [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/overflow-menu.tsx](../../apps/web/src/components/app/overflow-menu.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/components/app/practice-mascot.tsx](../../apps/web/src/components/app/practice-mascot.tsx), [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-route.ts](../../apps/web/src/hooks/use-course-route.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/course-sections.ts](../../apps/web/src/lib/course-sections.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/rps-limits.ts](../../apps/web/src/lib/rps-limits.ts), [apps/web/src/lib/student-home-copy.ts](../../apps/web/src/lib/student-home-copy.ts).
+Local dependencies: [apps/web/src/components/app/assistant-page-context-provider.tsx](../../apps/web/src/components/app/assistant-page-context-provider.tsx), [apps/web/src/components/app/attendance-manager.tsx](../../apps/web/src/components/app/attendance-manager.tsx), [apps/web/src/components/app/char-meter.tsx](../../apps/web/src/components/app/char-meter.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-form.tsx](../../apps/web/src/components/app/course-form.tsx), [apps/web/src/components/app/course-info.tsx](../../apps/web/src/components/app/course-info.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-settings.tsx](../../apps/web/src/components/app/course-settings.tsx), [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/components/app/practice-mascot.tsx](../../apps/web/src/components/app/practice-mascot.tsx), [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-route.ts](../../apps/web/src/hooks/use-course-route.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/class-scope.ts](../../apps/web/src/lib/class-scope.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/course-sections.ts](../../apps/web/src/lib/course-sections.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/rps-limits.ts](../../apps/web/src/lib/rps-limits.ts), [apps/web/src/lib/student-home-copy.ts](../../apps/web/src/lib/student-home-copy.ts).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
@@ -362,7 +714,7 @@ Source: [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/compone
 
 Exports: `CourseRail`.
 
-Local dependencies: [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/course-sections.ts](../../apps/web/src/lib/course-sections.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/course-sections.ts](../../apps/web/src/lib/course-sections.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/styles/ui-audit-fixes.css](../../apps/web/src/styles/ui-audit-fixes.css).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
@@ -410,7 +762,7 @@ Package imports: `lucide-react`, `react`.
 
 Literal database references: `course_sections`, `enrollments`.
 
-Imported by: [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx).
+Imported by: [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx).
 
 ## components/app/course-settings.tsx
 
@@ -446,7 +798,7 @@ Exports: `CourseThumb`.
 
 Local dependencies: [apps/web/src/lib/course-thumb.ts](../../apps/web/src/lib/course-thumb.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts).
 
-Imported by: [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/course-catalog-card.tsx](../../apps/web/src/components/app/course-catalog-card.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-thumb-dialog.tsx](../../apps/web/src/components/app/course-thumb-dialog.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx).
+Imported by: [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/builder/builder-assignment-card.tsx](../../apps/web/src/components/app/builder/builder-assignment-card.tsx), [apps/web/src/components/app/course-catalog-card.tsx](../../apps/web/src/components/app/course-catalog-card.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-thumb-dialog.tsx](../../apps/web/src/components/app/course-thumb-dialog.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx).
 
 ## components/app/course-workspace.tsx
 
@@ -532,11 +884,11 @@ Source: [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/sr
 
 Exports: `EvaluationWorkspace`.
 
-Local dependencies: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assignment-revision-controls.tsx](../../apps/web/src/components/app/assignment-revision-controls.tsx), [apps/web/src/components/app/bulk-paper-input.tsx](../../apps/web/src/components/app/bulk-paper-input.tsx), [apps/web/src/components/app/formative-evaluation-review.tsx](../../apps/web/src/components/app/formative-evaluation-review.tsx), [apps/web/src/components/app/overflow-menu.tsx](../../apps/web/src/components/app/overflow-menu.tsx), [apps/web/src/components/app/submission-pdf-preview.tsx](../../apps/web/src/components/app/submission-pdf-preview.tsx), [apps/web/src/components/app/submission-revision-context.tsx](../../apps/web/src/components/app/submission-revision-context.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-workspaces/check-feedback-body.tsx](../../apps/web/src/components/app/task-workspaces/check-feedback-body.tsx), [apps/web/src/components/app/task-workspaces/transcript-panel.tsx](../../apps/web/src/components/app/task-workspaces/transcript-panel.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/check-types.ts](../../apps/web/src/lib/check-types.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts), [apps/web/src/lib/transcription.ts](../../apps/web/src/lib/transcription.ts).
+Local dependencies: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assignment-revision-controls.tsx](../../apps/web/src/components/app/assignment-revision-controls.tsx), [apps/web/src/components/app/bulk-paper-input.tsx](../../apps/web/src/components/app/bulk-paper-input.tsx), [apps/web/src/components/app/formative-evaluation-review.tsx](../../apps/web/src/components/app/formative-evaluation-review.tsx), [apps/web/src/components/app/overflow-menu.tsx](../../apps/web/src/components/app/overflow-menu.tsx), [apps/web/src/components/app/submission-pdf-preview.tsx](../../apps/web/src/components/app/submission-pdf-preview.tsx), [apps/web/src/components/app/submission-revision-context.tsx](../../apps/web/src/components/app/submission-revision-context.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-workspaces/check-feedback-body.tsx](../../apps/web/src/components/app/task-workspaces/check-feedback-body.tsx), [apps/web/src/components/app/task-workspaces/transcript-panel.tsx](../../apps/web/src/components/app/task-workspaces/transcript-panel.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/check-types.ts](../../apps/web/src/lib/check-types.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts), [apps/web/src/lib/transcription.ts](../../apps/web/src/lib/transcription.ts).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
-Literal database references: `assignment_submissions`, `assignments`, `check_attempts`, `courses`, `public_submissions`.
+Literal database references: `assignment_submissions`, `assignments`, `check_attempts`, `courses`.
 
 Imported by: [apps/web/src/routes/app.tugas.$assignmentId.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.tsx).
 
@@ -560,7 +912,7 @@ Source: [apps/web/src/components/app/file-context.tsx](../../apps/web/src/compon
 
 Exports: `FileContextView`.
 
-Local dependencies: [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/context-suggestions-client.ts](../../apps/web/src/lib/context-suggestions-client.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/file-metadata.ts](../../apps/web/src/lib/file-metadata.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/context-passages.ts](../../apps/web/src/lib/context-passages.ts), [apps/web/src/lib/context-suggestions-client.ts](../../apps/web/src/lib/context-suggestions-client.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/file-metadata.ts](../../apps/web/src/lib/file-metadata.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
@@ -568,19 +920,31 @@ Literal database references: `class_sessions`, `context_sections`, `context_sugg
 
 Imported by: [apps/web/src/routes/app.berkas.$fileId.tsx](../../apps/web/src/routes/app.berkas.$fileId.tsx).
 
+## components/app/file-library-v2.tsx
+
+Source: [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx)
+
+Exports: `FileLibraryV2`.
+
+Local dependencies: [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/lib/file-library-nav.ts](../../apps/web/src/lib/file-library-nav.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Literal database references: `class_sessions`, `courses`, `cpmk`, `file_library`, `sub_cpmk`.
+
+Imported by: [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx).
+
 ## components/app/file-library.tsx
 
 Source: [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx)
 
 Exports: `FileLibrary`.
 
-Local dependencies: [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/file-metadata.ts](../../apps/web/src/lib/file-metadata.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/file-metadata.ts](../../apps/web/src/lib/file-metadata.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
 Literal database references: `class_sessions`, `courses`, `cpmk`, `file_extractions`, `file_library`, `sub_cpmk`.
-
-Imported by: [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx).
 
 ## components/app/file-upload-dialog.tsx
 
@@ -594,7 +958,7 @@ Package imports: `lucide-react`, `react`.
 
 Literal database references: `context_sections`, `file_contexts`, `file_extractions`, `file_library`.
 
-Imported by: [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx).
+Imported by: [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx).
 
 ## components/app/file-version-history.tsx
 
@@ -608,7 +972,7 @@ Package imports: `lucide-react`, `react`.
 
 Literal database references: `file_versions`.
 
-Imported by: [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx).
+Imported by: [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx).
 
 ## components/app/form-status.tsx
 
@@ -664,13 +1028,23 @@ Source: [apps/web/src/components/app/global-search.tsx](../../apps/web/src/compo
 
 Exports: `COLORED_LOGO`, `GlobalSearch`.
 
-Local dependencies: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/lib/global-search.ts](../../apps/web/src/lib/global-search.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/styles/global-search-palette.css](../../apps/web/src/styles/global-search-palette.css).
 
-Package imports: `lucide-react`, `react`, `react-router`.
+Package imports: `lucide-react`, `react`, `react-dom`, `react-router`.
 
-Literal database references: `assignment_submissions`, `assignments`, `course_resources`, `courses`, `enrollments`, `public_submissions`.
+Literal database references: `assignment_submissions`, `assignments`, `course_resources`, `courses`, `enrollments`.
 
 Imported by: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx).
+
+## components/app/grade-change-review.tsx
+
+Source: [apps/web/src/components/app/grade-change-review.tsx](../../apps/web/src/components/app/grade-change-review.tsx)
+
+Exports: `GradeChangeReview`, `ReviewProposal`, `gradeCommandRequest`.
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx).
 
 ## components/app/lecturer-assignment-preview.tsx
 
@@ -692,7 +1066,7 @@ Source: [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/
 
 Exports: `LecturerGradebook`.
 
-Local dependencies: [apps/web/src/components/app/app-modal.tsx](../../apps/web/src/components/app/app-modal.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/overflow-menu.tsx](../../apps/web/src/components/app/overflow-menu.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts), [apps/web/src/lib/grouped-gradebook.ts](../../apps/web/src/lib/grouped-gradebook.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/components/app/app-modal.tsx](../../apps/web/src/components/app/app-modal.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/grade-change-review.tsx](../../apps/web/src/components/app/grade-change-review.tsx), [apps/web/src/components/app/overflow-menu.tsx](../../apps/web/src/components/app/overflow-menu.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/gradebook/commands.server.ts](../../apps/web/src/lib/gradebook/commands.server.ts), [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts), [apps/web/src/lib/grouped-gradebook.ts](../../apps/web/src/lib/grouped-gradebook.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
@@ -732,7 +1106,7 @@ Exports: `OverflowMenu`.
 
 Package imports: `lucide-react`, `react`.
 
-Imported by: [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx).
+Imported by: [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx).
 
 ## components/app/penilaian-index.tsx
 
@@ -754,7 +1128,7 @@ Source: [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/c
 
 Exports: `PersonalPractice`.
 
-Local dependencies: [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/personal-practice.ts](../../apps/web/src/lib/personal-practice.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/student-progress.ts](../../apps/web/src/lib/student-progress.ts).
+Local dependencies: [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/personal-practice.ts](../../apps/web/src/lib/personal-practice.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/practice-i18n.ts](../../apps/web/src/lib/practice-i18n.ts), [apps/web/src/lib/student-progress.ts](../../apps/web/src/lib/student-progress.ts).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
@@ -808,7 +1182,7 @@ Exports: `PracticeMascot`.
 
 Package imports: `react`.
 
-Imported by: [apps/web/src/components/app/attendance-manager.tsx](../../apps/web/src/components/app/attendance-manager.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-info.tsx](../../apps/web/src/components/app/course-info.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx).
+Imported by: [apps/web/src/components/app/attendance-manager.tsx](../../apps/web/src/components/app/attendance-manager.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-info.tsx](../../apps/web/src/components/app/course-info.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx).
 
 ## components/app/research-analytics.tsx
 
@@ -818,7 +1192,7 @@ Exports: `ResearchAnalyticsView`.
 
 Local dependencies: [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/lib/feedback-uptake.ts](../../apps/web/src/lib/feedback-uptake.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/research-analytics.ts](../../apps/web/src/lib/research-analytics.ts).
 
-Package imports: `lucide-react`, `react`.
+Package imports: `lucide-react`, `react`, `react-router`.
 
 Imported by: [apps/web/src/routes/app.riset.tsx](../../apps/web/src/routes/app.riset.tsx).
 
@@ -876,6 +1250,196 @@ Literal database references: `assessments`, `class_sessions`, `collaborative_tas
 
 Imported by: [apps/web/src/routes/app.rps.$courseId.tsx](../../apps/web/src/routes/app.rps.$courseId.tsx).
 
+## components/app/scheduled-card-matching.tsx
+
+Source: [apps/web/src/components/app/scheduled-card-matching.tsx](../../apps/web/src/components/app/scheduled-card-matching.tsx)
+
+Exports: `ScheduledCardMatching`.
+
+Local dependencies: [apps/web/src/lib/card-matching.ts](../../apps/web/src/lib/card-matching.ts), [apps/web/src/lib/card-pointer-drag.ts](../../apps/web/src/lib/card-pointer-drag.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/styles/scheduled-card-matching.css](../../apps/web/src/styles/scheduled-card-matching.css).
+
+Package imports: `framer-motion`, `lucide-react`, `react`, `react-dom`.
+
+Imported by: [apps/web/src/components/app/builder/builder-classroom-blocks.tsx](../../apps/web/src/components/app/builder/builder-classroom-blocks.tsx), [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx).
+
+## components/app/scheduled-class-ai-panel.tsx
+
+Source: [apps/web/src/components/app/scheduled-class-ai-panel.tsx](../../apps/web/src/components/app/scheduled-class-ai-panel.tsx)
+
+Exports: `AcademicChoices`, `ScheduledClassAiPanel`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-material-picker.tsx](../../apps/web/src/components/app/scheduled-material-picker.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/scheduled-class-ai-client.ts](../../apps/web/src/lib/scheduled-class-ai-client.ts), [apps/web/src/lib/scheduled-class-ai.ts](../../apps/web/src/lib/scheduled-class-ai.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx).
+
+## components/app/scheduled-class-editor.tsx
+
+Source: [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx)
+
+Exports: `ScheduledClassEditor`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-class-ai-panel.tsx](../../apps/web/src/components/app/scheduled-class-ai-panel.tsx), [apps/web/src/components/app/scheduled-material-picker.tsx](../../apps/web/src/components/app/scheduled-material-picker.tsx), [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx), [apps/web/src/components/app/task-builders/quiz-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-builder.tsx), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/hooks/use-unsaved-work.ts](../../apps/web/src/hooks/use-unsaved-work.ts), [apps/web/src/lib/authoring-recovery.ts](../../apps/web/src/lib/authoring-recovery.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/scheduled-class-ai.ts](../../apps/web/src/lib/scheduled-class-ai.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/scheduled-lesson.ts](../../apps/web/src/lib/scheduled-lesson.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx).
+
+## components/app/scheduled-class-report.tsx
+
+Source: [apps/web/src/components/app/scheduled-class-report.tsx](../../apps/web/src/components/app/scheduled-class-report.tsx)
+
+Exports: `ScheduledClassReport`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx).
+
+## components/app/scheduled-classroom.tsx
+
+Source: [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx)
+
+Exports: `ClassroomRequest`, `ScheduledClassroom`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-lesson.tsx](../../apps/web/src/components/app/scheduled-lesson.tsx), [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx), [apps/web/src/components/app/student-classroom-ui.tsx](../../apps/web/src/components/app/student-classroom-ui.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/scheduled-answer-complete.ts](../../apps/web/src/lib/scheduled-answer-complete.ts), [apps/web/src/lib/scheduled-book-reference.ts](../../apps/web/src/lib/scheduled-book-reference.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/session-clock.ts](../../apps/web/src/lib/session-clock.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/scheduled-student-preview.tsx](../../apps/web/src/components/app/scheduled-student-preview.tsx), [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
+
+## components/app/scheduled-dialogue-audio.tsx
+
+Source: [apps/web/src/components/app/scheduled-dialogue-audio.tsx](../../apps/web/src/components/app/scheduled-dialogue-audio.tsx)
+
+Exports: `ScheduledDialogueAudio`.
+
+Local dependencies: [apps/web/src/lib/arzt-dialogue-audio.json](../../apps/web/src/lib/arzt-dialogue-audio.json), [apps/web/src/lib/scheduled-lesson.ts](../../apps/web/src/lib/scheduled-lesson.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/scheduled-lesson.tsx](../../apps/web/src/components/app/scheduled-lesson.tsx).
+
+## components/app/scheduled-exact-answer-overview.tsx
+
+Source: [apps/web/src/components/app/scheduled-exact-answer-overview.tsx](../../apps/web/src/components/app/scheduled-exact-answer-overview.tsx)
+
+Exports: `ScheduledExactAnswerOverview`, `isExactResponse`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/session-review-verdict.ts](../../apps/web/src/lib/session-review-verdict.ts).
+
+Imported by: [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx).
+
+## components/app/scheduled-lecturer-session.tsx
+
+Source: [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx)
+
+Exports: `ScheduledLecturerSession`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx), [apps/web/src/components/app/scheduled-class-report.tsx](../../apps/web/src/components/app/scheduled-class-report.tsx), [apps/web/src/components/app/scheduled-lesson-editor.tsx](../../apps/web/src/components/app/scheduled-lesson-editor.tsx), [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx), [apps/web/src/hooks/use-course-route.ts](../../apps/web/src/hooks/use-course-route.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/scheduled-book-reference.ts](../../apps/web/src/lib/scheduled-book-reference.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/scheduled-session-workspace.ts](../../apps/web/src/lib/scheduled-session-workspace.ts), [apps/web/src/lib/session-review-verdict.ts](../../apps/web/src/lib/session-review-verdict.ts).
+
+Package imports: `lucide-react`, `react`, `react-router`.
+
+Imported by: [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
+
+## components/app/scheduled-lesson-editor.tsx
+
+Source: [apps/web/src/components/app/scheduled-lesson-editor.tsx](../../apps/web/src/components/app/scheduled-lesson-editor.tsx)
+
+Exports: `ScheduledLessonEditor`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-lesson.tsx](../../apps/web/src/components/app/scheduled-lesson.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/scheduled-lesson.ts](../../apps/web/src/lib/scheduled-lesson.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx).
+
+## components/app/scheduled-lesson.tsx
+
+Source: [apps/web/src/components/app/scheduled-lesson.tsx](../../apps/web/src/components/app/scheduled-lesson.tsx)
+
+Exports: `Bilingual`, `ScheduledLessonView`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-dialogue-audio.tsx](../../apps/web/src/components/app/scheduled-dialogue-audio.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/scheduled-lesson.ts](../../apps/web/src/lib/scheduled-lesson.ts), [apps/web/src/styles/scheduled-lesson.css](../../apps/web/src/styles/scheduled-lesson.css).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/components/app/scheduled-lesson-editor.tsx](../../apps/web/src/components/app/scheduled-lesson-editor.tsx).
+
+## components/app/scheduled-material-picker.tsx
+
+Source: [apps/web/src/components/app/scheduled-material-picker.tsx](../../apps/web/src/components/app/scheduled-material-picker.tsx)
+
+Exports: `ScheduledMaterialPicker`.
+
+Local dependencies: [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/scheduled-class-ai.ts](../../apps/web/src/lib/scheduled-class-ai.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/scheduled-class-ai-panel.tsx](../../apps/web/src/components/app/scheduled-class-ai-panel.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx).
+
+## components/app/scheduled-review-workspace.tsx
+
+Source: [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx)
+
+Exports: `ScheduledReviewWorkspace`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-exact-answer-overview.tsx](../../apps/web/src/components/app/scheduled-exact-answer-overview.tsx), [apps/web/src/components/app/scheduled-written-answer.tsx](../../apps/web/src/components/app/scheduled-written-answer.tsx), [apps/web/src/components/ui/dialog.tsx](../../apps/web/src/components/ui/dialog.tsx), [apps/web/src/lib/scheduled-book-reference.ts](../../apps/web/src/lib/scheduled-book-reference.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/scheduled-review.ts](../../apps/web/src/lib/scheduled-review.ts), [apps/web/src/lib/scheduled-session-workspace.ts](../../apps/web/src/lib/scheduled-session-workspace.ts), [apps/web/src/lib/session-review-verdict.ts](../../apps/web/src/lib/session-review-verdict.ts), [apps/web/src/styles/scheduled-review-overview.css](../../apps/web/src/styles/scheduled-review-overview.css).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx).
+
+## components/app/scheduled-sessions-index.tsx
+
+Source: [apps/web/src/components/app/scheduled-sessions-index.tsx](../../apps/web/src/components/app/scheduled-sessions-index.tsx)
+
+Exports: `ScheduledSessionsIndex`.
+
+Local dependencies: [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/published-listings.ts](../../apps/web/src/lib/published-listings.ts), [apps/web/src/lib/scheduled-session-workspace.ts](../../apps/web/src/lib/scheduled-session-workspace.ts), [apps/web/src/styles/builder-workspace.css](../../apps/web/src/styles/builder-workspace.css).
+
+Package imports: `lucide-react`, `react`, `react-router`.
+
+Literal database references: `courses`.
+
+Imported by: [apps/web/src/routes/app.scheduled-classes.tsx](../../apps/web/src/routes/app.scheduled-classes.tsx).
+
+## components/app/scheduled-student-preview.tsx
+
+Source: [apps/web/src/components/app/scheduled-student-preview.tsx](../../apps/web/src/components/app/scheduled-student-preview.tsx)
+
+Exports: `ScheduledStudentPreview`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/components/app/student-classroom-ui.tsx](../../apps/web/src/components/app/student-classroom-ui.tsx), [apps/web/src/components/app/student-preview-dock.tsx](../../apps/web/src/components/app/student-preview-dock.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/scheduled-student-preview.ts](../../apps/web/src/lib/scheduled-student-preview.ts).
+
+Package imports: `react`.
+
+Imported by: [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
+
+## components/app/scheduled-worksheet.tsx
+
+Source: [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx)
+
+Exports: `WorksheetAnswers`, `WorksheetEditor`, `WorksheetSource`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-card-matching.tsx](../../apps/web/src/components/app/scheduled-card-matching.tsx), [apps/web/src/components/app/task-builders/quiz-source-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-source-builder.tsx), [apps/web/src/lib/card-matching.ts](../../apps/web/src/lib/card-matching.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/scheduled-book-reference.ts](../../apps/web/src/lib/scheduled-book-reference.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/worksheet-layout.ts](../../apps/web/src/lib/worksheet-layout.ts).
+
+Package imports: `lucide-react`, `pdfjs-dist`, `pdfjs-dist/build/pdf.worker.min.mjs?url`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-classroom-blocks.tsx](../../apps/web/src/components/app/builder/builder-classroom-blocks.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx), [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx).
+
+## components/app/scheduled-written-answer.tsx
+
+Source: [apps/web/src/components/app/scheduled-written-answer.tsx](../../apps/web/src/components/app/scheduled-written-answer.tsx)
+
+Exports: `ScheduledAnswerIdentity`, `ScheduledWrittenAnswer`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/session-review-verdict.ts](../../apps/web/src/lib/session-review-verdict.ts).
+
+Imported by: [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx).
+
 ## components/app/session-date-autofill.tsx
 
 Source: [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx)
@@ -896,7 +1460,7 @@ Source: [apps/web/src/components/app/session-form.tsx](../../apps/web/src/compon
 
 Exports: `SessionForm`.
 
-Local dependencies: [apps/web/src/components/app/app-modal.tsx](../../apps/web/src/components/app/app-modal.tsx), [apps/web/src/components/app/multi-select.tsx](../../apps/web/src/components/app/multi-select.tsx), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/components/app/app-modal.tsx](../../apps/web/src/components/app/app-modal.tsx), [apps/web/src/components/app/multi-select.tsx](../../apps/web/src/components/app/multi-select.tsx), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
 Package imports: `lucide-react`, `react`.
 
@@ -910,7 +1474,7 @@ Source: [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/comp
 
 Exports: `SessionRoster`.
 
-Local dependencies: [apps/web/src/hooks/use-attendance.ts](../../apps/web/src/hooks/use-attendance.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/styles/session-roster.css](../../apps/web/src/styles/session-roster.css).
+Local dependencies: [apps/web/src/hooks/use-attendance.ts](../../apps/web/src/hooks/use-attendance.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/class-scope.ts](../../apps/web/src/lib/class-scope.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/styles/session-roster.css](../../apps/web/src/styles/session-roster.css).
 
 Package imports: `@radix-ui/react-dialog`, `react`.
 
@@ -925,6 +1489,18 @@ Source: [apps/web/src/components/app/settings/account-info-section.tsx](../../ap
 Exports: `AccountInfoSection`.
 
 Local dependencies: [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts).
+
+Imported by: [apps/web/src/components/app/settings/settings-page.tsx](../../apps/web/src/components/app/settings/settings-page.tsx).
+
+## components/app/settings/ai-model-section.tsx
+
+Source: [apps/web/src/components/app/settings/ai-model-section.tsx](../../apps/web/src/components/app/settings/ai-model-section.tsx)
+
+Exports: `AiModelSection`.
+
+Local dependencies: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+
+Package imports: `lucide-react`, `react`.
 
 Imported by: [apps/web/src/components/app/settings/settings-page.tsx](../../apps/web/src/components/app/settings/settings-page.tsx).
 
@@ -1006,13 +1582,25 @@ Literal database references: `users`.
 
 Imported by: [apps/web/src/components/app/settings/settings-page.tsx](../../apps/web/src/components/app/settings/settings-page.tsx).
 
+## components/app/settings/settings-nav.tsx
+
+Source: [apps/web/src/components/app/settings/settings-nav.tsx](../../apps/web/src/components/app/settings/settings-nav.tsx)
+
+Exports: `SettingsNav`, `SettingsNavGroup`, `SettingsNavItem`, `SettingsSectionId`, `allSectionIds`, `facultySettingsNav`, `studentSettingsNav`.
+
+Package imports: `react-router`.
+
+Imported by: [apps/web/src/components/app/settings/settings-page.tsx](../../apps/web/src/components/app/settings/settings-page.tsx).
+
 ## components/app/settings/settings-page.tsx
 
 Source: [apps/web/src/components/app/settings/settings-page.tsx](../../apps/web/src/components/app/settings/settings-page.tsx)
 
 Exports: `SettingsPage`.
 
-Local dependencies: [apps/web/src/components/app/settings/account-info-section.tsx](../../apps/web/src/components/app/settings/account-info-section.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/settings/learner-profile-section.tsx](../../apps/web/src/components/app/settings/learner-profile-section.tsx), [apps/web/src/components/app/settings/preferences-section.tsx](../../apps/web/src/components/app/settings/preferences-section.tsx), [apps/web/src/components/app/settings/profile-section.tsx](../../apps/web/src/components/app/settings/profile-section.tsx), [apps/web/src/components/app/settings/recovery-section.tsx](../../apps/web/src/components/app/settings/recovery-section.tsx), [apps/web/src/components/app/settings/security-section.tsx](../../apps/web/src/components/app/settings/security-section.tsx), [apps/web/src/components/app/settings/usage-section.tsx](../../apps/web/src/components/app/settings/usage-section.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts).
+Local dependencies: [apps/web/src/components/app/settings/account-info-section.tsx](../../apps/web/src/components/app/settings/account-info-section.tsx), [apps/web/src/components/app/settings/ai-model-section.tsx](../../apps/web/src/components/app/settings/ai-model-section.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/settings/learner-profile-section.tsx](../../apps/web/src/components/app/settings/learner-profile-section.tsx), [apps/web/src/components/app/settings/preferences-section.tsx](../../apps/web/src/components/app/settings/preferences-section.tsx), [apps/web/src/components/app/settings/profile-section.tsx](../../apps/web/src/components/app/settings/profile-section.tsx), [apps/web/src/components/app/settings/recovery-section.tsx](../../apps/web/src/components/app/settings/recovery-section.tsx), [apps/web/src/components/app/settings/security-section.tsx](../../apps/web/src/components/app/settings/security-section.tsx), [apps/web/src/components/app/settings/settings-nav.tsx](../../apps/web/src/components/app/settings/settings-nav.tsx), [apps/web/src/components/app/settings/usage-section.tsx](../../apps/web/src/components/app/settings/usage-section.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts).
+
+Package imports: `react`, `react-router`.
 
 Imported by: [apps/web/src/routes/app.pengaturan.tsx](../../apps/web/src/routes/app.pengaturan.tsx).
 
@@ -1046,7 +1634,7 @@ Source: [apps/web/src/components/app/student-answer-sheet.tsx](../../apps/web/sr
 
 Exports: `AnswerEditor`, `AttachmentDrop`, `SheetBadge`, `SheetInfo`, `SheetMaterial`, `StudentAnswerSheet`, `instructionLines`.
 
-Local dependencies: [apps/web/src/components/app/worksheet-art.tsx](../../apps/web/src/components/app/worksheet-art.tsx), [apps/web/src/components/form-stepper.tsx](../../apps/web/src/components/form-stepper.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/worksheet-brief.ts](../../apps/web/src/lib/worksheet-brief.ts).
+Local dependencies: [apps/web/src/components/app/worksheet-art.tsx](../../apps/web/src/components/app/worksheet-art.tsx), [apps/web/src/components/form-stepper.tsx](../../apps/web/src/components/form-stepper.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/worksheet-brief.ts](../../apps/web/src/lib/worksheet-brief.ts), [apps/web/src/styles/assessment-clarity.css](../../apps/web/src/styles/assessment-clarity.css).
 
 Package imports: `lucide-react`, `react`.
 
@@ -1058,11 +1646,23 @@ Source: [apps/web/src/components/app/student-assistant-panel.tsx](../../apps/web
 
 Exports: `AssistantPage`, `StudentAssistantPanel`.
 
-Local dependencies: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/student-assistant.server.ts).
+Local dependencies: [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/student-assistant.server.ts).
 
 Package imports: `lucide-react`, `react`.
 
 Imported by: [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx).
+
+## components/app/student-classroom-ui.tsx
+
+Source: [apps/web/src/components/app/student-classroom-ui.tsx](../../apps/web/src/components/app/student-classroom-ui.tsx)
+
+Exports: `StudentActivityHeading`, `StudentPreviewAnswerFooter`, `StudentPreviewNavigation`.
+
+Local dependencies: [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts).
+
+Package imports: `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-journey-preview.tsx](../../apps/web/src/components/app/builder/builder-journey-preview.tsx), [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/components/app/scheduled-student-preview.tsx](../../apps/web/src/components/app/scheduled-student-preview.tsx).
 
 ## components/app/student-course-overview.tsx
 
@@ -1070,11 +1670,9 @@ Source: [apps/web/src/components/app/student-course-overview.tsx](../../apps/web
 
 Exports: `StudentCourseOverview`.
 
-Local dependencies: [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/practice-mascot.tsx](../../apps/web/src/components/app/practice-mascot.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-assignments.ts](../../apps/web/src/hooks/use-course-assignments.ts), [apps/web/src/hooks/use-course-resources.ts](../../apps/web/src/hooks/use-course-resources.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/course-sections.ts](../../apps/web/src/lib/course-sections.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/student-home-copy.ts](../../apps/web/src/lib/student-home-copy.ts).
+Local dependencies: [apps/web/src/lib/course-sections.ts](../../apps/web/src/lib/course-sections.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts).
 
-Package imports: `lucide-react`, `react`, `react-router`.
-
-Literal database references: `file_library`.
+Package imports: `lucide-react`, `react-router`.
 
 Imported by: [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx).
 
@@ -1098,11 +1696,11 @@ Source: [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/c
 
 Exports: `StudentDashboard`.
 
-Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx), [apps/web/src/components/card-cta.tsx](../../apps/web/src/components/card-cta.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/student-home-copy.ts](../../apps/web/src/lib/student-home-copy.ts).
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/session-clock.ts](../../apps/web/src/lib/session-clock.ts), [apps/web/src/lib/student-dashboard-data.ts](../../apps/web/src/lib/student-dashboard-data.ts), [apps/web/src/styles/student-dashboard-v2.css](../../apps/web/src/styles/student-dashboard-v2.css).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
-Literal database references: `assignment_submissions`, `assignments`, `class_sessions`, `courses`, `enrollments`.
+Literal database references: `assignment_submissions`, `assignments`, `courses`, `enrollments`.
 
 Imported by: [apps/web/src/routes/app.student.tsx](../../apps/web/src/routes/app.student.tsx).
 
@@ -1124,11 +1722,11 @@ Source: [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/
 
 Exports: `StudentHomeAdventure`, `WorldScene`.
 
-Local dependencies: [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/components/app/practice-mascot.tsx](../../apps/web/src/components/app/practice-mascot.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/personal-practice.ts](../../apps/web/src/lib/personal-practice.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/student-home-copy.ts](../../apps/web/src/lib/student-home-copy.ts).
+Local dependencies: [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/components/app/practice-mascot.tsx](../../apps/web/src/components/app/practice-mascot.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/personal-practice.ts](../../apps/web/src/lib/personal-practice.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/student-home-copy.ts](../../apps/web/src/lib/student-home-copy.ts).
 
 Package imports: `lucide-react`, `react-router`.
 
-Imported by: [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx).
+Imported by: [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx).
 
 ## components/app/student-onboarding.tsx
 
@@ -1140,7 +1738,7 @@ Local dependencies: [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/us
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
-Literal database references: `email_verifications`, `users`.
+Literal database references: `users`.
 
 Imported by: [apps/web/src/routes/app.onboarding.tsx](../../apps/web/src/routes/app.onboarding.tsx).
 
@@ -1150,13 +1748,25 @@ Source: [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/co
 
 Exports: `StudentPractice`.
 
-Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/conversation-practice.tsx](../../apps/web/src/components/app/conversation-practice.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/conversation-practice.tsx](../../apps/web/src/components/app/conversation-practice.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
 Literal database references: `enrollments`.
 
 Imported by: [apps/web/src/routes/app.latihan.tsx](../../apps/web/src/routes/app.latihan.tsx).
+
+## components/app/student-preview-dock.tsx
+
+Source: [apps/web/src/components/app/student-preview-dock.tsx](../../apps/web/src/components/app/student-preview-dock.tsx)
+
+Exports: `StudentPreviewDock`.
+
+Local dependencies: [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/styles/student-preview-dock.css](../../apps/web/src/styles/student-preview-dock.css).
+
+Package imports: `lucide-react`, `react`, `react-dom`, `react-router`.
+
+Imported by: [apps/web/src/components/app/builder/builder-journey-preview.tsx](../../apps/web/src/components/app/builder/builder-journey-preview.tsx), [apps/web/src/components/app/scheduled-student-preview.tsx](../../apps/web/src/components/app/scheduled-student-preview.tsx).
 
 ## components/app/student-published-feedback.tsx
 
@@ -1210,13 +1820,13 @@ Imported by: [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/w
 
 Source: [apps/web/src/components/app/submission-revision-context.tsx](../../apps/web/src/components/app/submission-revision-context.tsx)
 
-Exports: `SubmissionRevisionContext`.
+Exports: `LinkedRevisionAbove`, `SavedSubmissionText`, `SubmissionRevisionContext`.
 
-Local dependencies: [apps/web/src/components/app/submission-pdf-preview.tsx](../../apps/web/src/components/app/submission-pdf-preview.tsx), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/submission-pdf-preview.tsx](../../apps/web/src/components/app/submission-pdf-preview.tsx), [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
 Package imports: `react`, `react-router`.
 
-Literal database references: `assignment_submissions`.
+Literal database references: `ai_evaluations`, `assignment_submissions`.
 
 Imported by: [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/student-work-page.tsx](../../apps/web/src/components/app/student-work-page.tsx).
 
@@ -1262,11 +1872,25 @@ Source: [apps/web/src/components/app/task-builders/quiz-builder.tsx](../../apps/
 
 Exports: `QuizBuilder`, `QuizBuilderValue`.
 
-Local dependencies: [apps/web/src/components/app/form-status.tsx](../../apps/web/src/components/app/form-status.tsx), [apps/web/src/components/app/task-builders/builder-shared.tsx](../../apps/web/src/components/app/task-builders/builder-shared.tsx), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+Local dependencies: [apps/web/src/components/app/form-status.tsx](../../apps/web/src/components/app/form-status.tsx), [apps/web/src/components/app/task-builders/builder-shared.tsx](../../apps/web/src/components/app/task-builders/builder-shared.tsx), [apps/web/src/components/app/task-builders/quiz-source-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-source-builder.tsx), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Package imports: `lucide-react`.
 
-Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx).
+Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx).
+
+## components/app/task-builders/quiz-source-builder.tsx
+
+Source: [apps/web/src/components/app/task-builders/quiz-source-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-source-builder.tsx)
+
+Exports: `PDFPreview`, `QuizSourceBuilder`.
+
+Local dependencies: [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/quiz-source.ts](../../apps/web/src/lib/quiz-source.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts), [apps/web/src/styles/quiz-source.css](../../apps/web/src/styles/quiz-source.css).
+
+Package imports: `lucide-react`, `pdfjs-dist`, `pdfjs-dist/build/pdf.worker.min.mjs?url`, `react`.
+
+Literal database references: `file_library`.
+
+Imported by: [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx), [apps/web/src/components/app/task-builders/quiz-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-builder.tsx).
 
 ## components/app/task-builders/reading-builder.tsx
 
@@ -1322,7 +1946,7 @@ Source: [apps/web/src/components/app/task-builders/writing-builder.tsx](../../ap
 
 Exports: `WritingBuilder`.
 
-Local dependencies: [apps/web/src/components/app/task-builders/builder-shared.tsx](../../apps/web/src/components/app/task-builders/builder-shared.tsx), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+Local dependencies: [apps/web/src/components/app/task-builders/builder-shared.tsx](../../apps/web/src/components/app/task-builders/builder-shared.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Package imports: `lucide-react`.
 
@@ -1454,7 +2078,7 @@ Source: [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../.
 
 Exports: `WritingWorkspace`.
 
-Local dependencies: [apps/web/src/components/app/formative-answer-script.tsx](../../apps/web/src/components/app/formative-answer-script.tsx), [apps/web/src/components/app/task-workspaces/check-answer-panel.tsx](../../apps/web/src/components/app/task-workspaces/check-answer-panel.tsx), [apps/web/src/components/app/task-workspaces/point-feedback.tsx](../../apps/web/src/components/app/task-workspaces/point-feedback.tsx), [apps/web/src/components/app/worksheet-art.tsx](../../apps/web/src/components/app/worksheet-art.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/resources.ts](../../apps/web/src/lib/resources.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+Local dependencies: [apps/web/src/components/app/formative-answer-script.tsx](../../apps/web/src/components/app/formative-answer-script.tsx), [apps/web/src/components/app/task-workspaces/check-answer-panel.tsx](../../apps/web/src/components/app/task-workspaces/check-answer-panel.tsx), [apps/web/src/components/app/task-workspaces/point-feedback.tsx](../../apps/web/src/components/app/task-workspaces/point-feedback.tsx), [apps/web/src/components/app/worksheet-art.tsx](../../apps/web/src/components/app/worksheet-art.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/hooks/use-unsaved-work.ts](../../apps/web/src/hooks/use-unsaved-work.ts), [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/resources.ts](../../apps/web/src/lib/resources.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts), [apps/web/src/styles/assessment-clarity.css](../../apps/web/src/styles/assessment-clarity.css), [apps/web/src/styles/ui-audit-fixes.css](../../apps/web/src/styles/ui-audit-fixes.css).
 
 Package imports: `lucide-react`, `react`, `react-dom`.
 
@@ -1468,11 +2092,11 @@ Source: [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/compone
 
 Exports: `TugasBoard`.
 
-Local dependencies: [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/components/app/difficulty-summary.tsx](../../apps/web/src/components/app/difficulty-summary.tsx), [apps/web/src/components/card-cta.tsx](../../apps/web/src/components/card-cta.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+Local dependencies: [apps/web/src/components/app/builder/builder-assignment-card.tsx](../../apps/web/src/components/app/builder/builder-assignment-card.tsx), [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/components/app/difficulty-summary.tsx](../../apps/web/src/components/app/difficulty-summary.tsx), [apps/web/src/components/card-cta.tsx](../../apps/web/src/components/card-cta.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/published-listings.ts](../../apps/web/src/lib/published-listings.ts), [apps/web/src/lib/submission-state.ts](../../apps/web/src/lib/submission-state.ts), [apps/web/src/styles/builder-workspace.css](../../apps/web/src/styles/builder-workspace.css).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
-Literal database references: `assignment_submissions`, `assignments`, `check_attempts`, `courses`, `public_submissions`.
+Literal database references: `assignment_submissions`, `assignments`, `check_attempts`, `courses`.
 
 Imported by: [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx).
 
@@ -1548,7 +2172,7 @@ Source: [apps/web/src/components/auth/auth-panel.tsx](../../apps/web/src/compone
 
 Exports: `AuthPanel`.
 
-Local dependencies: [apps/web/src/components/app/welcome-tour.tsx](../../apps/web/src/components/app/welcome-tour.tsx), [apps/web/src/components/auth/login-feature-preview.tsx](../../apps/web/src/components/auth/login-feature-preview.tsx), [apps/web/src/components/brand/laras-lockup.tsx](../../apps/web/src/components/brand/laras-lockup.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/styles/login-light.css](../../apps/web/src/styles/login-light.css).
+Local dependencies: [apps/web/src/components/app/welcome-tour.tsx](../../apps/web/src/components/app/welcome-tour.tsx), [apps/web/src/components/auth/login-feature-preview.tsx](../../apps/web/src/components/auth/login-feature-preview.tsx), [apps/web/src/components/brand/laras-lockup.tsx](../../apps/web/src/components/brand/laras-lockup.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/login-error.ts](../../apps/web/src/lib/login-error.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/styles/login-light.css](../../apps/web/src/styles/login-light.css).
 
 Package imports: `lucide-react`, `react`, `react-router`.
 
@@ -1582,7 +2206,7 @@ Exports: `CardCta`.
 
 Package imports: `lucide-react`, `react-router`.
 
-Imported by: [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx).
+Imported by: [apps/web/src/components/app/builder/builder-assignment-card.tsx](../../apps/web/src/components/app/builder/builder-assignment-card.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx).
 
 ## components/confirm-dialog.tsx
 
@@ -1592,7 +2216,7 @@ Exports: `ConfirmDialogHost`, `ConfirmOptions`, `ConfirmVariant`, `confirmDialog
 
 Package imports: `lucide-react`, `react`, `react-dom`.
 
-Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assistant-panel.tsx](../../apps/web/src/components/app/assistant-panel.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx), [apps/web/src/components/app/formative-practice.tsx](../../apps/web/src/components/app/formative-practice.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
+Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assistant-panel.tsx](../../apps/web/src/components/app/assistant-panel.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx), [apps/web/src/components/app/formative-practice.tsx](../../apps/web/src/components/app/formative-practice.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/student-assistant-panel.tsx](../../apps/web/src/components/app/student-assistant-panel.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/hooks/use-unsaved-work.ts](../../apps/web/src/hooks/use-unsaved-work.ts), [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
 
 ## components/editor-overlay-guard.tsx
 
@@ -1646,8 +2270,6 @@ Exports: `CompactWorkflow`, `ProgressAndTrust`.
 
 Package imports: `lucide-react`, `react`.
 
-Imported by: [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx).
-
 ## components/home/final-cta.tsx
 
 Source: [apps/web/src/components/home/final-cta.tsx](../../apps/web/src/components/home/final-cta.tsx)
@@ -1655,8 +2277,6 @@ Source: [apps/web/src/components/home/final-cta.tsx](../../apps/web/src/componen
 Exports: `FinalCta`.
 
 Package imports: `lucide-react`, `react-router`.
-
-Imported by: [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx).
 
 ## components/home/hero.tsx
 
@@ -1666,8 +2286,6 @@ Exports: `Hero`.
 
 Package imports: `lucide-react`, `react-router`.
 
-Imported by: [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx).
-
 ## components/home/landing-effects.tsx
 
 Source: [apps/web/src/components/home/landing-effects.tsx](../../apps/web/src/components/home/landing-effects.tsx)
@@ -1675,8 +2293,6 @@ Source: [apps/web/src/components/home/landing-effects.tsx](../../apps/web/src/co
 Exports: `LandingEffects`.
 
 Package imports: `react`.
-
-Imported by: [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx).
 
 ## components/home/lecturer.tsx
 
@@ -1707,8 +2323,6 @@ Source: [apps/web/src/components/home/workspace-preview.tsx](../../apps/web/src/
 Exports: `WorkspacePreview`.
 
 Package imports: `lucide-react`, `react`, `react-router`.
-
-Imported by: [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx).
 
 ## components/site-footer.tsx
 
@@ -1749,6 +2363,8 @@ Source: [apps/web/src/components/ui/alert-dialog.tsx](../../apps/web/src/compone
 Local dependencies: [apps/web/src/components/ui/button.tsx](../../apps/web/src/components/ui/button.tsx), [apps/web/src/lib/utils.ts](../../apps/web/src/lib/utils.ts).
 
 Package imports: `@radix-ui/react-alert-dialog`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
 
 ## components/ui/alert.tsx
 
@@ -1884,7 +2500,7 @@ Local dependencies: [apps/web/src/lib/utils.ts](../../apps/web/src/lib/utils.ts)
 
 Package imports: `@radix-ui/react-dialog`, `lucide-react`, `react`.
 
-Imported by: [apps/web/src/components/app/welcome-tour.tsx](../../apps/web/src/components/app/welcome-tour.tsx), [apps/web/src/components/ui/command.tsx](../../apps/web/src/components/ui/command.tsx).
+Imported by: [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/components/app/builder/builder-publish-dialog.tsx](../../apps/web/src/components/app/builder/builder-publish-dialog.tsx), [apps/web/src/components/app/builder/builder-saved-items.tsx](../../apps/web/src/components/app/builder/builder-saved-items.tsx), [apps/web/src/components/app/builder/builder-theme-palette-control.tsx](../../apps/web/src/components/app/builder/builder-theme-palette-control.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx), [apps/web/src/components/app/welcome-tour.tsx](../../apps/web/src/components/app/welcome-tour.tsx), [apps/web/src/components/ui/command.tsx](../../apps/web/src/components/ui/command.tsx).
 
 ## components/ui/drawer.tsx
 
@@ -1901,6 +2517,8 @@ Source: [apps/web/src/components/ui/dropdown-menu.tsx](../../apps/web/src/compon
 Local dependencies: [apps/web/src/lib/utils.ts](../../apps/web/src/lib/utils.ts).
 
 Package imports: `@radix-ui/react-dropdown-menu`, `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
 
 ## components/ui/empty.tsx
 
@@ -2059,6 +2677,8 @@ Source: [apps/web/src/components/ui/select.tsx](../../apps/web/src/components/ui
 Local dependencies: [apps/web/src/lib/utils.ts](../../apps/web/src/lib/utils.ts).
 
 Package imports: `@radix-ui/react-select`, `lucide-react`, `react`.
+
+Imported by: [apps/web/src/components/app/builder/builder-class-start.tsx](../../apps/web/src/components/app/builder/builder-class-start.tsx).
 
 ## components/ui/separator.tsx
 
@@ -2250,7 +2870,7 @@ Package imports: `react`.
 
 Literal database references: `users`.
 
-Imported by: [apps/web/src/components/app/academic-calendar.tsx](../../apps/web/src/components/app/academic-calendar.tsx), [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/feedback-uptake-review.tsx](../../apps/web/src/components/app/feedback-uptake-review.tsx), [apps/web/src/components/app/lecturer-recommendations.tsx](../../apps/web/src/components/app/lecturer-recommendations.tsx), [apps/web/src/components/app/penilaian-index.tsx](../../apps/web/src/components/app/penilaian-index.tsx), [apps/web/src/components/app/personalization-analytics.tsx](../../apps/web/src/components/app/personalization-analytics.tsx), [apps/web/src/components/app/research-analytics.tsx](../../apps/web/src/components/app/research-analytics.tsx), [apps/web/src/components/app/research-export.tsx](../../apps/web/src/components/app/research-export.tsx), [apps/web/src/components/app/settings/account-info-section.tsx](../../apps/web/src/components/app/settings/account-info-section.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/settings/profile-section.tsx](../../apps/web/src/components/app/settings/profile-section.tsx), [apps/web/src/components/app/settings/recovery-section.tsx](../../apps/web/src/components/app/settings/recovery-section.tsx), [apps/web/src/components/app/settings/security-section.tsx](../../apps/web/src/components/app/settings/security-section.tsx), [apps/web/src/components/app/settings/settings-page.tsx](../../apps/web/src/components/app/settings/settings-page.tsx), [apps/web/src/components/app/settings/usage-section.tsx](../../apps/web/src/components/app/settings/usage-section.tsx), [apps/web/src/components/app/student-onboarding.tsx](../../apps/web/src/components/app/student-onboarding.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/components/app/tugas-insights.tsx](../../apps/web/src/components/app/tugas-insights.tsx), [apps/web/src/components/app/welcome-tour.tsx](../../apps/web/src/components/app/welcome-tour.tsx), [apps/web/src/components/auth/auth-panel.tsx](../../apps/web/src/components/auth/auth-panel.tsx), [apps/web/src/components/site-footer.tsx](../../apps/web/src/components/site-footer.tsx), [apps/web/src/components/site-header.tsx](../../apps/web/src/components/site-header.tsx), [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx).
+Imported by: [apps/web/src/components/app/academic-calendar.tsx](../../apps/web/src/components/app/academic-calendar.tsx), [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/feedback-uptake-review.tsx](../../apps/web/src/components/app/feedback-uptake-review.tsx), [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx), [apps/web/src/components/app/lecturer-recommendations.tsx](../../apps/web/src/components/app/lecturer-recommendations.tsx), [apps/web/src/components/app/penilaian-index.tsx](../../apps/web/src/components/app/penilaian-index.tsx), [apps/web/src/components/app/personalization-analytics.tsx](../../apps/web/src/components/app/personalization-analytics.tsx), [apps/web/src/components/app/research-analytics.tsx](../../apps/web/src/components/app/research-analytics.tsx), [apps/web/src/components/app/research-export.tsx](../../apps/web/src/components/app/research-export.tsx), [apps/web/src/components/app/settings/account-info-section.tsx](../../apps/web/src/components/app/settings/account-info-section.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/settings/profile-section.tsx](../../apps/web/src/components/app/settings/profile-section.tsx), [apps/web/src/components/app/settings/recovery-section.tsx](../../apps/web/src/components/app/settings/recovery-section.tsx), [apps/web/src/components/app/settings/security-section.tsx](../../apps/web/src/components/app/settings/security-section.tsx), [apps/web/src/components/app/settings/settings-page.tsx](../../apps/web/src/components/app/settings/settings-page.tsx), [apps/web/src/components/app/settings/usage-section.tsx](../../apps/web/src/components/app/settings/usage-section.tsx), [apps/web/src/components/app/student-onboarding.tsx](../../apps/web/src/components/app/student-onboarding.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/components/app/tugas-insights.tsx](../../apps/web/src/components/app/tugas-insights.tsx), [apps/web/src/components/app/welcome-tour.tsx](../../apps/web/src/components/app/welcome-tour.tsx), [apps/web/src/components/auth/auth-panel.tsx](../../apps/web/src/components/auth/auth-panel.tsx), [apps/web/src/components/site-footer.tsx](../../apps/web/src/components/site-footer.tsx), [apps/web/src/components/site-header.tsx](../../apps/web/src/components/site-header.tsx), [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx).
 
 ## hooks/use-cached-query.ts
 
@@ -2262,7 +2882,7 @@ Local dependencies: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learni
 
 Package imports: `react`.
 
-Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx), [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/hooks/use-course-assignments.ts](../../apps/web/src/hooks/use-course-assignments.ts), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-resources.ts](../../apps/web/src/hooks/use-course-resources.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-route.ts](../../apps/web/src/hooks/use-course-route.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts).
+Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/builder/builder-class-start.tsx](../../apps/web/src/components/app/builder/builder-class-start.tsx), [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/scheduled-sessions-index.tsx](../../apps/web/src/components/app/scheduled-sessions-index.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx), [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/hooks/use-course-assignments.ts](../../apps/web/src/hooks/use-course-assignments.ts), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-resources.ts](../../apps/web/src/hooks/use-course-resources.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-route.ts](../../apps/web/src/hooks/use-course-route.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts).
 
 ## hooks/use-course-assignments.ts
 
@@ -2276,7 +2896,7 @@ Package imports: `react`.
 
 Literal database references: `assignment_submissions`, `assignments`, `class_sessions`, `enrollments`.
 
-Imported by: [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx).
+Imported by: [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx).
 
 ## hooks/use-course-records.ts
 
@@ -2304,7 +2924,7 @@ Package imports: `react`.
 
 Literal database references: `class_sessions`, `course_resources`.
 
-Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx).
+Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx).
 
 ## hooks/use-course-roster.ts
 
@@ -2328,7 +2948,7 @@ Exports: `useCourseByRoute`.
 
 Local dependencies: [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts).
 
-Imported by: [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/routes/course.lesson-plan.tsx](../../apps/web/src/routes/course.lesson-plan.tsx), [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx).
+Imported by: [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx), [apps/web/src/routes/course.lesson-plan.tsx](../../apps/web/src/routes/course.lesson-plan.tsx), [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx).
 
 ## hooks/use-course-sections.ts
 
@@ -2342,7 +2962,7 @@ Package imports: `react`.
 
 Literal database references: `course_sections`.
 
-Imported by: [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx).
+Imported by: [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx), [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
 
 ## hooks/use-hydrated.ts
 
@@ -2384,6 +3004,18 @@ Package imports: `react`.
 
 Imported by: [apps/web/src/components/ui/toaster.tsx](../../apps/web/src/components/ui/toaster.tsx).
 
+## hooks/use-unsaved-work.ts
+
+Source: [apps/web/src/hooks/use-unsaved-work.ts](../../apps/web/src/hooks/use-unsaved-work.ts)
+
+Exports: `useUnsavedWork`.
+
+Local dependencies: [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx).
+
+Package imports: `react`, `react-router`.
+
+Imported by: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx).
+
 ## horizons-preview-scripts.tsx
 
 Source: [apps/web/src/horizons-preview-scripts.tsx](../../apps/web/src/horizons-preview-scripts.tsx)
@@ -2420,7 +3052,79 @@ Source: [apps/web/src/lib/agent-tasks.ts](../../apps/web/src/lib/agent-tasks.ts)
 
 Exports: `AGENT_STATUS`, `AgentStep`, `AgentTask`, `LessonPlan`.
 
-Imported by: [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/lesson-plans.ts](../../apps/web/src/lib/lesson-plans.ts), [apps/web/src/routes/course.lesson-plan.tsx](../../apps/web/src/routes/course.lesson-plan.tsx).
+Imported by: [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/lesson-plans.ts](../../apps/web/src/lib/lesson-plans.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts), [apps/web/src/routes/course.lesson-plan.tsx](../../apps/web/src/routes/course.lesson-plan.tsx).
+
+## lib/ai/codex-oauth.server.ts
+
+Source: [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts)
+
+Exports: `CODEX_ACCOUNT_HEADER`, `CODEX_CHATGPT_BASE_URL`, `CODEX_CLIENT_ID`, `CODEX_ISSUER`, `CODEX_ORIGINATOR`, `CodexAuthRow`, `CodexAuthStatus`, `CodexConnection`, `CodexPollResult`, `StartedCodexLogin`, `cancelCodexLogin`, `codexAccountIdOf`, `codexConnectionFor`, `codexCredentialsFor`, `codexPlanTypeOf`, `decodeJwtPayload`, `forgetCodexGrant`, `isCodexOAuthEnabled`, `jwtExpiryMs`, `pollCodexLogin`, `startCodexLogin`.
+
+Local dependencies: [apps/web/src/lib/ai/secrets.server.ts](../../apps/web/src/lib/ai/secrets.server.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+
+Literal database references: `ai_codex_logins`, `ai_provider_codex_auth`.
+
+Imported by: [apps/web/src/lib/ai/codex-responses.server.ts](../../apps/web/src/lib/ai/codex-responses.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/routes/api.ai-providers-codex-cancel.ts](../../apps/web/src/routes/api.ai-providers-codex-cancel.ts), [apps/web/src/routes/api.ai-providers-codex-poll.ts](../../apps/web/src/routes/api.ai-providers-codex-poll.ts), [apps/web/src/routes/api.ai-providers-codex-start.ts](../../apps/web/src/routes/api.ai-providers-codex-start.ts), [apps/web/src/routes/api.ai-providers.ts](../../apps/web/src/routes/api.ai-providers.ts).
+
+## lib/ai/codex-responses.server.ts
+
+Source: [apps/web/src/lib/ai/codex-responses.server.ts](../../apps/web/src/lib/ai/codex-responses.server.ts)
+
+Exports: `CodexImage`, `CodexRequest`, `CodexResult`, `collectCodexResponse`.
+
+Local dependencies: [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts).
+
+Imported by: [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts).
+
+## lib/ai/model-client.server.ts
+
+Source: [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts)
+
+Exports: `ModelRequest`, `ModelResult`, `collectModel`.
+
+Local dependencies: [apps/web/src/lib/ai/codex-responses.server.ts](../../apps/web/src/lib/ai/codex-responses.server.ts), [apps/web/src/lib/ai/openai-compatible.server.ts](../../apps/web/src/lib/ai/openai-compatible.server.ts), [apps/web/src/lib/ai/target.ts](../../apps/web/src/lib/ai/target.ts).
+
+Imported by: [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/assistant/model.server.ts](../../apps/web/src/lib/assistant/model.server.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/routes/api.quiz-source.ts](../../apps/web/src/routes/api.quiz-source.ts).
+
+## lib/ai/openai-compatible.server.ts
+
+Source: [apps/web/src/lib/ai/openai-compatible.server.ts](../../apps/web/src/lib/ai/openai-compatible.server.ts)
+
+Exports: `ChatMessage`, `ChatResult`, `ChatTool`, `ChatToolCall`, `ProviderConfig`, `collectChatCompletion`.
+
+Imported by: [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts).
+
+## lib/ai/providers.server.ts
+
+Source: [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts)
+
+Exports: `AI_SURFACES`, `AiSurface`, `PreferenceRecord`, `ProviderRecord`, `ProviderView`, `SurfaceDescriptor`, `assertCapabilities`, `createCodexProvider`, `createProvider`, `deleteProvider`, `listPreferences`, `listProviders`, `resolveModel`, `resolveModelForCourse`, `setPreference`, `testProvider`, `validateProviderIdentity`.
+
+Local dependencies: [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts), [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts), [apps/web/src/lib/ai/secrets.server.ts](../../apps/web/src/lib/ai/secrets.server.ts), [apps/web/src/lib/ai/target.ts](../../apps/web/src/lib/ai/target.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+
+Package imports: `node:crypto`.
+
+Literal database references: `ai_model_prefs`, `ai_provider_secrets`, `ai_providers`, `courses`.
+
+Imported by: [apps/web/src/lib/assistant/model.server.ts](../../apps/web/src/lib/assistant/model.server.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts), [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/practice-assist.server.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/routes/api.ai-model-prefs.ts](../../apps/web/src/routes/api.ai-model-prefs.ts), [apps/web/src/routes/api.ai-providers-codex-poll.ts](../../apps/web/src/routes/api.ai-providers-codex-poll.ts), [apps/web/src/routes/api.ai-providers-codex-start.ts](../../apps/web/src/routes/api.ai-providers-codex-start.ts), [apps/web/src/routes/api.ai-providers-test.ts](../../apps/web/src/routes/api.ai-providers-test.ts), [apps/web/src/routes/api.ai-providers.ts](../../apps/web/src/routes/api.ai-providers.ts), [apps/web/src/routes/api.quiz-source.ts](../../apps/web/src/routes/api.quiz-source.ts).
+
+## lib/ai/secrets.server.ts
+
+Source: [apps/web/src/lib/ai/secrets.server.ts](../../apps/web/src/lib/ai/secrets.server.ts)
+
+Exports: `decryptSecret`, `encryptSecret`, `maskSecret`, `secretLast4`.
+
+Package imports: `node:crypto`.
+
+Imported by: [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts).
+
+## lib/ai/target.ts
+
+Source: [apps/web/src/lib/ai/target.ts](../../apps/web/src/lib/ai/target.ts)
+
+Exports: `Capabilities`, `ProviderKind`, `ResolvedModel`.
+
+Imported by: [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts).
 
 ## lib/ai-capabilities.ts
 
@@ -2434,15 +3138,15 @@ Imported by: [apps/web/src/components/app/assignment-ai-policy.tsx](../../apps/w
 
 Source: [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts)
 
-Exports: `AI_EVALUATION_PROMPT_VERSION`, `AI_EVALUATION_SYSTEM_PROMPT_VERSION`, `RESEARCH_SCHEMA_VERSION`, `queueEvaluationDraft`.
+Exports: `AI_EVALUATION_PROMPT_VERSION`, `AI_EVALUATION_SYSTEM_PROMPT_VERSION`, `RESEARCH_SCHEMA_VERSION`, `lessonContextOf`, `queueEvaluationDraft`.
 
-Local dependencies: [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/evaluation-rubric.ts](../../apps/web/src/lib/evaluation-rubric.ts), [apps/web/src/lib/evaluation-snapshot.server.ts](../../apps/web/src/lib/evaluation-snapshot.server.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+Local dependencies: [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/evaluation-rubric.ts](../../apps/web/src/lib/evaluation-rubric.ts), [apps/web/src/lib/evaluation-snapshot.server.ts](../../apps/web/src/lib/evaluation-snapshot.server.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/submission-content.server.ts](../../apps/web/src/lib/submission-content.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Package imports: `crypto`, `node:util`.
 
-Literal database references: `ai_evaluations`, `courses`.
+Literal database references: `ai_evaluations`, `class_sessions`, `courses`, `cpmk`, `sub_cpmk`.
 
-Imported by: [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts).
+Imported by: [apps/web/src/lib/bulk-paper.server.ts](../../apps/web/src/lib/bulk-paper.server.ts), [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.submission-content-refresh.ts](../../apps/web/src/routes/api.submission-content-refresh.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts).
 
 ## lib/ai-evaluation.ts
 
@@ -2452,7 +3156,7 @@ Exports: `ANCHOR_ERROR`, `AiEvaluationRow`, `AnchorError`, `AnchorResolution`, `
 
 Local dependencies: [apps/web/src/lib/evaluation-scoring.ts](../../apps/web/src/lib/evaluation-scoring.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
-Imported by: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/evaluation-annotation.server.ts](../../apps/web/src/lib/evaluation-annotation.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/learner-profile.server.ts](../../apps/web/src/lib/learner-profile.server.ts), [apps/web/src/lib/research-annotation.ts](../../apps/web/src/lib/research-annotation.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/routes/api.evaluation-publish.ts](../../apps/web/src/routes/api.evaluation-publish.ts), [apps/web/src/routes/api.evaluation-result.ts](../../apps/web/src/routes/api.evaluation-result.ts).
+Imported by: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/submission-revision-context.tsx](../../apps/web/src/components/app/submission-revision-context.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/evaluation-annotation.server.ts](../../apps/web/src/lib/evaluation-annotation.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/learner-profile.server.ts](../../apps/web/src/lib/learner-profile.server.ts), [apps/web/src/lib/research-annotation.ts](../../apps/web/src/lib/research-annotation.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/routes/api.evaluation-publish.ts](../../apps/web/src/routes/api.evaluation-publish.ts), [apps/web/src/routes/api.evaluation-result.ts](../../apps/web/src/routes/api.evaluation-result.ts).
 
 ## lib/ai-policy-form.ts
 
@@ -2496,7 +3200,7 @@ Exports: `AI_CAPABILITY_WEIGHTS`, `AI_DEFAULT_CAPABILITY_WEIGHT`, `AI_IDEMPOTENC
 
 Local dependencies: [apps/web/src/lib/ai-capabilities.ts](../../apps/web/src/lib/ai-capabilities.ts).
 
-Imported by: [apps/web/src/lib/ai-usage.server.ts](../../apps/web/src/lib/ai-usage.server.ts), [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts), [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts).
+Imported by: [apps/web/src/lib/ai-usage.server.ts](../../apps/web/src/lib/ai-usage.server.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts), [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts), [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts).
 
 ## lib/ai-usage.server.ts
 
@@ -2508,7 +3212,7 @@ Local dependencies: [apps/web/src/lib/ai-rate-limits.ts](../../apps/web/src/lib/
 
 Package imports: `node:crypto`, `rate-limiter-flexible`.
 
-Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/routes/api.ai-usage.ts](../../apps/web/src/routes/api.ai-usage.ts), [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.integrated-ai.stream.ts](../../apps/web/src/routes/api.integrated-ai.stream.ts), [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts).
+Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts), [apps/web/src/routes/api.ai-usage.ts](../../apps/web/src/routes/api.ai-usage.ts), [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.integrated-ai.stream.ts](../../apps/web/src/routes/api.integrated-ai.stream.ts), [apps/web/src/routes/api.quiz-source.ts](../../apps/web/src/routes/api.quiz-source.ts), [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts).
 
 ## lib/api.server.ts
 
@@ -2518,7 +3222,15 @@ Exports: `ApiArgs`, `BODY_LIMIT_BYTES`, `apiError`, `json`, `readFormData`, `rea
 
 Local dependencies: [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/rate-limit.server.ts](../../apps/web/src/lib/rate-limit.server.ts).
 
-Imported by: [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/lib/student-onboarding.server.ts](../../apps/web/src/lib/student-onboarding.server.ts), [apps/web/src/routes/api.$.ts](../../apps/web/src/routes/api.$.ts), [apps/web/src/routes/api.agent-tasks.ts](../../apps/web/src/routes/api.agent-tasks.ts), [apps/web/src/routes/api.ai-usage.ts](../../apps/web/src/routes/api.ai-usage.ts), [apps/web/src/routes/api.assignment-draft.ts](../../apps/web/src/routes/api.assignment-draft.ts), [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts), [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts), [apps/web/src/routes/api.berkas-parse.ts](../../apps/web/src/routes/api.berkas-parse.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts), [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.berkas-suggest.ts](../../apps/web/src/routes/api.berkas-suggest.ts), [apps/web/src/routes/api.bulk-paper-extract.ts](../../apps/web/src/routes/api.bulk-paper-extract.ts), [apps/web/src/routes/api.bulk-paper-prepare.ts](../../apps/web/src/routes/api.bulk-paper-prepare.ts), [apps/web/src/routes/api.bulk-paper-submit.ts](../../apps/web/src/routes/api.bulk-paper-submit.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.context-check.ts](../../apps/web/src/routes/api.context-check.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.context-material.ts](../../apps/web/src/routes/api.context-material.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts), [apps/web/src/routes/api.course-thumbnail.ts](../../apps/web/src/routes/api.course-thumbnail.ts), [apps/web/src/routes/api.evaluation-annotation.ts](../../apps/web/src/routes/api.evaluation-annotation.ts), [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.evaluation-missed-error.ts](../../apps/web/src/routes/api.evaluation-missed-error.ts), [apps/web/src/routes/api.evaluation-participants.ts](../../apps/web/src/routes/api.evaluation-participants.ts), [apps/web/src/routes/api.evaluation-publish.ts](../../apps/web/src/routes/api.evaluation-publish.ts), [apps/web/src/routes/api.evaluation-result.ts](../../apps/web/src/routes/api.evaluation-result.ts), [apps/web/src/routes/api.evaluation-review.ts](../../apps/web/src/routes/api.evaluation-review.ts), [apps/web/src/routes/api.feedback-uptake.ts](../../apps/web/src/routes/api.feedback-uptake.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.health.ts](../../apps/web/src/routes/api.health.ts), [apps/web/src/routes/api.integrated-ai.stream.ts](../../apps/web/src/routes/api.integrated-ai.stream.ts), [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.lesson-plans.ts), [apps/web/src/routes/api.personal-practice.ts](../../apps/web/src/routes/api.personal-practice.ts), [apps/web/src/routes/api.personalization-analytics.ts](../../apps/web/src/routes/api.personalization-analytics.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.recommendations-review.ts](../../apps/web/src/routes/api.recommendations-review.ts), [apps/web/src/routes/api.recovery-email-request-reset.ts](../../apps/web/src/routes/api.recovery-email-request-reset.ts), [apps/web/src/routes/api.recovery-email-request.ts](../../apps/web/src/routes/api.recovery-email-request.ts), [apps/web/src/routes/api.recovery-email-reset-password.ts](../../apps/web/src/routes/api.recovery-email-reset-password.ts), [apps/web/src/routes/api.recovery-email-verify.ts](../../apps/web/src/routes/api.recovery-email-verify.ts), [apps/web/src/routes/api.research-analytics.ts](../../apps/web/src/routes/api.research-analytics.ts), [apps/web/src/routes/api.research-export.ts](../../apps/web/src/routes/api.research-export.ts), [apps/web/src/routes/api.roster-enroll.ts](../../apps/web/src/routes/api.roster-enroll.ts), [apps/web/src/routes/api.roster-language.ts](../../apps/web/src/routes/api.roster-language.ts), [apps/web/src/routes/api.roster-reset-password.ts](../../apps/web/src/routes/api.roster-reset-password.ts), [apps/web/src/routes/api.roster-status.ts](../../apps/web/src/routes/api.roster-status.ts), [apps/web/src/routes/api.rps-assist.ts](../../apps/web/src/routes/api.rps-assist.ts), [apps/web/src/routes/api.rps-import.ts](../../apps/web/src/routes/api.rps-import.ts), [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts), [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts), [apps/web/src/routes/api.student-password.ts](../../apps/web/src/routes/api.student-password.ts), [apps/web/src/routes/api.student-profile.ts](../../apps/web/src/routes/api.student-profile.ts), [apps/web/src/routes/api.task-assist.ts](../../apps/web/src/routes/api.task-assist.ts), [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts), [apps/web/src/routes/api.transcribe.ts](../../apps/web/src/routes/api.transcribe.ts).
+Imported by: [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/lib/student-onboarding.server.ts](../../apps/web/src/lib/student-onboarding.server.ts), [apps/web/src/routes/api.$.ts](../../apps/web/src/routes/api.$.ts), [apps/web/src/routes/api.agent-tasks.ts](../../apps/web/src/routes/api.agent-tasks.ts), [apps/web/src/routes/api.ai-model-prefs.ts](../../apps/web/src/routes/api.ai-model-prefs.ts), [apps/web/src/routes/api.ai-providers-codex-cancel.ts](../../apps/web/src/routes/api.ai-providers-codex-cancel.ts), [apps/web/src/routes/api.ai-providers-codex-poll.ts](../../apps/web/src/routes/api.ai-providers-codex-poll.ts), [apps/web/src/routes/api.ai-providers-codex-start.ts](../../apps/web/src/routes/api.ai-providers-codex-start.ts), [apps/web/src/routes/api.ai-providers-test.ts](../../apps/web/src/routes/api.ai-providers-test.ts), [apps/web/src/routes/api.ai-providers.ts](../../apps/web/src/routes/api.ai-providers.ts), [apps/web/src/routes/api.ai-usage.ts](../../apps/web/src/routes/api.ai-usage.ts), [apps/web/src/routes/api.assignment-draft.ts](../../apps/web/src/routes/api.assignment-draft.ts), [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts), [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts), [apps/web/src/routes/api.berkas-parse.ts](../../apps/web/src/routes/api.berkas-parse.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts), [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.berkas-suggest.ts](../../apps/web/src/routes/api.berkas-suggest.ts), [apps/web/src/routes/api.builder-capability.ts](../../apps/web/src/routes/api.builder-capability.ts), [apps/web/src/routes/api.builder-import.ts](../../apps/web/src/routes/api.builder-import.ts), [apps/web/src/routes/api.bulk-paper-extract.ts](../../apps/web/src/routes/api.bulk-paper-extract.ts), [apps/web/src/routes/api.bulk-paper-prepare.ts](../../apps/web/src/routes/api.bulk-paper-prepare.ts), [apps/web/src/routes/api.bulk-paper-submit.ts](../../apps/web/src/routes/api.bulk-paper-submit.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.context-check.ts](../../apps/web/src/routes/api.context-check.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.context-material.ts](../../apps/web/src/routes/api.context-material.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts), [apps/web/src/routes/api.course-thumbnail.ts](../../apps/web/src/routes/api.course-thumbnail.ts), [apps/web/src/routes/api.evaluation-annotation.ts](../../apps/web/src/routes/api.evaluation-annotation.ts), [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.evaluation-missed-error.ts](../../apps/web/src/routes/api.evaluation-missed-error.ts), [apps/web/src/routes/api.evaluation-participants.ts](../../apps/web/src/routes/api.evaluation-participants.ts), [apps/web/src/routes/api.evaluation-publish.ts](../../apps/web/src/routes/api.evaluation-publish.ts), [apps/web/src/routes/api.evaluation-result.ts](../../apps/web/src/routes/api.evaluation-result.ts), [apps/web/src/routes/api.evaluation-review.ts](../../apps/web/src/routes/api.evaluation-review.ts), [apps/web/src/routes/api.feedback-uptake.ts](../../apps/web/src/routes/api.feedback-uptake.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.gradebook-commands.ts](../../apps/web/src/routes/api.gradebook-commands.ts), [apps/web/src/routes/api.gradebook-release.ts](../../apps/web/src/routes/api.gradebook-release.ts), [apps/web/src/routes/api.health.ts](../../apps/web/src/routes/api.health.ts), [apps/web/src/routes/api.integrated-ai.stream.ts](../../apps/web/src/routes/api.integrated-ai.stream.ts), [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.lesson-plans.ts), [apps/web/src/routes/api.personal-practice.ts](../../apps/web/src/routes/api.personal-practice.ts), [apps/web/src/routes/api.personalization-analytics.ts](../../apps/web/src/routes/api.personalization-analytics.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts), [apps/web/src/routes/api.quiz-source.ts](../../apps/web/src/routes/api.quiz-source.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.recommendations-review.ts](../../apps/web/src/routes/api.recommendations-review.ts), [apps/web/src/routes/api.recovery-email-request-reset.ts](../../apps/web/src/routes/api.recovery-email-request-reset.ts), [apps/web/src/routes/api.recovery-email-request.ts](../../apps/web/src/routes/api.recovery-email-request.ts), [apps/web/src/routes/api.recovery-email-reset-password.ts](../../apps/web/src/routes/api.recovery-email-reset-password.ts), [apps/web/src/routes/api.recovery-email-verify.ts](../../apps/web/src/routes/api.recovery-email-verify.ts), [apps/web/src/routes/api.research-analytics.ts](../../apps/web/src/routes/api.research-analytics.ts), [apps/web/src/routes/api.research-export.ts](../../apps/web/src/routes/api.research-export.ts), [apps/web/src/routes/api.roster-enroll.ts](../../apps/web/src/routes/api.roster-enroll.ts), [apps/web/src/routes/api.roster-language.ts](../../apps/web/src/routes/api.roster-language.ts), [apps/web/src/routes/api.roster-reset-password.ts](../../apps/web/src/routes/api.roster-reset-password.ts), [apps/web/src/routes/api.roster-status.ts](../../apps/web/src/routes/api.roster-status.ts), [apps/web/src/routes/api.rps-assist.ts](../../apps/web/src/routes/api.rps-assist.ts), [apps/web/src/routes/api.rps-import.ts](../../apps/web/src/routes/api.rps-import.ts), [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts), [apps/web/src/routes/api.scheduled-class-draft.ts](../../apps/web/src/routes/api.scheduled-class-draft.ts), [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts), [apps/web/src/routes/api.student-password.ts](../../apps/web/src/routes/api.student-password.ts), [apps/web/src/routes/api.student-profile.ts](../../apps/web/src/routes/api.student-profile.ts), [apps/web/src/routes/api.submission-content-refresh.ts](../../apps/web/src/routes/api.submission-content-refresh.ts), [apps/web/src/routes/api.task-assist.ts](../../apps/web/src/routes/api.task-assist.ts), [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts), [apps/web/src/routes/api.transcribe.ts](../../apps/web/src/routes/api.transcribe.ts).
+
+## lib/assessment-draft.ts
+
+Source: [apps/web/src/lib/assessment-draft.ts](../../apps/web/src/lib/assessment-draft.ts)
+
+Exports: `AssessmentDraft`, `parseAssessmentDraft`.
+
+Imported by: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/routes/api.evaluation-review.ts](../../apps/web/src/routes/api.evaluation-review.ts).
 
 ## lib/assignment-draft.server.ts
 
@@ -2548,7 +3260,7 @@ Exports: `ACTIVITY_TYPE_LABEL`, `ACTIVITY_TYPE_OPTIONS`, `ASSIGNMENT_STATUS_LABE
 
 Local dependencies: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
-Imported by: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/assignment-ai-policy.tsx](../../apps/web/src/components/app/assignment-ai-policy.tsx), [apps/web/src/components/app/assignment-editor-page.tsx](../../apps/web/src/components/app/assignment-editor-page.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assignment-revision-controls.tsx](../../apps/web/src/components/app/assignment-revision-controls.tsx), [apps/web/src/components/app/bulk-paper-input.tsx](../../apps/web/src/components/app/bulk-paper-input.tsx), [apps/web/src/components/app/check-history.tsx](../../apps/web/src/components/app/check-history.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/difficulty-insights.tsx](../../apps/web/src/components/app/difficulty-insights.tsx), [apps/web/src/components/app/difficulty-summary.tsx](../../apps/web/src/components/app/difficulty-summary.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/feedback-uptake-review.tsx](../../apps/web/src/components/app/feedback-uptake-review.tsx), [apps/web/src/components/app/formative-evaluation-review.tsx](../../apps/web/src/components/app/formative-evaluation-review.tsx), [apps/web/src/components/app/formative-practice.tsx](../../apps/web/src/components/app/formative-practice.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/lecturer-recommendations.tsx](../../apps/web/src/components/app/lecturer-recommendations.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/practice-content-autofill.tsx](../../apps/web/src/components/app/practice-content-autofill.tsx), [apps/web/src/components/app/research-export.tsx](../../apps/web/src/components/app/research-export.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/student-work-page.tsx](../../apps/web/src/components/app/student-work-page.tsx), [apps/web/src/components/app/submission-revision-context.tsx](../../apps/web/src/components/app/submission-revision-context.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-builders/task-autofill.tsx](../../apps/web/src/components/app/task-builders/task-autofill.tsx), [apps/web/src/components/app/task-workspaces/check-answer-panel.tsx](../../apps/web/src/components/app/task-workspaces/check-answer-panel.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/reading-workspace.tsx](../../apps/web/src/components/app/task-workspaces/reading-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/components/app/tugas-insights.tsx](../../apps/web/src/components/app/tugas-insights.tsx), [apps/web/src/hooks/use-course-assignments.ts](../../apps/web/src/hooks/use-course-assignments.ts), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/ai-policy-form.ts](../../apps/web/src/lib/ai-policy-form.ts), [apps/web/src/lib/ai-policy.server.ts](../../apps/web/src/lib/ai-policy.server.ts), [apps/web/src/lib/ai-policy.ts](../../apps/web/src/lib/ai-policy.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assignment-import.ts](../../apps/web/src/lib/assignment-import.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/assistant/types.ts](../../apps/web/src/lib/assistant/types.ts), [apps/web/src/lib/bulk-paper.server.ts](../../apps/web/src/lib/bulk-paper.server.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/lib/check-types.ts](../../apps/web/src/lib/check-types.ts), [apps/web/src/lib/course-analytics.ts](../../apps/web/src/lib/course-analytics.ts), [apps/web/src/lib/difficulty-data.ts](../../apps/web/src/lib/difficulty-data.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/evaluation-scoring.ts](../../apps/web/src/lib/evaluation-scoring.ts), [apps/web/src/lib/feedback-uptake.server.ts](../../apps/web/src/lib/feedback-uptake.server.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts), [apps/web/src/lib/grouped-gradebook.ts](../../apps/web/src/lib/grouped-gradebook.ts), [apps/web/src/lib/personalization-analytics.server.ts](../../apps/web/src/lib/personalization-analytics.server.ts), [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/practice-assist.server.ts), [apps/web/src/lib/public-drafts.server.ts](../../apps/web/src/lib/public-drafts.server.ts), [apps/web/src/lib/public-linking.server.ts](../../apps/web/src/lib/public-linking.server.ts), [apps/web/src/lib/research-analytics.server.ts](../../apps/web/src/lib/research-analytics.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/lib/research-target.server.ts](../../apps/web/src/lib/research-target.server.ts), [apps/web/src/lib/rubric-suggestions.server.ts](../../apps/web/src/lib/rubric-suggestions.server.ts), [apps/web/src/lib/student-assistant-tools.server.ts](../../apps/web/src/lib/student-assistant-tools.server.ts), [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/student-assistant.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts), [apps/web/src/routes/api.assignment-draft.ts](../../apps/web/src/routes/api.assignment-draft.ts), [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts), [apps/web/src/routes/api.bulk-paper-extract.ts](../../apps/web/src/routes/api.bulk-paper-extract.ts), [apps/web/src/routes/api.bulk-paper-prepare.ts](../../apps/web/src/routes/api.bulk-paper-prepare.ts), [apps/web/src/routes/api.bulk-paper-submit.ts](../../apps/web/src/routes/api.bulk-paper-submit.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.context-check.ts](../../apps/web/src/routes/api.context-check.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts), [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.evaluation-participants.ts](../../apps/web/src/routes/api.evaluation-participants.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts), [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts), [apps/web/src/routes/api.task-assist.ts](../../apps/web/src/routes/api.task-assist.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts), [apps/web/src/routes/api.transcribe.ts](../../apps/web/src/routes/api.transcribe.ts).
+Imported by: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/assignment-ai-policy.tsx](../../apps/web/src/components/app/assignment-ai-policy.tsx), [apps/web/src/components/app/assignment-editor-page.tsx](../../apps/web/src/components/app/assignment-editor-page.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assignment-revision-controls.tsx](../../apps/web/src/components/app/assignment-revision-controls.tsx), [apps/web/src/components/app/builder/builder-assignment-card.tsx](../../apps/web/src/components/app/builder/builder-assignment-card.tsx), [apps/web/src/components/app/bulk-paper-input.tsx](../../apps/web/src/components/app/bulk-paper-input.tsx), [apps/web/src/components/app/check-history.tsx](../../apps/web/src/components/app/check-history.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/difficulty-insights.tsx](../../apps/web/src/components/app/difficulty-insights.tsx), [apps/web/src/components/app/difficulty-summary.tsx](../../apps/web/src/components/app/difficulty-summary.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/feedback-uptake-review.tsx](../../apps/web/src/components/app/feedback-uptake-review.tsx), [apps/web/src/components/app/formative-evaluation-review.tsx](../../apps/web/src/components/app/formative-evaluation-review.tsx), [apps/web/src/components/app/formative-practice.tsx](../../apps/web/src/components/app/formative-practice.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/lecturer-recommendations.tsx](../../apps/web/src/components/app/lecturer-recommendations.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/practice-content-autofill.tsx](../../apps/web/src/components/app/practice-content-autofill.tsx), [apps/web/src/components/app/research-export.tsx](../../apps/web/src/components/app/research-export.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/student-work-page.tsx](../../apps/web/src/components/app/student-work-page.tsx), [apps/web/src/components/app/submission-revision-context.tsx](../../apps/web/src/components/app/submission-revision-context.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-builders/task-autofill.tsx](../../apps/web/src/components/app/task-builders/task-autofill.tsx), [apps/web/src/components/app/task-workspaces/check-answer-panel.tsx](../../apps/web/src/components/app/task-workspaces/check-answer-panel.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/reading-workspace.tsx](../../apps/web/src/components/app/task-workspaces/reading-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/components/app/tugas-insights.tsx](../../apps/web/src/components/app/tugas-insights.tsx), [apps/web/src/hooks/use-course-assignments.ts](../../apps/web/src/hooks/use-course-assignments.ts), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/ai-policy-form.ts](../../apps/web/src/lib/ai-policy-form.ts), [apps/web/src/lib/ai-policy.server.ts](../../apps/web/src/lib/ai-policy.server.ts), [apps/web/src/lib/ai-policy.ts](../../apps/web/src/lib/ai-policy.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assignment-import.ts](../../apps/web/src/lib/assignment-import.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/assistant/types.ts](../../apps/web/src/lib/assistant/types.ts), [apps/web/src/lib/bulk-paper.server.ts](../../apps/web/src/lib/bulk-paper.server.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/lib/course-analytics.ts](../../apps/web/src/lib/course-analytics.ts), [apps/web/src/lib/difficulty-data.ts](../../apps/web/src/lib/difficulty-data.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/evaluation-scoring.ts](../../apps/web/src/lib/evaluation-scoring.ts), [apps/web/src/lib/feedback-uptake.server.ts](../../apps/web/src/lib/feedback-uptake.server.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/gradebook/publication.server.ts](../../apps/web/src/lib/gradebook/publication.server.ts), [apps/web/src/lib/gradebook/publication.ts](../../apps/web/src/lib/gradebook/publication.ts), [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts), [apps/web/src/lib/grouped-gradebook.ts](../../apps/web/src/lib/grouped-gradebook.ts), [apps/web/src/lib/personalization-analytics.server.ts](../../apps/web/src/lib/personalization-analytics.server.ts), [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/practice-assist.server.ts), [apps/web/src/lib/published-listings.ts](../../apps/web/src/lib/published-listings.ts), [apps/web/src/lib/research-analytics.server.ts](../../apps/web/src/lib/research-analytics.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/lib/research-target.server.ts](../../apps/web/src/lib/research-target.server.ts), [apps/web/src/lib/rubric-suggestions.server.ts](../../apps/web/src/lib/rubric-suggestions.server.ts), [apps/web/src/lib/student-assistant-tools.server.ts](../../apps/web/src/lib/student-assistant-tools.server.ts), [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/student-assistant.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts), [apps/web/src/routes/api.assignment-draft.ts](../../apps/web/src/routes/api.assignment-draft.ts), [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts), [apps/web/src/routes/api.bulk-paper-extract.ts](../../apps/web/src/routes/api.bulk-paper-extract.ts), [apps/web/src/routes/api.bulk-paper-prepare.ts](../../apps/web/src/routes/api.bulk-paper-prepare.ts), [apps/web/src/routes/api.bulk-paper-submit.ts](../../apps/web/src/routes/api.bulk-paper-submit.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.context-check.ts](../../apps/web/src/routes/api.context-check.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts), [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.evaluation-participants.ts](../../apps/web/src/routes/api.evaluation-participants.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts), [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts), [apps/web/src/routes/api.submission-content-refresh.ts](../../apps/web/src/routes/api.submission-content-refresh.ts), [apps/web/src/routes/api.task-assist.ts](../../apps/web/src/routes/api.task-assist.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts), [apps/web/src/routes/api.transcribe.ts](../../apps/web/src/routes/api.transcribe.ts).
 
 ## lib/assistant/attachments.server.ts
 
@@ -2598,6 +3310,20 @@ Local dependencies: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learni
 
 Package imports: `pocketbase`.
 
+Imported by: [apps/web/src/lib/assistant/grading-tools.server.ts](../../apps/web/src/lib/assistant/grading-tools.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts).
+
+## lib/assistant/builder-tools.server.ts
+
+Source: [apps/web/src/lib/assistant/builder-tools.server.ts](../../apps/web/src/lib/assistant/builder-tools.server.ts)
+
+Exports: `BUILDER_TOOLS`.
+
+Local dependencies: [apps/web/src/lib/assistant/context.server.ts](../../apps/web/src/lib/assistant/context.server.ts), [apps/web/src/lib/assistant/types.ts](../../apps/web/src/lib/assistant/types.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts).
+
+Package imports: `node:crypto`.
+
+Literal database references: `class_sessions`, `file_library`.
+
 Imported by: [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts).
 
 ## lib/assistant/compaction.server.ts
@@ -2634,7 +3360,7 @@ Package imports: `pocketbase`.
 
 Literal database references: `courses`.
 
-Imported by: [apps/web/src/lib/assistant/page-context.server.ts](../../apps/web/src/lib/assistant/page-context.server.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts).
+Imported by: [apps/web/src/lib/assistant/builder-tools.server.ts](../../apps/web/src/lib/assistant/builder-tools.server.ts), [apps/web/src/lib/assistant/page-context.server.ts](../../apps/web/src/lib/assistant/page-context.server.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts).
 
 ## lib/assistant/env.server.ts
 
@@ -2651,6 +3377,20 @@ Source: [apps/web/src/lib/assistant/features.ts](../../apps/web/src/lib/assistan
 Exports: `ASSISTANT_FEATURES`, `ENTITY_TYPES`, `FEATURE_BY_NAME`, `FeatureDescriptor`, `featureDescriptor`.
 
 Imported by: [apps/web/src/lib/assistant/context.server.ts](../../apps/web/src/lib/assistant/context.server.ts), [apps/web/src/lib/assistant/page-context.ts](../../apps/web/src/lib/assistant/page-context.ts), [apps/web/src/lib/assistant/ui-labels.ts](../../apps/web/src/lib/assistant/ui-labels.ts).
+
+## lib/assistant/grading-tools.server.ts
+
+Source: [apps/web/src/lib/assistant/grading-tools.server.ts](../../apps/web/src/lib/assistant/grading-tools.server.ts)
+
+Exports: `GradebookRow`, `GradebookView`, `MAX_PROPOSAL_ITEMS`, `PrepareGradeChangeInput`, `prepareGradeChangeProposal`, `readGradeChangeStatus`, `readGradebook`.
+
+Local dependencies: [apps/web/src/lib/assistant/authorization.server.ts](../../apps/web/src/lib/assistant/authorization.server.ts), [apps/web/src/lib/gradebook/commands.server.ts](../../apps/web/src/lib/gradebook/commands.server.ts), [apps/web/src/lib/gradebook/validation.ts](../../apps/web/src/lib/gradebook/validation.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts).
+
+Package imports: `pocketbase`.
+
+Literal database references: `enrollments`, `grade_change_sets`, `grade_components`, `grade_entries`.
+
+Imported by: [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts).
 
 ## lib/assistant/history-retrieval.server.ts
 
@@ -2680,7 +3420,7 @@ Source: [apps/web/src/lib/assistant/model.server.ts](../../apps/web/src/lib/assi
 
 Exports: `collectModel`.
 
-Local dependencies: [apps/web/src/lib/assistant/logging.server.ts](../../apps/web/src/lib/assistant/logging.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/assistant/types.ts](../../apps/web/src/lib/assistant/types.ts), [apps/web/src/lib/hostinger-model.server.ts](../../apps/web/src/lib/hostinger-model.server.ts).
+Local dependencies: [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/assistant/logging.server.ts](../../apps/web/src/lib/assistant/logging.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/assistant/types.ts](../../apps/web/src/lib/assistant/types.ts), [apps/web/src/lib/hostinger-model.server.ts](../../apps/web/src/lib/hostinger-model.server.ts).
 
 Imported by: [apps/web/src/lib/assistant/compaction.server.ts](../../apps/web/src/lib/assistant/compaction.server.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts).
 
@@ -2756,7 +3496,7 @@ Source: [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assi
 
 Exports: `ASSISTANT_TOOLS`, `READ_TOOL_NAMES`, `TOOL_REGISTRY`, `ValidationResult`, `WRITE_TOOL_NAMES`, `cleanAssignmentSummary`, `cleanLinkSummary`, `cleanRosterTransferSummary`, `executeAddRosterStudents`, `executeCreateAssignment`, `executeCreateCourse`, `executeLinkSessionOutcomes`, `executeReadTool`, `getToolDefinition`, `prepareAssignmentDraft`, `prepareLinkPlan`, `prepareRosterTransfer`, `runReadTool`, `serializeToolResult`, `validateToolArgs`.
 
-Local dependencies: [apps/web/src/data/academic-calendar.ts](../../apps/web/src/data/academic-calendar.ts), [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/assistant/authorization.server.ts](../../apps/web/src/lib/assistant/authorization.server.ts), [apps/web/src/lib/assistant/context.server.ts](../../apps/web/src/lib/assistant/context.server.ts), [apps/web/src/lib/assistant/history-retrieval.server.ts](../../apps/web/src/lib/assistant/history-retrieval.server.ts), [apps/web/src/lib/assistant/parsing.ts](../../apps/web/src/lib/assistant/parsing.ts), [apps/web/src/lib/assistant/types.ts](../../apps/web/src/lib/assistant/types.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/rps-pdf-import.server.ts](../../apps/web/src/lib/rps-pdf-import.server.ts), [apps/web/src/lib/student-onboarding.server.ts](../../apps/web/src/lib/student-onboarding.server.ts), [apps/web/src/lib/student-progress.server.ts](../../apps/web/src/lib/student-progress.server.ts), [apps/web/src/lib/task-config-draft.server.ts](../../apps/web/src/lib/task-config-draft.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+Local dependencies: [apps/web/src/data/academic-calendar.ts](../../apps/web/src/data/academic-calendar.ts), [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/assistant/authorization.server.ts](../../apps/web/src/lib/assistant/authorization.server.ts), [apps/web/src/lib/assistant/builder-tools.server.ts](../../apps/web/src/lib/assistant/builder-tools.server.ts), [apps/web/src/lib/assistant/context.server.ts](../../apps/web/src/lib/assistant/context.server.ts), [apps/web/src/lib/assistant/grading-tools.server.ts](../../apps/web/src/lib/assistant/grading-tools.server.ts), [apps/web/src/lib/assistant/history-retrieval.server.ts](../../apps/web/src/lib/assistant/history-retrieval.server.ts), [apps/web/src/lib/assistant/parsing.ts](../../apps/web/src/lib/assistant/parsing.ts), [apps/web/src/lib/assistant/types.ts](../../apps/web/src/lib/assistant/types.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/rps-pdf-import.server.ts](../../apps/web/src/lib/rps-pdf-import.server.ts), [apps/web/src/lib/student-onboarding.server.ts](../../apps/web/src/lib/student-onboarding.server.ts), [apps/web/src/lib/student-progress.server.ts](../../apps/web/src/lib/student-progress.server.ts), [apps/web/src/lib/task-config-draft.server.ts](../../apps/web/src/lib/task-config-draft.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Package imports: `pocketbase`.
 
@@ -2774,7 +3514,7 @@ Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/ass
 
 Package imports: `pocketbase`.
 
-Imported by: [apps/web/src/components/app/assistant-page-context-provider.tsx](../../apps/web/src/components/app/assistant-page-context-provider.tsx), [apps/web/src/lib/assistant/audit.server.ts](../../apps/web/src/lib/assistant/audit.server.ts), [apps/web/src/lib/assistant/auth.server.ts](../../apps/web/src/lib/assistant/auth.server.ts), [apps/web/src/lib/assistant/compaction.server.ts](../../apps/web/src/lib/assistant/compaction.server.ts), [apps/web/src/lib/assistant/compaction.ts](../../apps/web/src/lib/assistant/compaction.ts), [apps/web/src/lib/assistant/context.server.ts](../../apps/web/src/lib/assistant/context.server.ts), [apps/web/src/lib/assistant/logging.server.ts](../../apps/web/src/lib/assistant/logging.server.ts), [apps/web/src/lib/assistant/model.server.ts](../../apps/web/src/lib/assistant/model.server.ts), [apps/web/src/lib/assistant/page-context.server.ts](../../apps/web/src/lib/assistant/page-context.server.ts), [apps/web/src/lib/assistant/page-context.ts](../../apps/web/src/lib/assistant/page-context.ts), [apps/web/src/lib/assistant/parsing.ts](../../apps/web/src/lib/assistant/parsing.ts), [apps/web/src/lib/assistant/persistence.server.ts](../../apps/web/src/lib/assistant/persistence.server.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/assistant/ui-labels.ts](../../apps/web/src/lib/assistant/ui-labels.ts), [apps/web/src/lib/assistant.server.ts](../../apps/web/src/lib/assistant.server.ts), [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts).
+Imported by: [apps/web/src/components/app/assistant-page-context-provider.tsx](../../apps/web/src/components/app/assistant-page-context-provider.tsx), [apps/web/src/lib/assistant/audit.server.ts](../../apps/web/src/lib/assistant/audit.server.ts), [apps/web/src/lib/assistant/auth.server.ts](../../apps/web/src/lib/assistant/auth.server.ts), [apps/web/src/lib/assistant/builder-tools.server.ts](../../apps/web/src/lib/assistant/builder-tools.server.ts), [apps/web/src/lib/assistant/compaction.server.ts](../../apps/web/src/lib/assistant/compaction.server.ts), [apps/web/src/lib/assistant/compaction.ts](../../apps/web/src/lib/assistant/compaction.ts), [apps/web/src/lib/assistant/context.server.ts](../../apps/web/src/lib/assistant/context.server.ts), [apps/web/src/lib/assistant/logging.server.ts](../../apps/web/src/lib/assistant/logging.server.ts), [apps/web/src/lib/assistant/model.server.ts](../../apps/web/src/lib/assistant/model.server.ts), [apps/web/src/lib/assistant/page-context.server.ts](../../apps/web/src/lib/assistant/page-context.server.ts), [apps/web/src/lib/assistant/page-context.ts](../../apps/web/src/lib/assistant/page-context.ts), [apps/web/src/lib/assistant/parsing.ts](../../apps/web/src/lib/assistant/parsing.ts), [apps/web/src/lib/assistant/persistence.server.ts](../../apps/web/src/lib/assistant/persistence.server.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/assistant/ui-labels.ts](../../apps/web/src/lib/assistant/ui-labels.ts), [apps/web/src/lib/assistant.server.ts](../../apps/web/src/lib/assistant.server.ts), [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts).
 
 ## lib/assistant/ui-labels.ts
 
@@ -2802,6 +3542,14 @@ Local dependencies: [apps/web/src/lib/assistant/attachments.server.ts](../../app
 
 Imported by: [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts).
 
+## lib/authoring-recovery.ts
+
+Source: [apps/web/src/lib/authoring-recovery.ts](../../apps/web/src/lib/authoring-recovery.ts)
+
+Exports: `AuthoringRecovery`, `readAuthoringRecovery`, `writeAuthoringRecovery`.
+
+Imported by: [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx).
+
 ## lib/berkas-versions.server.ts
 
 Source: [apps/web/src/lib/berkas-versions.server.ts](../../apps/web/src/lib/berkas-versions.server.ts)
@@ -2814,7 +3562,189 @@ Package imports: `pocketbase`.
 
 Literal database references: `file_extractions`, `file_versions`, `users`.
 
-Imported by: [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.berkas-suggest.ts](../../apps/web/src/routes/api.berkas-suggest.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.recommendations-review.ts](../../apps/web/src/routes/api.recommendations-review.ts).
+Imported by: [apps/web/src/lib/gradebook/import.server.ts](../../apps/web/src/lib/gradebook/import.server.ts), [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.berkas-suggest.ts](../../apps/web/src/routes/api.berkas-suggest.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.recommendations-review.ts](../../apps/web/src/routes/api.recommendations-review.ts).
+
+## lib/builder-appearance.ts
+
+Source: [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts)
+
+Exports: `APPEARANCE_FIELDS`, `APPEARANCE_OPTIONS`, `BUILDER_APPEARANCE_PRESETS`, `BuilderAppearance`, `BuilderAppearanceCorners`, `BuilderAppearanceField`, `BuilderAppearancePreset`, `BuilderBorderDetail`, `BuilderResponsiveAppearance`, `PRESET_APPEARANCE_FIELDS`, `ThemeColorPair`, `appearanceClassName`, `appearanceColorStyle`, `appearanceDetailStyle`, `applyAppearancePreset`, `contrastRatio`, `hasDocumentAppearanceToReset`, `matchingAppearancePreset`, `resetBuilderAppearance`, `resetDocumentAppearance`, `resetResponsiveAppearance`, `validHexColor`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-appearance-controls.tsx](../../apps/web/src/components/app/builder/builder-appearance-controls.tsx), [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts), [apps/web/src/lib/builder-style-clipboard.ts](../../apps/web/src/lib/builder-style-clipboard.ts), [apps/web/src/lib/builder-theme.ts](../../apps/web/src/lib/builder-theme.ts).
+
+## lib/builder-authoring.ts
+
+Source: [apps/web/src/lib/builder-authoring.ts](../../apps/web/src/lib/builder-authoring.ts)
+
+Exports: `ProposalOperation`, `ProposalTarget`, `appendBuilderContent`, `applyBuilderProposal`, `builderFromAiProposal`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts), [apps/web/src/lib/scheduled-class-ai.ts](../../apps/web/src/lib/scheduled-class-ai.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-authoring-tools.tsx](../../apps/web/src/components/app/builder/builder-authoring-tools.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## lib/builder-capability.ts
+
+Source: [apps/web/src/lib/builder-capability.ts](../../apps/web/src/lib/builder-capability.ts)
+
+Exports: `BuilderAuthoringGate`, `BuilderCapabilityPayload`, `ENHANCED_AUTHORING_ALLOWLIST_ENV`, `ENHANCED_AUTHORING_DENIED`, `ENHANCED_AUTHORING_ENV`, `EnhancedAuthoringCapability`, `EnhancedAuthoringMode`, `builderAuthoringGate`, `builderCapabilityPayload`, `enhancedAuthoringNotice`, `fetchBuilderCapability`, `hasBuilderAnchors`, `hasBuilderCaptions`, `hasBuilderPlaybackDetails`, `hasCustomThemeColors`, `hasDetailedBorderRadius`, `hasResponsiveBorderRadius`, `isEnhancedAuthoringDenied`, `parseEnhancedAuthoringAllowlist`, `parseEnhancedAuthoringMode`, `resolveEnhancedAuthoring`, `serverEnhancedAuthoring`, `usesEnhancedAuthoring`.
+
+Local dependencies: [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/researcher-ids.ts](../../apps/web/src/lib/researcher-ids.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-capability-notice.tsx](../../apps/web/src/components/app/builder/builder-capability-notice.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/routes/api.builder-capability.ts](../../apps/web/src/routes/api.builder-capability.ts).
+
+## lib/builder-delivery.ts
+
+Source: [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts)
+
+Exports: `BuilderAssessment`, `BuilderResponse`, `BuilderRunItem`, `BuilderRunState`, `deliveryRequest`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-assignment-card.tsx](../../apps/web/src/components/app/builder/builder-assignment-card.tsx), [apps/web/src/components/app/builder/builder-publish-dialog.tsx](../../apps/web/src/components/app/builder/builder-publish-dialog.tsx), [apps/web/src/components/app/builder/builder-run.tsx](../../apps/web/src/components/app/builder/builder-run.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/components/app/scheduled-sessions-index.tsx](../../apps/web/src/components/app/scheduled-sessions-index.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/lib/published-listings.ts](../../apps/web/src/lib/published-listings.ts), [apps/web/src/lib/student-dashboard-data.ts](../../apps/web/src/lib/student-dashboard-data.ts).
+
+## lib/builder-document.ts
+
+Source: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts)
+
+Exports: `BLOCK_LABELS`, `BUILDER_ANCHOR_PATTERN`, `BUILDER_CAPTIONS_MAX_CUES`, `BUILDER_CAPTIONS_MAX_TEXT`, `BUILDER_CAPTIONS_MAX_TOTAL`, `BUILDER_PLAYBACK_MAX_SECONDS`, `BUILDER_PLAYBACK_RATES`, `BUILDER_RICH_LIST_MAX_DEPTH`, `BUILDER_TRANSCRIPT_MAX_LENGTH`, `BlockType`, `BuilderActivity`, `BuilderAsset`, `BuilderBlock`, `BuilderCaptionCue`, `BuilderCaptions`, `BuilderDocument`, `BuilderEnvelope`, `BuilderImage`, `BuilderImagePresentation`, `BuilderIssue`, `BuilderKey`, `BuilderKind`, `BuilderListItem`, `BuilderPlayback`, `BuilderQuestion`, `BuilderRecord`, `BuilderVisibilityDevice`, `QuestionKind`, `RichText`, `RichTextRun`, `SavedBuilderTemplate`, `activitySummary`, `adjustRichListDepth`, `appendBlock`, `appendQuestion`, `applyBlockFormat`, `applyInlineLink`, `applyInlineMark`, `applyTemplate`, `blankBuilder`, `builderAnchors`, `builderBlockCanBeHidden`, `builderImagePresentationStyle`, `builderIssues`, `builderLayoutGroupCanBeHidden`, `builderNodeVisibilitySafe`, `builderRequest`, `builderRichTextValid`, `builderVisibilityForDevice`, `builderWriteAction`, `copyBuilder`, `copyScheduledToBuilder`, `duplicateActivity`, `duplicateBlock`, `encodeBuilderDraft`, `hasBuilderThemePalette`, `hasBuilderVisibility`, `hasNestedBuilderLists`, `insertGroupTemplate`, `moveBuilderHistory`, `newActivity`, `normalizeBuilderAnchor`, `normalizeBuilderCaptions`, `normalizeBuilderImagePresentation`, `normalizeBuilderPlayback`, `normalizeBuilderRichText`, `normalizeBuilderVisibility`, `plain`, `questionIds`, `remapDuplicateBuilderAnchors`, `removeBlock`, `replaceRichText`, `resetBuilderImagePresentation`, `resetBuilderPlayback`, `rich`, `safeInlineUrl`, `savedTemplateScope`, `uid`, `validateBuilderAnchors`.
+
+Local dependencies: [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts), [apps/web/src/lib/builder-element-registry.ts](../../apps/web/src/lib/builder-element-registry.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts), [apps/web/src/lib/builder-theme.ts](../../apps/web/src/lib/builder-theme.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/scheduled-lesson.ts](../../apps/web/src/lib/scheduled-lesson.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-anchor-control.tsx](../../apps/web/src/components/app/builder/builder-anchor-control.tsx), [apps/web/src/components/app/builder/builder-authoring-tools.tsx](../../apps/web/src/components/app/builder/builder-authoring-tools.tsx), [apps/web/src/components/app/builder/builder-class-start.tsx](../../apps/web/src/components/app/builder/builder-class-start.tsx), [apps/web/src/components/app/builder/builder-classroom-blocks.tsx](../../apps/web/src/components/app/builder/builder-classroom-blocks.tsx), [apps/web/src/components/app/builder/builder-draft-card.tsx](../../apps/web/src/components/app/builder/builder-draft-card.tsx), [apps/web/src/components/app/builder/builder-element-inspector.tsx](../../apps/web/src/components/app/builder/builder-element-inspector.tsx), [apps/web/src/components/app/builder/builder-element-library.tsx](../../apps/web/src/components/app/builder/builder-element-library.tsx), [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/components/app/builder/builder-group-background-controls.tsx](../../apps/web/src/components/app/builder/builder-group-background-controls.tsx), [apps/web/src/components/app/builder/builder-inspector-dispatch.tsx](../../apps/web/src/components/app/builder/builder-inspector-dispatch.tsx), [apps/web/src/components/app/builder/builder-journey-preview.tsx](../../apps/web/src/components/app/builder/builder-journey-preview.tsx), [apps/web/src/components/app/builder/builder-layout-lock-control.tsx](../../apps/web/src/components/app/builder/builder-layout-lock-control.tsx), [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx), [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx), [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/components/app/builder/builder-publish-dialog.tsx](../../apps/web/src/components/app/builder/builder-publish-dialog.tsx), [apps/web/src/components/app/builder/builder-richtext-view.tsx](../../apps/web/src/components/app/builder/builder-richtext-view.tsx), [apps/web/src/components/app/builder/builder-run.tsx](../../apps/web/src/components/app/builder/builder-run.tsx), [apps/web/src/components/app/builder/builder-saved-items.tsx](../../apps/web/src/components/app/builder/builder-saved-items.tsx), [apps/web/src/components/app/builder/builder-visibility-control.tsx](../../apps/web/src/components/app/builder/builder-visibility-control.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/lib/assistant/builder-tools.server.ts](../../apps/web/src/lib/assistant/builder-tools.server.ts), [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts), [apps/web/src/lib/builder-authoring.ts](../../apps/web/src/lib/builder-authoring.ts), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/builder-element-registry.ts](../../apps/web/src/lib/builder-element-registry.ts), [apps/web/src/lib/builder-import-plan.server.ts](../../apps/web/src/lib/builder-import-plan.server.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts), [apps/web/src/lib/builder-import.ts](../../apps/web/src/lib/builder-import.ts), [apps/web/src/lib/builder-layout-lock.ts](../../apps/web/src/lib/builder-layout-lock.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts), [apps/web/src/lib/builder-navigator.ts](../../apps/web/src/lib/builder-navigator.ts), [apps/web/src/lib/builder-save.ts](../../apps/web/src/lib/builder-save.ts), [apps/web/src/lib/builder-style-clipboard.ts](../../apps/web/src/lib/builder-style-clipboard.ts), [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx).
+
+## lib/builder-element-registry.ts
+
+Source: [apps/web/src/lib/builder-element-registry.ts](../../apps/web/src/lib/builder-element-registry.ts)
+
+Exports: `BUILDER_BLOCK_REGISTRY`, `BuilderCreationDefault`, `BuilderPlacement`, `BuilderRegistryKind`, `builderPlacementAllows`, `createBuilderBlockDefaults`, `isBuilderRegistryKind`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-element-inspector.tsx](../../apps/web/src/components/app/builder/builder-element-inspector.tsx), [apps/web/src/components/app/builder/builder-element-library.tsx](../../apps/web/src/components/app/builder/builder-element-library.tsx), [apps/web/src/components/app/builder/builder-inspector-dispatch.tsx](../../apps/web/src/components/app/builder/builder-inspector-dispatch.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
+
+## lib/builder-import-plan.server.ts
+
+Source: [apps/web/src/lib/builder-import-plan.server.ts](../../apps/web/src/lib/builder-import-plan.server.ts)
+
+Exports: `BOOK_PAGE_INSTRUCTIONS`, `BookPagePlan`, `bookPagePlan`, `compileBookPage`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-import.ts](../../apps/web/src/lib/builder-import.ts).
+
+Package imports: `zod`.
+
+Imported by: [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts).
+
+## lib/builder-import.server.ts
+
+Source: [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts)
+
+Exports: `getBookPageImport`, `listBookPageImports`, `startBookPageImport`.
+
+Local dependencies: [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/ai-rate-limits.ts](../../apps/web/src/lib/ai-rate-limits.ts), [apps/web/src/lib/ai-usage.server.ts](../../apps/web/src/lib/ai-usage.server.ts), [apps/web/src/lib/assistant/authorization.server.ts](../../apps/web/src/lib/assistant/authorization.server.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-import-plan.server.ts](../../apps/web/src/lib/builder-import-plan.server.ts), [apps/web/src/lib/builder-import.ts](../../apps/web/src/lib/builder-import.ts), [apps/web/src/lib/rate-limit.server.ts](../../apps/web/src/lib/rate-limit.server.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts).
+
+Package imports: `node:crypto`, `pocketbase`, `sharp`, `zod`.
+
+Literal database references: `class_sessions`, `course_sections`, `file_library`.
+
+Imported by: [apps/web/src/lib/assistant/builder-tools.server.ts](../../apps/web/src/lib/assistant/builder-tools.server.ts), [apps/web/src/routes/api.builder-import.ts](../../apps/web/src/routes/api.builder-import.ts).
+
+## lib/builder-import.ts
+
+Source: [apps/web/src/lib/builder-import.ts](../../apps/web/src/lib/builder-import.ts)
+
+Exports: `BuilderImportJob`, `BuilderImportReport`, `BuilderImportSettings`, `builderImportRequest`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-authoring-tools.tsx](../../apps/web/src/components/app/builder/builder-authoring-tools.tsx), [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/lib/builder-import-plan.server.ts](../../apps/web/src/lib/builder-import-plan.server.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts), [apps/web/src/routes/api.builder-import.ts](../../apps/web/src/routes/api.builder-import.ts), [apps/web/src/routes/app.builder-import.tsx](../../apps/web/src/routes/app.builder-import.tsx).
+
+## lib/builder-layout-lock.ts
+
+Source: [apps/web/src/lib/builder-layout-lock.ts](../../apps/web/src/lib/builder-layout-lock.ts)
+
+Exports: `LAYOUT_LOCK_CAPABILITY_REASON`, `LAYOUT_LOCK_REASON`, `activityLayoutProtected`, `guardedLayoutEdit`, `hasLayoutLockFields`, `layoutLockState`, `layoutLockTransitionReason`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-layout-lock-control.tsx](../../apps/web/src/components/app/builder/builder-layout-lock-control.tsx), [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## lib/builder-layout.ts
+
+Source: [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts)
+
+Exports: `BuilderBlockInsertionTarget`, `BuilderColumnWeights`, `BuilderLayout`, `BuilderLayoutAlign`, `BuilderLayoutBackground`, `BuilderLayoutBlock`, `BuilderLayoutDirection`, `BuilderLayoutDistribute`, `BuilderLayoutGap`, `BuilderLayoutGroup`, `BuilderLayoutGroupKind`, `BuilderLayoutNode`, `BuilderLayoutPadding`, `BuilderLayoutSurface`, `BuilderLayoutWidth`, `BuilderResponsiveOverride`, `BuilderSideSpacing`, `BuilderThemeBackgroundToken`, `LAYOUT_LIMITS`, `LayoutPathItem`, `ResolvedLayoutBlock`, `ResolvedLayoutGroup`, `ResolvedLayoutNode`, `addLayoutGroup`, `canMoveLayoutItem`, `countLayoutGroups`, `countLayoutNodes`, `ensureLayout`, `findLayoutGroup`, `flattenResolvedBlocks`, `insertBlockAtTarget`, `insertBlockIntoLayout`, `layoutGroupDepth`, `layoutItemLocation`, `layoutPath`, `moveBlockBefore`, `moveBlockBetweenActivities`, `moveBlockInLayout`, `moveLayoutGroup`, `moveLayoutGroupAtTarget`, `moveLayoutItem`, `newLayoutGroup`, `reconcileActivityLayout`, `removeBlockFromLayout`, `removeLayoutGroup`, `reparentLayoutItem`, `resetResponsiveOverride`, `resolveActivityLayout`, `resolveBlockInsertionTarget`, `resolveLayoutBackground`, `resolveLayoutGroupMoveTarget`, `setLayoutSide`.
+
+Local dependencies: [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-authoring-tools.tsx](../../apps/web/src/components/app/builder/builder-authoring-tools.tsx), [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/builder/builder-group-background-controls.tsx](../../apps/web/src/components/app/builder/builder-group-background-controls.tsx), [apps/web/src/components/app/builder/builder-layout-lock-control.tsx](../../apps/web/src/components/app/builder/builder-layout-lock-control.tsx), [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx), [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx), [apps/web/src/components/app/builder/builder-saved-items.tsx](../../apps/web/src/components/app/builder/builder-saved-items.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts), [apps/web/src/lib/builder-authoring.ts](../../apps/web/src/lib/builder-authoring.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout-lock.ts](../../apps/web/src/lib/builder-layout-lock.ts), [apps/web/src/lib/builder-navigator.ts](../../apps/web/src/lib/builder-navigator.ts), [apps/web/src/lib/builder-style-clipboard.ts](../../apps/web/src/lib/builder-style-clipboard.ts).
+
+## lib/builder-media-ticket.server.ts
+
+Source: [apps/web/src/lib/builder-media-ticket.server.ts](../../apps/web/src/lib/builder-media-ticket.server.ts)
+
+Exports: `BuilderMediaTicket`, `builderMediaTicketKey`, `openBuilderMediaTicket`, `sealBuilderMediaTicket`.
+
+Package imports: `node:crypto`.
+
+Imported by: [apps/web/src/routes/api.builder-media.ts](../../apps/web/src/routes/api.builder-media.ts).
+
+## lib/builder-navigator.ts
+
+Source: [apps/web/src/lib/builder-navigator.ts](../../apps/web/src/lib/builder-navigator.ts)
+
+Exports: `NAVIGATOR_TITLE_MAX`, `NavigatorReveal`, `finishNavigatorRename`, `navigatorTitle`, `renameNavigatorGroup`, `revealNavigatorAncestors`, `revealNavigatorCanvas`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-layout-panels.tsx](../../apps/web/src/components/app/builder/builder-layout-panels.tsx), [apps/web/src/components/app/builder/builder-navigator-title.tsx](../../apps/web/src/components/app/builder/builder-navigator-title.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## lib/builder-pointer-drag.ts
+
+Source: [apps/web/src/lib/builder-pointer-drag.ts](../../apps/web/src/lib/builder-pointer-drag.ts)
+
+Exports: `BUILDER_DRAG_EDGE_ZONE`, `BUILDER_DRAG_MAX_SCROLL_SPEED`, `BUILDER_POINTER_DRAG_THRESHOLD`, `BuilderDropAddress`, `BuilderPointerGesture`, `builderDragEdgeSpeed`, `builderDragScrollDelta`, `builderDropTargetFromElement`, `builderPointerDragActivated`, `updateBuilderPointerGesture`.
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## lib/builder-preview-policy.ts
+
+Source: [apps/web/src/lib/builder-preview-policy.ts](../../apps/web/src/lib/builder-preview-policy.ts)
+
+Exports: `BuilderPreviewPolicy`, `BuilderPreviewPolicyInput`, `BuilderPreviewScenario`, `getBuilderPreviewPolicy`.
+
+Imported by: [apps/web/src/components/app/builder/builder-journey-preview.tsx](../../apps/web/src/components/app/builder/builder-journey-preview.tsx).
+
+## lib/builder-save.ts
+
+Source: [apps/web/src/lib/builder-save.ts](../../apps/web/src/lib/builder-save.ts)
+
+Exports: `BuilderSaveCommand`, `createBuilderSaveQueue`.
+
+Local dependencies: [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## lib/builder-style-clipboard.ts
+
+Source: [apps/web/src/lib/builder-style-clipboard.ts](../../apps/web/src/lib/builder-style-clipboard.ts)
+
+Exports: `BuilderStyleClipboard`, `BuilderStyleSelection`, `canPasteBuilderStyle`, `copyBuilderStyle`, `pasteBuilderStyle`.
+
+Local dependencies: [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-layout.ts](../../apps/web/src/lib/builder-layout.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx).
+
+## lib/builder-theme.ts
+
+Source: [apps/web/src/lib/builder-theme.ts](../../apps/web/src/lib/builder-theme.ts)
+
+Exports: `BuilderDocumentTheme`, `BuilderThemePair`, `BuilderThemePalette`, `builderThemePairContrast`, `builderThemePaletteStyle`, `normalizeBuilderDocumentTheme`.
+
+Local dependencies: [apps/web/src/lib/builder-appearance.ts](../../apps/web/src/lib/builder-appearance.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/builder/builder-theme-palette-control.tsx](../../apps/web/src/components/app/builder/builder-theme-palette-control.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts).
 
 ## lib/bulk-paper.server.ts
 
@@ -2822,7 +3752,7 @@ Source: [apps/web/src/lib/bulk-paper.server.ts](../../apps/web/src/lib/bulk-pape
 
 Exports: `SubmitOutcome`, `createPaperSubmissions`, `extractImageEntries`, `resolveEnrolledRoster`.
 
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/bulk-paper.ts](../../apps/web/src/lib/bulk-paper.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts).
+Local dependencies: [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/bulk-paper.ts](../../apps/web/src/lib/bulk-paper.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts).
 
 Literal database references: `assignment_submissions`.
 
@@ -2835,6 +3765,24 @@ Source: [apps/web/src/lib/bulk-paper.ts](../../apps/web/src/lib/bulk-paper.ts)
 Exports: `MatchResult`, `PaperEntry`, `RosterStudent`, `matchStudent`, `newRowId`, `parseTextEntries`.
 
 Imported by: [apps/web/src/components/app/bulk-paper-input.tsx](../../apps/web/src/components/app/bulk-paper-input.tsx), [apps/web/src/lib/bulk-paper.server.ts](../../apps/web/src/lib/bulk-paper.server.ts), [apps/web/src/routes/api.bulk-paper-submit.ts](../../apps/web/src/routes/api.bulk-paper-submit.ts).
+
+## lib/card-matching.ts
+
+Source: [apps/web/src/lib/card-matching.ts](../../apps/web/src/lib/card-matching.ts)
+
+Exports: `MatchingTarget`, `cardMatchingTargets`, `moveMatchingCard`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Imported by: [apps/web/src/components/app/scheduled-card-matching.tsx](../../apps/web/src/components/app/scheduled-card-matching.tsx), [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx).
+
+## lib/card-pointer-drag.ts
+
+Source: [apps/web/src/lib/card-pointer-drag.ts](../../apps/web/src/lib/card-pointer-drag.ts)
+
+Exports: `CardDragSource`, `CardPointer`, `createCardPointerDrag`.
+
+Imported by: [apps/web/src/components/app/scheduled-card-matching.tsx](../../apps/web/src/components/app/scheduled-card-matching.tsx).
 
 ## lib/cefr-level.ts
 
@@ -2860,11 +3808,25 @@ Imported by: [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes
 
 Source: [apps/web/src/lib/check-types.ts](../../apps/web/src/lib/check-types.ts)
 
-Exports: `CHECK_KIND_NOTE`, `CHECK_LEVEL_LABEL`, `CheckResponsePayload`, `DEFAULT_CHECK_MAX`, `EXPLICIT_CORRECTION_LEVEL`, `FeedbackInteractionMeta`, `MAX_PROGRESSIVE_LEVEL`, `PublicCheckIdentity`, `checkLevelOf`, `checkMaxOf`, `enrolledIdentityKey`, `identityOf`, `interactionMetaOf`, `publicIdentityComplete`, `responseSignatureOf`.
-
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts).
+Exports: `CHECK_KIND_NOTE`, `CHECK_LEVEL_LABEL`, `CheckResponsePayload`, `DEFAULT_CHECK_MAX`, `EXPLICIT_CORRECTION_LEVEL`, `FeedbackInteractionMeta`, `MAX_PROGRESSIVE_LEVEL`, `checkLevelOf`, `checkMaxOf`, `enrolledIdentityKey`, `interactionMetaOf`, `responseSignatureOf`.
 
 Imported by: [apps/web/src/components/app/difficulty-insights.tsx](../../apps/web/src/components/app/difficulty-insights.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-workspaces/check-answer-panel.tsx](../../apps/web/src/components/app/task-workspaces/check-answer-panel.tsx), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts).
+
+## lib/class-scope.ts
+
+Source: [apps/web/src/lib/class-scope.ts](../../apps/web/src/lib/class-scope.ts)
+
+Exports: `sessionInClass`.
+
+Imported by: [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx).
+
+## lib/context-passages.ts
+
+Source: [apps/web/src/lib/context-passages.ts](../../apps/web/src/lib/context-passages.ts)
+
+Exports: `ContextPassage`, `MAX_CONTEXT_EXCERPT_CHARS`, `resolveContextPassage`.
+
+Imported by: [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
 
 ## lib/context-retrieval.server.ts
 
@@ -2872,13 +3834,13 @@ Source: [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/co
 
 Exports: `AuthFailure`, `AuthedUser`, `ContextBundle`, `ContextCitation`, `ContextFeature`, `ContextSectionRef`, `ContextSource`, `Requester`, `RequesterRole`, `RetrievalScope`, `SourceKind`, `authenticateUser`, `cpmkOfSubCpmk`, `retrieveContextBundle`.
 
-Local dependencies: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+Local dependencies: [apps/web/src/lib/context-passages.ts](../../apps/web/src/lib/context-passages.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
 
 Package imports: `node:crypto`, `pocketbase`.
 
 Literal database references: `context_retrievals`, `context_sections`, `file_contexts`, `file_extractions`, `file_library`, `sub_cpmk`, `users`.
 
-Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/evaluation-annotation.server.ts](../../apps/web/src/lib/evaluation-annotation.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/feedback-uptake.server.ts](../../apps/web/src/lib/feedback-uptake.server.ts), [apps/web/src/lib/lecturer-recommendations.server.ts](../../apps/web/src/lib/lecturer-recommendations.server.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/personalization-analytics.server.ts](../../apps/web/src/lib/personalization-analytics.server.ts), [apps/web/src/lib/research-analytics.server.ts](../../apps/web/src/lib/research-analytics.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/lib/research-target.server.ts](../../apps/web/src/lib/research-target.server.ts), [apps/web/src/lib/student-assistant-tools.server.ts](../../apps/web/src/lib/student-assistant-tools.server.ts), [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/student-assistant.server.ts), [apps/web/src/routes/api.agent-tasks.ts](../../apps/web/src/routes/api.agent-tasks.ts), [apps/web/src/routes/api.ai-usage.ts](../../apps/web/src/routes/api.ai-usage.ts), [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts), [apps/web/src/routes/api.bulk-paper-extract.ts](../../apps/web/src/routes/api.bulk-paper-extract.ts), [apps/web/src/routes/api.bulk-paper-prepare.ts](../../apps/web/src/routes/api.bulk-paper-prepare.ts), [apps/web/src/routes/api.bulk-paper-submit.ts](../../apps/web/src/routes/api.bulk-paper-submit.ts), [apps/web/src/routes/api.context-check.ts](../../apps/web/src/routes/api.context-check.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.context-material.ts](../../apps/web/src/routes/api.context-material.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts), [apps/web/src/routes/api.course-thumbnail.ts](../../apps/web/src/routes/api.course-thumbnail.ts), [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.evaluation-participants.ts](../../apps/web/src/routes/api.evaluation-participants.ts), [apps/web/src/routes/api.evaluation-result.ts](../../apps/web/src/routes/api.evaluation-result.ts), [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.lesson-plans.ts), [apps/web/src/routes/api.personal-practice.ts](../../apps/web/src/routes/api.personal-practice.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts), [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts).
+Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/evaluation-annotation.server.ts](../../apps/web/src/lib/evaluation-annotation.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/feedback-uptake.server.ts](../../apps/web/src/lib/feedback-uptake.server.ts), [apps/web/src/lib/lecturer-recommendations.server.ts](../../apps/web/src/lib/lecturer-recommendations.server.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/personalization-analytics.server.ts](../../apps/web/src/lib/personalization-analytics.server.ts), [apps/web/src/lib/research-analytics.server.ts](../../apps/web/src/lib/research-analytics.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/lib/research-target.server.ts](../../apps/web/src/lib/research-target.server.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts), [apps/web/src/lib/student-assistant-tools.server.ts](../../apps/web/src/lib/student-assistant-tools.server.ts), [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/student-assistant.server.ts), [apps/web/src/routes/api.agent-tasks.ts](../../apps/web/src/routes/api.agent-tasks.ts), [apps/web/src/routes/api.ai-model-prefs.ts](../../apps/web/src/routes/api.ai-model-prefs.ts), [apps/web/src/routes/api.ai-providers-codex-cancel.ts](../../apps/web/src/routes/api.ai-providers-codex-cancel.ts), [apps/web/src/routes/api.ai-providers-codex-poll.ts](../../apps/web/src/routes/api.ai-providers-codex-poll.ts), [apps/web/src/routes/api.ai-providers-codex-start.ts](../../apps/web/src/routes/api.ai-providers-codex-start.ts), [apps/web/src/routes/api.ai-providers-test.ts](../../apps/web/src/routes/api.ai-providers-test.ts), [apps/web/src/routes/api.ai-providers.ts](../../apps/web/src/routes/api.ai-providers.ts), [apps/web/src/routes/api.ai-usage.ts](../../apps/web/src/routes/api.ai-usage.ts), [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts), [apps/web/src/routes/api.builder-capability.ts](../../apps/web/src/routes/api.builder-capability.ts), [apps/web/src/routes/api.builder-import.ts](../../apps/web/src/routes/api.builder-import.ts), [apps/web/src/routes/api.bulk-paper-extract.ts](../../apps/web/src/routes/api.bulk-paper-extract.ts), [apps/web/src/routes/api.bulk-paper-prepare.ts](../../apps/web/src/routes/api.bulk-paper-prepare.ts), [apps/web/src/routes/api.bulk-paper-submit.ts](../../apps/web/src/routes/api.bulk-paper-submit.ts), [apps/web/src/routes/api.context-check.ts](../../apps/web/src/routes/api.context-check.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.context-material.ts](../../apps/web/src/routes/api.context-material.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts), [apps/web/src/routes/api.course-thumbnail.ts](../../apps/web/src/routes/api.course-thumbnail.ts), [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.evaluation-participants.ts](../../apps/web/src/routes/api.evaluation-participants.ts), [apps/web/src/routes/api.evaluation-result.ts](../../apps/web/src/routes/api.evaluation-result.ts), [apps/web/src/routes/api.gradebook-commands.ts](../../apps/web/src/routes/api.gradebook-commands.ts), [apps/web/src/routes/api.gradebook-release.ts](../../apps/web/src/routes/api.gradebook-release.ts), [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.lesson-plans.ts), [apps/web/src/routes/api.personal-practice.ts](../../apps/web/src/routes/api.personal-practice.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts), [apps/web/src/routes/api.quiz-source.ts](../../apps/web/src/routes/api.quiz-source.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts), [apps/web/src/routes/api.scheduled-class-draft.ts](../../apps/web/src/routes/api.scheduled-class-draft.ts), [apps/web/src/routes/api.submission-content-refresh.ts](../../apps/web/src/routes/api.submission-content-refresh.ts), [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts).
 
 ## lib/context-suggestions-client.ts
 
@@ -2928,7 +3890,7 @@ Source: [apps/web/src/lib/course-analytics.ts](../../apps/web/src/lib/course-ana
 
 Exports: `AlertItem`, `AnalyticsAttempt`, `AnalyticsModel`, `CourseAnalyticsInput`, `DistRow`, `OwnerIdentity`, `RosterAccount`, `StudentAttention`, `SubCpmkRow`, `TopicRow`, `WeekBar`, `buildCourseAnalytics`, `isCollected`.
 
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts).
+Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/submission-state.ts](../../apps/web/src/lib/submission-state.ts).
 
 Imported by: [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx).
 
@@ -2976,13 +3938,13 @@ Imported by: [apps/web/src/routes/api.course-thumbnail.ts](../../apps/web/src/ro
 
 Source: [apps/web/src/lib/difficulty-data.ts](../../apps/web/src/lib/difficulty-data.ts)
 
-Exports: `DifficultyAttempt`, `DifficultyChannel`, `channelOf`, `useDifficultyData`.
+Exports: `DifficultyAttempt`, `useDifficultyData`.
 
 Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
 Package imports: `react`.
 
-Literal database references: `assignment_submissions`, `check_attempts`, `public_submissions`.
+Literal database references: `assignment_submissions`, `check_attempts`.
 
 Imported by: [apps/web/src/components/app/difficulty-insights.tsx](../../apps/web/src/components/app/difficulty-insights.tsx), [apps/web/src/components/app/difficulty-summary.tsx](../../apps/web/src/components/app/difficulty-summary.tsx).
 
@@ -3052,7 +4014,7 @@ Source: [apps/web/src/lib/feedback-uptake.server.ts](../../apps/web/src/lib/feed
 
 Exports: `ParticipantChain`, `SaveAssociationInput`, `SaveUptakeInput`, `UPTAKE_CSV_HEADERS`, `UptakeError`, `UptakeExportRow`, `UptakeViewData`, `buildUptakeCsv`, `buildUptakeExportRows`, `computeUptakeAnalyticsForUser`, `csvEscapeUptake`, `groupByParticipant`, `loadUptakeView`, `responseTextOf`, `saveAssociation`, `saveUptakeAnnotation`.
 
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/feedback-uptake.ts](../../apps/web/src/lib/feedback-uptake.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts).
+Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/feedback-uptake.ts](../../apps/web/src/lib/feedback-uptake.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/lib/researcher-ids.ts](../../apps/web/src/lib/researcher-ids.ts).
 
 Literal database references: `assignments`, `check_attempts`, `courses`, `feedback_revisions`, `feedback_uptake`.
 
@@ -3072,21 +4034,31 @@ Source: [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.se
 
 Exports: `ExtractedContent`, `HintCriterion`, `OcrAttemptSnapshot`, `ProgressiveHint`, `TASK_KIND_GUIDANCE`, `buildProgressiveHint`, `criteriaForAssignment`, `extractStoredFiles`, `extractSubmissionContent`, `parseExtracted`, `parseModelJson`, `taskSourceContext`.
 
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pdf-ocr.server.ts](../../apps/web/src/lib/pdf-ocr.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Package imports: `pdf-parse`.
 
-Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/practice-assist.server.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts).
+Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/practice-assist.server.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts), [apps/web/src/lib/submission-content.server.ts](../../apps/web/src/lib/submission-content.server.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts), [apps/web/src/routes/api.quiz-source.ts](../../apps/web/src/routes/api.quiz-source.ts).
+
+## lib/file-library-nav.ts
+
+Source: [apps/web/src/lib/file-library-nav.ts](../../apps/web/src/lib/file-library-nav.ts)
+
+Exports: `FileGroup`, `LIBRARY_TABS`, `LibraryFilters`, `LibraryTab`, `SORT_FIELD`, `SortKey`, `buildFilter`, `duplicateKeys`, `groupByCourse`, `isRecent`, `isUnlinked`, `matchesTab`, `needsAction`.
+
+Local dependencies: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts).
+
+Imported by: [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx).
 
 ## lib/file-library.ts
 
 Source: [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts)
 
-Exports: `ACCESS_HINTS`, `ACCESS_LABELS`, `EXTRACTION_STATUS_LABELS`, `FILE_KIND_LABELS`, `FILE_LIBRARY_MAX_SIZE`, `FILE_LIBRARY_MIME_TYPES`, `FileKind`, `ProcessSummary`, `ProcessingState`, `STATUS_LABELS`, `fileKindFor`, `formatBytes`, `processLibraryFile`, `processingStateFor`, `restoreFileVersion`, `snapshotLibraryFile`, `validateLibraryFile`.
+Exports: `ACCESS_HINTS`, `ACCESS_LABELS`, `EXTRACTION_STATUS_LABELS`, `FILE_KIND_LABELS`, `FILE_LIBRARY_MAX_SIZE`, `FILE_LIBRARY_MIME_TYPES`, `FileKind`, `ProcessSummary`, `ProcessingState`, `STATUS_LABELS`, `fileKindFor`, `formatBytes`, `processLibraryFile`, `processingStateFor`, `reprocessLibraryFiles`, `restoreFileVersion`, `snapshotLibraryFile`, `validateLibraryFile`.
 
 Local dependencies: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
-Imported by: [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx).
+Imported by: [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx).
 
 ## lib/file-metadata.ts
 
@@ -3108,15 +4080,119 @@ Local dependencies: [apps/web/src/lib/evaluation-scoring.ts](../../apps/web/src/
 
 Imported by: [apps/web/src/components/app/formative-evaluation-review.tsx](../../apps/web/src/components/app/formative-evaluation-review.tsx).
 
+## lib/global-search.ts
+
+Source: [apps/web/src/lib/global-search.ts](../../apps/web/src/lib/global-search.ts)
+
+Exports: `SEARCH_GROUPS`, `SEARCH_GROUP_LIMIT`, `SEARCH_GROUP_ORDER`, `SearchEntry`, `SearchGroupId`, `capByGroup`, `filterSearchEntries`, `matchesTokens`, `rankEntries`, `tokenize`.
+
+Imported by: [apps/web/src/components/app/global-search.tsx](../../apps/web/src/components/app/global-search.tsx).
+
+## lib/gradebook/authorization.server.ts
+
+Source: [apps/web/src/lib/gradebook/authorization.server.ts](../../apps/web/src/lib/gradebook/authorization.server.ts)
+
+Exports: `authorizeGradebookCourse`, `requireGradebookFaculty`.
+
+Package imports: `pocketbase`.
+
+Literal database references: `courses`.
+
+Imported by: [apps/web/src/lib/gradebook/history.server.ts](../../apps/web/src/lib/gradebook/history.server.ts).
+
+## lib/gradebook/commands.server.ts
+
+Source: [apps/web/src/lib/gradebook/commands.server.ts](../../apps/web/src/lib/gradebook/commands.server.ts)
+
+Exports: `GradeChangeInput`, `GradeProposal`, `GradeProposalRef`, `GradeState`, `PrepareGradeChangesInput`, `applyGradeChanges`, `approveGradeChanges`, `getGradeChangeStatus`, `prepareGradeChanges`, `prepareGradeRevert`, `reconcileGradeChanges`, `rejectGradeChanges`.
+
+Local dependencies: [apps/web/src/lib/gradebook/validation.ts](../../apps/web/src/lib/gradebook/validation.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+
+Package imports: `pocketbase`.
+
+Imported by: [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/lib/assistant/grading-tools.server.ts](../../apps/web/src/lib/assistant/grading-tools.server.ts), [apps/web/src/lib/gradebook/history.server.ts](../../apps/web/src/lib/gradebook/history.server.ts), [apps/web/src/routes/api.gradebook-commands.ts](../../apps/web/src/routes/api.gradebook-commands.ts).
+
+## lib/gradebook/history.server.ts
+
+Source: [apps/web/src/lib/gradebook/history.server.ts](../../apps/web/src/lib/gradebook/history.server.ts)
+
+Exports: `GradeChangeEvent`, `getGradeChangeHistory`.
+
+Local dependencies: [apps/web/src/lib/gradebook/authorization.server.ts](../../apps/web/src/lib/gradebook/authorization.server.ts), [apps/web/src/lib/gradebook/commands.server.ts](../../apps/web/src/lib/gradebook/commands.server.ts).
+
+Package imports: `pocketbase`.
+
+Literal database references: `grade_change_events`.
+
+## lib/gradebook/import.server.ts
+
+Source: [apps/web/src/lib/gradebook/import.server.ts](../../apps/web/src/lib/gradebook/import.server.ts)
+
+Exports: `ImportArtifactInput`, `ImportArtifactResult`, `loadImportArtifact`.
+
+Local dependencies: [apps/web/src/lib/berkas-versions.server.ts](../../apps/web/src/lib/berkas-versions.server.ts), [apps/web/src/lib/gradebook/import.ts](../../apps/web/src/lib/gradebook/import.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+
+Literal database references: `file_library`.
+
+## lib/gradebook/import.ts
+
+Source: [apps/web/src/lib/gradebook/import.ts](../../apps/web/src/lib/gradebook/import.ts)
+
+Exports: `ColumnKind`, `ColumnMap`, `CsvResult`, `ImportError`, `ImportFormat`, `ImportIssue`, `ImportResult`, `ImportSuccess`, `ImportSummary`, `LIMITS`, `ParseImportInput`, `ParseImportXlsxInput`, `ParsedCell`, `ParsedRow`, `ScaleConversion`, `SelectSubsetResult`, `XLSX_LIMITS`, `detectFormat`, `parseCsv`, `parseImport`, `parseImportAuto`, `parseImportXlsx`, `selectSubset`, `summarizeImport`.
+
+Local dependencies: [apps/web/src/lib/gradebook/validation.ts](../../apps/web/src/lib/gradebook/validation.ts).
+
+Imported by: [apps/web/src/lib/gradebook/import.server.ts](../../apps/web/src/lib/gradebook/import.server.ts).
+
+## lib/gradebook/publication.server.ts
+
+Source: [apps/web/src/lib/gradebook/publication.server.ts](../../apps/web/src/lib/gradebook/publication.server.ts)
+
+Exports: `APPROVAL_HASH_PREFIX`, `AtomicReleaseWrite`, `CreateReleasePreviewInput`, `GradeReleaseError`, `GradeReleaseErrorCode`, `PublishReleaseInput`, `PublishedRelease`, `ReleaseClient`, `ReleasePreview`, `ReleasePreviewStudent`, `ReleaseSources`, `ReleaseStore`, `ReleaseStudent`, `StoredReleaseHead`, `StoredReleaseItem`, `approvalHashOf`, `buildReleaseInputs`, `canonicalInputsJson`, `createReleasePreview`, `currentReleaseOf`, `newReleaseId`, `normalizeApprovalHash`, `pocketbaseReleaseStore`, `previewReleaseFromStore`, `publishRelease`, `publishReleaseToStore`.
+
+Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/gradebook/publication.ts](../../apps/web/src/lib/gradebook/publication.ts), [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts), [apps/web/src/lib/grouped-gradebook.ts](../../apps/web/src/lib/grouped-gradebook.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+
+Package imports: `node:crypto`.
+
+Literal database references: `courses`, `grade_releases`.
+
+Imported by: [apps/web/src/routes/api.gradebook-release.ts](../../apps/web/src/routes/api.gradebook-release.ts).
+
+## lib/gradebook/publication.ts
+
+Source: [apps/web/src/lib/gradebook/publication.ts](../../apps/web/src/lib/gradebook/publication.ts)
+
+Exports: `BACKFILL_REASON`, `INPUTS_HASH_PREFIX`, `ReleaseComponentInput`, `ReleaseComponentRow`, `ReleaseDiffEntry`, `ReleaseInputs`, `ReleaseIssue`, `ReleaseIssueCode`, `ReleaseSnapshot`, `ReleaseState`, `ReleaseStudentResult`, `ReleaseValidation`, `buildReleaseSnapshot`, `diffReleases`, `inputsHashOf`, `isStale`, `validateRelease`.
+
+Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts).
+
+Imported by: [apps/web/src/lib/gradebook/publication.server.ts](../../apps/web/src/lib/gradebook/publication.server.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts).
+
+## lib/gradebook/scoring-evidence.ts
+
+Source: [apps/web/src/lib/gradebook/scoring-evidence.ts](../../apps/web/src/lib/gradebook/scoring-evidence.ts)
+
+Exports: `MIN_QUOTE_LENGTH`, `ProposedCriterion`, `RejectedProposal`, `RejectionCode`, `RubricCriterion`, `ValidationReport`, `criterionTotals`, `describeRejection`, `isPublishable`, `isReviewable`, `validateProposal`.
+
+Local dependencies: [apps/web/src/lib/gradebook/validation.ts](../../apps/web/src/lib/gradebook/validation.ts).
+
+## lib/gradebook/validation.ts
+
+Source: [apps/web/src/lib/gradebook/validation.ts](../../apps/web/src/lib/gradebook/validation.ts)
+
+Exports: `ChapterStatus`, `ComponentKind`, `MAX_BONUS_DELTA`, `MAX_NOTE_LENGTH`, `ParsedInput`, `SCORE_PRECISION`, `ScoreOperation`, `TargetKind`, `ValidationIssue`, `ValidationResult`, `allowedOperations`, `convertScale`, `needsScaleConversion`, `parseScoreInput`, `validateScoreOperation`.
+
+Imported by: [apps/web/src/lib/assistant/grading-tools.server.ts](../../apps/web/src/lib/assistant/grading-tools.server.ts), [apps/web/src/lib/gradebook/commands.server.ts](../../apps/web/src/lib/gradebook/commands.server.ts), [apps/web/src/lib/gradebook/import.ts](../../apps/web/src/lib/gradebook/import.ts), [apps/web/src/lib/gradebook/scoring-evidence.ts](../../apps/web/src/lib/gradebook/scoring-evidence.ts).
+
 ## lib/gradebook.ts
 
 Source: [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts)
 
-Exports: `FinalGradeResult`, `GradeComponent`, `GradeComponentKind`, `GradeEntry`, `GradeOverride`, `GradePublication`, `GradebookStudent`, `LETTER_GRADES`, `STATUS_LABEL`, `StudentStatus`, `calculateFinalGrade`, `componentCounts`, `componentScore`, `letterGrade`, `parseGradeInput`, `studentStatus`, `totalWeight`.
+Exports: `ChapterDef`, `ChapterStatus`, `FinalGradeResult`, `GradeComponent`, `GradeComponentKind`, `GradeEntry`, `GradeOverride`, `GradePublication`, `GradebookStudent`, `LETTER_GRADES`, `STATUS_LABEL`, `StudentStatus`, `calculateFinalGrade`, `chapterCounts`, `chapterValue`, `componentCounts`, `componentScore`, `isChapterComponent`, `letterGrade`, `parseGradeInput`, `studentStatus`, `totalWeight`.
 
 Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts).
 
-Imported by: [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/lib/grouped-gradebook.ts](../../apps/web/src/lib/grouped-gradebook.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts).
+Imported by: [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/lib/gradebook/publication.server.ts](../../apps/web/src/lib/gradebook/publication.server.ts), [apps/web/src/lib/gradebook/publication.ts](../../apps/web/src/lib/gradebook/publication.ts), [apps/web/src/lib/grouped-gradebook.ts](../../apps/web/src/lib/grouped-gradebook.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts).
 
 ## lib/grouped-gradebook.ts
 
@@ -3126,7 +4202,7 @@ Exports: `AttendanceRecord`, `AttendanceSession`, `ParticipationAward`, `grouped
 
 Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts).
 
-Imported by: [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts).
+Imported by: [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/lib/gradebook/publication.server.ts](../../apps/web/src/lib/gradebook/publication.server.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts).
 
 ## lib/heic.ts
 
@@ -3142,9 +4218,9 @@ Imported by: [apps/web/src/components/app/bulk-paper-input.tsx](../../apps/web/s
 
 Source: [apps/web/src/lib/hostinger-model.server.ts](../../apps/web/src/lib/hostinger-model.server.ts)
 
-Exports: `HostingerMessage`, `HostingerResult`, `HostingerTool`, `HostingerToolCall`, `collectHostingerText`.
+Exports: `HostingerMessage`, `HostingerResult`, `HostingerTool`, `HostingerToolCall`, `ResolvedProvider`, `collectHostingerText`.
 
-Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assistant/model.server.ts](../../apps/web/src/lib/assistant/model.server.ts), [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/rps-ai-extract.server.ts](../../apps/web/src/lib/rps-ai-extract.server.ts), [apps/web/src/lib/rps-assist.server.ts](../../apps/web/src/lib/rps-assist.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts).
+Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assistant/model.server.ts](../../apps/web/src/lib/assistant/model.server.ts), [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/lib/pdf-ocr.server.ts](../../apps/web/src/lib/pdf-ocr.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/rps-ai-extract.server.ts](../../apps/web/src/lib/rps-ai-extract.server.ts), [apps/web/src/lib/rps-assist.server.ts](../../apps/web/src/lib/rps-assist.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts).
 
 ## lib/hostinger-tts.server.ts
 
@@ -3158,13 +4234,13 @@ Imported by: [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/s
 
 Source: [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts)
 
-Exports: `DEFAULT_LANGUAGE`, `DEFAULT_STUDENT_LANGUAGE`, `LANGUAGES`, `Language`, `isLanguage`, `languageOf`, `nativeName`, `translate`, `useLanguage`, `useT`.
+Exports: `DEFAULT_LANGUAGE`, `DEFAULT_STUDENT_LANGUAGE`, `LANGUAGES`, `Language`, `isLanguage`, `languageOf`, `localeOf`, `nativeName`, `translate`, `useLanguage`, `useT`.
 
 Local dependencies: [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
 Package imports: `react`.
 
-Imported by: [apps/web/src/components/app/academic-calendar.tsx](../../apps/web/src/components/app/academic-calendar.tsx), [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/attendance-manager.tsx](../../apps/web/src/components/app/attendance-manager.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/student-answer-sheet.tsx](../../apps/web/src/components/app/student-answer-sheet.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/workspace-guide-steps.ts](../../apps/web/src/components/app/workspace-guide-steps.ts), [apps/web/src/components/app/workspace-guide.tsx](../../apps/web/src/components/app/workspace-guide.tsx), [apps/web/src/lib/student-home-copy.ts](../../apps/web/src/lib/student-home-copy.ts), [apps/web/src/lib/worksheet-brief.ts](../../apps/web/src/lib/worksheet-brief.ts), [apps/web/src/routes/api.roster-language.ts](../../apps/web/src/routes/api.roster-language.ts).
+Imported by: [apps/web/src/components/app/academic-calendar.tsx](../../apps/web/src/components/app/academic-calendar.tsx), [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/attendance-manager.tsx](../../apps/web/src/components/app/attendance-manager.tsx), [apps/web/src/components/app/conversation-practice.tsx](../../apps/web/src/components/app/conversation-practice.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/global-search.tsx](../../apps/web/src/components/app/global-search.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/components/app/scheduled-card-matching.tsx](../../apps/web/src/components/app/scheduled-card-matching.tsx), [apps/web/src/components/app/scheduled-class-ai-panel.tsx](../../apps/web/src/components/app/scheduled-class-ai-panel.tsx), [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/components/app/scheduled-lesson-editor.tsx](../../apps/web/src/components/app/scheduled-lesson-editor.tsx), [apps/web/src/components/app/scheduled-lesson.tsx](../../apps/web/src/components/app/scheduled-lesson.tsx), [apps/web/src/components/app/scheduled-material-picker.tsx](../../apps/web/src/components/app/scheduled-material-picker.tsx), [apps/web/src/components/app/scheduled-student-preview.tsx](../../apps/web/src/components/app/scheduled-student-preview.tsx), [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/student-answer-sheet.tsx](../../apps/web/src/components/app/student-answer-sheet.tsx), [apps/web/src/components/app/student-assistant-panel.tsx](../../apps/web/src/components/app/student-assistant-panel.tsx), [apps/web/src/components/app/student-classroom-ui.tsx](../../apps/web/src/components/app/student-classroom-ui.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx), [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/components/app/student-preview-dock.tsx](../../apps/web/src/components/app/student-preview-dock.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/task-builders/quiz-source-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-source-builder.tsx), [apps/web/src/components/app/task-builders/writing-builder.tsx](../../apps/web/src/components/app/task-builders/writing-builder.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/components/app/workspace-guide-steps.ts](../../apps/web/src/components/app/workspace-guide-steps.ts), [apps/web/src/components/app/workspace-guide.tsx](../../apps/web/src/components/app/workspace-guide.tsx), [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/student-assistant.server.ts), [apps/web/src/lib/student-home-copy.ts](../../apps/web/src/lib/student-home-copy.ts), [apps/web/src/lib/worksheet-brief.ts](../../apps/web/src/lib/worksheet-brief.ts), [apps/web/src/routes/api.roster-language.ts](../../apps/web/src/routes/api.roster-language.ts), [apps/web/src/routes/app.latihan.tsx](../../apps/web/src/routes/app.latihan.tsx), [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
 
 ## lib/integrated-ai.server.ts
 
@@ -3200,9 +4276,9 @@ Imported by: [apps/web/src/lib/learner-profile.server.ts](../../apps/web/src/lib
 
 Source: [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts)
 
-Exports: `Assessment`, `ClassSession`, `ClassSessionLinks`, `CollaborativeTask`, `ContextLanguage`, `ContextSectionRecord`, `ContextSectionStatus`, `ContextSuggestionKind`, `ContextSuggestionRecord`, `ContextSuggestionReview`, `Course`, `CourseResource`, `CourseRosterEntry`, `CourseSection`, `Cpmk`, `Enrollment`, `ExtractionStatus`, `FACULTY_DASHBOARD`, `FileAccess`, `FileContextRecord`, `FileExtractionRecord`, `FileLibraryRecord`, `FileProcessingStatus`, `FileVersionRecord`, `Role`, `STUDENT_DASHBOARD`, `SpecialWeekType`, `StructuredItem`, `SubCpmk`, `dashboardForRole`, `dateLabel`, `errorMessage`, `isAbortError`, `isSessionDone`, `sessionProgressPct`.
+Exports: `Assessment`, `ClassSession`, `ClassSessionLinks`, `CollaborativeTask`, `ContextLanguage`, `ContextSectionRecord`, `ContextSectionStatus`, `ContextSuggestionKind`, `ContextSuggestionRecord`, `ContextSuggestionReview`, `Course`, `CourseResource`, `CourseRosterEntry`, `CourseSection`, `Cpmk`, `Enrollment`, `ExtractionStatus`, `FACULTY_DASHBOARD`, `FileAccess`, `FileContextRecord`, `FileExtractionRecord`, `FileLibraryRecord`, `FileProcessingStatus`, `FileVersionRecord`, `Role`, `STUDENT_DASHBOARD`, `SpecialWeekType`, `StructuredItem`, `SubCpmk`, `angkatanOf`, `dashboardForRole`, `dateLabel`, `deriveAngkatan`, `errorMessage`, `isAbortError`, `isSessionDone`, `linkIds`, `relationRecords`, `sectionTermLabel`, `sessionProgressPct`.
 
-Imported by: [apps/web/src/components/app/academic-calendar.tsx](../../apps/web/src/components/app/academic-calendar.tsx), [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/assignment-editor-page.tsx](../../apps/web/src/components/app/assignment-editor-page.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assignment-revision-controls.tsx](../../apps/web/src/components/app/assignment-revision-controls.tsx), [apps/web/src/components/app/attendance-manager.tsx](../../apps/web/src/components/app/attendance-manager.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-catalog-card.tsx](../../apps/web/src/components/app/course-catalog-card.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-form.tsx](../../apps/web/src/components/app/course-form.tsx), [apps/web/src/components/app/course-info.tsx](../../apps/web/src/components/app/course-info.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-settings.tsx](../../apps/web/src/components/app/course-settings.tsx), [apps/web/src/components/app/course-thumb-dialog.tsx](../../apps/web/src/components/app/course-thumb-dialog.tsx), [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/difficulty-insights.tsx](../../apps/web/src/components/app/difficulty-insights.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/feedback-uptake-review.tsx](../../apps/web/src/components/app/feedback-uptake-review.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx), [apps/web/src/components/app/global-search.tsx](../../apps/web/src/components/app/global-search.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/lecturer-recommendations.tsx](../../apps/web/src/components/app/lecturer-recommendations.tsx), [apps/web/src/components/app/penilaian-index.tsx](../../apps/web/src/components/app/penilaian-index.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/components/app/personalization-analytics.tsx](../../apps/web/src/components/app/personalization-analytics.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/practice-content-autofill.tsx](../../apps/web/src/components/app/practice-content-autofill.tsx), [apps/web/src/components/app/research-analytics.tsx](../../apps/web/src/components/app/research-analytics.tsx), [apps/web/src/components/app/research-export.tsx](../../apps/web/src/components/app/research-export.tsx), [apps/web/src/components/app/resource-form.tsx](../../apps/web/src/components/app/resource-form.tsx), [apps/web/src/components/app/rps-ai-helper.tsx](../../apps/web/src/components/app/rps-ai-helper.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx), [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/components/app/settings/account-info-section.tsx](../../apps/web/src/components/app/settings/account-info-section.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/settings/learner-profile-section.tsx](../../apps/web/src/components/app/settings/learner-profile-section.tsx), [apps/web/src/components/app/settings/profile-section.tsx](../../apps/web/src/components/app/settings/profile-section.tsx), [apps/web/src/components/app/settings/recovery-section.tsx](../../apps/web/src/components/app/settings/recovery-section.tsx), [apps/web/src/components/app/settings/security-section.tsx](../../apps/web/src/components/app/settings/security-section.tsx), [apps/web/src/components/app/settings/usage-section.tsx](../../apps/web/src/components/app/settings/usage-section.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/student-assistant-panel.tsx](../../apps/web/src/components/app/student-assistant-panel.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx), [apps/web/src/components/app/student-onboarding.tsx](../../apps/web/src/components/app/student-onboarding.tsx), [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/student-work-page.tsx](../../apps/web/src/components/app/student-work-page.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-builders/listening-builder.tsx](../../apps/web/src/components/app/task-builders/listening-builder.tsx), [apps/web/src/components/app/task-builders/task-autofill.tsx](../../apps/web/src/components/app/task-builders/task-autofill.tsx), [apps/web/src/components/app/task-workspaces/check-answer-panel.tsx](../../apps/web/src/components/app/task-workspaces/check-answer-panel.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/reading-workspace.tsx](../../apps/web/src/components/app/task-workspaces/reading-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/components/app/tugas-insights.tsx](../../apps/web/src/components/app/tugas-insights.tsx), [apps/web/src/components/auth/auth-panel.tsx](../../apps/web/src/components/auth/auth-panel.tsx), [apps/web/src/components/auth/login-feature-preview.tsx](../../apps/web/src/components/auth/login-feature-preview.tsx), [apps/web/src/components/site-footer.tsx](../../apps/web/src/components/site-footer.tsx), [apps/web/src/components/site-header.tsx](../../apps/web/src/components/site-header.tsx), [apps/web/src/hooks/use-attendance.ts](../../apps/web/src/hooks/use-attendance.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-assignments.ts](../../apps/web/src/hooks/use-course-assignments.ts), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-resources.ts](../../apps/web/src/hooks/use-course-resources.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-route.ts](../../apps/web/src/hooks/use-course-route.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/assistant/authorization.server.ts](../../apps/web/src/lib/assistant/authorization.server.ts), [apps/web/src/lib/assistant/context.server.ts](../../apps/web/src/lib/assistant/context.server.ts), [apps/web/src/lib/assistant/page-context.server.ts](../../apps/web/src/lib/assistant/page-context.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/assistant/types.ts](../../apps/web/src/lib/assistant/types.ts), [apps/web/src/lib/berkas-versions.server.ts](../../apps/web/src/lib/berkas-versions.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/context-suggestions-client.ts](../../apps/web/src/lib/context-suggestions-client.ts), [apps/web/src/lib/context-suggestions.server.ts](../../apps/web/src/lib/context-suggestions.server.ts), [apps/web/src/lib/course-analytics.ts](../../apps/web/src/lib/course-analytics.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/file-metadata.ts](../../apps/web/src/lib/file-metadata.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/resources.ts](../../apps/web/src/lib/resources.ts), [apps/web/src/lib/roster-csv.ts](../../apps/web/src/lib/roster-csv.ts), [apps/web/src/lib/rps-draft.ts](../../apps/web/src/lib/rps-draft.ts), [apps/web/src/lib/rps-validation.ts](../../apps/web/src/lib/rps-validation.ts), [apps/web/src/lib/student-progress.server.ts](../../apps/web/src/lib/student-progress.server.ts), [apps/web/src/lib/task-config-draft.server.ts](../../apps/web/src/lib/task-config-draft.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts), [apps/web/src/routes/api.assignment-draft.ts](../../apps/web/src/routes/api.assignment-draft.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts), [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.course-thumbnail.ts](../../apps/web/src/routes/api.course-thumbnail.ts), [apps/web/src/routes/api.feedback-uptake.ts](../../apps/web/src/routes/api.feedback-uptake.ts), [apps/web/src/routes/api.roster-enroll.ts](../../apps/web/src/routes/api.roster-enroll.ts), [apps/web/src/routes/api.roster-language.ts](../../apps/web/src/routes/api.roster-language.ts), [apps/web/src/routes/api.roster-reset-password.ts](../../apps/web/src/routes/api.roster-reset-password.ts), [apps/web/src/routes/api.roster-status.ts](../../apps/web/src/routes/api.roster-status.ts), [apps/web/src/routes/api.rps-assist.ts](../../apps/web/src/routes/api.rps-assist.ts), [apps/web/src/routes/api.student-profile.ts](../../apps/web/src/routes/api.student-profile.ts), [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts), [apps/web/src/routes/app.asisten.tsx](../../apps/web/src/routes/app.asisten.tsx), [apps/web/src/routes/app.berkas.$fileId.tsx](../../apps/web/src/routes/app.berkas.$fileId.tsx), [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx), [apps/web/src/routes/app.latihan.tsx](../../apps/web/src/routes/app.latihan.tsx), [apps/web/src/routes/app.onboarding.tsx](../../apps/web/src/routes/app.onboarding.tsx), [apps/web/src/routes/app.penilaian.tsx](../../apps/web/src/routes/app.penilaian.tsx), [apps/web/src/routes/app.rps.$courseId.tsx](../../apps/web/src/routes/app.rps.$courseId.tsx), [apps/web/src/routes/app.student.tsx](../../apps/web/src/routes/app.student.tsx), [apps/web/src/routes/app.tsx](../../apps/web/src/routes/app.tsx), [apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx), [apps/web/src/routes/app.tugas.$assignmentId.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.tsx), [apps/web/src/routes/app.tugas.buat.tsx](../../apps/web/src/routes/app.tugas.buat.tsx), [apps/web/src/routes/app.tugas.insights.tsx](../../apps/web/src/routes/app.tugas.insights.tsx), [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx), [apps/web/src/routes/course.lesson-plan.tsx](../../apps/web/src/routes/course.lesson-plan.tsx), [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx).
+Imported by: [apps/web/src/components/app/academic-calendar.tsx](../../apps/web/src/components/app/academic-calendar.tsx), [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/assignment-editor-page.tsx](../../apps/web/src/components/app/assignment-editor-page.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assignment-revision-controls.tsx](../../apps/web/src/components/app/assignment-revision-controls.tsx), [apps/web/src/components/app/attendance-manager.tsx](../../apps/web/src/components/app/attendance-manager.tsx), [apps/web/src/components/app/builder/builder-assignment-card.tsx](../../apps/web/src/components/app/builder/builder-assignment-card.tsx), [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-catalog-card.tsx](../../apps/web/src/components/app/course-catalog-card.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-form.tsx](../../apps/web/src/components/app/course-form.tsx), [apps/web/src/components/app/course-info.tsx](../../apps/web/src/components/app/course-info.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-settings.tsx](../../apps/web/src/components/app/course-settings.tsx), [apps/web/src/components/app/course-thumb-dialog.tsx](../../apps/web/src/components/app/course-thumb-dialog.tsx), [apps/web/src/components/app/course-thumb.tsx](../../apps/web/src/components/app/course-thumb.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/difficulty-insights.tsx](../../apps/web/src/components/app/difficulty-insights.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/feedback-uptake-review.tsx](../../apps/web/src/components/app/feedback-uptake-review.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx), [apps/web/src/components/app/global-search.tsx](../../apps/web/src/components/app/global-search.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/lecturer-recommendations.tsx](../../apps/web/src/components/app/lecturer-recommendations.tsx), [apps/web/src/components/app/penilaian-index.tsx](../../apps/web/src/components/app/penilaian-index.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/components/app/personalization-analytics.tsx](../../apps/web/src/components/app/personalization-analytics.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/practice-content-autofill.tsx](../../apps/web/src/components/app/practice-content-autofill.tsx), [apps/web/src/components/app/research-analytics.tsx](../../apps/web/src/components/app/research-analytics.tsx), [apps/web/src/components/app/research-export.tsx](../../apps/web/src/components/app/research-export.tsx), [apps/web/src/components/app/resource-form.tsx](../../apps/web/src/components/app/resource-form.tsx), [apps/web/src/components/app/rps-ai-helper.tsx](../../apps/web/src/components/app/rps-ai-helper.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx), [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/components/app/settings/account-info-section.tsx](../../apps/web/src/components/app/settings/account-info-section.tsx), [apps/web/src/components/app/settings/ai-model-section.tsx](../../apps/web/src/components/app/settings/ai-model-section.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/settings/learner-profile-section.tsx](../../apps/web/src/components/app/settings/learner-profile-section.tsx), [apps/web/src/components/app/settings/profile-section.tsx](../../apps/web/src/components/app/settings/profile-section.tsx), [apps/web/src/components/app/settings/recovery-section.tsx](../../apps/web/src/components/app/settings/recovery-section.tsx), [apps/web/src/components/app/settings/security-section.tsx](../../apps/web/src/components/app/settings/security-section.tsx), [apps/web/src/components/app/settings/usage-section.tsx](../../apps/web/src/components/app/settings/usage-section.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/student-assistant-panel.tsx](../../apps/web/src/components/app/student-assistant-panel.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx), [apps/web/src/components/app/student-onboarding.tsx](../../apps/web/src/components/app/student-onboarding.tsx), [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/student-work-page.tsx](../../apps/web/src/components/app/student-work-page.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-builders/listening-builder.tsx](../../apps/web/src/components/app/task-builders/listening-builder.tsx), [apps/web/src/components/app/task-builders/quiz-source-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-source-builder.tsx), [apps/web/src/components/app/task-builders/task-autofill.tsx](../../apps/web/src/components/app/task-builders/task-autofill.tsx), [apps/web/src/components/app/task-workspaces/check-answer-panel.tsx](../../apps/web/src/components/app/task-workspaces/check-answer-panel.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/reading-workspace.tsx](../../apps/web/src/components/app/task-workspaces/reading-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/components/app/tugas-insights.tsx](../../apps/web/src/components/app/tugas-insights.tsx), [apps/web/src/components/auth/auth-panel.tsx](../../apps/web/src/components/auth/auth-panel.tsx), [apps/web/src/components/auth/login-feature-preview.tsx](../../apps/web/src/components/auth/login-feature-preview.tsx), [apps/web/src/components/site-footer.tsx](../../apps/web/src/components/site-footer.tsx), [apps/web/src/components/site-header.tsx](../../apps/web/src/components/site-header.tsx), [apps/web/src/hooks/use-attendance.ts](../../apps/web/src/hooks/use-attendance.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts), [apps/web/src/hooks/use-course-assignments.ts](../../apps/web/src/hooks/use-course-assignments.ts), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-resources.ts](../../apps/web/src/hooks/use-course-resources.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-route.ts](../../apps/web/src/hooks/use-course-route.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/assistant/authorization.server.ts](../../apps/web/src/lib/assistant/authorization.server.ts), [apps/web/src/lib/assistant/context.server.ts](../../apps/web/src/lib/assistant/context.server.ts), [apps/web/src/lib/assistant/page-context.server.ts](../../apps/web/src/lib/assistant/page-context.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/assistant/types.ts](../../apps/web/src/lib/assistant/types.ts), [apps/web/src/lib/berkas-versions.server.ts](../../apps/web/src/lib/berkas-versions.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/context-suggestions-client.ts](../../apps/web/src/lib/context-suggestions-client.ts), [apps/web/src/lib/context-suggestions.server.ts](../../apps/web/src/lib/context-suggestions.server.ts), [apps/web/src/lib/course-analytics.ts](../../apps/web/src/lib/course-analytics.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/file-library-nav.ts](../../apps/web/src/lib/file-library-nav.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/file-metadata.ts](../../apps/web/src/lib/file-metadata.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/published-listings.ts](../../apps/web/src/lib/published-listings.ts), [apps/web/src/lib/resources.ts](../../apps/web/src/lib/resources.ts), [apps/web/src/lib/roster-csv.ts](../../apps/web/src/lib/roster-csv.ts), [apps/web/src/lib/rps-draft.ts](../../apps/web/src/lib/rps-draft.ts), [apps/web/src/lib/rps-validation.ts](../../apps/web/src/lib/rps-validation.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts), [apps/web/src/lib/student-progress.server.ts](../../apps/web/src/lib/student-progress.server.ts), [apps/web/src/lib/task-config-draft.server.ts](../../apps/web/src/lib/task-config-draft.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts), [apps/web/src/routes/api.assignment-draft.ts](../../apps/web/src/routes/api.assignment-draft.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts), [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.course-thumbnail.ts](../../apps/web/src/routes/api.course-thumbnail.ts), [apps/web/src/routes/api.feedback-uptake.ts](../../apps/web/src/routes/api.feedback-uptake.ts), [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.lesson-plans.ts), [apps/web/src/routes/api.roster-enroll.ts](../../apps/web/src/routes/api.roster-enroll.ts), [apps/web/src/routes/api.roster-language.ts](../../apps/web/src/routes/api.roster-language.ts), [apps/web/src/routes/api.roster-reset-password.ts](../../apps/web/src/routes/api.roster-reset-password.ts), [apps/web/src/routes/api.roster-status.ts](../../apps/web/src/routes/api.roster-status.ts), [apps/web/src/routes/api.rps-assist.ts](../../apps/web/src/routes/api.rps-assist.ts), [apps/web/src/routes/api.student-profile.ts](../../apps/web/src/routes/api.student-profile.ts), [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts), [apps/web/src/routes/app.asisten.tsx](../../apps/web/src/routes/app.asisten.tsx), [apps/web/src/routes/app.berkas.$fileId.tsx](../../apps/web/src/routes/app.berkas.$fileId.tsx), [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx), [apps/web/src/routes/app.latihan.tsx](../../apps/web/src/routes/app.latihan.tsx), [apps/web/src/routes/app.onboarding.tsx](../../apps/web/src/routes/app.onboarding.tsx), [apps/web/src/routes/app.penilaian.tsx](../../apps/web/src/routes/app.penilaian.tsx), [apps/web/src/routes/app.rps.$courseId.tsx](../../apps/web/src/routes/app.rps.$courseId.tsx), [apps/web/src/routes/app.student.tsx](../../apps/web/src/routes/app.student.tsx), [apps/web/src/routes/app.tsx](../../apps/web/src/routes/app.tsx), [apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx), [apps/web/src/routes/app.tugas.$assignmentId.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.tsx), [apps/web/src/routes/app.tugas.buat.tsx](../../apps/web/src/routes/app.tugas.buat.tsx), [apps/web/src/routes/app.tugas.insights.tsx](../../apps/web/src/routes/app.tugas.insights.tsx), [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx), [apps/web/src/routes/course.lesson-plan.tsx](../../apps/web/src/routes/course.lesson-plan.tsx), [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx).
 
 ## lib/lecturer-recommendations.server.ts
 
@@ -3228,7 +4304,7 @@ Package imports: `pocketbase`.
 
 Literal database references: `class_sessions`, `courses`.
 
-Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.lesson-plans.ts).
+Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts), [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.lesson-plans.ts).
 
 ## lib/lesson-plans.ts
 
@@ -3248,13 +4324,49 @@ Exports: `cachedQuery`, `clearAllCache`, `clearUserCache`, `invalidate`, `invali
 
 Local dependencies: [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
 
-Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-form.tsx](../../apps/web/src/components/app/course-form.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-thumb-dialog.tsx](../../apps/web/src/components/app/course-thumb-dialog.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/resource-form.tsx](../../apps/web/src/components/app/resource-form.tsx), [apps/web/src/components/app/rps-ai-helper.tsx](../../apps/web/src/components/app/rps-ai-helper.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx), [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts).
+Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-form.tsx](../../apps/web/src/components/app/course-form.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-thumb-dialog.tsx](../../apps/web/src/components/app/course-thumb-dialog.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/resource-form.tsx](../../apps/web/src/components/app/resource-form.tsx), [apps/web/src/components/app/rps-ai-helper.tsx](../../apps/web/src/components/app/rps-ai-helper.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx), [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/hooks/use-cached-query.ts](../../apps/web/src/hooks/use-cached-query.ts).
 
 ## lib/logger.server.ts
 
 Source: [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts)
 
-Imported by: [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/ai-usage.server.ts](../../apps/web/src/lib/ai-usage.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assistant/attachments.server.ts](../../apps/web/src/lib/assistant/attachments.server.ts), [apps/web/src/lib/assistant/audit.server.ts](../../apps/web/src/lib/assistant/audit.server.ts), [apps/web/src/lib/assistant/logging.server.ts](../../apps/web/src/lib/assistant/logging.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/course-thumbnail.server.ts](../../apps/web/src/lib/course-thumbnail.server.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/lib/lecturer-recommendations.server.ts](../../apps/web/src/lib/lecturer-recommendations.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/rps-ai-extract.server.ts](../../apps/web/src/lib/rps-ai-extract.server.ts), [apps/web/src/lib/rps-assist.server.ts](../../apps/web/src/lib/rps-assist.server.ts), [apps/web/src/lib/rps-pdf-import.server.ts](../../apps/web/src/lib/rps-pdf-import.server.ts), [apps/web/src/lib/rubric-suggestions.server.ts](../../apps/web/src/lib/rubric-suggestions.server.ts), [apps/web/src/lib/student-assistant-tools.server.ts](../../apps/web/src/lib/student-assistant-tools.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/lib/task-config-draft.server.ts](../../apps/web/src/lib/task-config-draft.server.ts), [apps/web/src/lib/transcription.server.ts](../../apps/web/src/lib/transcription.server.ts), [apps/web/src/routes/api.berkas-parse.ts](../../apps/web/src/routes/api.berkas-parse.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts), [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts).
+Imported by: [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/ai-usage.server.ts](../../apps/web/src/lib/ai-usage.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignment-draft.server.ts](../../apps/web/src/lib/assignment-draft.server.ts), [apps/web/src/lib/assistant/attachments.server.ts](../../apps/web/src/lib/assistant/attachments.server.ts), [apps/web/src/lib/assistant/audit.server.ts](../../apps/web/src/lib/assistant/audit.server.ts), [apps/web/src/lib/assistant/grading-tools.server.ts](../../apps/web/src/lib/assistant/grading-tools.server.ts), [apps/web/src/lib/assistant/logging.server.ts](../../apps/web/src/lib/assistant/logging.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/course-thumbnail.server.ts](../../apps/web/src/lib/course-thumbnail.server.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/lib/lecturer-recommendations.server.ts](../../apps/web/src/lib/lecturer-recommendations.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/rps-ai-extract.server.ts](../../apps/web/src/lib/rps-ai-extract.server.ts), [apps/web/src/lib/rps-assist.server.ts](../../apps/web/src/lib/rps-assist.server.ts), [apps/web/src/lib/rps-pdf-import.server.ts](../../apps/web/src/lib/rps-pdf-import.server.ts), [apps/web/src/lib/rubric-suggestions.server.ts](../../apps/web/src/lib/rubric-suggestions.server.ts), [apps/web/src/lib/student-assistant-tools.server.ts](../../apps/web/src/lib/student-assistant-tools.server.ts), [apps/web/src/lib/submission-content.server.ts](../../apps/web/src/lib/submission-content.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/lib/task-config-draft.server.ts](../../apps/web/src/lib/task-config-draft.server.ts), [apps/web/src/lib/transcription.server.ts](../../apps/web/src/lib/transcription.server.ts), [apps/web/src/routes/api.berkas-parse.ts](../../apps/web/src/routes/api.berkas-parse.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts), [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts).
+
+## lib/login-error.ts
+
+Source: [apps/web/src/lib/login-error.ts](../../apps/web/src/lib/login-error.ts)
+
+Exports: `isLoginCredentialError`, `loginErrorMessage`.
+
+Imported by: [apps/web/src/components/auth/auth-panel.tsx](../../apps/web/src/components/auth/auth-panel.tsx).
+
+## lib/media-transcribe.server.ts
+
+Source: [apps/web/src/lib/media-transcribe.server.ts](../../apps/web/src/lib/media-transcribe.server.ts)
+
+Exports: `STT_MAX_BYTES`, `TranscriptionOutcome`, `isAudioExtension`, `isTranscriptionConfigured`, `isVideoExtension`, `transcribeAudio`, `whisperUrl`.
+
+Imported by: [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts).
+
+## lib/office-text.server.ts
+
+Source: [apps/web/src/lib/office-text.server.ts](../../apps/web/src/lib/office-text.server.ts)
+
+Exports: `OFFICE_EXTENSIONS`, `OFFICE_FORMAT_LABEL`, `OfficeFormat`, `extractOfficeText`.
+
+Imported by: [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts).
+
+## lib/pdf-ocr.server.ts
+
+Source: [apps/web/src/lib/pdf-ocr.server.ts](../../apps/web/src/lib/pdf-ocr.server.ts)
+
+Exports: `PdfOcrResult`, `ocrPdf`.
+
+Local dependencies: [apps/web/src/lib/hostinger-model.server.ts](../../apps/web/src/lib/hostinger-model.server.ts).
+
+Package imports: `node:child_process`, `node:fs/promises`, `node:os`, `node:path`, `node:util`.
+
+Imported by: [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts).
 
 ## lib/personal-practice.server.ts
 
@@ -3286,7 +4398,7 @@ Source: [apps/web/src/lib/personalization-analytics.server.ts](../../apps/web/sr
 
 Exports: `PersonalizationAnalyticsData`, `loadPersonalizationAnalytics`.
 
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/personalization-analytics.ts](../../apps/web/src/lib/personalization-analytics.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts).
+Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/personalization-analytics.ts](../../apps/web/src/lib/personalization-analytics.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/lib/researcher-ids.ts](../../apps/web/src/lib/researcher-ids.ts).
 
 Literal database references: `assignment_submissions`, `assignments`, `courses`.
 
@@ -3322,7 +4434,7 @@ Local dependencies: [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/l
 
 Package imports: `pocketbase`.
 
-Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/ai-usage.server.ts](../../apps/web/src/lib/ai-usage.server.ts), [apps/web/src/lib/assistant/attachments.server.ts](../../apps/web/src/lib/assistant/attachments.server.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/berkas-versions.server.ts](../../apps/web/src/lib/berkas-versions.server.ts), [apps/web/src/lib/bulk-paper.server.ts](../../apps/web/src/lib/bulk-paper.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/context-suggestions.server.ts](../../apps/web/src/lib/context-suggestions.server.ts), [apps/web/src/lib/evaluation-annotation.server.ts](../../apps/web/src/lib/evaluation-annotation.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/feedback-uptake.server.ts](../../apps/web/src/lib/feedback-uptake.server.ts), [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/lib/learner-profile.server.ts](../../apps/web/src/lib/learner-profile.server.ts), [apps/web/src/lib/lecturer-recommendations.server.ts](../../apps/web/src/lib/lecturer-recommendations.server.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/personalization-analytics.server.ts](../../apps/web/src/lib/personalization-analytics.server.ts), [apps/web/src/lib/public-drafts.server.ts](../../apps/web/src/lib/public-drafts.server.ts), [apps/web/src/lib/public-linking.server.ts](../../apps/web/src/lib/public-linking.server.ts), [apps/web/src/lib/research-analytics.server.ts](../../apps/web/src/lib/research-analytics.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/lib/research-target.server.ts](../../apps/web/src/lib/research-target.server.ts), [apps/web/src/lib/roster-audit.server.ts](../../apps/web/src/lib/roster-audit.server.ts), [apps/web/src/lib/student-progress.server.ts](../../apps/web/src/lib/student-progress.server.ts), [apps/web/src/lib/transcription.server.ts](../../apps/web/src/lib/transcription.server.ts), [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts), [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.bulk-paper-extract.ts](../../apps/web/src/routes/api.bulk-paper-extract.ts), [apps/web/src/routes/api.bulk-paper-prepare.ts](../../apps/web/src/routes/api.bulk-paper-prepare.ts), [apps/web/src/routes/api.bulk-paper-submit.ts](../../apps/web/src/routes/api.bulk-paper-submit.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.context-material.ts](../../apps/web/src/routes/api.context-material.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts), [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.evaluation-participants.ts](../../apps/web/src/routes/api.evaluation-participants.ts), [apps/web/src/routes/api.evaluation-publish.ts](../../apps/web/src/routes/api.evaluation-publish.ts), [apps/web/src/routes/api.evaluation-result.ts](../../apps/web/src/routes/api.evaluation-result.ts), [apps/web/src/routes/api.evaluation-review.ts](../../apps/web/src/routes/api.evaluation-review.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.lesson-plans.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.recommendations-review.ts](../../apps/web/src/routes/api.recommendations-review.ts), [apps/web/src/routes/api.recovery-email-request-reset.ts](../../apps/web/src/routes/api.recovery-email-request-reset.ts), [apps/web/src/routes/api.recovery-email-request.ts](../../apps/web/src/routes/api.recovery-email-request.ts), [apps/web/src/routes/api.recovery-email-reset-password.ts](../../apps/web/src/routes/api.recovery-email-reset-password.ts), [apps/web/src/routes/api.recovery-email-verify.ts](../../apps/web/src/routes/api.recovery-email-verify.ts), [apps/web/src/routes/api.roster-enroll.ts](../../apps/web/src/routes/api.roster-enroll.ts), [apps/web/src/routes/api.roster-language.ts](../../apps/web/src/routes/api.roster-language.ts), [apps/web/src/routes/api.roster-reset-password.ts](../../apps/web/src/routes/api.roster-reset-password.ts), [apps/web/src/routes/api.roster-status.ts](../../apps/web/src/routes/api.roster-status.ts), [apps/web/src/routes/api.student-password.ts](../../apps/web/src/routes/api.student-password.ts), [apps/web/src/routes/api.student-profile.ts](../../apps/web/src/routes/api.student-profile.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts), [apps/web/src/routes/api.transcribe.ts](../../apps/web/src/routes/api.transcribe.ts).
+Imported by: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/ai-usage.server.ts](../../apps/web/src/lib/ai-usage.server.ts), [apps/web/src/lib/assistant/attachments.server.ts](../../apps/web/src/lib/assistant/attachments.server.ts), [apps/web/src/lib/assistant/runtime.server.ts](../../apps/web/src/lib/assistant/runtime.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/berkas-versions.server.ts](../../apps/web/src/lib/berkas-versions.server.ts), [apps/web/src/lib/bulk-paper.server.ts](../../apps/web/src/lib/bulk-paper.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/context-suggestions.server.ts](../../apps/web/src/lib/context-suggestions.server.ts), [apps/web/src/lib/evaluation-annotation.server.ts](../../apps/web/src/lib/evaluation-annotation.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/feedback-uptake.server.ts](../../apps/web/src/lib/feedback-uptake.server.ts), [apps/web/src/lib/gradebook/commands.server.ts](../../apps/web/src/lib/gradebook/commands.server.ts), [apps/web/src/lib/gradebook/import.server.ts](../../apps/web/src/lib/gradebook/import.server.ts), [apps/web/src/lib/gradebook/publication.server.ts](../../apps/web/src/lib/gradebook/publication.server.ts), [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/lib/learner-profile.server.ts](../../apps/web/src/lib/learner-profile.server.ts), [apps/web/src/lib/lecturer-recommendations.server.ts](../../apps/web/src/lib/lecturer-recommendations.server.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/personalization-analytics.server.ts](../../apps/web/src/lib/personalization-analytics.server.ts), [apps/web/src/lib/research-analytics.server.ts](../../apps/web/src/lib/research-analytics.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/lib/research-target.server.ts](../../apps/web/src/lib/research-target.server.ts), [apps/web/src/lib/roster-audit.server.ts](../../apps/web/src/lib/roster-audit.server.ts), [apps/web/src/lib/student-progress.server.ts](../../apps/web/src/lib/student-progress.server.ts), [apps/web/src/lib/submission-content.server.ts](../../apps/web/src/lib/submission-content.server.ts), [apps/web/src/lib/transcription.server.ts](../../apps/web/src/lib/transcription.server.ts), [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts), [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/api.berkas-process.ts), [apps/web/src/routes/api.berkas-restore.ts](../../apps/web/src/routes/api.berkas-restore.ts), [apps/web/src/routes/api.berkas-snapshot.ts](../../apps/web/src/routes/api.berkas-snapshot.ts), [apps/web/src/routes/api.builder-media.ts](../../apps/web/src/routes/api.builder-media.ts), [apps/web/src/routes/api.bulk-paper-extract.ts](../../apps/web/src/routes/api.bulk-paper-extract.ts), [apps/web/src/routes/api.bulk-paper-prepare.ts](../../apps/web/src/routes/api.bulk-paper-prepare.ts), [apps/web/src/routes/api.bulk-paper-submit.ts](../../apps/web/src/routes/api.bulk-paper-submit.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.context-insights.ts](../../apps/web/src/routes/api.context-insights.ts), [apps/web/src/routes/api.context-material.ts](../../apps/web/src/routes/api.context-material.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts), [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts), [apps/web/src/routes/api.evaluation-participants.ts](../../apps/web/src/routes/api.evaluation-participants.ts), [apps/web/src/routes/api.evaluation-publish.ts](../../apps/web/src/routes/api.evaluation-publish.ts), [apps/web/src/routes/api.evaluation-result.ts](../../apps/web/src/routes/api.evaluation-result.ts), [apps/web/src/routes/api.evaluation-review.ts](../../apps/web/src/routes/api.evaluation-review.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.gradebook-commands.ts](../../apps/web/src/routes/api.gradebook-commands.ts), [apps/web/src/routes/api.gradebook-release.ts](../../apps/web/src/routes/api.gradebook-release.ts), [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.lesson-plans.ts), [apps/web/src/routes/api.recommendations-generate.ts](../../apps/web/src/routes/api.recommendations-generate.ts), [apps/web/src/routes/api.recommendations-review.ts](../../apps/web/src/routes/api.recommendations-review.ts), [apps/web/src/routes/api.recovery-email-request-reset.ts](../../apps/web/src/routes/api.recovery-email-request-reset.ts), [apps/web/src/routes/api.recovery-email-request.ts](../../apps/web/src/routes/api.recovery-email-request.ts), [apps/web/src/routes/api.recovery-email-reset-password.ts](../../apps/web/src/routes/api.recovery-email-reset-password.ts), [apps/web/src/routes/api.recovery-email-verify.ts](../../apps/web/src/routes/api.recovery-email-verify.ts), [apps/web/src/routes/api.roster-enroll.ts](../../apps/web/src/routes/api.roster-enroll.ts), [apps/web/src/routes/api.roster-language.ts](../../apps/web/src/routes/api.roster-language.ts), [apps/web/src/routes/api.roster-reset-password.ts](../../apps/web/src/routes/api.roster-reset-password.ts), [apps/web/src/routes/api.roster-status.ts](../../apps/web/src/routes/api.roster-status.ts), [apps/web/src/routes/api.student-password.ts](../../apps/web/src/routes/api.student-password.ts), [apps/web/src/routes/api.student-profile.ts](../../apps/web/src/routes/api.student-profile.ts), [apps/web/src/routes/api.submission-content-refresh.ts](../../apps/web/src/routes/api.submission-content-refresh.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts), [apps/web/src/routes/api.transcribe.ts](../../apps/web/src/routes/api.transcribe.ts).
 
 ## lib/pocketbase-client.ts
 
@@ -3330,7 +4442,7 @@ Source: [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbas
 
 Package imports: `pocketbase`.
 
-Imported by: [apps/web/src/api/integrated-ai-api.ts](../../apps/web/src/api/integrated-ai-api.ts), [apps/web/src/components/app/academic-calendar.tsx](../../apps/web/src/components/app/academic-calendar.tsx), [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/assignment-editor-page.tsx](../../apps/web/src/components/app/assignment-editor-page.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assignment-revision-controls.tsx](../../apps/web/src/components/app/assignment-revision-controls.tsx), [apps/web/src/components/app/assistant-panel.tsx](../../apps/web/src/components/app/assistant-panel.tsx), [apps/web/src/components/app/bulk-paper-input.tsx](../../apps/web/src/components/app/bulk-paper-input.tsx), [apps/web/src/components/app/check-history.tsx](../../apps/web/src/components/app/check-history.tsx), [apps/web/src/components/app/conversation-practice.tsx](../../apps/web/src/components/app/conversation-practice.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-form.tsx](../../apps/web/src/components/app/course-form.tsx), [apps/web/src/components/app/course-info.tsx](../../apps/web/src/components/app/course-info.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-thumb-dialog.tsx](../../apps/web/src/components/app/course-thumb-dialog.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/feedback-uptake-review.tsx](../../apps/web/src/components/app/feedback-uptake-review.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx), [apps/web/src/components/app/formative-evaluation-review.tsx](../../apps/web/src/components/app/formative-evaluation-review.tsx), [apps/web/src/components/app/global-search.tsx](../../apps/web/src/components/app/global-search.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/lecturer-recommendations.tsx](../../apps/web/src/components/app/lecturer-recommendations.tsx), [apps/web/src/components/app/penilaian-index.tsx](../../apps/web/src/components/app/penilaian-index.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/components/app/personalization-analytics.tsx](../../apps/web/src/components/app/personalization-analytics.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/practice-content-autofill.tsx](../../apps/web/src/components/app/practice-content-autofill.tsx), [apps/web/src/components/app/research-analytics.tsx](../../apps/web/src/components/app/research-analytics.tsx), [apps/web/src/components/app/research-export.tsx](../../apps/web/src/components/app/research-export.tsx), [apps/web/src/components/app/resource-form.tsx](../../apps/web/src/components/app/resource-form.tsx), [apps/web/src/components/app/rps-ai-helper.tsx](../../apps/web/src/components/app/rps-ai-helper.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx), [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/settings/learner-profile-section.tsx](../../apps/web/src/components/app/settings/learner-profile-section.tsx), [apps/web/src/components/app/settings/profile-section.tsx](../../apps/web/src/components/app/settings/profile-section.tsx), [apps/web/src/components/app/settings/recovery-section.tsx](../../apps/web/src/components/app/settings/recovery-section.tsx), [apps/web/src/components/app/settings/security-section.tsx](../../apps/web/src/components/app/settings/security-section.tsx), [apps/web/src/components/app/settings/usage-section.tsx](../../apps/web/src/components/app/settings/usage-section.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/student-assistant-panel.tsx](../../apps/web/src/components/app/student-assistant-panel.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx), [apps/web/src/components/app/student-onboarding.tsx](../../apps/web/src/components/app/student-onboarding.tsx), [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/components/app/student-published-feedback.tsx](../../apps/web/src/components/app/student-published-feedback.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/student-work-page.tsx](../../apps/web/src/components/app/student-work-page.tsx), [apps/web/src/components/app/submission-revision-context.tsx](../../apps/web/src/components/app/submission-revision-context.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-builders/task-autofill.tsx](../../apps/web/src/components/app/task-builders/task-autofill.tsx), [apps/web/src/components/app/task-workspaces/check-answer-panel.tsx](../../apps/web/src/components/app/task-workspaces/check-answer-panel.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/reading-workspace.tsx](../../apps/web/src/components/app/task-workspaces/reading-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/transcript-panel.tsx](../../apps/web/src/components/app/task-workspaces/transcript-panel.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/components/app/tugas-insights.tsx](../../apps/web/src/components/app/tugas-insights.tsx), [apps/web/src/components/auth/auth-panel.tsx](../../apps/web/src/components/auth/auth-panel.tsx), [apps/web/src/hooks/use-attendance.ts](../../apps/web/src/hooks/use-attendance.ts), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/hooks/use-course-assignments.ts](../../apps/web/src/hooks/use-course-assignments.ts), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-resources.ts](../../apps/web/src/hooks/use-course-resources.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-suggestions-client.ts](../../apps/web/src/lib/context-suggestions-client.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/course-thumb.ts](../../apps/web/src/lib/course-thumb.ts), [apps/web/src/lib/difficulty-data.ts](../../apps/web/src/lib/difficulty-data.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/lib/resources.ts](../../apps/web/src/lib/resources.ts), [apps/web/src/lib/transcription.ts](../../apps/web/src/lib/transcription.ts), [apps/web/src/root.tsx](../../apps/web/src/root.tsx), [apps/web/src/routes/app.courses.tsx](../../apps/web/src/routes/app.courses.tsx), [apps/web/src/routes/course.lesson-plan.tsx](../../apps/web/src/routes/course.lesson-plan.tsx), [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx), [apps/web/src/routes/tugas.$token.tsx](../../apps/web/src/routes/tugas.$token.tsx).
+Imported by: [apps/web/src/api/integrated-ai-api.ts](../../apps/web/src/api/integrated-ai-api.ts), [apps/web/src/components/app/academic-calendar.tsx](../../apps/web/src/components/app/academic-calendar.tsx), [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/analytics-index.tsx](../../apps/web/src/components/app/analytics-index.tsx), [apps/web/src/components/app/assignment-editor-page.tsx](../../apps/web/src/components/app/assignment-editor-page.tsx), [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/assignment-revision-controls.tsx](../../apps/web/src/components/app/assignment-revision-controls.tsx), [apps/web/src/components/app/assistant-panel.tsx](../../apps/web/src/components/app/assistant-panel.tsx), [apps/web/src/components/app/builder/builder-class-start.tsx](../../apps/web/src/components/app/builder/builder-class-start.tsx), [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/components/app/builder/builder-media.tsx](../../apps/web/src/components/app/builder/builder-media.tsx), [apps/web/src/components/app/builder/builder-publish-dialog.tsx](../../apps/web/src/components/app/builder/builder-publish-dialog.tsx), [apps/web/src/components/app/builder/builder-run.tsx](../../apps/web/src/components/app/builder/builder-run.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/components/app/bulk-paper-input.tsx](../../apps/web/src/components/app/bulk-paper-input.tsx), [apps/web/src/components/app/check-history.tsx](../../apps/web/src/components/app/check-history.tsx), [apps/web/src/components/app/conversation-practice.tsx](../../apps/web/src/components/app/conversation-practice.tsx), [apps/web/src/components/app/course-analytics.tsx](../../apps/web/src/components/app/course-analytics.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/course-form.tsx](../../apps/web/src/components/app/course-form.tsx), [apps/web/src/components/app/course-info.tsx](../../apps/web/src/components/app/course-info.tsx), [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/course-resources.tsx](../../apps/web/src/components/app/course-resources.tsx), [apps/web/src/components/app/course-roster.tsx](../../apps/web/src/components/app/course-roster.tsx), [apps/web/src/components/app/course-sections.tsx](../../apps/web/src/components/app/course-sections.tsx), [apps/web/src/components/app/course-thumb-dialog.tsx](../../apps/web/src/components/app/course-thumb-dialog.tsx), [apps/web/src/components/app/course-workspace.tsx](../../apps/web/src/components/app/course-workspace.tsx), [apps/web/src/components/app/courses-page.tsx](../../apps/web/src/components/app/courses-page.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/feedback-uptake-review.tsx](../../apps/web/src/components/app/feedback-uptake-review.tsx), [apps/web/src/components/app/file-context.tsx](../../apps/web/src/components/app/file-context.tsx), [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/components/app/file-upload-dialog.tsx](../../apps/web/src/components/app/file-upload-dialog.tsx), [apps/web/src/components/app/file-version-history.tsx](../../apps/web/src/components/app/file-version-history.tsx), [apps/web/src/components/app/formative-evaluation-review.tsx](../../apps/web/src/components/app/formative-evaluation-review.tsx), [apps/web/src/components/app/global-search.tsx](../../apps/web/src/components/app/global-search.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/lecturer-gradebook.tsx](../../apps/web/src/components/app/lecturer-gradebook.tsx), [apps/web/src/components/app/lecturer-recommendations.tsx](../../apps/web/src/components/app/lecturer-recommendations.tsx), [apps/web/src/components/app/penilaian-index.tsx](../../apps/web/src/components/app/penilaian-index.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/components/app/personalization-analytics.tsx](../../apps/web/src/components/app/personalization-analytics.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/practice-content-autofill.tsx](../../apps/web/src/components/app/practice-content-autofill.tsx), [apps/web/src/components/app/research-analytics.tsx](../../apps/web/src/components/app/research-analytics.tsx), [apps/web/src/components/app/research-export.tsx](../../apps/web/src/components/app/research-export.tsx), [apps/web/src/components/app/resource-form.tsx](../../apps/web/src/components/app/resource-form.tsx), [apps/web/src/components/app/rps-ai-helper.tsx](../../apps/web/src/components/app/rps-ai-helper.tsx), [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx), [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/components/app/scheduled-sessions-index.tsx](../../apps/web/src/components/app/scheduled-sessions-index.tsx), [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx), [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx), [apps/web/src/components/app/session-form.tsx](../../apps/web/src/components/app/session-form.tsx), [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx), [apps/web/src/components/app/settings/ai-model-section.tsx](../../apps/web/src/components/app/settings/ai-model-section.tsx), [apps/web/src/components/app/settings/language-section.tsx](../../apps/web/src/components/app/settings/language-section.tsx), [apps/web/src/components/app/settings/learner-profile-section.tsx](../../apps/web/src/components/app/settings/learner-profile-section.tsx), [apps/web/src/components/app/settings/profile-section.tsx](../../apps/web/src/components/app/settings/profile-section.tsx), [apps/web/src/components/app/settings/recovery-section.tsx](../../apps/web/src/components/app/settings/recovery-section.tsx), [apps/web/src/components/app/settings/security-section.tsx](../../apps/web/src/components/app/settings/security-section.tsx), [apps/web/src/components/app/settings/usage-section.tsx](../../apps/web/src/components/app/settings/usage-section.tsx), [apps/web/src/components/app/structured-records.tsx](../../apps/web/src/components/app/structured-records.tsx), [apps/web/src/components/app/student-assistant-panel.tsx](../../apps/web/src/components/app/student-assistant-panel.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx), [apps/web/src/components/app/student-onboarding.tsx](../../apps/web/src/components/app/student-onboarding.tsx), [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/components/app/student-published-feedback.tsx](../../apps/web/src/components/app/student-published-feedback.tsx), [apps/web/src/components/app/student-result-view.tsx](../../apps/web/src/components/app/student-result-view.tsx), [apps/web/src/components/app/student-work-page.tsx](../../apps/web/src/components/app/student-work-page.tsx), [apps/web/src/components/app/submission-revision-context.tsx](../../apps/web/src/components/app/submission-revision-context.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-builders/quiz-source-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-source-builder.tsx), [apps/web/src/components/app/task-builders/task-autofill.tsx](../../apps/web/src/components/app/task-builders/task-autofill.tsx), [apps/web/src/components/app/task-workspaces/check-answer-panel.tsx](../../apps/web/src/components/app/task-workspaces/check-answer-panel.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/reading-workspace.tsx](../../apps/web/src/components/app/task-workspaces/reading-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/transcript-panel.tsx](../../apps/web/src/components/app/task-workspaces/transcript-panel.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/components/app/tugas-insights.tsx](../../apps/web/src/components/app/tugas-insights.tsx), [apps/web/src/components/auth/auth-panel.tsx](../../apps/web/src/components/auth/auth-panel.tsx), [apps/web/src/hooks/use-attendance.ts](../../apps/web/src/hooks/use-attendance.ts), [apps/web/src/hooks/use-auth.ts](../../apps/web/src/hooks/use-auth.ts), [apps/web/src/hooks/use-course-assignments.ts](../../apps/web/src/hooks/use-course-assignments.ts), [apps/web/src/hooks/use-course-records.ts](../../apps/web/src/hooks/use-course-records.ts), [apps/web/src/hooks/use-course-resources.ts](../../apps/web/src/hooks/use-course-resources.ts), [apps/web/src/hooks/use-course-roster.ts](../../apps/web/src/hooks/use-course-roster.ts), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/builder-capability.ts](../../apps/web/src/lib/builder-capability.ts), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/builder-import.ts](../../apps/web/src/lib/builder-import.ts), [apps/web/src/lib/context-suggestions-client.ts](../../apps/web/src/lib/context-suggestions-client.ts), [apps/web/src/lib/course-route.ts](../../apps/web/src/lib/course-route.ts), [apps/web/src/lib/course-thumb.ts](../../apps/web/src/lib/course-thumb.ts), [apps/web/src/lib/difficulty-data.ts](../../apps/web/src/lib/difficulty-data.ts), [apps/web/src/lib/file-library.ts](../../apps/web/src/lib/file-library.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/local-cache.ts](../../apps/web/src/lib/local-cache.ts), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/lib/resources.ts](../../apps/web/src/lib/resources.ts), [apps/web/src/lib/scheduled-class-ai-client.ts](../../apps/web/src/lib/scheduled-class-ai-client.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/transcription.ts](../../apps/web/src/lib/transcription.ts), [apps/web/src/root.tsx](../../apps/web/src/root.tsx), [apps/web/src/routes/app.courses.tsx](../../apps/web/src/routes/app.courses.tsx), [apps/web/src/routes/course.lesson-plan.tsx](../../apps/web/src/routes/course.lesson-plan.tsx), [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx), [apps/web/src/routes/tugas.$token.tsx](../../apps/web/src/routes/tugas.$token.tsx).
 
 ## lib/practice-assist.server.ts
 
@@ -3338,33 +4450,37 @@ Source: [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/prac
 
 Exports: `PracticeAssist`, `PracticeCitation`, `buildPracticeAssist`.
 
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+Local dependencies: [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Imported by: [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts).
 
-## lib/public-drafts.server.ts
+## lib/practice-i18n.ts
 
-Source: [apps/web/src/lib/public-drafts.server.ts](../../apps/web/src/lib/public-drafts.server.ts)
+Source: [apps/web/src/lib/practice-i18n.ts](../../apps/web/src/lib/practice-i18n.ts)
 
-Exports: `PublicSubmissionRow`, `continuationMatches`, `countSubmittedPublic`, `findPublicAssignment`, `findPublicRow`, `publicFileUrl`, `randomContinuationCode`.
+Exports: `practiceSystemMessage`.
 
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+Imported by: [apps/web/src/components/app/conversation-practice.tsx](../../apps/web/src/components/app/conversation-practice.tsx), [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx).
 
-Literal database references: `assignments`, `public_submissions`.
+## lib/published-listings.ts
 
-Imported by: [apps/web/src/lib/public-linking.server.ts](../../apps/web/src/lib/public-linking.server.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.context-check.ts](../../apps/web/src/routes/api.context-check.ts).
+Source: [apps/web/src/lib/published-listings.ts](../../apps/web/src/lib/published-listings.ts)
 
-## lib/public-linking.server.ts
+Exports: `ClassListing`, `TaskListing`, `filterTaskPublications`, `mergeClassPublications`, `mergeTaskPublications`, `publicationClosed`, `publicationPath`, `taskPublicationTotals`.
 
-Source: [apps/web/src/lib/public-linking.server.ts](../../apps/web/src/lib/public-linking.server.ts)
+Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/scheduled-session-workspace.ts](../../apps/web/src/lib/scheduled-session-workspace.ts), [apps/web/src/lib/submission-state.ts](../../apps/web/src/lib/submission-state.ts).
 
-Exports: `LinkOutcome`, `LinkResult`, `LinkSummary`, `linkPublicAnswersForAssignment`, `linkPublicAnswersForCourse`.
+Imported by: [apps/web/src/components/app/builder/builder-assignment-card.tsx](../../apps/web/src/components/app/builder/builder-assignment-card.tsx), [apps/web/src/components/app/scheduled-sessions-index.tsx](../../apps/web/src/components/app/scheduled-sessions-index.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx).
 
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/public-drafts.server.ts](../../apps/web/src/lib/public-drafts.server.ts).
+## lib/quiz-source.ts
 
-Literal database references: `assignment_submissions`, `assignments`, `enrollments`, `public_submissions`, `users`.
+Source: [apps/web/src/lib/quiz-source.ts](../../apps/web/src/lib/quiz-source.ts)
 
-Imported by: [apps/web/src/routes/api.roster-enroll.ts](../../apps/web/src/routes/api.roster-enroll.ts).
+Exports: `QUIZ_SOURCE_LIMITS`, `QuizSourceError`, `QuizSourceMode`, `QuizSourcePage`, `QuizSourceQuestion`, `parseQuizPageRange`, `validateQuizSourcePages`, `validateSourceQuiz`.
+
+Local dependencies: [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+
+Imported by: [apps/web/src/components/app/task-builders/quiz-source-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-source-builder.tsx), [apps/web/src/routes/api.quiz-source.ts](../../apps/web/src/routes/api.quiz-source.ts).
 
 ## lib/rate-limit.server.ts
 
@@ -3374,7 +4490,7 @@ Exports: `RateLimitVerdict`, `clientIdentifier`, `consumeRateLimit`, `createRate
 
 Package imports: `ipaddr.js`, `rate-limiter-flexible`.
 
-Imported by: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/routes/api.agent-tasks.ts](../../apps/web/src/routes/api.agent-tasks.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.personal-practice.ts](../../apps/web/src/routes/api.personal-practice.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts).
+Imported by: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts), [apps/web/src/lib/integrated-ai.server.ts](../../apps/web/src/lib/integrated-ai.server.ts), [apps/web/src/routes/api.agent-tasks.ts](../../apps/web/src/routes/api.agent-tasks.ts), [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts), [apps/web/src/routes/api.personal-practice.ts](../../apps/web/src/routes/api.personal-practice.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts).
 
 ## lib/require-auth.ts
 
@@ -3386,7 +4502,7 @@ Local dependencies: [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/l
 
 Package imports: `react-router`.
 
-Imported by: [apps/web/src/routes/analytics.tsx](../../apps/web/src/routes/analytics.tsx), [apps/web/src/routes/app.asisten.tsx](../../apps/web/src/routes/app.asisten.tsx), [apps/web/src/routes/app.berkas.$fileId.tsx](../../apps/web/src/routes/app.berkas.$fileId.tsx), [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx), [apps/web/src/routes/app.coming.$slug.tsx](../../apps/web/src/routes/app.coming.$slug.tsx), [apps/web/src/routes/app.courses.tsx](../../apps/web/src/routes/app.courses.tsx), [apps/web/src/routes/app.kerja.$assignmentId.tsx](../../apps/web/src/routes/app.kerja.$assignmentId.tsx), [apps/web/src/routes/app.latihan.tsx](../../apps/web/src/routes/app.latihan.tsx), [apps/web/src/routes/app.onboarding.tsx](../../apps/web/src/routes/app.onboarding.tsx), [apps/web/src/routes/app.pengaturan.tsx](../../apps/web/src/routes/app.pengaturan.tsx), [apps/web/src/routes/app.penilaian.tsx](../../apps/web/src/routes/app.penilaian.tsx), [apps/web/src/routes/app.riset.tsx](../../apps/web/src/routes/app.riset.tsx), [apps/web/src/routes/app.rps.$courseId.tsx](../../apps/web/src/routes/app.rps.$courseId.tsx), [apps/web/src/routes/app.student.tsx](../../apps/web/src/routes/app.student.tsx), [apps/web/src/routes/app.tsx](../../apps/web/src/routes/app.tsx), [apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx), [apps/web/src/routes/app.tugas.$assignmentId.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.tsx), [apps/web/src/routes/app.tugas.buat.tsx](../../apps/web/src/routes/app.tugas.buat.tsx), [apps/web/src/routes/app.tugas.insights.tsx](../../apps/web/src/routes/app.tugas.insights.tsx), [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx), [apps/web/src/routes/kalender.tsx](../../apps/web/src/routes/kalender.tsx).
+Imported by: [apps/web/src/routes/analytics.tsx](../../apps/web/src/routes/analytics.tsx), [apps/web/src/routes/app.asisten.tsx](../../apps/web/src/routes/app.asisten.tsx), [apps/web/src/routes/app.berkas.$fileId.tsx](../../apps/web/src/routes/app.berkas.$fileId.tsx), [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx), [apps/web/src/routes/app.builder-import.tsx](../../apps/web/src/routes/app.builder-import.tsx), [apps/web/src/routes/app.builder-new.tsx](../../apps/web/src/routes/app.builder-new.tsx), [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx), [apps/web/src/routes/app.builder-run.tsx](../../apps/web/src/routes/app.builder-run.tsx), [apps/web/src/routes/app.builder.tsx](../../apps/web/src/routes/app.builder.tsx), [apps/web/src/routes/app.coming.$slug.tsx](../../apps/web/src/routes/app.coming.$slug.tsx), [apps/web/src/routes/app.courses.tsx](../../apps/web/src/routes/app.courses.tsx), [apps/web/src/routes/app.kerja.$assignmentId.tsx](../../apps/web/src/routes/app.kerja.$assignmentId.tsx), [apps/web/src/routes/app.latihan.tsx](../../apps/web/src/routes/app.latihan.tsx), [apps/web/src/routes/app.onboarding.tsx](../../apps/web/src/routes/app.onboarding.tsx), [apps/web/src/routes/app.pengaturan.tsx](../../apps/web/src/routes/app.pengaturan.tsx), [apps/web/src/routes/app.penilaian.tsx](../../apps/web/src/routes/app.penilaian.tsx), [apps/web/src/routes/app.riset.tsx](../../apps/web/src/routes/app.riset.tsx), [apps/web/src/routes/app.rps.$courseId.tsx](../../apps/web/src/routes/app.rps.$courseId.tsx), [apps/web/src/routes/app.scheduled-classes.tsx](../../apps/web/src/routes/app.scheduled-classes.tsx), [apps/web/src/routes/app.scheduled-session.tsx](../../apps/web/src/routes/app.scheduled-session.tsx), [apps/web/src/routes/app.student.tsx](../../apps/web/src/routes/app.student.tsx), [apps/web/src/routes/app.tsx](../../apps/web/src/routes/app.tsx), [apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx), [apps/web/src/routes/app.tugas.$assignmentId.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.tsx), [apps/web/src/routes/app.tugas.buat.tsx](../../apps/web/src/routes/app.tugas.buat.tsx), [apps/web/src/routes/app.tugas.insights.tsx](../../apps/web/src/routes/app.tugas.insights.tsx), [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx), [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx), [apps/web/src/routes/kalender.tsx](../../apps/web/src/routes/kalender.tsx).
 
 ## lib/research-analytics.server.ts
 
@@ -3394,7 +4510,7 @@ Source: [apps/web/src/lib/research-analytics.server.ts](../../apps/web/src/lib/r
 
 Exports: `AnalyticsError`, `AnalyticsInput`, `computeResearchAnalytics`.
 
-Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/research-analytics.ts](../../apps/web/src/lib/research-analytics.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts).
+Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/research-analytics.ts](../../apps/web/src/lib/research-analytics.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts), [apps/web/src/lib/researcher-ids.ts](../../apps/web/src/lib/researcher-ids.ts).
 
 Literal database references: `ai_evaluations`, `ai_feedback_items`, `assignments`, `courses`.
 
@@ -3424,9 +4540,9 @@ Imported by: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/w
 
 Source: [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts)
 
-Exports: `ActiveRaterMembership`, `CSV_HEADERS`, `CsvRow`, `EXPORT_RESEARCH_SCHEMA_VERSION`, `ExportError`, `ExportInput`, `PseudonymKind`, `Pseudonymizer`, `RESEARCH_DATASET_VERSION`, `ResearchExport`, `ResolvedAiItemFields`, `ReviewDecision`, `assignParticipantIds`, `buildCsv`, `buildResearchExport`, `computeDatasetSnapshotId`, `createPseudonymizer`, `csvEscape`, `isActiveRater`, `isActiveRaterForAssignment`, `isAuthorizedExporter`, `parseResearcherIds`, `resolveAiItemFields`, `resolveReviewDecision`, `serializeReviewFindings`, `serializeSnapshotProvenance`.
+Exports: `ActiveRaterMembership`, `CSV_HEADERS`, `CsvRow`, `EXPORT_RESEARCH_SCHEMA_VERSION`, `ExportError`, `ExportInput`, `PseudonymKind`, `Pseudonymizer`, `RESEARCH_DATASET_VERSION`, `ResearchExport`, `ResolvedAiItemFields`, `ReviewDecision`, `assignParticipantIds`, `buildCsv`, `buildResearchExport`, `computeDatasetSnapshotId`, `createPseudonymizer`, `csvEscape`, `isActiveRater`, `isActiveRaterForAssignment`, `isAuthorizedExporter`, `resolveAiItemFields`, `resolveReviewDecision`, `serializeReviewFindings`, `serializeSnapshotProvenance`.
 
-Local dependencies: [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/research-annotation.ts](../../apps/web/src/lib/research-annotation.ts), [apps/web/src/lib/research-rater.ts](../../apps/web/src/lib/research-rater.ts).
+Local dependencies: [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/research-annotation.ts](../../apps/web/src/lib/research-annotation.ts), [apps/web/src/lib/research-rater.ts](../../apps/web/src/lib/research-rater.ts), [apps/web/src/lib/researcher-ids.ts](../../apps/web/src/lib/researcher-ids.ts).
 
 Package imports: `node:crypto`.
 
@@ -3460,9 +4576,17 @@ Exports: `ResearchError`, `ResearchTarget`, `ResearchTargetBody`, `loadResearchT
 
 Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/research-rater.ts](../../apps/web/src/lib/research-rater.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
-Literal database references: `assignments`, `research_rater_assignments`.
+Literal database references: `assignment_submissions`, `assignments`, `research_rater_assignments`.
 
 Imported by: [apps/web/src/lib/evaluation-annotation.server.ts](../../apps/web/src/lib/evaluation-annotation.server.ts).
+
+## lib/researcher-ids.ts
+
+Source: [apps/web/src/lib/researcher-ids.ts](../../apps/web/src/lib/researcher-ids.ts)
+
+Exports: `parseResearcherIds`.
+
+Imported by: [apps/web/src/lib/builder-capability.ts](../../apps/web/src/lib/builder-capability.ts), [apps/web/src/lib/feedback-uptake.server.ts](../../apps/web/src/lib/feedback-uptake.server.ts), [apps/web/src/lib/personalization-analytics.server.ts](../../apps/web/src/lib/personalization-analytics.server.ts), [apps/web/src/lib/research-analytics.server.ts](../../apps/web/src/lib/research-analytics.server.ts), [apps/web/src/lib/research-export.server.ts](../../apps/web/src/lib/research-export.server.ts).
 
 ## lib/resources.ts
 
@@ -3632,6 +4756,106 @@ Exports: `EMPTY_SUGGESTED_CRITERIA`, `MAX_RUBRIC_SUGGESTIONS`, `MIN_PROMPT_CHARS
 
 Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/task-builders/rubric-suggestions.tsx](../../apps/web/src/components/app/task-builders/rubric-suggestions.tsx), [apps/web/src/lib/rubric-suggestions.server.ts](../../apps/web/src/lib/rubric-suggestions.server.ts), [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts).
 
+## lib/scheduled-answer-complete.ts
+
+Source: [apps/web/src/lib/scheduled-answer-complete.ts](../../apps/web/src/lib/scheduled-answer-complete.ts)
+
+Exports: `scheduledAnswerComplete`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Imported by: [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/lib/scheduled-student-preview.ts](../../apps/web/src/lib/scheduled-student-preview.ts).
+
+## lib/scheduled-book-reference.ts
+
+Source: [apps/web/src/lib/scheduled-book-reference.ts](../../apps/web/src/lib/scheduled-book-reference.ts)
+
+Exports: `activityBookReference`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Imported by: [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx), [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx), [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx).
+
+## lib/scheduled-class-ai-client.ts
+
+Source: [apps/web/src/lib/scheduled-class-ai-client.ts](../../apps/web/src/lib/scheduled-class-ai-client.ts)
+
+Exports: `scheduledAiRequest`.
+
+Local dependencies: [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-authoring-tools.tsx](../../apps/web/src/components/app/builder/builder-authoring-tools.tsx), [apps/web/src/components/app/scheduled-class-ai-panel.tsx](../../apps/web/src/components/app/scheduled-class-ai-panel.tsx).
+
+## lib/scheduled-class-ai.ts
+
+Source: [apps/web/src/lib/scheduled-class-ai.ts](../../apps/web/src/lib/scheduled-class-ai.ts)
+
+Exports: `AiScheduledActivity`, `ScheduledAcademicContext`, `ScheduledAiDraft`, `ScheduledAiProposal`, `ScheduledOutcome`, `ScheduledSource`, `validateScheduledAiDraft`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-authoring-tools.tsx](../../apps/web/src/components/app/builder/builder-authoring-tools.tsx), [apps/web/src/components/app/scheduled-class-ai-panel.tsx](../../apps/web/src/components/app/scheduled-class-ai-panel.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx), [apps/web/src/components/app/scheduled-material-picker.tsx](../../apps/web/src/components/app/scheduled-material-picker.tsx), [apps/web/src/lib/builder-authoring.ts](../../apps/web/src/lib/builder-authoring.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts).
+
+## lib/scheduled-class-draft.server.ts
+
+Source: [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts)
+
+Exports: `generateScheduledClassDraft`, `meetingAcademicContext`, `scheduledAcademicContext`, `selectedBuilderContext`.
+
+Local dependencies: [apps/web/src/lib/agent-tasks.ts](../../apps/web/src/lib/agent-tasks.ts), [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/ai-usage.server.ts](../../apps/web/src/lib/ai-usage.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/scheduled-class-ai.ts](../../apps/web/src/lib/scheduled-class-ai.ts).
+
+Package imports: `pocketbase`.
+
+Literal database references: `assistant_lesson_plans`, `context_sections`, `courses`, `cpmk`, `file_extractions`, `file_library`, `sub_cpmk`.
+
+Imported by: [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts), [apps/web/src/routes/api.scheduled-class-draft.ts](../../apps/web/src/routes/api.scheduled-class-draft.ts).
+
+## lib/scheduled-classes.ts
+
+Source: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts)
+
+Exports: `ACTIVITY_LABELS`, `ActivityKind`, `Bilingual`, `ClassReportRow`, `GradingSetting`, `ScheduledActivity`, `ScheduledAssessment`, `ScheduledAttempt`, `ScheduledClass`, `ScheduledClassState`, `ScheduledWorksheet`, `WorksheetAnswerKeyEntry`, `WorksheetBlock`, `WorksheetDestination`, `WorksheetSegment`, `fromWibInput`, `scheduledRequest`, `toWibInput`, `wibLabel`.
+
+Local dependencies: [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/scheduled-lesson.ts](../../apps/web/src/lib/scheduled-lesson.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+
+Imported by: [apps/web/src/components/app/builder/builder-class-start.tsx](../../apps/web/src/components/app/builder/builder-class-start.tsx), [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/components/app/scheduled-card-matching.tsx](../../apps/web/src/components/app/scheduled-card-matching.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx), [apps/web/src/components/app/scheduled-class-report.tsx](../../apps/web/src/components/app/scheduled-class-report.tsx), [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/components/app/scheduled-exact-answer-overview.tsx](../../apps/web/src/components/app/scheduled-exact-answer-overview.tsx), [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx), [apps/web/src/components/app/scheduled-lesson-editor.tsx](../../apps/web/src/components/app/scheduled-lesson-editor.tsx), [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx), [apps/web/src/components/app/scheduled-student-preview.tsx](../../apps/web/src/components/app/scheduled-student-preview.tsx), [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx), [apps/web/src/components/app/scheduled-written-answer.tsx](../../apps/web/src/components/app/scheduled-written-answer.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/card-matching.ts](../../apps/web/src/lib/card-matching.ts), [apps/web/src/lib/scheduled-answer-complete.ts](../../apps/web/src/lib/scheduled-answer-complete.ts), [apps/web/src/lib/scheduled-book-reference.ts](../../apps/web/src/lib/scheduled-book-reference.ts), [apps/web/src/lib/scheduled-class-ai.ts](../../apps/web/src/lib/scheduled-class-ai.ts), [apps/web/src/lib/scheduled-session-workspace.ts](../../apps/web/src/lib/scheduled-session-workspace.ts), [apps/web/src/lib/scheduled-student-preview.ts](../../apps/web/src/lib/scheduled-student-preview.ts), [apps/web/src/lib/session-review-verdict.ts](../../apps/web/src/lib/session-review-verdict.ts), [apps/web/src/lib/worksheet-layout.ts](../../apps/web/src/lib/worksheet-layout.ts), [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
+
+## lib/scheduled-lesson.ts
+
+Source: [apps/web/src/lib/scheduled-lesson.ts](../../apps/web/src/lib/scheduled-lesson.ts)
+
+Exports: `BilingualText`, `LessonScene`, `LessonVideo`, `ScheduledLesson`.
+
+Imported by: [apps/web/src/components/app/builder/builder-elements.tsx](../../apps/web/src/components/app/builder/builder-elements.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx), [apps/web/src/components/app/scheduled-dialogue-audio.tsx](../../apps/web/src/components/app/scheduled-dialogue-audio.tsx), [apps/web/src/components/app/scheduled-lesson-editor.tsx](../../apps/web/src/components/app/scheduled-lesson-editor.tsx), [apps/web/src/components/app/scheduled-lesson.tsx](../../apps/web/src/components/app/scheduled-lesson.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+## lib/scheduled-review.ts
+
+Source: [apps/web/src/lib/scheduled-review.ts](../../apps/web/src/lib/scheduled-review.ts)
+
+Exports: `AssessmentPayloadInput`, `GradeDraftState`, `GradingSettingsPayloadInput`, `buildAssessmentPayload`, `buildGradingSettingsPayload`, `buildPublishPayload`, `emptyGradeDraft`, `formatScheduledResponse`, `hydrateGradeDraft`, `validateManualGrade`.
+
+Imported by: [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx).
+
+## lib/scheduled-session-workspace.ts
+
+Source: [apps/web/src/lib/scheduled-session-workspace.ts](../../apps/web/src/lib/scheduled-session-workspace.ts)
+
+Exports: `ASSESSMENT_LABELS`, `ResponseCard`, `SESSION_PHASE_LABELS`, `ScheduledSessionListItem`, `SessionTab`, `assessmentStatus`, `defaultSessionTab`, `manualActivities`, `responseCards`, `sessionWorkspacePath`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Imported by: [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx), [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx), [apps/web/src/components/app/scheduled-sessions-index.tsx](../../apps/web/src/components/app/scheduled-sessions-index.tsx), [apps/web/src/lib/published-listings.ts](../../apps/web/src/lib/published-listings.ts).
+
+## lib/scheduled-student-preview.ts
+
+Source: [apps/web/src/lib/scheduled-student-preview.ts](../../apps/web/src/lib/scheduled-student-preview.ts)
+
+Exports: `previewRequest`, `studentPreview`.
+
+Local dependencies: [apps/web/src/lib/scheduled-answer-complete.ts](../../apps/web/src/lib/scheduled-answer-complete.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Imported by: [apps/web/src/components/app/scheduled-student-preview.tsx](../../apps/web/src/components/app/scheduled-student-preview.tsx).
+
 ## lib/seo.ts
 
 Source: [apps/web/src/lib/seo.ts](../../apps/web/src/lib/seo.ts)
@@ -3640,7 +4864,15 @@ Exports: `SeoArgs`, `SeoInput`, `absoluteUrl`, `seo`, `siteOriginFrom`.
 
 Package imports: `react-router`.
 
-Imported by: [apps/web/src/routes/analytics.tsx](../../apps/web/src/routes/analytics.tsx), [apps/web/src/routes/app.asisten.tsx](../../apps/web/src/routes/app.asisten.tsx), [apps/web/src/routes/app.berkas.$fileId.tsx](../../apps/web/src/routes/app.berkas.$fileId.tsx), [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx), [apps/web/src/routes/app.coming.$slug.tsx](../../apps/web/src/routes/app.coming.$slug.tsx), [apps/web/src/routes/app.courses.tsx](../../apps/web/src/routes/app.courses.tsx), [apps/web/src/routes/app.kerja.$assignmentId.tsx](../../apps/web/src/routes/app.kerja.$assignmentId.tsx), [apps/web/src/routes/app.latihan.tsx](../../apps/web/src/routes/app.latihan.tsx), [apps/web/src/routes/app.onboarding.tsx](../../apps/web/src/routes/app.onboarding.tsx), [apps/web/src/routes/app.pengaturan.tsx](../../apps/web/src/routes/app.pengaturan.tsx), [apps/web/src/routes/app.penilaian.tsx](../../apps/web/src/routes/app.penilaian.tsx), [apps/web/src/routes/app.riset.tsx](../../apps/web/src/routes/app.riset.tsx), [apps/web/src/routes/app.rps.$courseId.tsx](../../apps/web/src/routes/app.rps.$courseId.tsx), [apps/web/src/routes/app.student.tsx](../../apps/web/src/routes/app.student.tsx), [apps/web/src/routes/app.tsx](../../apps/web/src/routes/app.tsx), [apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx), [apps/web/src/routes/app.tugas.$assignmentId.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.tsx), [apps/web/src/routes/app.tugas.buat.tsx](../../apps/web/src/routes/app.tugas.buat.tsx), [apps/web/src/routes/app.tugas.insights.tsx](../../apps/web/src/routes/app.tugas.insights.tsx), [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx), [apps/web/src/routes/course.index.tsx](../../apps/web/src/routes/course.index.tsx), [apps/web/src/routes/course.section.tsx](../../apps/web/src/routes/course.section.tsx), [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx), [apps/web/src/routes/kalender.tsx](../../apps/web/src/routes/kalender.tsx), [apps/web/src/routes/login.tsx](../../apps/web/src/routes/login.tsx), [apps/web/src/routes/lupa-sandi.tsx](../../apps/web/src/routes/lupa-sandi.tsx), [apps/web/src/routes/reset-password.tsx](../../apps/web/src/routes/reset-password.tsx), [apps/web/src/routes/tugas.$token.tsx](../../apps/web/src/routes/tugas.$token.tsx), [apps/web/src/routes/verifikasi-email.tsx](../../apps/web/src/routes/verifikasi-email.tsx).
+Imported by: [apps/web/src/routes/analytics.tsx](../../apps/web/src/routes/analytics.tsx), [apps/web/src/routes/app.asisten.tsx](../../apps/web/src/routes/app.asisten.tsx), [apps/web/src/routes/app.berkas.$fileId.tsx](../../apps/web/src/routes/app.berkas.$fileId.tsx), [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx), [apps/web/src/routes/app.coming.$slug.tsx](../../apps/web/src/routes/app.coming.$slug.tsx), [apps/web/src/routes/app.courses.tsx](../../apps/web/src/routes/app.courses.tsx), [apps/web/src/routes/app.kerja.$assignmentId.tsx](../../apps/web/src/routes/app.kerja.$assignmentId.tsx), [apps/web/src/routes/app.latihan.tsx](../../apps/web/src/routes/app.latihan.tsx), [apps/web/src/routes/app.onboarding.tsx](../../apps/web/src/routes/app.onboarding.tsx), [apps/web/src/routes/app.pengaturan.tsx](../../apps/web/src/routes/app.pengaturan.tsx), [apps/web/src/routes/app.penilaian.tsx](../../apps/web/src/routes/app.penilaian.tsx), [apps/web/src/routes/app.riset.tsx](../../apps/web/src/routes/app.riset.tsx), [apps/web/src/routes/app.rps.$courseId.tsx](../../apps/web/src/routes/app.rps.$courseId.tsx), [apps/web/src/routes/app.student.tsx](../../apps/web/src/routes/app.student.tsx), [apps/web/src/routes/app.tsx](../../apps/web/src/routes/app.tsx), [apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.pratinjau.tsx), [apps/web/src/routes/app.tugas.$assignmentId.tsx](../../apps/web/src/routes/app.tugas.$assignmentId.tsx), [apps/web/src/routes/app.tugas.buat.tsx](../../apps/web/src/routes/app.tugas.buat.tsx), [apps/web/src/routes/app.tugas.insights.tsx](../../apps/web/src/routes/app.tugas.insights.tsx), [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx), [apps/web/src/routes/course.index.tsx](../../apps/web/src/routes/course.index.tsx), [apps/web/src/routes/course.section.tsx](../../apps/web/src/routes/course.section.tsx), [apps/web/src/routes/kalender.tsx](../../apps/web/src/routes/kalender.tsx), [apps/web/src/routes/login.tsx](../../apps/web/src/routes/login.tsx), [apps/web/src/routes/lupa-sandi.tsx](../../apps/web/src/routes/lupa-sandi.tsx), [apps/web/src/routes/reset-password.tsx](../../apps/web/src/routes/reset-password.tsx), [apps/web/src/routes/tugas.$token.tsx](../../apps/web/src/routes/tugas.$token.tsx), [apps/web/src/routes/verifikasi-email.tsx](../../apps/web/src/routes/verifikasi-email.tsx).
+
+## lib/session-clock.ts
+
+Source: [apps/web/src/lib/session-clock.ts](../../apps/web/src/lib/session-clock.ts)
+
+Exports: `sessionClock`.
+
+Imported by: [apps/web/src/components/app/builder/builder-journey-preview.tsx](../../apps/web/src/components/app/builder/builder-journey-preview.tsx), [apps/web/src/components/app/builder/builder-run.tsx](../../apps/web/src/components/app/builder/builder-run.tsx), [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx).
 
 ## lib/session-dates.ts
 
@@ -3653,6 +4885,16 @@ Local dependencies: [apps/web/src/data/academic-calendar.ts](../../apps/web/src/
 Package imports: `date-fns`.
 
 Imported by: [apps/web/src/components/app/session-date-autofill.tsx](../../apps/web/src/components/app/session-date-autofill.tsx).
+
+## lib/session-review-verdict.ts
+
+Source: [apps/web/src/lib/session-review-verdict.ts](../../apps/web/src/lib/session-review-verdict.ts)
+
+Exports: `ResponseVerdict`, `ResponseVerdictCard`, `ReviewTally`, `VerdictTally`, `gradingModeLabel`, `nextManualTarget`, `normalizeAnswer`, `requiresManual`, `responseVerdicts`, `reviewTally`, `verdictTally`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Imported by: [apps/web/src/components/app/scheduled-exact-answer-overview.tsx](../../apps/web/src/components/app/scheduled-exact-answer-overview.tsx), [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx), [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx), [apps/web/src/components/app/scheduled-written-answer.tsx](../../apps/web/src/components/app/scheduled-written-answer.tsx).
 
 ## lib/site-origin.server.ts
 
@@ -3700,13 +4942,23 @@ Source: [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/st
 
 Exports: `AssistantChat`, `AssistantContext`, `AssistantMessage`, `AssistantMode`, `AssistantTurnResult`, `HINT_LEVEL_LABEL`, `MODE_CAPABILITY`, `MODE_DESCRIPTION`, `MODE_KIND`, `MODE_LABEL`, `QUICK_MODES`, `SUBMISSION_STATE_LABEL`, `SubmissionState`, `appendMessages`, `buildAssistantTurn`, `clearChat`, `loadAssistantContext`, `loadChat`, `modeAvailability`, `renderStudentDraft`, `submissionStateOf`.
 
-Local dependencies: [apps/web/src/lib/ai-capabilities.ts](../../apps/web/src/lib/ai-capabilities.ts), [apps/web/src/lib/ai-policy.server.ts](../../apps/web/src/lib/ai-policy.server.ts), [apps/web/src/lib/ai-policy.ts](../../apps/web/src/lib/ai-policy.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/structured-assignment.ts](../../apps/web/src/lib/structured-assignment.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts).
+Local dependencies: [apps/web/src/lib/ai-capabilities.ts](../../apps/web/src/lib/ai-capabilities.ts), [apps/web/src/lib/ai-policy.server.ts](../../apps/web/src/lib/ai-policy.server.ts), [apps/web/src/lib/ai-policy.ts](../../apps/web/src/lib/ai-policy.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/structured-assignment.ts](../../apps/web/src/lib/structured-assignment.ts), [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Package imports: `pocketbase`.
 
 Literal database references: `assignment_submissions`, `student_assistant_chats`.
 
 Imported by: [apps/web/src/components/app/student-assistant-panel.tsx](../../apps/web/src/components/app/student-assistant-panel.tsx), [apps/web/src/lib/student-assistant-tools.server.ts](../../apps/web/src/lib/student-assistant-tools.server.ts), [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts).
+
+## lib/student-dashboard-data.ts
+
+Source: [apps/web/src/lib/student-dashboard-data.ts](../../apps/web/src/lib/student-dashboard-data.ts)
+
+Exports: `DashboardCalendarEvent`, `DashboardClass`, `StudentLiveClass`, `dashboardClasses`, `dashboardWeek`, `jakartaDay`, `orderByDeadline`.
+
+Local dependencies: [apps/web/src/lib/builder-delivery.ts](../../apps/web/src/lib/builder-delivery.ts).
+
+Imported by: [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx).
 
 ## lib/student-feedback.ts
 
@@ -3724,7 +4976,7 @@ Exports: `useStudentHomeText`.
 
 Local dependencies: [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts).
 
-Imported by: [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/student-course-overview.tsx](../../apps/web/src/components/app/student-course-overview.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx).
+Imported by: [apps/web/src/components/app/agent-task-panel.tsx](../../apps/web/src/components/app/agent-task-panel.tsx), [apps/web/src/components/app/course-detail.tsx](../../apps/web/src/components/app/course-detail.tsx), [apps/web/src/components/app/student-courses.tsx](../../apps/web/src/components/app/student-courses.tsx), [apps/web/src/components/app/student-grades.tsx](../../apps/web/src/components/app/student-grades.tsx), [apps/web/src/components/app/student-home-adventure.tsx](../../apps/web/src/components/app/student-home-adventure.tsx).
 
 ## lib/student-onboarding.server.ts
 
@@ -3758,13 +5010,31 @@ Exports: `PRACTICE_SKILLS`, `PracticeSkillId`, `StudentProgress`, `normalizePrac
 
 Imported by: [apps/web/src/components/app/personal-practice.tsx](../../apps/web/src/components/app/personal-practice.tsx), [apps/web/src/lib/personal-practice.server.ts](../../apps/web/src/lib/personal-practice.server.ts), [apps/web/src/lib/personal-practice.ts](../../apps/web/src/lib/personal-practice.ts), [apps/web/src/lib/student-progress.server.ts](../../apps/web/src/lib/student-progress.server.ts), [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx).
 
+## lib/submission-content.server.ts
+
+Source: [apps/web/src/lib/submission-content.server.ts](../../apps/web/src/lib/submission-content.server.ts)
+
+Exports: `ContentRefreshOutcome`, `isPointerOnlyContent`, `refreshSubmissionContent`.
+
+Local dependencies: [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+
+Imported by: [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/routes/api.submission-content-refresh.ts](../../apps/web/src/routes/api.submission-content-refresh.ts).
+
+## lib/submission-state.ts
+
+Source: [apps/web/src/lib/submission-state.ts](../../apps/web/src/lib/submission-state.ts)
+
+Exports: `isCollectedSubmission`, `isOfficiallyGraded`, `needsGrading`.
+
+Imported by: [apps/web/src/components/app/course-dashboard.tsx](../../apps/web/src/components/app/course-dashboard.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/lib/course-analytics.ts](../../apps/web/src/lib/course-analytics.ts), [apps/web/src/lib/published-listings.ts](../../apps/web/src/lib/published-listings.ts).
+
 ## lib/task-assist.server.ts
 
 Source: [apps/web/src/lib/task-assist.server.ts](../../apps/web/src/lib/task-assist.server.ts)
 
 Exports: `ASSIST_KIND_LABEL`, `AssistInput`, `AssistKind`, `ModelProvenance`, `buildTaskAssist`, `collectModel`, `collectModelWithProvenance`, `imageFilenames`, `storedFileUrl`, `submissionImageUrl`.
 
-Local dependencies: [apps/web/src/lib/hostinger-model.server.ts](../../apps/web/src/lib/hostinger-model.server.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts).
+Local dependencies: [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/hostinger-model.server.ts](../../apps/web/src/lib/hostinger-model.server.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts).
 
 Imported by: [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/bulk-paper.server.ts](../../apps/web/src/lib/bulk-paper.server.ts), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/lib/context-suggestions.server.ts](../../apps/web/src/lib/context-suggestions.server.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/lecturer-recommendations.server.ts](../../apps/web/src/lib/lecturer-recommendations.server.ts), [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/practice-assist.server.ts), [apps/web/src/lib/student-assistant-tools.server.ts](../../apps/web/src/lib/student-assistant-tools.server.ts), [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/student-assistant.server.ts), [apps/web/src/routes/api.task-assist.ts](../../apps/web/src/routes/api.task-assist.ts).
 
@@ -3786,7 +5056,7 @@ Exports: `DEFAULT_LISTENING_CONFIG`, `DEFAULT_QUIZ_CONFIG`, `DEFAULT_READING_CON
 
 Local dependencies: [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/structured-assignment.ts](../../apps/web/src/lib/structured-assignment.ts).
 
-Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/formative-practice.tsx](../../apps/web/src/components/app/formative-practice.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/practice-content-autofill.tsx](../../apps/web/src/components/app/practice-content-autofill.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-builders/listening-builder.tsx](../../apps/web/src/components/app/task-builders/listening-builder.tsx), [apps/web/src/components/app/task-builders/quiz-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-builder.tsx), [apps/web/src/components/app/task-builders/reading-builder.tsx](../../apps/web/src/components/app/task-builders/reading-builder.tsx), [apps/web/src/components/app/task-builders/speaking-builder.tsx](../../apps/web/src/components/app/task-builders/speaking-builder.tsx), [apps/web/src/components/app/task-builders/task-autofill.tsx](../../apps/web/src/components/app/task-builders/task-autofill.tsx), [apps/web/src/components/app/task-builders/writing-builder.tsx](../../apps/web/src/components/app/task-builders/writing-builder.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/reading-workspace.tsx](../../apps/web/src/components/app/task-workspaces/reading-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/evaluation-scoring.ts](../../apps/web/src/lib/evaluation-scoring.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/practice-assist.server.ts), [apps/web/src/lib/research-target.server.ts](../../apps/web/src/lib/research-target.server.ts), [apps/web/src/lib/rubric-suggestions.server.ts](../../apps/web/src/lib/rubric-suggestions.server.ts), [apps/web/src/lib/speaking-directions.ts](../../apps/web/src/lib/speaking-directions.ts), [apps/web/src/lib/task-config-draft.server.ts](../../apps/web/src/lib/task-config-draft.server.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts), [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts), [apps/web/src/routes/api.task-assist.ts](../../apps/web/src/routes/api.task-assist.ts), [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts), [apps/web/src/routes/api.transcribe.ts](../../apps/web/src/routes/api.transcribe.ts).
+Imported by: [apps/web/src/components/app/assignment-form.tsx](../../apps/web/src/components/app/assignment-form.tsx), [apps/web/src/components/app/course-assignments.tsx](../../apps/web/src/components/app/course-assignments.tsx), [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/evaluation-workspace.tsx](../../apps/web/src/components/app/evaluation-workspace.tsx), [apps/web/src/components/app/formative-practice.tsx](../../apps/web/src/components/app/formative-practice.tsx), [apps/web/src/components/app/lecturer-assignment-preview.tsx](../../apps/web/src/components/app/lecturer-assignment-preview.tsx), [apps/web/src/components/app/practice-autofill-form.tsx](../../apps/web/src/components/app/practice-autofill-form.tsx), [apps/web/src/components/app/practice-content-autofill.tsx](../../apps/web/src/components/app/practice-content-autofill.tsx), [apps/web/src/components/app/scheduled-class-editor.tsx](../../apps/web/src/components/app/scheduled-class-editor.tsx), [apps/web/src/components/app/submission-task-review.tsx](../../apps/web/src/components/app/submission-task-review.tsx), [apps/web/src/components/app/task-builders/listening-builder.tsx](../../apps/web/src/components/app/task-builders/listening-builder.tsx), [apps/web/src/components/app/task-builders/quiz-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-builder.tsx), [apps/web/src/components/app/task-builders/quiz-source-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-source-builder.tsx), [apps/web/src/components/app/task-builders/reading-builder.tsx](../../apps/web/src/components/app/task-builders/reading-builder.tsx), [apps/web/src/components/app/task-builders/speaking-builder.tsx](../../apps/web/src/components/app/task-builders/speaking-builder.tsx), [apps/web/src/components/app/task-builders/task-autofill.tsx](../../apps/web/src/components/app/task-builders/task-autofill.tsx), [apps/web/src/components/app/task-builders/writing-builder.tsx](../../apps/web/src/components/app/task-builders/writing-builder.tsx), [apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/formative-speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/listening-workspace.tsx](../../apps/web/src/components/app/task-workspaces/listening-workspace.tsx), [apps/web/src/components/app/task-workspaces/quiz-workspace.tsx](../../apps/web/src/components/app/task-workspaces/quiz-workspace.tsx), [apps/web/src/components/app/task-workspaces/reading-workspace.tsx](../../apps/web/src/components/app/task-workspaces/reading-workspace.tsx), [apps/web/src/components/app/task-workspaces/speaking-workspace.tsx](../../apps/web/src/components/app/task-workspaces/speaking-workspace.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx), [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/assistant/tools.server.ts](../../apps/web/src/lib/assistant/tools.server.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/evaluation-scoring.ts](../../apps/web/src/lib/evaluation-scoring.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/practice-assist.server.ts), [apps/web/src/lib/quiz-source.ts](../../apps/web/src/lib/quiz-source.ts), [apps/web/src/lib/research-target.server.ts](../../apps/web/src/lib/research-target.server.ts), [apps/web/src/lib/rubric-suggestions.server.ts](../../apps/web/src/lib/rubric-suggestions.server.ts), [apps/web/src/lib/scheduled-class-ai.ts](../../apps/web/src/lib/scheduled-class-ai.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/lib/speaking-directions.ts](../../apps/web/src/lib/speaking-directions.ts), [apps/web/src/lib/student-assistant.server.ts](../../apps/web/src/lib/student-assistant.server.ts), [apps/web/src/lib/task-config-draft.server.ts](../../apps/web/src/lib/task-config-draft.server.ts), [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.check-answer.ts), [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts), [apps/web/src/routes/api.practice-assist.ts](../../apps/web/src/routes/api.practice-assist.ts), [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts), [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts), [apps/web/src/routes/api.submission-content-refresh.ts](../../apps/web/src/routes/api.submission-content-refresh.ts), [apps/web/src/routes/api.task-assist.ts](../../apps/web/src/routes/api.task-assist.ts), [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts), [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts), [apps/web/src/routes/api.transcribe.ts](../../apps/web/src/routes/api.transcribe.ts).
 
 ## lib/transcription.server.ts
 
@@ -3830,13 +5100,23 @@ Local dependencies: [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), 
 
 Imported by: [apps/web/src/components/app/enrolled-answer-sheet.tsx](../../apps/web/src/components/app/enrolled-answer-sheet.tsx), [apps/web/src/components/app/student-answer-sheet.tsx](../../apps/web/src/components/app/student-answer-sheet.tsx).
 
+## lib/worksheet-layout.ts
+
+Source: [apps/web/src/lib/worksheet-layout.ts](../../apps/web/src/lib/worksheet-layout.ts)
+
+Exports: `WorksheetBlock`, `singleGap`, `worksheetBlocks`, `writingRows`.
+
+Local dependencies: [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts).
+
+Imported by: [apps/web/src/components/app/scheduled-worksheet.tsx](../../apps/web/src/components/app/scheduled-worksheet.tsx).
+
 ## root.tsx
 
 Source: [apps/web/src/root.tsx](../../apps/web/src/root.tsx)
 
 Exports: `ErrorBoundary`, `Layout`, `headers`, `links`, `loader`, `shouldRevalidate`.
 
-Local dependencies: [apps/web/src/components/app/welcome-tour.tsx](../../apps/web/src/components/app/welcome-tour.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/components/editor-overlay-guard.tsx](../../apps/web/src/components/editor-overlay-guard.tsx), [apps/web/src/components/site-footer.tsx](../../apps/web/src/components/site-footer.tsx), [apps/web/src/components/site-header.tsx](../../apps/web/src/components/site-header.tsx), [apps/web/src/horizons-preview-scripts.tsx](../../apps/web/src/horizons-preview-scripts.tsx), [apps/web/src/index.css](../../apps/web/src/index.css), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/site-origin.server.ts](../../apps/web/src/lib/site-origin.server.ts), [apps/web/src/styles/agent-tasks.css](../../apps/web/src/styles/agent-tasks.css), [apps/web/src/styles/dark-overrides.css](../../apps/web/src/styles/dark-overrides.css), [apps/web/src/styles/lesson-plans.css](../../apps/web/src/styles/lesson-plans.css), [apps/web/src/styles/personal-practice.css](../../apps/web/src/styles/personal-practice.css), [apps/web/src/styles/premium-workspace.css](../../apps/web/src/styles/premium-workspace.css), [apps/web/src/styles/student-home.css](../../apps/web/src/styles/student-home.css).
+Local dependencies: [apps/web/src/components/app/welcome-tour.tsx](../../apps/web/src/components/app/welcome-tour.tsx), [apps/web/src/components/confirm-dialog.tsx](../../apps/web/src/components/confirm-dialog.tsx), [apps/web/src/components/editor-overlay-guard.tsx](../../apps/web/src/components/editor-overlay-guard.tsx), [apps/web/src/components/site-footer.tsx](../../apps/web/src/components/site-footer.tsx), [apps/web/src/components/site-header.tsx](../../apps/web/src/components/site-header.tsx), [apps/web/src/horizons-preview-scripts.tsx](../../apps/web/src/horizons-preview-scripts.tsx), [apps/web/src/index.css](../../apps/web/src/index.css), [apps/web/src/lib/pocketbase-client.ts](../../apps/web/src/lib/pocketbase-client.ts), [apps/web/src/lib/site-origin.server.ts](../../apps/web/src/lib/site-origin.server.ts), [apps/web/src/styles/agent-tasks.css](../../apps/web/src/styles/agent-tasks.css), [apps/web/src/styles/dark-overrides.css](../../apps/web/src/styles/dark-overrides.css), [apps/web/src/styles/lesson-plans.css](../../apps/web/src/styles/lesson-plans.css), [apps/web/src/styles/personal-practice.css](../../apps/web/src/styles/personal-practice.css), [apps/web/src/styles/premium-workspace.css](../../apps/web/src/styles/premium-workspace.css), [apps/web/src/styles/readability-pass.css](../../apps/web/src/styles/readability-pass.css), [apps/web/src/styles/redesign-v1.css](../../apps/web/src/styles/redesign-v1.css), [apps/web/src/styles/shared-components.css](../../apps/web/src/styles/shared-components.css), [apps/web/src/styles/student-home.css](../../apps/web/src/styles/student-home.css), [apps/web/src/styles/theme-readability-pass.css](../../apps/web/src/styles/theme-readability-pass.css), [apps/web/src/styles/theme.css](../../apps/web/src/styles/theme.css), [apps/web/src/styles/ui-audit-improvements.css](../../apps/web/src/styles/ui-audit-improvements.css).
 
 Package imports: `react`, `react-router`.
 
@@ -3863,6 +5143,54 @@ Source: [apps/web/src/routes/api.agent-tasks.ts](../../apps/web/src/routes/api.a
 Exports: `action`.
 
 Local dependencies: [apps/web/src/lib/agent-tasks.server.ts](../../apps/web/src/lib/agent-tasks.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/rate-limit.server.ts](../../apps/web/src/lib/rate-limit.server.ts).
+
+## routes/api.ai-model-prefs.ts
+
+Source: [apps/web/src/routes/api.ai-model-prefs.ts](../../apps/web/src/routes/api.ai-model-prefs.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
+
+## routes/api.ai-providers-codex-cancel.ts
+
+Source: [apps/web/src/routes/api.ai-providers-codex-cancel.ts](../../apps/web/src/routes/api.ai-providers-codex-cancel.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
+
+## routes/api.ai-providers-codex-poll.ts
+
+Source: [apps/web/src/routes/api.ai-providers-codex-poll.ts](../../apps/web/src/routes/api.ai-providers-codex-poll.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
+
+## routes/api.ai-providers-codex-start.ts
+
+Source: [apps/web/src/routes/api.ai-providers-codex-start.ts](../../apps/web/src/routes/api.ai-providers-codex-start.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
+
+## routes/api.ai-providers-test.ts
+
+Source: [apps/web/src/routes/api.ai-providers-test.ts](../../apps/web/src/routes/api.ai-providers-test.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
+
+## routes/api.ai-providers.ts
+
+Source: [apps/web/src/routes/api.ai-providers.ts](../../apps/web/src/routes/api.ai-providers.ts)
+
+Exports: `action`, `loader`.
+
+Local dependencies: [apps/web/src/lib/ai/codex-oauth.server.ts](../../apps/web/src/lib/ai/codex-oauth.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
 
 ## routes/api.ai-usage.ts
 
@@ -3920,9 +5248,9 @@ Source: [apps/web/src/routes/api.berkas-process.ts](../../apps/web/src/routes/ap
 
 Exports: `action`.
 
-Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/file-metadata.ts](../../apps/web/src/lib/file-metadata.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/file-metadata.ts](../../apps/web/src/lib/file-metadata.ts), [apps/web/src/lib/hostinger-model.server.ts](../../apps/web/src/lib/hostinger-model.server.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/media-transcribe.server.ts](../../apps/web/src/lib/media-transcribe.server.ts), [apps/web/src/lib/office-text.server.ts](../../apps/web/src/lib/office-text.server.ts), [apps/web/src/lib/pdf-ocr.server.ts](../../apps/web/src/lib/pdf-ocr.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
 
-Package imports: `pdf-parse`, `pocketbase`.
+Package imports: `node:crypto`, `pdf-parse`, `pocketbase`.
 
 Literal database references: `file_extractions`, `file_library`, `users`.
 
@@ -3953,6 +5281,32 @@ Source: [apps/web/src/routes/api.berkas-suggest.ts](../../apps/web/src/routes/ap
 Exports: `action`.
 
 Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/berkas-versions.server.ts](../../apps/web/src/lib/berkas-versions.server.ts), [apps/web/src/lib/context-suggestions.server.ts](../../apps/web/src/lib/context-suggestions.server.ts).
+
+## routes/api.builder-capability.ts
+
+Source: [apps/web/src/routes/api.builder-capability.ts](../../apps/web/src/routes/api.builder-capability.ts)
+
+Exports: `action`, `loader`.
+
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/builder-capability.ts](../../apps/web/src/lib/builder-capability.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
+
+## routes/api.builder-import.ts
+
+Source: [apps/web/src/routes/api.builder-import.ts](../../apps/web/src/routes/api.builder-import.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/builder-import.server.ts](../../apps/web/src/lib/builder-import.server.ts), [apps/web/src/lib/builder-import.ts](../../apps/web/src/lib/builder-import.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
+
+## routes/api.builder-media.ts
+
+Source: [apps/web/src/routes/api.builder-media.ts](../../apps/web/src/routes/api.builder-media.ts)
+
+Exports: `action`, `loader`.
+
+Local dependencies: [apps/web/src/lib/builder-media-ticket.server.ts](../../apps/web/src/lib/builder-media-ticket.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+
+Package imports: `pocketbase`, `react-router`.
 
 ## routes/api.bulk-paper-extract.ts
 
@@ -3990,11 +5344,11 @@ Source: [apps/web/src/routes/api.check-answer.ts](../../apps/web/src/routes/api.
 
 Exports: `action`.
 
-Local dependencies: [apps/web/src/lib/ai-policy.server.ts](../../apps/web/src/lib/ai-policy.server.ts), [apps/web/src/lib/ai-policy.ts](../../apps/web/src/lib/ai-policy.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/lib/check-types.ts](../../apps/web/src/lib/check-types.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/learner-profile.server.ts](../../apps/web/src/lib/learner-profile.server.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/personalization.server.ts](../../apps/web/src/lib/personalization.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/public-drafts.server.ts](../../apps/web/src/lib/public-drafts.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+Local dependencies: [apps/web/src/lib/ai-policy.server.ts](../../apps/web/src/lib/ai-policy.server.ts), [apps/web/src/lib/ai-policy.ts](../../apps/web/src/lib/ai-policy.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/cefr-level.ts](../../apps/web/src/lib/cefr-level.ts), [apps/web/src/lib/check-answer.server.ts](../../apps/web/src/lib/check-answer.server.ts), [apps/web/src/lib/check-types.ts](../../apps/web/src/lib/check-types.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/learner-profile.server.ts](../../apps/web/src/lib/learner-profile.server.ts), [apps/web/src/lib/logger.server.ts](../../apps/web/src/lib/logger.server.ts), [apps/web/src/lib/personalization.server.ts](../../apps/web/src/lib/personalization.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Package imports: `pocketbase`.
 
-Literal database references: `assignment_submissions`, `assignments`, `check_attempts`, `courses`, `personalization_logs`, `public_submissions`, `users`.
+Literal database references: `assignment_submissions`, `assignments`, `check_attempts`, `courses`, `personalization_logs`, `users`.
 
 ## routes/api.context-check.ts
 
@@ -4002,7 +5356,7 @@ Source: [apps/web/src/routes/api.context-check.ts](../../apps/web/src/routes/api
 
 Exports: `action`.
 
-Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/public-drafts.server.ts](../../apps/web/src/lib/public-drafts.server.ts).
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts).
 
 Literal database references: `assignments`.
 
@@ -4044,7 +5398,7 @@ Source: [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/rou
 
 Exports: `action`.
 
-Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts), [apps/web/src/lib/grouped-gradebook.ts](../../apps/web/src/lib/grouped-gradebook.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/gradebook/publication.ts](../../apps/web/src/lib/gradebook/publication.ts), [apps/web/src/lib/gradebook.ts](../../apps/web/src/lib/gradebook.ts), [apps/web/src/lib/grouped-gradebook.ts](../../apps/web/src/lib/grouped-gradebook.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
 
 Literal database references: `enrollments`.
 
@@ -4074,7 +5428,7 @@ Exports: `action`.
 
 Local dependencies: [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
 
-Literal database references: `assignment_submissions`, `assignments`, `public_submissions`.
+Literal database references: `assignment_submissions`, `assignments`.
 
 ## routes/api.evaluation-missed-error.ts
 
@@ -4102,7 +5456,7 @@ Exports: `action`.
 
 Local dependencies: [apps/web/src/lib/ai-evaluation.ts](../../apps/web/src/lib/ai-evaluation.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/evaluation-scoring.ts](../../apps/web/src/lib/evaluation-scoring.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
 
-Literal database references: `ai_evaluations`.
+Literal database references: `ai_evaluations`, `assignment_submissions`.
 
 ## routes/api.evaluation-result.ts
 
@@ -4120,7 +5474,7 @@ Source: [apps/web/src/routes/api.evaluation-review.ts](../../apps/web/src/routes
 
 Exports: `action`.
 
-Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assessment-draft.ts](../../apps/web/src/lib/assessment-draft.ts), [apps/web/src/lib/evaluation-review.server.ts](../../apps/web/src/lib/evaluation-review.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
 
 Literal database references: `ai_evaluations`.
 
@@ -4144,6 +5498,26 @@ Package imports: `pocketbase`.
 
 Literal database references: `ai_feedback`, `assignment_submissions`, `assignments`, `users`.
 
+## routes/api.gradebook-commands.ts
+
+Source: [apps/web/src/routes/api.gradebook-commands.ts](../../apps/web/src/routes/api.gradebook-commands.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/gradebook/commands.server.ts](../../apps/web/src/lib/gradebook/commands.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+
+Literal database references: `courses`, `grade_change_sets`.
+
+## routes/api.gradebook-release.ts
+
+Source: [apps/web/src/routes/api.gradebook-release.ts](../../apps/web/src/routes/api.gradebook-release.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/gradebook/publication.server.ts](../../apps/web/src/lib/gradebook/publication.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+
+Literal database references: `courses`.
+
 ## routes/api.health.ts
 
 Source: [apps/web/src/routes/api.health.ts](../../apps/web/src/routes/api.health.ts)
@@ -4166,7 +5540,7 @@ Source: [apps/web/src/routes/api.lesson-plans.ts](../../apps/web/src/routes/api.
 
 Exports: `action`.
 
-Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/lesson-plans.server.ts](../../apps/web/src/lib/lesson-plans.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts).
 
 Literal database references: `cpmk`, `file_library`, `sub_cpmk`.
 
@@ -4205,6 +5579,18 @@ Exports: `action`.
 Local dependencies: [apps/web/src/lib/ai-policy.server.ts](../../apps/web/src/lib/ai-policy.server.ts), [apps/web/src/lib/ai-policy.ts](../../apps/web/src/lib/ai-policy.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/practice-assist.server.ts](../../apps/web/src/lib/practice-assist.server.ts), [apps/web/src/lib/rate-limit.server.ts](../../apps/web/src/lib/rate-limit.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Literal database references: `assignment_submissions`, `assignments`.
+
+## routes/api.quiz-source.ts
+
+Source: [apps/web/src/routes/api.quiz-source.ts](../../apps/web/src/routes/api.quiz-source.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/ai/model-client.server.ts](../../apps/web/src/lib/ai/model-client.server.ts), [apps/web/src/lib/ai/providers.server.ts](../../apps/web/src/lib/ai/providers.server.ts), [apps/web/src/lib/ai-usage.server.ts](../../apps/web/src/lib/ai-usage.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/feedback.server.ts](../../apps/web/src/lib/feedback.server.ts), [apps/web/src/lib/quiz-source.ts](../../apps/web/src/lib/quiz-source.ts).
+
+Package imports: `node:crypto`.
+
+Literal database references: `courses`.
 
 ## routes/api.recommendations-generate.ts
 
@@ -4288,7 +5674,7 @@ Source: [apps/web/src/routes/api.roster-enroll.ts](../../apps/web/src/routes/api
 
 Exports: `action`.
 
-Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/public-linking.server.ts](../../apps/web/src/lib/public-linking.server.ts), [apps/web/src/lib/roster-audit.server.ts](../../apps/web/src/lib/roster-audit.server.ts).
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/roster-audit.server.ts](../../apps/web/src/lib/roster-audit.server.ts).
 
 Package imports: `node:crypto`, `pocketbase`.
 
@@ -4324,7 +5710,7 @@ Exports: `action`.
 
 Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/student-onboarding.server.ts](../../apps/web/src/lib/student-onboarding.server.ts).
 
-Literal database references: `assignments`, `course_roster`, `courses`, `enrollments`, `public_submissions`, `users`.
+Literal database references: `course_roster`, `courses`, `enrollments`, `users`.
 
 ## routes/api.rps-assist.ts
 
@@ -4355,6 +5741,14 @@ Exports: `action`.
 Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/rubric-suggestions.server.ts](../../apps/web/src/lib/rubric-suggestions.server.ts), [apps/web/src/lib/rubric-suggestions.ts](../../apps/web/src/lib/rubric-suggestions.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
 
 Literal database references: `assignments`.
+
+## routes/api.scheduled-class-draft.ts
+
+Source: [apps/web/src/routes/api.scheduled-class-draft.ts](../../apps/web/src/routes/api.scheduled-class-draft.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/scheduled-class-draft.server.ts](../../apps/web/src/lib/scheduled-class-draft.server.ts).
 
 ## routes/api.student-assistant.ts
 
@@ -4387,6 +5781,16 @@ Exports: `action`.
 Local dependencies: [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/student-onboarding.server.ts](../../apps/web/src/lib/student-onboarding.server.ts), [apps/web/src/lib/student-progress.server.ts](../../apps/web/src/lib/student-progress.server.ts).
 
 Literal database references: `assignment_submissions`, `assignments`, `attendance`, `course_roster`, `courses`, `student_conversation_reflections`, `student_learning_profiles`.
+
+## routes/api.submission-content-refresh.ts
+
+Source: [apps/web/src/routes/api.submission-content-refresh.ts](../../apps/web/src/routes/api.submission-content-refresh.ts)
+
+Exports: `action`.
+
+Local dependencies: [apps/web/src/lib/ai-evaluation.server.ts](../../apps/web/src/lib/ai-evaluation.server.ts), [apps/web/src/lib/api.server.ts](../../apps/web/src/lib/api.server.ts), [apps/web/src/lib/assignments.ts](../../apps/web/src/lib/assignments.ts), [apps/web/src/lib/context-retrieval.server.ts](../../apps/web/src/lib/context-retrieval.server.ts), [apps/web/src/lib/pocketbase-client.server.ts](../../apps/web/src/lib/pocketbase-client.server.ts), [apps/web/src/lib/submission-content.server.ts](../../apps/web/src/lib/submission-content.server.ts), [apps/web/src/lib/task-types.ts](../../apps/web/src/lib/task-types.ts).
+
+Literal database references: `assignment_submissions`, `assignments`.
 
 ## routes/api.task-assist.ts
 
@@ -4462,7 +5866,57 @@ Source: [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berka
 
 Exports: `HydrateFallback`, `clientLoader`, `meta`.
 
-Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/file-library.tsx](../../apps/web/src/components/app/file-library.tsx), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/lib/seo.ts](../../apps/web/src/lib/seo.ts).
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/file-library-v2.tsx](../../apps/web/src/components/app/file-library-v2.tsx), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/lib/seo.ts](../../apps/web/src/lib/seo.ts), [apps/web/src/styles/file-library-filters.css](../../apps/web/src/styles/file-library-filters.css).
+
+Package imports: `react-router`.
+
+## routes/app.builder-import.tsx
+
+Source: [apps/web/src/routes/app.builder-import.tsx](../../apps/web/src/routes/app.builder-import.tsx)
+
+Exports: `HydrateFallback`, `clientLoader`, `meta`.
+
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/lib/builder-import.ts](../../apps/web/src/lib/builder-import.ts), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/styles/builder-workspace.css](../../apps/web/src/styles/builder-workspace.css).
+
+Package imports: `react`, `react-router`.
+
+## routes/app.builder-new.tsx
+
+Source: [apps/web/src/routes/app.builder-new.tsx](../../apps/web/src/routes/app.builder-new.tsx)
+
+Exports: `HydrateFallback`, `clientLoader`, `meta`.
+
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/styles/builder-workspace.css](../../apps/web/src/styles/builder-workspace.css).
+
+Package imports: `react-router`.
+
+## routes/app.builder-preview.tsx
+
+Source: [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx)
+
+Exports: `HydrateFallback`, `clientLoader`, `meta`.
+
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/builder/builder-journey-preview.tsx](../../apps/web/src/components/app/builder/builder-journey-preview.tsx), [apps/web/src/lib/builder-document.ts](../../apps/web/src/lib/builder-document.ts), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/styles/builder-classroom-preview.css](../../apps/web/src/styles/builder-classroom-preview.css), [apps/web/src/styles/builder-workspace.css](../../apps/web/src/styles/builder-workspace.css), [apps/web/src/styles/scheduled-classes.css](../../apps/web/src/styles/scheduled-classes.css), [apps/web/src/styles/scheduled-student-workspace.css](../../apps/web/src/styles/scheduled-student-workspace.css).
+
+Package imports: `react`, `react-router`.
+
+## routes/app.builder-run.tsx
+
+Source: [apps/web/src/routes/app.builder-run.tsx](../../apps/web/src/routes/app.builder-run.tsx)
+
+Exports: `HydrateFallback`, `clientLoader`, `meta`.
+
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/builder/builder-run.tsx](../../apps/web/src/components/app/builder/builder-run.tsx), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/styles/builder-workspace.css](../../apps/web/src/styles/builder-workspace.css).
+
+Package imports: `react-router`.
+
+## routes/app.builder.tsx
+
+Source: [apps/web/src/routes/app.builder.tsx](../../apps/web/src/routes/app.builder.tsx)
+
+Exports: `HydrateFallback`, `clientLoader`, `meta`.
+
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/builder/builder-workspace.tsx](../../apps/web/src/components/app/builder/builder-workspace.tsx), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/styles/builder-workspace.css](../../apps/web/src/styles/builder-workspace.css).
 
 Package imports: `react-router`.
 
@@ -4502,9 +5956,9 @@ Source: [apps/web/src/routes/app.latihan.tsx](../../apps/web/src/routes/app.lati
 
 Exports: `HydrateFallback`, `clientLoader`, `meta`.
 
-Local dependencies: [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/lib/seo.ts](../../apps/web/src/lib/seo.ts).
+Local dependencies: [apps/web/src/components/app/student-practice.tsx](../../apps/web/src/components/app/student-practice.tsx), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/lib/seo.ts](../../apps/web/src/lib/seo.ts).
 
-Package imports: `react-router`.
+Package imports: `react`, `react-router`.
 
 ## routes/app.onboarding.tsx
 
@@ -4542,7 +5996,7 @@ Exports: `HydrateFallback`, `clientLoader`, `meta`.
 
 Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/feedback-uptake-review.tsx](../../apps/web/src/components/app/feedback-uptake-review.tsx), [apps/web/src/components/app/personalization-analytics.tsx](../../apps/web/src/components/app/personalization-analytics.tsx), [apps/web/src/components/app/research-analytics.tsx](../../apps/web/src/components/app/research-analytics.tsx), [apps/web/src/components/app/research-export.tsx](../../apps/web/src/components/app/research-export.tsx), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/lib/seo.ts](../../apps/web/src/lib/seo.ts).
 
-Package imports: `react`, `react-router`.
+Package imports: `react-router`.
 
 ## routes/app.rps.$courseId.tsx
 
@@ -4551,6 +6005,26 @@ Source: [apps/web/src/routes/app.rps.$courseId.tsx](../../apps/web/src/routes/ap
 Exports: `HydrateFallback`, `clientLoader`, `meta`.
 
 Local dependencies: [apps/web/src/components/app/rps-editor-page.tsx](../../apps/web/src/components/app/rps-editor-page.tsx), [apps/web/src/lib/learning.ts](../../apps/web/src/lib/learning.ts), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/lib/seo.ts](../../apps/web/src/lib/seo.ts).
+
+Package imports: `react-router`.
+
+## routes/app.scheduled-classes.tsx
+
+Source: [apps/web/src/routes/app.scheduled-classes.tsx](../../apps/web/src/routes/app.scheduled-classes.tsx)
+
+Exports: `HydrateFallback`, `clientLoader`, `meta`.
+
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/components/app/scheduled-sessions-index.tsx](../../apps/web/src/components/app/scheduled-sessions-index.tsx), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/styles/scheduled-session-workspace.css](../../apps/web/src/styles/scheduled-session-workspace.css).
+
+Package imports: `react-router`.
+
+## routes/app.scheduled-session.tsx
+
+Source: [apps/web/src/routes/app.scheduled-session.tsx](../../apps/web/src/routes/app.scheduled-session.tsx)
+
+Exports: `HydrateFallback`, `clientLoader`, `meta`.
+
+Local dependencies: [apps/web/src/components/app/app-shell.tsx](../../apps/web/src/components/app/app-shell.tsx), [apps/web/src/lib/require-auth.ts](../../apps/web/src/lib/require-auth.ts), [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx), [apps/web/src/styles/scheduled-review-student-sidebar.css](../../apps/web/src/styles/scheduled-review-student-sidebar.css), [apps/web/src/styles/scheduled-session-workspace.css](../../apps/web/src/styles/scheduled-session-workspace.css).
 
 Package imports: `react-router`.
 
@@ -4644,6 +6118,18 @@ Package imports: `lucide-react`, `react`, `react-router`.
 
 Literal database references: `assistant_lesson_plans`, `class_sessions`, `cpmk`, `file_library`, `lesson_plan_revisions`, `sub_cpmk`.
 
+## routes/course.scheduled-class.tsx
+
+Source: [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx)
+
+Exports: `meta`.
+
+Local dependencies: [apps/web/src/components/app/scheduled-classroom.tsx](../../apps/web/src/components/app/scheduled-classroom.tsx), [apps/web/src/components/app/scheduled-lecturer-session.tsx](../../apps/web/src/components/app/scheduled-lecturer-session.tsx), [apps/web/src/components/app/scheduled-student-preview.tsx](../../apps/web/src/components/app/scheduled-student-preview.tsx), [apps/web/src/hooks/use-course-sections.ts](../../apps/web/src/hooks/use-course-sections.ts), [apps/web/src/lib/i18n.ts](../../apps/web/src/lib/i18n.ts), [apps/web/src/lib/scheduled-classes.ts](../../apps/web/src/lib/scheduled-classes.ts), [apps/web/src/styles/scheduled-classes.css](../../apps/web/src/styles/scheduled-classes.css), [apps/web/src/styles/scheduled-review-student-sidebar.css](../../apps/web/src/styles/scheduled-review-student-sidebar.css), [apps/web/src/styles/scheduled-session-workspace.css](../../apps/web/src/styles/scheduled-session-workspace.css), [apps/web/src/styles/scheduled-student-workspace.css](../../apps/web/src/styles/scheduled-student-workspace.css).
+
+Package imports: `react`, `react-router`.
+
+Imported by: [apps/web/src/routes/app.scheduled-session.tsx](../../apps/web/src/routes/app.scheduled-session.tsx).
+
 ## routes/course.section.tsx
 
 Source: [apps/web/src/routes/course.section.tsx](../../apps/web/src/routes/course.section.tsx)
@@ -4684,9 +6170,9 @@ Package imports: `react-router`.
 
 Source: [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx)
 
-Exports: `meta`.
+Exports: `loader`.
 
-Local dependencies: [apps/web/src/components/home/compact-tour.tsx](../../apps/web/src/components/home/compact-tour.tsx), [apps/web/src/components/home/final-cta.tsx](../../apps/web/src/components/home/final-cta.tsx), [apps/web/src/components/home/hero.tsx](../../apps/web/src/components/home/hero.tsx), [apps/web/src/components/home/landing-effects.tsx](../../apps/web/src/components/home/landing-effects.tsx), [apps/web/src/components/home/workspace-preview.tsx](../../apps/web/src/components/home/workspace-preview.tsx), [apps/web/src/lib/seo.ts](../../apps/web/src/lib/seo.ts), [apps/web/src/styles/landing.css](../../apps/web/src/styles/landing.css).
+Package imports: `react-router`.
 
 ## routes/kalender.tsx
 
@@ -4780,6 +6266,42 @@ Source: [apps/web/src/styles/agent-tasks.css](../../apps/web/src/styles/agent-ta
 
 Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
 
+## styles/assessment-clarity.css
+
+Source: [apps/web/src/styles/assessment-clarity.css](../../apps/web/src/styles/assessment-clarity.css)
+
+Imported by: [apps/web/src/components/app/ai-evaluation-review.tsx](../../apps/web/src/components/app/ai-evaluation-review.tsx), [apps/web/src/components/app/student-answer-sheet.tsx](../../apps/web/src/components/app/student-answer-sheet.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx).
+
+## styles/builder-appearance.css
+
+Source: [apps/web/src/styles/builder-appearance.css](../../apps/web/src/styles/builder-appearance.css)
+
+Imported by: [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx).
+
+## styles/builder-classroom-preview.css
+
+Source: [apps/web/src/styles/builder-classroom-preview.css](../../apps/web/src/styles/builder-classroom-preview.css)
+
+Imported by: [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx).
+
+## styles/builder-draft-list.css
+
+Source: [apps/web/src/styles/builder-draft-list.css](../../apps/web/src/styles/builder-draft-list.css)
+
+Imported by: [apps/web/src/components/app/builder/builder-entry.tsx](../../apps/web/src/components/app/builder/builder-entry.tsx).
+
+## styles/builder-responsive.css
+
+Source: [apps/web/src/styles/builder-responsive.css](../../apps/web/src/styles/builder-responsive.css)
+
+Imported by: [apps/web/src/components/app/builder/builder-layout-view.tsx](../../apps/web/src/components/app/builder/builder-layout-view.tsx).
+
+## styles/builder-workspace.css
+
+Source: [apps/web/src/styles/builder-workspace.css](../../apps/web/src/styles/builder-workspace.css)
+
+Imported by: [apps/web/src/components/app/scheduled-sessions-index.tsx](../../apps/web/src/components/app/scheduled-sessions-index.tsx), [apps/web/src/components/app/tugas-board.tsx](../../apps/web/src/components/app/tugas-board.tsx), [apps/web/src/routes/app.builder-import.tsx](../../apps/web/src/routes/app.builder-import.tsx), [apps/web/src/routes/app.builder-new.tsx](../../apps/web/src/routes/app.builder-new.tsx), [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx), [apps/web/src/routes/app.builder-run.tsx](../../apps/web/src/routes/app.builder-run.tsx), [apps/web/src/routes/app.builder.tsx](../../apps/web/src/routes/app.builder.tsx).
+
 ## styles/course-analytics.css
 
 Source: [apps/web/src/styles/course-analytics.css](../../apps/web/src/styles/course-analytics.css)
@@ -4792,11 +6314,21 @@ Source: [apps/web/src/styles/dark-overrides.css](../../apps/web/src/styles/dark-
 
 Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
 
+## styles/file-library-filters.css
+
+Source: [apps/web/src/styles/file-library-filters.css](../../apps/web/src/styles/file-library-filters.css)
+
+Imported by: [apps/web/src/routes/app.berkas.tsx](../../apps/web/src/routes/app.berkas.tsx).
+
+## styles/global-search-palette.css
+
+Source: [apps/web/src/styles/global-search-palette.css](../../apps/web/src/styles/global-search-palette.css)
+
+Imported by: [apps/web/src/components/app/global-search.tsx](../../apps/web/src/components/app/global-search.tsx).
+
 ## styles/landing.css
 
 Source: [apps/web/src/styles/landing.css](../../apps/web/src/styles/landing.css)
-
-Imported by: [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx).
 
 ## styles/lesson-plans.css
 
@@ -4822,15 +6354,117 @@ Source: [apps/web/src/styles/premium-workspace.css](../../apps/web/src/styles/pr
 
 Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
 
+## styles/quiz-source.css
+
+Source: [apps/web/src/styles/quiz-source.css](../../apps/web/src/styles/quiz-source.css)
+
+Imported by: [apps/web/src/components/app/task-builders/quiz-source-builder.tsx](../../apps/web/src/components/app/task-builders/quiz-source-builder.tsx).
+
+## styles/readability-pass.css
+
+Source: [apps/web/src/styles/readability-pass.css](../../apps/web/src/styles/readability-pass.css)
+
+Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
+
+## styles/redesign-v1.css
+
+Source: [apps/web/src/styles/redesign-v1.css](../../apps/web/src/styles/redesign-v1.css)
+
+Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
+
+## styles/scheduled-card-matching.css
+
+Source: [apps/web/src/styles/scheduled-card-matching.css](../../apps/web/src/styles/scheduled-card-matching.css)
+
+Imported by: [apps/web/src/components/app/scheduled-card-matching.tsx](../../apps/web/src/components/app/scheduled-card-matching.tsx).
+
+## styles/scheduled-classes.css
+
+Source: [apps/web/src/styles/scheduled-classes.css](../../apps/web/src/styles/scheduled-classes.css)
+
+Imported by: [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx), [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
+
+## styles/scheduled-lesson.css
+
+Source: [apps/web/src/styles/scheduled-lesson.css](../../apps/web/src/styles/scheduled-lesson.css)
+
+Imported by: [apps/web/src/components/app/scheduled-lesson.tsx](../../apps/web/src/components/app/scheduled-lesson.tsx).
+
+## styles/scheduled-review-overview.css
+
+Source: [apps/web/src/styles/scheduled-review-overview.css](../../apps/web/src/styles/scheduled-review-overview.css)
+
+Imported by: [apps/web/src/components/app/scheduled-review-workspace.tsx](../../apps/web/src/components/app/scheduled-review-workspace.tsx).
+
+## styles/scheduled-review-student-sidebar.css
+
+Source: [apps/web/src/styles/scheduled-review-student-sidebar.css](../../apps/web/src/styles/scheduled-review-student-sidebar.css)
+
+Imported by: [apps/web/src/routes/app.scheduled-session.tsx](../../apps/web/src/routes/app.scheduled-session.tsx), [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
+
+## styles/scheduled-session-workspace.css
+
+Source: [apps/web/src/styles/scheduled-session-workspace.css](../../apps/web/src/styles/scheduled-session-workspace.css)
+
+Imported by: [apps/web/src/routes/app.scheduled-classes.tsx](../../apps/web/src/routes/app.scheduled-classes.tsx), [apps/web/src/routes/app.scheduled-session.tsx](../../apps/web/src/routes/app.scheduled-session.tsx), [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
+
+## styles/scheduled-student-workspace.css
+
+Source: [apps/web/src/styles/scheduled-student-workspace.css](../../apps/web/src/styles/scheduled-student-workspace.css)
+
+Imported by: [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx), [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx).
+
 ## styles/session-roster.css
 
 Source: [apps/web/src/styles/session-roster.css](../../apps/web/src/styles/session-roster.css)
 
 Imported by: [apps/web/src/components/app/session-roster.tsx](../../apps/web/src/components/app/session-roster.tsx).
 
+## styles/shared-components.css
+
+Source: [apps/web/src/styles/shared-components.css](../../apps/web/src/styles/shared-components.css)
+
+Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
+
+## styles/student-dashboard-v2.css
+
+Source: [apps/web/src/styles/student-dashboard-v2.css](../../apps/web/src/styles/student-dashboard-v2.css)
+
+Imported by: [apps/web/src/components/app/student-dashboard.tsx](../../apps/web/src/components/app/student-dashboard.tsx).
+
 ## styles/student-home.css
 
 Source: [apps/web/src/styles/student-home.css](../../apps/web/src/styles/student-home.css)
+
+Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
+
+## styles/student-preview-dock.css
+
+Source: [apps/web/src/styles/student-preview-dock.css](../../apps/web/src/styles/student-preview-dock.css)
+
+Imported by: [apps/web/src/components/app/student-preview-dock.tsx](../../apps/web/src/components/app/student-preview-dock.tsx).
+
+## styles/theme-readability-pass.css
+
+Source: [apps/web/src/styles/theme-readability-pass.css](../../apps/web/src/styles/theme-readability-pass.css)
+
+Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
+
+## styles/theme.css
+
+Source: [apps/web/src/styles/theme.css](../../apps/web/src/styles/theme.css)
+
+Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
+
+## styles/ui-audit-fixes.css
+
+Source: [apps/web/src/styles/ui-audit-fixes.css](../../apps/web/src/styles/ui-audit-fixes.css)
+
+Imported by: [apps/web/src/components/app/course-rail.tsx](../../apps/web/src/components/app/course-rail.tsx), [apps/web/src/components/app/task-workspaces/writing-workspace.tsx](../../apps/web/src/components/app/task-workspaces/writing-workspace.tsx).
+
+## styles/ui-audit-improvements.css
+
+Source: [apps/web/src/styles/ui-audit-improvements.css](../../apps/web/src/styles/ui-audit-improvements.css)
 
 Imported by: [apps/web/src/root.tsx](../../apps/web/src/root.tsx).
 

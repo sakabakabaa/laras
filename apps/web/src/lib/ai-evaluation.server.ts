@@ -184,7 +184,7 @@ const clipLine = (value: unknown, max = 500): string =>
  * stored course data, not model output, so it is safe to show the model as
  * "what was taught"; anything missing is simply left out. Never throws.
  */
-export async function lessonContextOf(assignment: Assignment): Promise<string> {
+export async function lessonContextOf(assignment: Pick<Assignment, 'session' | 'subCpmk'>): Promise<string> {
 	const lines: string[] = [];
 	const add = (label: string, value: unknown, max?: number) => {
 		const text = clipLine(value, max);

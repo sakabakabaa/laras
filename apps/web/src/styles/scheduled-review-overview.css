@@ -182,3 +182,55 @@
 @media (max-width: 720px) {
   .sr-donut-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ── Review redesign: written work first, auto-graded work folded into one line ── */
+.sr-auto-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--ss-border);
+  border-radius: 10px;
+  background: var(--ss-soft);
+}
+.sr-auto-summary > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.sr-auto-summary strong { font-size: 13px; font-weight: 650; color: var(--ss-text); }
+.sr-auto-summary span { font-size: 12px; color: var(--ss-muted); }
+.sr-auto-summary .sr-exact-toggle {
+  width: auto;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  color: var(--ss-accent);
+}
+
+/* The opened overview is a reference: smaller donuts, more per row. */
+.sr-exact-overview .sr-donut-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.sr-exact-overview .sr-donut { width: 64px; height: 64px; }
+.sr-exact-overview .sr-donut-card { padding: 10px 8px; }
+
+/* One accent: the selected activity gets a quiet header marker, not a red frame. */
+.sr-workspace .sr-grading-section.is-current { border-color: var(--ss-border); box-shadow: none; }
+.sr-workspace .sr-activity-block.is-active .sr-activity-head { border-left: 0; padding-left: 0; }
+.sr-workspace .sr-activity-block.is-active .sr-activity-index { background: var(--ss-accent); color: #fff; }
+
+/* Quick grading setup instead of an empty red-outlined box. */
+.sr-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sr-presets .ss-button { width: auto; font-size: 12px; padding: 9px 12px; }
+.sr-presets .ss-button-primary { grid-column: 1 / -1; }
+
+/* AI draft: clearly a suggestion, never styled like a result. */
+.sr-ai { display: grid; gap: 8px; padding: 10px; border: 1px dashed var(--ss-border); border-radius: 10px; }
+.sr-ai > .ss-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; }
+.sr-ai small, .sr-ai-note { font-size: 11px; color: var(--ss-muted); line-height: 1.5; }
+.sr-ai-draft { display: grid; gap: 8px; font-size: 12px; line-height: 1.6; color: var(--ss-text); }
+.sr-ai-draft ul { margin: 0; padding-left: 16px; display: grid; gap: 4px; }
+.sr-ai-draft q { font-style: italic; }
+.sr-ai-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Student list: names wrap instead of truncating. */
+.sr-workspace .sr-students li strong { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
+.sr-workspace .sr-students li small { white-space: normal; }

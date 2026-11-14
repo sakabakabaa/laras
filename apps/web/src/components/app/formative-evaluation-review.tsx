@@ -281,7 +281,6 @@ export function FormativeReviewProvider({
 	enabled = true,
 	assignmentId,
 	identityKey,
-	channel,
 	submissionId,
 	content,
 	feedback,
@@ -294,7 +293,6 @@ export function FormativeReviewProvider({
 	enabled?: boolean;
 	assignmentId: string;
 	identityKey: string;
-	channel: 'enrolled' | 'public';
 	submissionId?: string;
 	content: string;
 	feedback: string;
@@ -384,7 +382,7 @@ export function FormativeReviewProvider({
 					const payload = {
 						assignment: assignmentId,
 						identityKey,
-						channel,
+						channel: 'enrolled',
 						submission: submissionId || '',
 						findings,
 						strengths,

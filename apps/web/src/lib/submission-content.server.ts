@@ -51,7 +51,7 @@ export const isPointerOnlyContent = (content: string): boolean => {
  */
 export async function refreshSubmissionContent(input: {
 	submissionId: string;
-	collection?: 'assignment_submissions' | 'public_submissions';
+	collection?: 'assignment_submissions';
 	kind?: string;
 	force?: boolean;
 }): Promise<ContentRefreshOutcome> {

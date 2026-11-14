@@ -156,7 +156,7 @@ async function loadIndex(userId: string, isStudent: boolean): Promise<SearchItem
 		const courseFilter = courseIds.length
 			? courseIds.map((id) => `course = ${quote(id)}`).join(' || ')
 			: 'id = ""';
-		const [assignments, resources, enrollments, submissions, publics] = await Promise.all([
+		const [assignments, resources, enrollments, submissions] = await Promise.all([
 			pb.collection('assignments').getFullList<{
 				id: string;
 				title: string;
@@ -206,19 +206,6 @@ async function loadIndex(userId: string, isStudent: boolean): Promise<SearchItem
 					sort: '-created',
 				}),
 			),
-			pb
-				.collection('public_submissions')
-				.getFullList<{
-					id: string;
-					assignment: string;
-					participantName: string;
-					nim: string;
-					groupName: string;
-					status: string;
-				}>({
-					sort: '-created',
-				})
-				.catch(() => []),
 		]);
 		const courseName = new Map(courses.map((c) => [c.id, c.title]));
 		const taskName = new Map(assignments.map((a) => [a.id, a]));
@@ -279,18 +266,6 @@ async function loadIndex(userId: string, isStudent: boolean): Promise<SearchItem
 				hint: `${who} \u00b7 ${sub.status || 'terkumpul'}`,
 				href: task ? `/app/tugas/${task.id}` : '/app/tugas',
 				haystack: `${task?.title || ''} ${who} ${sub.content || ''} ${sub.status}`,
-			});
-		}
-		for (const pub of publics.filter((p) => ownedTasks.has(p.assignment))) {
-			const task = taskName.get(pub.assignment);
-			const who = pub.participantName || pub.groupName || 'Peserta publik';
-			items.push({
-				id: `p-${pub.id}`,
-				group: 'submissions',
-				title: task?.title || 'Pengumpulan publik',
-				hint: `${who}${pub.nim ? ` \u00b7 ${pub.nim}` : ''} \u00b7 publik`,
-				href: task ? `/app/tugas/${task.id}` : '/app/tugas',
-				haystack: `${task?.title || ''} ${who} ${pub.nim} ${pub.groupName}`,
 			});
 		}
 	}

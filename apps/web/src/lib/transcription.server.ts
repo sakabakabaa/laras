@@ -15,7 +15,7 @@
  * - No grade, feedback, or submission status is ever written — only the
  *   transcript fields. The audio itself is never modified.
  * - Only enrolled speaking submissions are transcribed (the recorder is
- *   enrolled-student-only). Public submissions keep their existing flow.
+ *   enrolled-student-only).
  */
 import logger from '@/lib/logger.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';

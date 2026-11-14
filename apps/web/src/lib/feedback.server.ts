@@ -107,7 +107,7 @@ const imageUnreadable = (name: string) =>
 
 /** Pull readable text / visual description from stored files. Does not guess. */
 export async function extractStoredFiles(input: {
-	collection: 'assignment_submissions' | 'public_submissions';
+	collection: 'assignment_submissions';
 	recordId: string;
 	files: string[];
 	/** Task kind the check belongs to — adapts audio/video notes (Phase 6). */

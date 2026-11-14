@@ -364,7 +364,7 @@ export function FeedbackUptakeReview() {
 										<span>
 											<strong>{p.participantName}</strong>
 											<small>
-												{p.channel === 'public' ? 'Publik' : 'Terdaftar'} · {p.attempts.length}{' '}
+												{p.attempts.length}{' '}
 												cek
 											</small>
 										</span>

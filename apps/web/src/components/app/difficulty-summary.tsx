@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { BarChart3, LoaderCircle } from 'lucide-react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { channelOf, useDifficultyData } from '@/lib/difficulty-data';
+import { useDifficultyData } from '@/lib/difficulty-data';
 import type { Assignment } from '@/lib/assignments';
 
 /** Slice palette for the compact summary donuts — brand red first, then readable companions. */
@@ -35,7 +35,6 @@ export function DifficultySummary({ assignments }: { assignments: Assignment[] }
 		const areaMap = new Map<string, { label: string; n: number }>();
 		const levels = { 1: 0, 2: 0, 3: 0, none: 0 };
 		const checksByKey = new Map<string, number>();
-		const channelCounts = { enrolled: 0, public: 0 };
 
 		for (const a of attempts) {
 			const label = a.area.trim().replace(/\s+/g, ' ') || NO_AREA;
@@ -48,7 +47,6 @@ export function DifficultySummary({ assignments }: { assignments: Assignment[] }
 			else levels.none += 1;
 
 			checksByKey.set(a.identityKey, (checksByKey.get(a.identityKey) || 0) + 1);
-			channelCounts[channelOf(a)] += 1;
 		}
 
 		const total = attempts.length;
@@ -79,11 +77,6 @@ export function DifficultySummary({ assignments }: { assignments: Assignment[] }
 			.filter((b) => b.n > 0)
 			.map((b) => ({ name: b.name, value: b.n }));
 
-		const channelData: Slice[] = [
-			{ name: 'Peserta terdaftar', value: channelCounts.enrolled },
-			{ name: 'Peserta publik', value: channelCounts.public },
-		].filter((row) => row.value > 0);
-
 		return [
 			{
 				key: 'area',
@@ -105,13 +98,6 @@ export function DifficultySummary({ assignments }: { assignments: Assignment[] }
 				center: String(participants),
 				centerLabel: 'peserta',
 				data: checksData,
-			},
-			{
-				key: 'channel',
-				title: 'Jenis peserta',
-				center: String(total),
-				centerLabel: 'pemeriksaan',
-				data: channelData,
 			},
 		];
 	}, [attempts]);

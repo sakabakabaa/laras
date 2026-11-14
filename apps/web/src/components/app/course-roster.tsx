@@ -11,7 +11,6 @@ import {
 	History,
 	KeyRound,
 	Layers,
-	Link2,
 	LoaderCircle,
 	MailCheck,
 	Pencil,
@@ -55,7 +54,6 @@ type ActivateResult = {
 		reused: number;
 		alreadyEnrolled: number;
 		errors: number;
-		linkedPublicAnswers?: { total: number; linked: number; skipped: number; conflict: number; errors: number };
 	};
 };
 
@@ -70,7 +68,6 @@ type RosterStatusEntry = {
 	mustChangePassword: boolean;
 	recoveryEmail: string;
 	recoveryEmailVerified: boolean;
-	linkedPublicCount: number;
 	language: string;
 };
 
@@ -1020,11 +1017,6 @@ function RosterStatusBadges({
 					<MailCheck size={12} /> {t('roster.noEmail')}
 				</span>
 			)}
-			{status.linkedPublicCount > 0 && (
-				<span className="roster-status-pill info">
-					<Link2 size={12} /> {t('roster.publicLinksCount', { count: String(status.linkedPublicCount) })}
-				</span>
-			)}
 		</div>
 	);
 }
@@ -1630,25 +1622,6 @@ function RosterActivate({
 						</span>
 					)}
 				</div>
-
-				{summary.linkedPublicAnswers && summary.linkedPublicAnswers.total > 0 && (
-					<div className="roster-activate-linked">
-						<Link2 size={15} />
-						<div>
-							<strong>{t('roster.linkedPublicCount', { count: String(summary.linkedPublicAnswers.linked) })}</strong>
-							<span>
-								{t('roster.linkedPublicBody')}
-								{summary.linkedPublicAnswers.skipped > 0 &&
-									t('roster.linkedSkipped', { count: String(summary.linkedPublicAnswers.skipped) })}
-								{summary.linkedPublicAnswers.conflict > 0 &&
-									t('roster.linkedConflict', { count: String(summary.linkedPublicAnswers.conflict) })}
-								{summary.linkedPublicAnswers.errors > 0 &&
-									t('roster.linkedErrors', { count: String(summary.linkedPublicAnswers.errors) })}
-								{t('roster.linkedPublicTail')}
-							</span>
-						</div>
-					</div>
-				)}
 
 				{created.length > 0 && (
 					<>

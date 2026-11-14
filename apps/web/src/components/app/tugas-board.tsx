@@ -1,5 +1,5 @@
 import {BuilderAssignmentCard} from './builder/builder-assignment-card';
-import { mergeSubmissionChannels, isCollectedSubmission, isOfficiallyGraded } from '@/lib/submission-state';
+import { isCollectedSubmission, isOfficiallyGraded } from '@/lib/submission-state';
 import { useEffect, useMemo, useState } from 'react';
 import {BuilderDraftList} from './builder/builder-entry';
 import '@/styles/builder-workspace.css';
@@ -26,7 +26,6 @@ import {deliveryRequest,type BuilderRunItem} from '@/lib/builder-delivery';
 import {filterTaskPublications,mergeTaskPublications,taskPublicationTotals} from '@/lib/published-listings';
 
 type Row = {
- linkedSubmission?: string;
 	id: string;
 	assignment: string;
 	status: string;
@@ -56,7 +55,6 @@ export function TugasBoard() {
 	const [assignments, setAssignments] = useState<Assignment[]>([]);
 	const [courses, setCourses] = useState<Course[]>([]);
 	const [subs, setSubs] = useState<Row[]>([]);
-	const [pubs, setPubs] = useState<Row[]>([]);
 	const [checks, setChecks] = useState<CheckRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
@@ -88,7 +86,7 @@ export function TugasBoard() {
 		setLoading(true);
 		void (async () => {
 			try {
-				const [courseRows, assignmentRows, subRows, pubRows, checkRows] = await Promise.all([
+				const [courseRows, assignmentRows, subRows, checkRows] = await Promise.all([
 					pb.collection('courses').getFullList<Course>({ sort: 'title' }),
 					pb.collection('assignments').getFullList<Assignment>({
 						filter: pb.filter('owner = {:id}', { id: me }),
@@ -96,10 +94,7 @@ export function TugasBoard() {
 						expand: 'session,subCpmk,parentAssignment',
 					}),
 					pb.collection('assignment_submissions').getFullList<Row>({
-						fields: 'id,assignment,status,grade,linkedSubmission',
-					}),
-					pb.collection('public_submissions').getFullList<Row>({
-						fields: 'id,assignment,status,grade,linkedSubmission',
+						fields: 'id,assignment,status,grade',
 					}),
 					pb.collection('check_attempts').getFullList<CheckRow>({
 						fields: 'id,assignment,identityKey',
@@ -109,7 +104,6 @@ export function TugasBoard() {
 				setCourses(courseRows.filter((c) => c.owner === me));
 				setAssignments(assignmentRows);
 				setSubs(subRows);
-				setPubs(pubRows);
 				setChecks(checkRows);
 			} catch {
 				if (alive) setError('Daftar tugas gagal dimuat. Muat ulang halaman.');
@@ -131,7 +125,7 @@ export function TugasBoard() {
 	const listings=useMemo(()=>mergeTaskPublications(assignments,publications.data?.items||[],courses),[assignments,publications.data,courses]);
 	const visible=useMemo(()=>filterTaskPublications(listings,{courseId,type:typeFilter,search:query}),[listings,courseId,typeFilter,query]);
 
-	const totals=useMemo(()=>taskPublicationTotals(visible,mergeSubmissionChannels(subs,pubs)),[visible,subs,pubs]);
+	const totals=useMemo(()=>taskPublicationTotals(visible,subs),[visible,subs]);
 
 	if (loading || publications.loading) {
 		return (
@@ -300,7 +294,7 @@ export function TugasBoard() {
 									const a=item.assignment;
 									const course = courses.find((c) => c.id === a.course);
 									const formative = activityTypeOf(a) === 'formative';
-									const mine = mergeSubmissionChannels(subs, pubs).filter((s) => s.assignment === a.id);
+									const mine = subs.filter((s) => s.assignment === a.id);
 									const collected = mine.filter(isCollectedSubmission);
 									const graded = collected.filter(isOfficiallyGraded);
 									const myChecks = checks.filter((c) => c.assignment === a.id);

@@ -227,7 +227,6 @@ export function FormativePractice({
 						checkEnabled: assignment.checkEnabled,
 						checkMax: assignment.checkMax,
 					}}
-					channel="enrolled"
 					buildResponse={buildResponse}
 				/>
 			)}

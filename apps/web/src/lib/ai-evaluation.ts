@@ -501,7 +501,6 @@ export type AiEvaluationRow = {
 	id: string;
 	assignment: string;
 	submission: string;
-	publicSubmission: string;
 	status: 'pending' | 'ready' | 'failed' | '';
 	result: 'sufficient' | 'insufficient' | '';
 	reason: string;

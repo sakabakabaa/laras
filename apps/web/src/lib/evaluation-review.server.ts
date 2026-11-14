@@ -1,6 +1,6 @@
 /**
  * Phase 2/3 (evaluasi dosen) — shared server helpers for the lecturer review
- * and publish routes: target loading (authentication, ownership, channel,
+ * and publish routes: target loading (authentication, ownership,
  * formality) and findings validation against the student's own submitted
  * text. Both routes enforce the exact same rules, so what the lecturer
  * reviews is exactly what can be published.
@@ -22,7 +22,6 @@ const STATUSES: ReviewStatus[] = ['pending', 'approved', 'edited', 'rejected', '
 export type EvaluationTarget = {
 	user: { id: string; role?: string };
 	assignment: Assignment;
-	channel: 'enrolled' | 'public';
 	recordId: string;
 	content: string;
 	submissionStatus: string;
@@ -44,26 +43,18 @@ export type TargetError = { status: number; message: string };
  */
 export async function loadEvaluationTarget(
 	request: Request,
-	body: { submissionId?: unknown; publicSubmissionId?: unknown },
+	body: { submissionId?: unknown },
 ): Promise<{ error: TargetError } | { target: EvaluationTarget }> {
 	const auth = await authenticateUser(request);
 	if ('error' in auth) return { error: auth.error };
 
 	const submissionId = typeof body.submissionId === 'string' ? body.submissionId.trim() : '';
-	const publicSubmissionId =
-		typeof body.publicSubmissionId === 'string' ? body.publicSubmissionId.trim() : '';
-	if (!SAFE_ID.test(submissionId) && !SAFE_ID.test(publicSubmissionId)) {
-		return {
-			error: {
-				status: 422,
-				message: 'submissionId atau publicSubmissionId wajib dan harus valid.',
-			},
-		};
+	if (!SAFE_ID.test(submissionId)) {
+		return { error: { status: 422, message: 'submissionId wajib dan harus valid.' } };
 	}
 
-	const channel: 'enrolled' | 'public' = submissionId ? 'enrolled' : 'public';
-	const recordId = submissionId || publicSubmissionId;
-	const collection = channel === 'enrolled' ? 'assignment_submissions' : 'public_submissions';
+	const recordId = submissionId;
+	const collection = 'assignment_submissions';
 
 	let assignmentId = '';
 	let content = '';
@@ -115,8 +106,6 @@ export async function loadEvaluationTarget(
 
 	// Phase 4 — for speaking tasks the approved transcript is the evidence
 	// text the lecturer annotates and the server validates quotes against.
-	// Public speaking submissions have no transcript (enrolled-only feature),
-	// so their content stays empty and quoted findings are rejected.
 	if (taskKindForShape(assignment.shape) === 'speaking') {
 		content = transcriptStatus === 'ready' ? transcript : '';
 	}
@@ -126,7 +115,6 @@ export async function loadEvaluationTarget(
 		target: {
 			user: { id: auth.user.id, role: auth.user.role },
 			assignment,
-			channel,
 			recordId,
 			content,
 			submissionStatus,

@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import PocketBase from 'pocketbase';
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
-import { linkPublicAnswersForCourse } from '@/lib/public-linking.server';
 import {
 	logRosterAudit,
 	logRosterAuditBatch,
@@ -166,7 +165,6 @@ export const action = withApi(async ({ request }) => {
 		return json({
 			results: [] as Outcome[],
 			summary: { total: 0, created: 0, reused: 0, alreadyEnrolled: 0, errors: 0 },
-			linkedPublicAnswers: { total: 0, linked: 0, skipped: 0, conflict: 0, errors: 0 },
 		});
 	}
 
@@ -290,21 +288,8 @@ export const action = withApi(async ({ request }) => {
 	});
 	await logRosterAuditBatch(auditEntries);
 
-	// Phase 4 — now that accounts exist and students are enrolled, link any
-	// existing public-link answers whose NIM matches a newly enrolled student.
-	// Failures here never break the activation flow; the lecturer can retry
-	// linking separately from the evaluation workspace.
-	let linkedPublicAnswers = { total: 0, linked: 0, skipped: 0, conflict: 0, errors: 0 };
-	try {
-		const linked = await linkPublicAnswersForCourse(courseId);
-		linkedPublicAnswers = linked.summary;
-	} catch {
-		/* non-fatal — activation already succeeded */
-	}
-
 	return json({
 		results,
 		summary: { total: roster.items.length, created, reused, alreadyEnrolled, errors },
-		linkedPublicAnswers,
 	});
 });

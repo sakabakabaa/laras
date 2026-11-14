@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { BarChart3, LoaderCircle } from 'lucide-react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { channelOf, useDifficultyData, type DifficultyChannel } from '@/lib/difficulty-data';
+import { useDifficultyData } from '@/lib/difficulty-data';
 import { CHECK_LEVEL_LABEL } from '@/lib/check-types';
 import type { Assignment } from '@/lib/assignments';
 import type { Course } from '@/lib/learning';
 
-type Channel = DifficultyChannel;
 type StatusFilter = 'all' | 'collected' | 'pending' | 'late' | 'graded';
 
 const NO_AREA = '(area tidak tercatat)';
@@ -46,7 +45,6 @@ export function DifficultyInsights({
 }) {
 	const { attempts, statusByKey, error } = useDifficultyData(assignments);
 	const [assignmentFilter, setAssignmentFilter] = useState('all');
-	const [channelFilter, setChannelFilter] = useState<'all' | Channel>('all');
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 	const [areaFilter, setAreaFilter] = useState('all');
 	const [from, setFrom] = useState('');
@@ -70,7 +68,6 @@ export function DifficultyInsights({
 		if (!attempts) return [];
 		return attempts.filter((a) => {
 			if (assignmentFilter !== 'all' && a.assignment !== assignmentFilter) return false;
-			if (channelFilter !== 'all' && channelOf(a) !== channelFilter) return false;
 			if (areaFilter !== 'all') {
 				const label = a.area.trim().replace(/\s+/g, ' ').toLowerCase();
 				if (label !== areaFilter) return false;
@@ -86,11 +83,11 @@ export function DifficultyInsights({
 			if (to && !Number.isNaN(t) && t > dayEnd(to)) return false;
 			return true;
 		});
-	}, [attempts, assignmentFilter, channelFilter, statusFilter, areaFilter, from, to, statusByKey]);
+	}, [attempts, assignmentFilter, statusFilter, areaFilter, from, to, statusByKey]);
 
 	const stats = useMemo(() => {
 		const total = filtered.length;
-		const byKey = new Map<string, { channel: Channel; checks: number; maxLevel: number }>();
+		const byKey = new Map<string, { checks: number; maxLevel: number }>();
 		const levels = { 1: 0, 2: 0, 3: 0, none: 0 };
 		const areaMap = new Map<string, { label: string; checks: number; people: Set<string> }>();
 		const areaByAssignment = new Map<string, Map<string, { label: string; checks: number }>>();
@@ -104,7 +101,7 @@ export function DifficultyInsights({
 
 			let p = byKey.get(a.identityKey);
 			if (!p) {
-				p = { channel: channelOf(a), checks: 0, maxLevel: 0 };
+				p = { checks: 0, maxLevel: 0 };
 				byKey.set(a.identityKey, p);
 			}
 			p.checks += 1;
@@ -315,24 +312,6 @@ export function DifficultyInsights({
 								))}
 							</select>
 						</label>
-						<div className="cho-tabs" role="group" aria-label="Saring jenis peserta">
-							{(
-								[
-									['all', 'Semua peserta'],
-									['enrolled', 'Terdaftar'],
-									['public', 'Publik'],
-								] as const
-							).map(([value, label]) => (
-								<button
-									key={value}
-									type="button"
-									className={channelFilter === value ? 'active' : ''}
-									onClick={() => setChannelFilter(value)}
-								>
-									{label}
-								</button>
-							))}
-						</div>
 						<div className="cho-tabs" role="group" aria-label="Saring status pengumpulan">
 							{(
 								[

@@ -1,4 +1,4 @@
-import { mergeSubmissionChannels, isCollectedSubmission, isOfficiallyGraded } from './submission-state';
+import { isCollectedSubmission, isOfficiallyGraded } from './submission-state';
 import type { Assignment, AssignmentSubmission } from '@/lib/assignments';
 import { activityTypeOf } from '@/lib/assignments';
 import type { ClassSession, CourseRosterEntry, StructuredItem } from '@/lib/learning';
@@ -48,7 +48,6 @@ export type CourseAnalyticsInput = {
 	/** When set, only assignments/sessions in this week are counted. 0 = whole semester. */
 	week: number;
 	studentId?: string;
-	publicSubmissions?: (CourseAnalyticsInput['submissions'][number] & { linkedSubmission?: string })[];
 };
 
 export type WeekBar = {
@@ -213,8 +212,7 @@ export function buildCourseAnalytics(input: CourseAnalyticsInput): AnalyticsMode
 		// A numeric field can contain a default zero before assessment is published.
 		if (isOfficiallyGraded(sub)) graded += 1;
 	}
-	const publicRows = input.studentId ? [] : (input.publicSubmissions || []).filter(s => formalIds.has(s.assignment));
- const gradingRows = mergeSubmissionChannels(subs, publicRows).filter(isCollectedSubmission);
+ const gradingRows = subs.filter(isCollectedSubmission);
  graded = gradingRows.filter(isOfficiallyGraded).length;
  submittedCount = gradingRows.length;
  const expected = classSize * formal.length;

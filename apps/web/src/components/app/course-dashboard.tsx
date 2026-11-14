@@ -1,4 +1,4 @@
-import { mergeSubmissionChannels, isCollectedSubmission, isOfficiallyGraded, needsGrading } from '@/lib/submission-state';
+import { isCollectedSubmission, isOfficiallyGraded, needsGrading } from '@/lib/submission-state';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
@@ -45,7 +45,7 @@ import {
 } from '@/data/academic-calendar';
 
 type SubRow = {
- linkedSubmission?: string; id: string; assignment: string; status: string; grade: number | null };
+ id: string; assignment: string; status: string; grade: number | null };
 
 function formatLongDate(d = new Date()) {
 	return d.toLocaleDateString('id-ID', {
@@ -257,9 +257,6 @@ export function CourseDashboard() {
 			fields: 'id,assignment,status,grade',
 		}),
 	);
- const pubsQuery = useCachedQuery<SubRow[]>('public_submissions:all:dashboard', () =>
-  pb.collection('public_submissions').getFullList<SubRow>({ fields: 'id,assignment,status,grade,linkedSubmission' }),
- );
 
 	const sectionsQuery = useCachedQuery<CourseSection[]>('course_sections:owner', () =>
 		pb.collection('course_sections').getFullList<CourseSection>({
@@ -281,28 +278,27 @@ export function CourseDashboard() {
 		() => (assignmentsQuery.data ?? []).filter((a) => a.owner === me),
 		[assignmentsQuery.data, me],
 	);
-	const subs = useMemo(() => mergeSubmissionChannels(subsQuery.data ?? [], pubsQuery.data ?? []), [subsQuery.data, pubsQuery.data]);
+	const subs = useMemo(() => subsQuery.data ?? [], [subsQuery.data]);
 	const sections = sectionsQuery.data ?? [];
 	const loading =
 		coursesQuery.loading ||
 		sessionsQuery.loading ||
 		assignmentsQuery.loading ||
-		subsQuery.loading || pubsQuery.loading ||
+		subsQuery.loading ||
 		sectionsQuery.loading;
 	const error =
 		coursesQuery.error ||
 		sessionsQuery.error ||
 		assignmentsQuery.error ||
-		subsQuery.error || pubsQuery.error ||
+		subsQuery.error ||
 		sectionsQuery.error;
 	const load = useCallback(() => {
 		coursesQuery.reload();
 		sessionsQuery.reload();
 		assignmentsQuery.reload();
 		subsQuery.reload();
-		pubsQuery.reload();
 		sectionsQuery.reload();
-	}, [coursesQuery, sessionsQuery, assignmentsQuery, subsQuery, pubsQuery, sectionsQuery]);
+	}, [coursesQuery, sessionsQuery, assignmentsQuery, subsQuery, sectionsQuery]);
 
 	const today = useMemo(() => {
 		const d = new Date();

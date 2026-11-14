@@ -2240,13 +2240,6 @@ export function AssignmentForm({
 											dipilih pada bagian Review.
 										</span>
 									</div>
-									<div className="asg-map-row">
-										<small>Tautan publik</small>
-										<span>
-											Tautan akses publik dengan kode akses dikelola pada halaman tugas
-											setelah tugas disimpan — tidak diubah di sini.
-										</span>
-									</div>
 								</div>
 							</section>
 

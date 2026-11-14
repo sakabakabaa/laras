@@ -150,7 +150,6 @@ export type AnnotationSave = {
 export type AnnotationBody = {
 	intent?: unknown;
 	submissionId?: unknown;
-	publicSubmissionId?: unknown;
 	findingFingerprint?: unknown;
 	/** Explicit human candidate for independent confirmation/adjudication. */
 	itemId?: unknown;
@@ -196,7 +195,7 @@ export async function saveResearchAnnotation(
 		return { error: { status: 422, message: 'findingFingerprint tidak valid.' } };
 	}
 
-	const relationField = target.channel === 'enrolled' ? 'submission' : 'publicSubmission';
+	const relationField = 'submission';
 	let evaluationId = '';
 	let sourceFinding: EvalFinding | null = null;
 	try {
@@ -374,7 +373,7 @@ export async function saveResearchAnnotation(
 	const created = await pocketbaseAdmin.createRecord<{ id: string }>('ai_feedback_items', {
 		evaluation: evaluationId,
 		assignment: target.assignment.id,
-		submission: target.channel === 'enrolled' ? target.recordId : '',
+		submission: target.recordId,
 		owner: target.assignment.owner,
 		parentAiFindingId: fingerprint,
 		origin: 'ai',
@@ -395,7 +394,7 @@ export async function loadResearchRatings(request: Request, body: AnnotationBody
 	const loaded = await loadResearchTarget(request, body);
 	if ('error' in loaded) return loaded;
 	const { target } = loaded;
-	const relationField = target.channel === 'enrolled' ? 'submission' : 'publicSubmission';
+	const relationField = 'submission';
 	const evaluation = (await pocketbaseAdmin.listRecords<{ id: string; findings: unknown }>('ai_evaluations', {
 		filter: `${relationField}="${target.recordId}"`, sort: '-created', perPage: 1,
 	})).items[0];
@@ -433,7 +432,6 @@ export async function loadResearchRatings(request: Request, body: AnnotationBody
 export type MissedErrorBody = {
 	round?: unknown;
 	submissionId?: unknown;
-	publicSubmissionId?: unknown;
 	quote?: unknown;
 	referenceCategory?: unknown;
 	referenceSubcategory?: unknown;
@@ -468,7 +466,7 @@ export async function saveMissedErrorAnnotation(
 	if ('error' in loaded) return { error: loaded.error };
 	const { target } = loaded;
 
-	const relationField = target.channel === 'enrolled' ? 'submission' : 'publicSubmission';
+	const relationField = 'submission';
 	let evaluationId = '';
 	try {
 		const evalRow = (
@@ -517,7 +515,7 @@ export async function saveMissedErrorAnnotation(
 	const record = await pocketbaseAdmin.createRecord<{ id: string }>('ai_feedback_items', {
 		evaluation: evaluationId,
 		assignment: target.assignment.id,
-		submission: target.channel === 'enrolled' ? target.recordId : '',
+		submission: target.recordId,
 		owner: target.assignment.owner,
 		parentAiFindingId: '',
 		origin: 'human',
@@ -573,13 +571,13 @@ export async function deleteMissedErrorAnnotation(
 	const auth = await authenticateUser(request);
 	if ('error' in auth) return { error: auth.error };
 
-	let row: { owner: string; assignment?: string; submission?: string; publicSubmission?: string; origin: string; raterJudgments?: unknown; adjudicationStatus?: string };
+	let row: { owner: string; assignment?: string; submission?: string; origin: string; raterJudgments?: unknown; adjudicationStatus?: string };
 	try {
 		row = await pocketbaseAdmin.getRecord<typeof row>('ai_feedback_items', id);
 	} catch {
 		return { error: { status: 404, message: 'Anotasi tidak ditemukan.' } };
 	}
-	if (row.assignment !== target.assignment.id || (target.channel === 'enrolled' ? row.submission !== target.recordId : row.publicSubmission !== target.recordId)) {
+	if (row.assignment !== target.assignment.id || row.submission !== target.recordId) {
 		return { error: { status: 404, message: 'Anotasi tidak ditemukan untuk target ini.' } };
 	}
 	if (row.owner !== target.assignment.owner || row.owner !== auth.user.id) {

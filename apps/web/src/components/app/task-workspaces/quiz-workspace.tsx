@@ -308,7 +308,6 @@ export function QuizWorkspace({
 			)}
 			<CheckAnswerPanel
 				assignment={assignment}
-				channel="enrolled"
 				buildResponse={() => ({ kind: 'quiz', answers })}
 			/>
 

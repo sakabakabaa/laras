@@ -196,11 +196,8 @@ export type Assignment = {
 	/** Provisional rubric-criterion suggestions (json) — separate from
 	 *  taskConfig.criteria, never affects grading until explicitly accepted. */
 	suggestedCriteria?: unknown;
-	/** Lecturer-controlled public link. Off by default. */
-	publicEnabled?: boolean;
+	/** Shareable login-gated task link token (`/tugas/:token`). */
 	publicToken?: string;
-	/** 0 / empty = no extra cap beyond one submission per identity. */
-	publicMax?: number | null;
 	/** Formal only: students may resubmit after lecturer feedback. */
 	allowRevision?: boolean;
 	/** Formative "Cek jawaban" AI checks. On by default. */
@@ -265,8 +262,6 @@ export type AssignmentSubmission = {
 	transcriptFile?: string;
 	/** Speaking-task per-word confidence summary (json, server-managed). */
 	transcriptConfidence?: unknown;
-	/** Phase 4 — true when this enrolled submission was imported from a public answer. */
-	linkedFromPublic?: boolean;
 	created: string;
 	updated: string;
 	expand?: { owner?: { name?: string; email?: string } };

@@ -2,7 +2,7 @@ import { validatedRubric, rubricTotal } from './evaluation-rubric';
 /**
  * Phase 1 (evaluasi dosen) — server-side AI evaluation drafts for Tugas formal.
  *
- * When a formal submission lands (enrolled or public), a DRAFT evaluation is
+ * When a formal submission lands, a DRAFT evaluation is
  * prepared in the background so it is ready when the lecturer opens the
  * evaluation page. The draft reviews the student's own answer against the
  * task requirements, the lecturer's rubric, and — only when available —
@@ -17,7 +17,7 @@ import { validatedRubric, rubricTotal } from './evaluation-rubric';
  *   only writes a fast `pending` row and kicks off the analysis in the
  *   background; every failure is caught and recorded as a `failed` row.
  * - The draft is a recommendation only: no grade, feedback, or status is ever
- *   written to the submission, and students/public participants can never
+ *   written to the submission, and students can never
  *   read it (owner-only PocketBase rules).
  * - Latihan formatif is never evaluated — no final submission, no grade.
  */
@@ -278,12 +278,11 @@ function validateDraft(
 /** The background analysis itself. Every failure becomes a recorded row. */
 async function runEvaluation(input: {
 	assignment: Assignment;
-	channel: 'enrolled' | 'public';
 	recordId: string;
 	evalId: string;
 }): Promise<void> {
-	const { assignment, channel, recordId, evalId } = input;
-	const collection = channel === 'enrolled' ? 'assignment_submissions' : 'public_submissions';
+	const { assignment, recordId, evalId } = input;
+	const collection = 'assignment_submissions';
 	const now = () => new Date().toISOString();
 
 	try {
@@ -642,11 +641,10 @@ async function runEvaluation(input: {
 const queueLocks = new Set<string>();
 export async function queueEvaluationDraft(input: {
 	assignment: Assignment;
-	submissionId?: string;
-	publicSubmissionId?: string;
-    force?: boolean;
+	submissionId: string;
+	force?: boolean;
 }): Promise<{ queued: boolean; status: string; reason?: string }> {
-	const key = input.submissionId ? `enrolled:${input.submissionId}` : `public:${input.publicSubmissionId || ''}`;
+	const key = `enrolled:${input.submissionId}`;
 	if (queueLocks.has(key)) return { queued: false, status: 'pending', reason: 'Draf evaluasi sedang disiapkan.' };
 	queueLocks.add(key);
 	try { return await prepareEvaluationDraft(input); }
@@ -655,24 +653,16 @@ export async function queueEvaluationDraft(input: {
 
 async function prepareEvaluationDraft(input: {
 	assignment: Assignment;
-	submissionId?: string;
-	publicSubmissionId?: string;
-    force?: boolean;
+	submissionId: string;
+	force?: boolean;
 }): Promise<{ queued: boolean; status: string; reason?: string }> {
 	try {
 		// Latihan formatif has no official evaluation — never analyzed.
 		if (activityTypeOf(input.assignment) === 'formative') {
 			return { queued: false, status: 'skipped', reason: 'Latihan formatif tidak dinilai.' };
 		}
-		const channel: 'enrolled' | 'public' | null = input.submissionId
-			? 'enrolled'
-			: input.publicSubmissionId
-				? 'public'
-				: null;
-		if (!channel) return { queued: false, status: 'skipped', reason: 'Kiriman tidak dikenal.' };
-
-		const collection = channel === 'enrolled' ? 'assignment_submissions' : 'public_submissions';
-		const recordId = channel === 'enrolled' ? input.submissionId : input.publicSubmissionId;
+		const collection = 'assignment_submissions';
+		const recordId = input.submissionId;
 		if (!recordId) return { queued: false, status: 'skipped', reason: 'Kiriman tidak dikenal.' };
 
 		let submission: SubmissionRow;
@@ -693,7 +683,7 @@ async function prepareEvaluationDraft(input: {
 			};
 		}
 
-		const relationField = channel === 'enrolled' ? 'submission' : 'publicSubmission';
+		const relationField = 'submission';
 		const existing = (
 			await pocketbaseAdmin.listRecords<EvalRow>('ai_evaluations', {
 				perPage: 1,
@@ -735,15 +725,13 @@ async function prepareEvaluationDraft(input: {
 			assignment: input.assignment.id,
 			owner: input.assignment.owner,
 			status: 'pending',
-			...(channel === 'enrolled'
-				? { submission: recordId, publicSubmission: '' }
-				: { submission: '', publicSubmission: recordId }),
+			submission: recordId,
 		};
 		const row = existing
 			? await pocketbaseAdmin.updateRecord<EvalRow>('ai_evaluations', existing.id, payload)
 			: await pocketbaseAdmin.createRecord<EvalRow>('ai_evaluations', payload);
 
-		void runEvaluation({ assignment: input.assignment, channel, recordId, evalId: row.id });
+		void runEvaluation({ assignment: input.assignment, recordId, evalId: row.id });
 		return { queued: true, status: 'pending' };
 	} catch (error) {
 		logger.error('evaluation queue failed', error);

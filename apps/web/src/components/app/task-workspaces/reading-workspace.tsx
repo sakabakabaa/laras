@@ -121,7 +121,6 @@ export function ReadingWorkspace({
 			{!locked && !isPastDeadline(assignment.deadline) && (
 				<CheckAnswerPanel
 					assignment={assignment}
-					channel="enrolled"
 					buildResponse={() => ({ kind: 'reading', answers })}
 				/>
 			)}

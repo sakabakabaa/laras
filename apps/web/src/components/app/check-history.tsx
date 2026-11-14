@@ -80,7 +80,6 @@ export function CheckHistory({
 								<strong>Pemeriksaan {row.attempt}</strong>
 								<span className="tsr-fb-chips">
 									{row.area && <span className="asg-tag">{row.area}</span>}
-									{row.channel === 'public' && <span className="asg-tag">Peserta publik</span>}
 								</span>
 							</div>
 							{row.focus && <p className="tsr-fb-evidence">Fokus mahasiswa: {row.focus}</p>}

@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { LoaderCircle, RotateCcw, ScanText, ShieldCheck, Sparkles } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { LoaderCircle, ScanText, ShieldCheck, Sparkles } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
 import { errorMessage } from '@/lib/learning';
 import { activityTypeOf, type ActivityType, type AssignmentMode } from '@/lib/assignments';
 import {
 	checkMaxOf,
 	CHECK_LEVEL_LABEL,
-	publicIdentityComplete,
 	type CheckResponsePayload,
-	type PublicCheckIdentity,
 } from '@/lib/check-types';
 import { CheckEvidence } from '@/components/app/task-workspaces/check-feedback-body';
 import { PointFeedback } from '@/components/app/task-workspaces/point-feedback';
@@ -17,8 +15,6 @@ export type CheckAssignmentInfo = {
 	activityType?: ActivityType | '' | null;
 	/** Enrolled: the assignment id. */
 	id?: string;
-	/** Public: the assignment's public token. */
-	token?: string;
 	status: string;
 	deadline: string;
 	mode: AssignmentMode;
@@ -62,9 +58,6 @@ type CheckResponse = {
 	evidence: string;
 	hasRubric: boolean;
 	unreadable?: string[];
-	/** Public: continuation code issued with the first check's draft row. */
-	continuationToken?: string;
-	files?: { name: string; url: string }[];
 	/** OCR-first image flow: the extracted reading awaiting participant review. */
 	ocrRequired?: boolean;
 	ocrText?: string;
@@ -83,11 +76,7 @@ export type LatestFeedback = { feedback: string; evidence: string; area: string;
  * answers, no right/wrong verdicts, no grades. Every check is recorded for
  * lecturer review; official grading stays with the lecturer.
  *
- * Works for authenticated students (identity = account) and public-link
- * participants (identity = required name + NIM / group fields, verified
- * against earlier attempts on return). Public participants with a saved draft
- * must present their continuation code — it is the only credential that may
- * spend that identity's check quota.
+ * Works for authenticated students (identity = account).
  */
 export function CheckAnswerPanel(props: Parameters<typeof FormativeCheckAnswerPanel>[0]) {
 	if (activityTypeOf(props.assignment) !== 'formative') return null;
@@ -96,14 +85,7 @@ export function CheckAnswerPanel(props: Parameters<typeof FormativeCheckAnswerPa
 
 function FormativeCheckAnswerPanel({
 	assignment,
-	channel,
 	buildResponse,
-	identity,
-	continuationToken,
-	onRestore,
-	onContinuation,
-	collectFiles,
-	onFilesSaved,
 	onApplyOcrText,
 	onLatestFeedback,
 	buildNumberedContent,
@@ -111,21 +93,8 @@ function FormativeCheckAnswerPanel({
 	hideLineByLineFeedback = false,
 }: {
 	assignment: CheckAssignmentInfo;
-	channel: 'enrolled' | 'public';
 	/** Snapshot of the participant's current response at check time. */
 	buildResponse: () => CheckResponsePayload;
-	/** Public participants: identity fields from the public form. */
-	identity?: PublicCheckIdentity;
-	/** Public participants: continuation code protecting their draft row. */
-	continuationToken?: string;
-	/** Public continuation: restore the last checked response into the form. */
-	onRestore?: (response: CheckResponsePayload) => void;
-	/** Public: surface a continuation code issued by the server (first check). */
-	onContinuation?: (code: string) => void;
-	/** Public: files currently attached, including ones not yet uploaded. */
-	collectFiles?: () => { kept: string[]; pending: File[] };
-	/** Public: server stored the attachments on the draft — drop local copies. */
-	onFilesSaved?: (files: { name: string; url: string }[]) => void;
 	/** Typed-answer tasks only: let the participant adopt the reviewed OCR text. */
 	onApplyOcrText?: (text: string) => void;
 	/** Reports the latest check so the writing workspace can draw annotations over the answer. */
@@ -143,13 +112,9 @@ function FormativeCheckAnswerPanel({
 }) {
 	const max = checkMaxOf(assignment);
 	const enabled = assignment.checkEnabled !== false;
-	const identityReady =
-		channel === 'enrolled' ||
-		(identity ? publicIdentityComplete(assignment.mode, identity) : false);
 
 	const [history, setHistory] = useState<CheckHistoryAttempt[]>([]);
 	const [used, setUsed] = useState(0);
-	const [lastResponse, setLastResponse] = useState<CheckResponsePayload | null>(null);
 	const [loaded, setLoaded] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState('');
@@ -162,18 +127,6 @@ function FormativeCheckAnswerPanel({
 		text: string;
 		image: { name: string; url: string };
 	} | null>(null);
-
-	const identityKey = useMemo(
-		() =>
-			channel === 'enrolled'
-				? 'enrolled'
-				: [
-						identity?.participantName.trim().toLowerCase(),
-						identity?.nim.trim().toLowerCase(),
-						identity?.groupName.trim().toLowerCase(),
-					].join('|'),
-		[channel, identity?.participantName, identity?.nim, identity?.groupName],
-	);
 
 	// Report the latest check's feedback upward so the writing workspace can
 	// draw annotations over the answer. Uses a ref so a changing parent callback
@@ -197,7 +150,7 @@ function FormativeCheckAnswerPanel({
 	}, [history]);
 
 	useEffect(() => {
-		if (!enabled || !identityReady) {
+		if (!enabled) {
 			setLoaded(true);
 			return;
 		}
@@ -209,23 +162,9 @@ function FormativeCheckAnswerPanel({
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
-							...(channel === 'enrolled' && pb.authStore.token
-								? { Authorization: `Bearer ${pb.authStore.token}` }
-								: {}),
+							...(pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {}),
 						},
-						body: JSON.stringify({
-							action: 'history',
-							...(channel === 'enrolled'
-								? { assignmentId: assignment.id }
-								: {
-										token: assignment.token,
-										participantName: identity?.participantName,
-										nim: identity?.nim,
-										groupName: identity?.groupName,
-										members: identity?.members,
-											...(continuationToken ? { continuationToken } : {}),
-									}),
-						}),
+						body: JSON.stringify({ action: 'history', assignmentId: assignment.id }),
 					});
 					const body = (await response.json()) as HistoryResponse;
 					if (!alive) return;
@@ -235,7 +174,6 @@ function FormativeCheckAnswerPanel({
 					}
 					setHistory(body.attempts || []);
 					setUsed(body.used || 0);
-					setLastResponse(body.lastResponse || null);
 				} catch {
 					if (alive) setError('Riwayat pemeriksaan gagal dimuat. Coba lagi.');
 				} finally {
@@ -247,20 +185,7 @@ function FormativeCheckAnswerPanel({
 			alive = false;
 			clearTimeout(timer);
 		};
-	}, [
-		enabled,
-		identityReady,
-		channel,
-		assignment.id,
-		assignment.token,
-		identityKey,
-		// identity fields are captured through identityKey; avoid re-running per keystroke beyond it
-		identity?.participantName,
-		identity?.nim,
-		identity?.groupName,
-		identity?.members,
-		continuationToken,
-	]);
+	}, [enabled, assignment.id]);
 
 	if (!enabled) return null;
 
@@ -291,71 +216,24 @@ function FormativeCheckAnswerPanel({
 			const numbered = buildNumberedContent();
 			if (numbered) payload.numberedContent = numbered;
 		}
-		const attached = collectFiles?.() ?? { kept: [], pending: [] };
-		const hasFiles = attached.kept.length > 0 || attached.pending.length > 0;
-		const useFiles = channel === 'public' && hasFiles;
-		const response = await fetch('/api/check-answer', useFiles
-			? {
-					method: 'POST',
-					body: (() => {
-						const fd = new FormData();
-						fd.set('action', 'check');
-						fd.set('token', assignment.token || '');
-						fd.set('participantName', identity?.participantName || '');
-						fd.set('nim', identity?.nim || '');
-						fd.set('groupName', identity?.groupName || '');
-						fd.set('members', identity?.members || '');
-						if (continuationToken) fd.set('continuationToken', continuationToken);
-						fd.set('focus', focus.trim());
-						if (extra.ocrConfirmed) fd.set('ocrConfirmed', 'true');
-						if (extra.ocrText) fd.set('ocrText', extra.ocrText);
-						if (extra.ocrRaw) fd.set('ocrRaw', extra.ocrRaw);
-					if (extra.explicit) fd.set('explicitCorrection', 'true');
-						fd.set(
-							'response',
-							JSON.stringify({
-								...payload,
-								attachments: [...attached.kept, ...attached.pending.map((file) => file.name)].map(
-									(name) => ({ name }),
-								),
-							}),
-						);
-						fd.set('keptFiles', JSON.stringify(attached.kept));
-						for (const file of attached.pending) fd.append('files', file, file.name);
-						return fd;
-					})(),
-				}
-			: {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						...(channel === 'enrolled' && pb.authStore.token
-							? { Authorization: `Bearer ${pb.authStore.token}` }
-							: {}),
-					},
-					body: JSON.stringify({
-						action: 'check',
-						...(channel === 'enrolled'
-							? { assignmentId: assignment.id }
-							: {
-									token: assignment.token,
-									participantName: identity?.participantName,
-									nim: identity?.nim,
-									groupName: identity?.groupName,
-									members: identity?.members,
-									...(continuationToken ? { continuationToken } : {}),
-								}),
-						response: payload,
-						focus: focus.trim(),
-						...(extra.ocrConfirmed ? { ocrConfirmed: true } : {}),
-						...(extra.ocrText ? { ocrText: extra.ocrText } : {}),
-						...(extra.ocrRaw ? { ocrRaw: extra.ocrRaw } : {}),
-						...(extra.explicit ? { explicitCorrection: true } : {}),
-					}),
-				});
+		const response = await fetch('/api/check-answer', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				...(pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {}),
+			},
+			body: JSON.stringify({
+				action: 'check',
+				assignmentId: assignment.id,
+				response: payload,
+				focus: focus.trim(),
+				...(extra.ocrConfirmed ? { ocrConfirmed: true } : {}),
+				...(extra.ocrText ? { ocrText: extra.ocrText } : {}),
+				...(extra.ocrRaw ? { ocrRaw: extra.ocrRaw } : {}),
+				...(extra.explicit ? { explicitCorrection: true } : {}),
+			}),
+		});
 		const body = (await response.json()) as CheckResponse;
-		if (body.continuationToken && onContinuation) onContinuation(body.continuationToken);
-		if (body.files && onFilesSaved) onFilesSaved(body.files);
 		return { response, body };
 	};
 
@@ -392,13 +270,10 @@ function FormativeCheckAnswerPanel({
 		setError('');
 		setNotes([]);
 		const payload = buildResponse();
-		const attached = collectFiles?.() ?? { kept: [], pending: [] };
-		const hasFiles = attached.kept.length > 0 || attached.pending.length > 0;
 		const hasWork =
 			(payload.answers && Object.keys(payload.answers).length > 0) ||
 			Boolean(payload.content?.trim()) ||
-			Boolean(payload.link?.trim()) ||
-			hasFiles;
+			Boolean(payload.link?.trim());
 		if (!hasWork) {
 			setError('Belum ada jawaban untuk diperiksa. Isi jawaban Anda lebih dulu.');
 			return;
@@ -474,18 +349,13 @@ function FormativeCheckAnswerPanel({
 				</div>
 			</div>
 
-			{!identityReady && (
-				<p className="fbp-note">
-					Isi identitas (nama lengkap dan {assignment.mode === 'collaborative' ? 'nama kelompok + daftar anggota' : 'NIM / nomor mahasiswa'}) lebih dulu untuk memakai Cek jawaban.
-				</p>
-			)}
-			{identityReady && limitReached && (
+			{limitReached && (
 				<p className="fbp-note over">
 					Kuota pemeriksaan sudah habis ({max} dari {max}). Perbaiki jawaban berdasarkan panduan
 					di bawah, lalu kumpulkan.
 				</p>
 			)}
-			{identityReady && !limitReached && !ocr && (
+			{!limitReached && !ocr && (
 				<div className="fbp-request">
 					<button
 						type="button"
@@ -626,16 +496,6 @@ function FormativeCheckAnswerPanel({
 						);
 					})}
 				</ol>
-			)}
-
-			{channel === 'public' && lastResponse && onRestore && (
-				<button
-					type="button"
-					className="ld-text-btn ckp-restore"
-					onClick={() => onRestore(lastResponse)}
-				>
-					<RotateCcw size={13} /> Muat jawaban dari pemeriksaan terakhir
-				</button>
 			)}
 
 			{error && (

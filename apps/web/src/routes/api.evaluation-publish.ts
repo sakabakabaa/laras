@@ -33,7 +33,6 @@ import type { ReviewFinding } from '@/lib/ai-evaluation';
 type Body = {
     criterionScores?: unknown;
 	submissionId?: string;
-	publicSubmissionId?: string;
 	findings?: unknown;
 	finalScore?: unknown;
 	/** False when the score is the untouched AI-recommendation autofill. */
@@ -146,7 +145,7 @@ export const action = withApi(async ({ request }) => {
 	// Retain the review + publish snapshot on the evaluation row. The AI
 	// draft's own columns (findings, recommendedScore, rubricBreakdown,
 	// citations) are never touched.
-	const relationField = target.channel === 'enrolled' ? 'submission' : 'publicSubmission';
+	const relationField = 'submission';
 	const existing = (
 		await pocketbaseAdmin.listRecords<{ id: string; recommendedScore: number | null }>(
 			'ai_evaluations',
@@ -192,24 +191,19 @@ export const action = withApi(async ({ request }) => {
 			findings: [],
 			summary: '',
 			generatedAt: now,
-			...(target.channel === 'enrolled'
-				? { submission: target.recordId, publicSubmission: '' }
-				: { submission: '', publicSubmission: target.recordId }),
+			submission: target.recordId,
 			...publishPayload,
 		});
 	}
 
 	// Publish to the student through the existing official grade/feedback
-	// fields — the only channel enrolled and public participants already read.
-	const collection =
-		target.channel === 'enrolled' ? 'assignment_submissions' : 'public_submissions';
-	await pocketbaseAdmin.updateRecord(collection, target.recordId, {
+	// fields — the only channel students already read.
+	await pocketbaseAdmin.updateRecord('assignment_submissions', target.recordId, {
 		grade: finalScore,
 		feedback,
 		status: 'graded',
-		...(target.channel === 'enrolled'
-			? { gradedBy: target.user.id, gradedAt: now }
-			: {}),
+		gradedBy: target.user.id,
+		gradedAt: now,
 	});
 
 	return json({ ok: true, finalScore, adjusted, publishedAt: now, omitted, divergence });

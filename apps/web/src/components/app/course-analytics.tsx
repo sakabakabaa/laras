@@ -62,7 +62,6 @@ export function CourseAnalytics({
 	const [bundle, setBundle] = useState<{
 		assignments: Assignment[];
 		submissions: AssignmentSubmission[];
-		publicSubmissions: (AssignmentSubmission & { linkedSubmission?: string })[];
 		sessions: ClassSession[];
 		subCpmks: StructuredItem[];
 		roster: CourseRosterEntry[];
@@ -100,7 +99,7 @@ export function CourseAnalytics({
 				const assignFilter = formal.length
 					? formal.map((a) => pb.filter('assignment = {:id}', { id: a.id })).join(' || ')
 					: '';
-				const [submissions, attempts, roster, publicSubmissions] = await Promise.all([
+				const [submissions, attempts, roster] = await Promise.all([
 					assignFilter
 						? pb.collection('assignment_submissions').getFullList<AssignmentSubmission>({
 								filter: isStudent ? `(${assignFilter}) && ${pb.filter('owner = {:id}', { id: pb.authStore.record?.id })}` : assignFilter,
@@ -119,7 +118,6 @@ export function CourseAnalytics({
 								sort: 'name',
 							})
 						: Promise.resolve([] as CourseRosterEntry[]),
-					canSeeClass && assignFilter ? pb.collection('public_submissions').getFullList<AssignmentSubmission & { linkedSubmission?: string }>({filter: assignFilter, fields: 'id,assignment,status,grade,updated,created,linkedSubmission'}) : Promise.resolve([]),
 				]);
 
 				const identities: Record<string, OwnerIdentity> = {};
@@ -181,7 +179,6 @@ export function CourseAnalytics({
 				setBundle({
 					assignments,
 					submissions: mine,
-					publicSubmissions,
 					sessions,
 					subCpmks,
 					roster,

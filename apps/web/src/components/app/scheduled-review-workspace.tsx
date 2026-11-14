@@ -133,8 +133,8 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
     try{setAiDraft(await requestLiveDraft({sessionId:state.session.id,activityTitle:a.title,items:written.map(card=>({prompt:card.prompt,answer:card.answer,modelAnswer:card.modelAnswer,rubric:card.rubric})),criteria:grading?.mode==='rubric'?grading.criteria:[]}));}
     catch(e){setAiError((e as Error).message);}finally{setAiBusy(false);}
   };
-  const useAiFeedback=()=>{if(aiDraft)setDraft(d=>({...d,feedback:aiDraft.feedback}));};
-  const useAiScore=(grading:NonNullable<typeof settings>)=>{
+  const applyAiFeedback=()=>{if(aiDraft)setDraft(d=>({...d,feedback:aiDraft.feedback}));};
+  const applyAiScore=(grading:NonNullable<typeof settings>)=>{
     if(!aiDraft||aiDraft.suggestedScore==null)return;
     if(grading.mode==='points')setDraft(d=>({...d,points:String(pointsFromPercent(aiDraft.suggestedScore as number,grading.maxPoints))}));
     else if(grading.mode==='rubric')setDraft(d=>({...d,criterionScores:Object.fromEntries(grading.criteria.map(c=>[c.id,String(pointsFromPercent(aiDraft.criterionScores[c.id]??aiDraft.suggestedScore as number,c.maxPoints))]))}));
@@ -187,7 +187,7 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
         {aiDraft.summary&&<p>{aiDraft.summary}</p>}
         {aiDraft.findings.length>0&&<ul>{aiDraft.findings.slice(0,6).map((f,i)=><li key={i}>{f.quote?<q lang="de">{f.quote}</q>:<em>Umum</em>} — {f.note}{f.correction?<> → <span lang="de">{f.correction}</span></>:null}</li>)}</ul>}
         {aiDraft.truncated&&<p className="sr-ai-note">Jawaban panjang dipotong; hanya bagian awal yang ditinjau.</p>}
-        <div className="sr-ai-actions"><button type="button" className="ss-button ss-button-small" onClick={useAiFeedback}>Pakai sebagai umpan balik</button>{aiDraft.suggestedScore!=null&&grading.mode!=='ungraded'&&<button type="button" className="ss-button ss-button-small" onClick={()=>useAiScore(grading)}>Pakai usulan nilai ({aiDraft.suggestedScore}/100)</button>}</div>
+        <div className="sr-ai-actions"><button type="button" className="ss-button ss-button-small" onClick={applyAiFeedback}>Pakai sebagai umpan balik</button>{aiDraft.suggestedScore!=null&&grading.mode!=='ungraded'&&<button type="button" className="ss-button ss-button-small" onClick={()=>applyAiScore(grading)}>Pakai usulan nilai ({aiDraft.suggestedScore}/100)</button>}</div>
         <small className="sr-ai-note">Periksa sebelum dipakai. Nilai resmi tetap keputusan dosen.</small>
       </div>}
     </div>;

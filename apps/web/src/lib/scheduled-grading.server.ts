@@ -11,11 +11,15 @@
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { cefrLevelForCourse } from '@/lib/cefr-level';
 import { generateLiveDraft, parseLiveDraftInput, type LiveDraft, type LiveDraftFailure } from '@/lib/live-answer-review.server';
-import { referenceItemsOf, writtenEntriesOf, writtenItemsOf, type ScheduledAiDraftRecord } from '@/lib/scheduled-grading';
+import { activityMaterialExcerpt, referenceItemsOf, writtenEntriesOf, writtenItemsOf, type ScheduledAiDraftRecord } from '@/lib/scheduled-grading';
+import { activityBookReference } from '@/lib/scheduled-book-reference';
+import type { ScheduledActivity } from '@/lib/scheduled-classes';
 import { anchorDraftFindings } from '@/lib/scheduled-answer-marks';
 import type { ScheduledSuggestionInput } from '@/lib/rubric-suggestions.server';
 import logger from '@/lib/logger.server';
 
+const MAX_STORED_FINDINGS = 15;
+const MAX_DRAFT_JSON = 38000;
 export const SAFE_RECORD_ID = /^[A-Za-z0-9]{5,40}$/;
 
 type ClassRecord = { id: string; session: string; course: string; owner: string; status: string; endsAt?: string };
@@ -158,7 +162,12 @@ export async function draftScheduledAttempt(
 		attemptRevision: attempt.revision,
 		settingsRevision: settings?.revision || 0,
 	};
-	const result = await generateLiveDraft(parsed.input, { code: courseCode, title: courseTitle });
+	// Where the activity comes from, as the lecturer sees it ("ÜB (Übungsbuch) · 11c · S. 105") + its text material.
+	const activityContext = {
+		bookReference: activityBookReference(snapshot as unknown as ScheduledActivity) || String((snapshot as { worksheet?: { sourceLabel?: string } }).worksheet?.sourceLabel || ''),
+		materialExcerpt: activityMaterialExcerpt(snapshot as Parameters<typeof activityMaterialExcerpt>[0]),
+	};
+	const result = await generateLiveDraft({ ...parsed.input, activityContext }, { code: courseCode, title: courseTitle });
 	if ('error' in result) {
 		try {
 			await upsertDraft(existing, { ...base, status: 'failed', error: result.error.message.slice(0, 500), draft: {} });
@@ -170,10 +179,10 @@ export async function draftScheduledAttempt(
 	// Offsets are verified against the answers exactly as the model saw them
 	// (trimmed/clipped, same order as `items`); map them back to each answer.
 	const anchored = anchorDraftFindings(
-		result.draft.findings.slice(0, 8),
+		result.draft.findings.slice(0, MAX_STORED_FINDINGS),
 		parsed.input.items.map((item, index) => ({ id: items[index]?.id || '', answer: item.answer })),
 	);
-	const stored = {
+	const stored: ScheduledAiDraftRecord['draft'] = {
 		summary: result.draft.summary,
 		feedback: result.draft.feedback,
 		suggestedScore: result.draft.suggestedScore,
@@ -183,7 +192,12 @@ export async function draftScheduledAttempt(
 		truncated: result.draft.truncated,
 		cefrLevel: cefrLevelForCourse({ code: courseCode, title: courseTitle }) || '',
 		usedRubric: criteria.length > 0,
+		usedLessonContext: result.draft.usedLessonContext,
+		usedSubCpmk: result.draft.usedSubCpmk,
+		...(result.draft.verifyFailed ? { verifyFailed: true } : {}),
 	};
+	// The JSON column holds 40 000 bytes: shed the last findings rather than fail the save.
+	while (stored.findings && stored.findings.length > 0 && JSON.stringify(stored).length > MAX_DRAFT_JSON) stored.findings.pop();
 	try {
 		await upsertDraft(existing, { ...base, status: 'ready', error: '', draft: stored });
 	} catch (error) {

@@ -1,3 +1,4 @@
+import {decisionsFromStored, type FindingDecision} from './scheduled-finding-review';
 export function formatScheduledResponse(activity: any, attempt?: any): string {
   if (attempt === undefined && activity && Object.prototype.hasOwnProperty.call(activity, 'answers')) {
     attempt = activity;
@@ -37,18 +38,20 @@ export function formatScheduledResponse(activity: any, attempt?: any): string {
   return lines.filter((line, index) => line !== '' || (index > 0 && lines[index - 1] !== '')).join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
-export type GradeDraftState = {feedback: string; points: string; criterionScores: Record<string, string>};
+/** `reviewFindings`: the lecturer's approve/reject decisions on AI findings (absent while none are made). */
+export type GradeDraftState = {feedback: string; points: string; criterionScores: Record<string, string>; reviewFindings?: FindingDecision[]};
 export const emptyGradeDraft: GradeDraftState = {feedback: '', points: '', criterionScores: {}};
 export function hydrateGradeDraft<T extends GradeDraftState>(draft: T, previousAttemptId: string | null, nextAttemptId: string | null, assessment: any, dirty = JSON.stringify(draft) !== JSON.stringify(emptyGradeDraft)) {
   const changedIdentity = previousAttemptId !== nextAttemptId;
   if (!changedIdentity && dirty) return {draft, changedIdentity};
   if (!assessment) return {draft: emptyGradeDraft, changedIdentity};
-  return {draft: {feedback: assessment.feedback || '', points: assessment.points == null ? '' : String(assessment.points), criterionScores: Object.fromEntries(Object.entries(assessment.criterionScores || {}).map(([key, value]) => [key, String(value)]))}, changedIdentity};
+  const decisions = decisionsFromStored(assessment.reviewFindings);
+  return {draft: {feedback: assessment.feedback || '', points: assessment.points == null ? '' : String(assessment.points), criterionScores: Object.fromEntries(Object.entries(assessment.criterionScores || {}).map(([key, value]) => [key, String(value)])), ...(decisions.length ? {reviewFindings: decisions} : {})}, changedIdentity};
 }
 
-export type AssessmentPayloadInput = {attemptId: string; assessmentRevision: number; attemptRevision: number; settingsRevision: number; status: 'draft' | 'reviewed'; points: number | null; criterionScores: Record<string, number>; feedback: string};
+export type AssessmentPayloadInput = {attemptId: string; assessmentRevision: number; attemptRevision: number; settingsRevision: number; status: 'draft' | 'reviewed'; points: number | null; criterionScores: Record<string, number>; feedback: string; reviewFindings?: unknown[]};
 export function buildAssessmentPayload(input: AssessmentPayloadInput) {
-  return {attemptId: input.attemptId, baseRevision: input.assessmentRevision, attemptRevision: input.attemptRevision, settingsRevision: input.settingsRevision, status: input.status, points: input.points, criterionScores: input.criterionScores, feedback: input.feedback};
+  return {attemptId: input.attemptId, baseRevision: input.assessmentRevision, attemptRevision: input.attemptRevision, settingsRevision: input.settingsRevision, status: input.status, points: input.points, criterionScores: input.criterionScores, feedback: input.feedback, ...(input.reviewFindings ? {reviewFindings: input.reviewFindings} : {})};
 }
 export function buildPublishPayload(input: {attemptId: string; assessmentRevision: number; attemptRevision: number; settingsRevision: number}) {
   return {attemptId: input.attemptId, baseRevision: input.assessmentRevision, attemptRevision: input.attemptRevision, settingsRevision: input.settingsRevision};

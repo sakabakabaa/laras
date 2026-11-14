@@ -134,7 +134,7 @@ function gradingState(app, c, owner, user) {
   return {
     aiDrafts,
     gradingSettings: settings.map(r => ({id:r.id,activity:r.getString('activity'),revision:r.getInt('revision'),mode:r.getString('mode'),maxPoints:r.getFloat('maxPoints'),criteria:json(r,'criteria')||[]})),
-    assessments: assessments.map(r => ({id:r.id,attempt:r.getString('attempt'),activity:r.getString('activity'),student:r.getString('student'),revision:r.getInt('revision'),attemptRevision:r.getInt('attemptRevision'),settingsRevision:r.getInt('settingsRevision'),status:r.getString('status'),points:settingsByActivity[r.getString('activity')] === 'ungraded' ? null : r.get('points'),criterionScores:json(r,'criterionScores')||{},answerOverrides:json(r,'answerOverrides')||{},feedback:r.getString('feedback'),...(json(r,'published')&&Object.keys(json(r,'published')).length?{published:json(r,'published')}:{})}))
+    assessments: assessments.map(r => ({id:r.id,attempt:r.getString('attempt'),activity:r.getString('activity'),student:r.getString('student'),revision:r.getInt('revision'),attemptRevision:r.getInt('attemptRevision'),settingsRevision:r.getInt('settingsRevision'),status:r.getString('status'),points:settingsByActivity[r.getString('activity')] === 'ungraded' ? null : r.get('points'),criterionScores:json(r,'criterionScores')||{},answerOverrides:json(r,'answerOverrides')||{},reviewFindings:(a=>Array.isArray(a)?a:[])(json(r,'reviewFindings')),feedback:r.getString('feedback'),...(json(r,'published')&&Object.keys(json(r,'published')).length?{published:json(r,'published')}:{})}))
   };
 }
 function view(app, c, ctx, user, now) {
@@ -377,8 +377,9 @@ function handle(app, body, user, now) {
         if (!['draft','reviewed'].includes(body.status)) bad('Status penilaian tidak valid.');
         const grade=assess.validateGrade({mode:setting.getString('mode'),maxPoints:setting.getFloat('maxPoints'),criteria:json(setting,'criteria')||[]},body.criterionScores,body.points);
         if (typeof body.feedback!=='string'||body.feedback.length>10000) bad('Umpan balik tidak valid.');
+        const reviewFindings = body.reviewFindings === undefined ? undefined : assess.validateReviewFindings(body.reviewFindings);
         if (!record) record=new Record(app.findCollectionByNameOrId('scheduled_assessments'));
-        record.load({class:c.id,activity:activity.id,attempt:attempt.id,student:attempt.getString('student'),revision:(record.getInt('revision')||0)+1,attemptRevision:attempt.getInt('revision'),settingsRevision:setting.getInt('revision'),status:body.status,points:grade.points,criterionScores:grade.criterionScores,feedback:body.feedback,published:record.get('published'),publishedRevision:record.getInt('publishedRevision')});app.save(record);
+        record.load({...(reviewFindings === undefined ? {} : {reviewFindings}),class:c.id,activity:activity.id,attempt:attempt.id,student:attempt.getString('student'),revision:(record.getInt('revision')||0)+1,attemptRevision:attempt.getInt('revision'),settingsRevision:setting.getInt('revision'),status:body.status,points:grade.points,criterionScores:grade.criterionScores,feedback:body.feedback,published:record.get('published'),publishedRevision:record.getInt('publishedRevision')});app.save(record);
         event(app,c,user.id,'assessment_saved',{attempt:attempt.id,status:body.status});
       }
     }

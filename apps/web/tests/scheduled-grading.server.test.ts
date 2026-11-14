@@ -78,6 +78,8 @@ const modelReply = JSON.stringify({
 });
 
 beforeEach(() => {
+	// These tests cover the single-pass wire shape; two-pass has its own tests.
+	process.env.AI_EVAL_TWO_PASS = '0';
 	db.model.mockReset();
 	db.collect.mockReset();
 	db.created = [];

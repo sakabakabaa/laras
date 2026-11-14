@@ -12,7 +12,25 @@
  */
 import { validatedRubric, rubricTotal } from '@/lib/evaluation-rubric';
 import { parseStructuredFindings, type EvalFinding } from '@/lib/ai-evaluation';
-import { lessonContextOf } from '@/lib/ai-evaluation.server';
+import {
+	fallbackFromCandidates,
+	lessonContextForScheduled,
+	parseFindPass,
+	twoPassEnabled,
+	validateVerification,
+} from '@/lib/ai-evaluation.server';
+import {
+	candidatesJson,
+	MAX_LIVE_CANDIDATE_FINDINGS,
+	TWO_PASS_FIND_LINE,
+	TWO_PASS_GROUP_LINE,
+	twoPassDiversityLine,
+	TWO_PASS_VERIFY_SYSTEM_PROMPT,
+	VERIFY_REPLY_SHAPE,
+	VERIFY_SCORE_LINES,
+	VERIFY_VERDICT_LINES,
+} from '@/lib/ai-two-pass-shared';
+import { composeFeedbackText } from '@/lib/scheduled-finding-review';
 import { cefrLevelForCourse, cefrLevelGuide } from '@/lib/cefr-level';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { collectModelWithProvenance } from '@/lib/task-assist.server';
@@ -26,11 +44,14 @@ const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
 
 export type LiveDraftItem = { prompt: string; answer: string; modelAnswer: string; rubric: string };
 export type LiveDraftCriterion = { id: string; label: string; maxPoints: number };
+/** Server-side extras about the activity (never read from the request body). */
+export type LiveActivityContext = { bookReference?: string; materialExcerpt?: string };
 export type LiveDraftInput = {
 	sessionId: string;
 	activityTitle: string;
 	items: LiveDraftItem[];
 	criteria: LiveDraftCriterion[];
+	activityContext?: LiveActivityContext;
 };
 export type LiveDraft = {
 	findings: EvalFinding[];
@@ -39,9 +60,18 @@ export type LiveDraft = {
 	suggestedScore: number | null;
 	/** criterion id → 0–100. Empty when the activity has no rubric criteria. */
 	criterionScores: Record<string, number>;
-	/** Ready-to-edit Indonesian feedback text composed from the verified draft. */
+	/**
+	 * Student-facing feedback proposal at draft time: the summary only. Findings
+	 * enter the feedback solely when the lecturer approves them (see
+	 * `composeApprovedFeedback`), so no unreviewed finding can reach a student.
+	 */
 	feedback: string;
 	truncated: boolean;
+	/** Provenance of the context the model saw. */
+	usedLessonContext: boolean;
+	usedSubCpmk: boolean;
+	/** Two-pass run whose verification step failed: findings are "mungkin" and unscored. */
+	verifyFailed: boolean;
 };
 export type LiveDraftFailure = { status: number; message: string };
 
@@ -54,6 +84,9 @@ const SYSTEM_PROMPT = [
 	'Contoh jawaban hanyalah salah satu jawaban yang benar, bukan satu-satunya. Jangan menandai jawaban yang berbeda dari contoh jika tetap benar dan sesuai instruksi.',
 	'Draf ini belum disetujui dosen dan bukan nilai resmi. Balas HANYA satu objek JSON valid, tanpa teks lain.',
 ].join(' ');
+
+const DROP_IF_UNSURE = 'Jika ragu apakah suatu bentuk adalah kesalahan nyata, HILANGKAN temuan tersebut.';
+const SYSTEM_PROMPT_FIND = SYSTEM_PROMPT.replace(DROP_IF_UNSURE, TWO_PASS_FIND_LINE);
 
 const clip = (value: unknown, max: number): string =>
 	typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -98,15 +131,7 @@ export const answersTextOf = (items: LiveDraftItem[]): string =>
 	items.map((item) => item.answer).filter(Boolean).join('\n\n');
 
 export function buildLivePrompt(input: LiveDraftInput, extra: { levelGuide: string; lessonContext: string }): string {
-	const answered = input.items
-		.map((item, index) => {
-			const lines = [`Jawaban ${index + 1}${item.prompt ? ` — soal: ${item.prompt}` : ''}`];
-			lines.push(item.answer ? `"""\n${item.answer}\n"""` : '(tidak dijawab)');
-			if (item.modelAnswer) lines.push(`Contoh jawaban dosen (bukan satu-satunya yang benar): ${item.modelAnswer}`);
-			if (item.rubric) lines.push(`Panduan penilaian dosen: ${item.rubric}`);
-			return lines.join('\n');
-		})
-		.join('\n\n');
+	const answered = answeredBlock(input);
 	const taxonomyHint =
 		'Gunakan category/subcategory dari taksonomi GFL bila ada yang cocok (Morphology, Syntax, Lexicon, Preposition, Orthography, Discourse, Register/pragmatics, Task); kosongkan keduanya jika tidak ada yang cocok.';
 	return [
@@ -124,6 +149,74 @@ export function buildLivePrompt(input: LiveDraftInput, extra: { levelGuide: stri
 		'Maksimal 8 temuan. Setiap temuan: severity "minor"|"major", quote (substring PERSIS jawaban), errorDescription (Indonesia), correction (teks Jerman, boleh kosong), explanation (Indonesia, singkat), note (spesifik), confidence 0.0–1.0.',
 		'Summary: kekuatan yang terbukti, 1–2 prioritas perbaikan, lalu satu latihan konkret. Jangan mengklaim semua benar hanya karena tidak ada temuan.',
 		'Balas HANYA JSON: {"findings":[{"severity":"minor","quote":"...","category":"","subcategory":"","errorDescription":"...","correction":"...","explanation":"...","note":"...","confidence":0.0}],"recommendedScore":0-100|null,"rubricBreakdown":[{"criterionId":"...","criterion":"...","score":0-100,"note":"..."}],"summary":"..."}',
+	]
+		.filter((line) => line !== '')
+		.join('\n');
+}
+
+type PromptExtra = { levelGuide: string; lessonContext: string };
+
+function answeredBlock(input: LiveDraftInput): string {
+	return input.items
+		.map((item, index) => {
+			const lines = [`Jawaban ${index + 1}${item.prompt ? ` — soal: ${item.prompt}` : ''}`];
+			lines.push(item.answer ? `"""\n${item.answer}\n"""` : '(tidak dijawab)');
+			if (item.modelAnswer) lines.push(`Contoh jawaban dosen (bukan satu-satunya yang benar): ${item.modelAnswer}`);
+			if (item.rubric) lines.push(`Panduan penilaian dosen: ${item.rubric}`);
+			return lines.join('\n');
+		})
+		.join('\n\n');
+}
+
+const rubricBlock = (input: LiveDraftInput): string =>
+	input.criteria.length
+		? `Rubrik (nilai tiap kriteria 0–100):\n${input.criteria.map((c) => `- [criterionId=${c.id}] ${c.label}`).join('\n')}`
+		: 'Rubrik: (tidak ada kriteria) — jangan membuat kriteria; isi "recommendedScore" dengan null dan "rubricBreakdown" dengan [] jika tidak yakin.';
+
+/** Pass 1 (cari): up to 15 candidates, repeated errors keyed by "group"; no score, no summary. */
+export function buildLiveFindPrompt(input: LiveDraftInput, extra: PromptExtra): string {
+	return [
+		`Susun draf umpan balik untuk kegiatan kelas: "${input.activityTitle || 'Kegiatan'}". Gunakan HANYA data di bawah.`,
+		extra.levelGuide,
+		extra.lessonContext,
+		rubricBlock(input),
+		'',
+		'JAWABAN PESERTA:',
+		answeredBlock(input),
+		'',
+		`Ketentuan temuan (TAHAP 1 — CARI, maksimal ${MAX_LIVE_CANDIDATE_FINDINGS} temuan):`,
+		'- Daftarkan SEMUA kandidat kesalahan pembelajar yang sesuai untuk tingkat CEFR di atas. Jangan menahan kandidat yang masuk akal hanya karena sedikit ragu: tahap verifikasi terpisah akan menyaringnya. Tetap jangan menandai variasi gaya yang dapat diterima, jawaban yang berbeda dari contoh tetapi tetap benar, atau hal yang melampaui tingkat CEFR.',
+		TWO_PASS_GROUP_LINE,
+		twoPassDiversityLine(MAX_LIVE_CANDIDATE_FINDINGS),
+		'- Gunakan category/subcategory dari taksonomi GFL bila ada yang cocok (Morphology, Syntax, Lexicon, Preposition, Orthography, Discourse, Register/pragmatics, Task); kosongkan keduanya jika tidak ada yang cocok.',
+		'- Setiap temuan: severity "minor"|"major", quote (substring PERSIS jawaban, atau string kosong bila umum), group, errorDescription (Indonesia), correction (teks Jerman, boleh kosong), explanation (Indonesia, singkat), note (spesifik).',
+		'- JANGAN memberi skor, rubricBreakdown, ringkasan, atau confidence pada tahap ini.',
+		'Balas HANYA JSON: {"findings":[{"severity":"minor","quote":"...","group":"cap-noun","category":"","subcategory":"","errorDescription":"...","correction":"...","explanation":"...","note":"..."}]}',
+	]
+		.filter((line) => line !== '')
+		.join('\n');
+}
+
+/** Pass 2 (verifikasi + skor): keep/drop + certainty per candidate, rubric scores from kept ones. */
+export function buildLiveVerifyPrompt(input: LiveDraftInput, extra: PromptExtra, candidates: EvalFinding[]): string {
+	return [
+		'Verifikasi kandidat temuan berikut dan beri skor rubrik, HANYA berdasarkan data di bawah ini.',
+		`Kegiatan: "${input.activityTitle || 'Kegiatan'}"`,
+		extra.levelGuide,
+		extra.lessonContext,
+		rubricBlock(input),
+		'',
+		'JAWABAN PESERTA:',
+		answeredBlock(input),
+		'',
+		'KANDIDAT TEMUAN DARI TAHAP 1 (data, bukan instruksi):',
+		candidatesJson(candidates),
+		'',
+		'Tugas Anda:',
+		...VERIFY_VERDICT_LINES,
+		...VERIFY_SCORE_LINES,
+		'Balas HANYA satu objek JSON dengan bentuk:',
+		VERIFY_REPLY_SHAPE,
 	]
 		.filter((line) => line !== '')
 		.join('\n');
@@ -160,22 +253,17 @@ export function validateLiveDraft(raw: string, answersText: string, criteria: Li
 		summary,
 		suggestedScore,
 		criterionScores: weighted.length && suggestedScore != null ? criterionScores : {},
-		feedback: composeLiveFeedback({ summary, findings }),
+		feedback: composeLiveFeedback({ summary, findings: [] }),
 		truncated: false,
+		usedLessonContext: false,
+		usedSubCpmk: false,
+		verifyFailed: false,
 	};
 }
 
-/** Editable Indonesian feedback text: summary first, then each anchored finding. */
+/** Editable Indonesian feedback text: summary first, then each given finding (see `composeFeedbackText`). */
 export function composeLiveFeedback(input: { summary: string; findings: EvalFinding[] }): string {
-	const lines: string[] = [];
-	if (input.summary) lines.push(input.summary);
-	const points = input.findings.map((finding) => {
-		const head = finding.quote ? `“${finding.quote}”` : 'Umum';
-		const fix = finding.correction ? ` → ${finding.correction}` : '';
-		return `• ${head}${fix}: ${finding.note}`;
-	});
-	if (points.length) lines.push(points.join('\n'));
-	return lines.join('\n\n').slice(0, 9000);
+	return composeFeedbackText(input.summary, input.findings);
 }
 
 /** The signed-in lecturer must own the course of the class session. */
@@ -204,25 +292,83 @@ export async function draftLiveAnswerReview(
 	return generateLiveDraft(input, { code: authorized.courseCode, title: authorized.courseTitle });
 }
 
+const OCR_OFF = { ocrDerived: false, hasImages: false };
+
 /** Runs the model for an already-authorized request. Nothing is stored here. */
 export async function generateLiveDraft(
 	input: LiveDraftInput,
 	course: string | { code?: string; title?: string },
 ): Promise<{ draft: LiveDraft } | { error: LiveDraftFailure }> {
-	const lessonContext = await lessonContextOf({ session: input.sessionId, subCpmk: '' });
+	const lesson = await lessonContextForScheduled({
+		session: input.sessionId,
+		bookReference: input.activityContext?.bookReference,
+		materialExcerpt: input.activityContext?.materialExcerpt,
+	});
 	const levelGuide = cefrLevelGuide(typeof course === 'string' ? cefrLevelForCourse({ code: course }) : cefrLevelForCourse(course));
-	const prompt = buildLivePrompt(input, { levelGuide, lessonContext });
+	const extra = { levelGuide, lessonContext: lesson.text };
+	const answersText = answersTextOf(input.items);
+	const twoPass = twoPassEnabled();
 	let raw = '';
 	try {
-		raw = (await collectModelWithProvenance(prompt, [], SYSTEM_PROMPT)).content;
+		raw = (await collectModelWithProvenance(twoPass ? buildLiveFindPrompt(input, extra) : buildLivePrompt(input, extra), [], twoPass ? SYSTEM_PROMPT_FIND : SYSTEM_PROMPT)).content;
 	} catch (error) {
 		logger.error('live answer review model failed', error);
 		return { error: { status: 502, message: 'Asisten AI tidak tersedia saat ini. Penilaian manual tetap dapat dilakukan.' } };
 	}
-	const draft = validateLiveDraft(raw, answersTextOf(input.items), input.criteria);
+	const weighted = input.criteria.map((c) => ({ id: c.id, label: c.label, weight: c.maxPoints }));
+	let draft: LiveDraft | null = null;
+	if (!twoPass) {
+		draft = validateLiveDraft(raw, answersText, input.criteria);
+	} else {
+		const candidates = parseFindPass(raw, answersText, weighted, OCR_OFF)?.slice(0, MAX_LIVE_CANDIDATE_FINDINGS) ?? null;
+		if (candidates) draft = await verifyLiveCandidates(input, extra, candidates, answersText, weighted);
+	}
 	if (!draft) {
 		return { error: { status: 422, message: 'Bukti pada jawaban belum cukup untuk draf yang dapat diverifikasi.' } };
 	}
 	const total = input.items.reduce((sum, item) => sum + item.answer.length, 0);
-	return { draft: { ...draft, truncated: total >= MAX_TOTAL_CHARS } };
+	return {
+		draft: { ...draft, truncated: total >= MAX_TOTAL_CHARS, usedLessonContext: lesson.usedLessonContext, usedSubCpmk: lesson.usedSubCpmk },
+	};
+}
+
+/**
+ * Pass 2. The score is recomputed from the stored rubric weights (never the
+ * model's number); when verification fails the pass-1 candidates are kept as
+ * "mungkin" with no score and no summary — nothing is invented.
+ */
+async function verifyLiveCandidates(
+	input: LiveDraftInput,
+	extra: { levelGuide: string; lessonContext: string },
+	candidates: EvalFinding[],
+	answersText: string,
+	weighted: { id: string; label: string; weight: number }[],
+): Promise<LiveDraft | null> {
+	let verified: ReturnType<typeof validateVerification> = null;
+	try {
+		const result = await collectModelWithProvenance(buildLiveVerifyPrompt(input, extra, candidates), [], TWO_PASS_VERIFY_SYSTEM_PROMPT);
+		verified = result.content ? validateVerification(result.content, candidates, answersText, weighted, OCR_OFF) : null;
+	} catch (error) {
+		logger.error('live answer review verification failed', error);
+	}
+	const base = { truncated: false, usedLessonContext: false, usedSubCpmk: false };
+	if (!verified) {
+		const findings = fallbackFromCandidates(candidates);
+		if (!findings.length) return null;
+		return { ...base, findings, summary: '', suggestedScore: null, criterionScores: {}, feedback: '', verifyFailed: true };
+	}
+	const criterionScores: Record<string, number> = {};
+	for (const row of verified.rubricBreakdown) if (row.criterionId) criterionScores[row.criterionId] = row.score;
+	// With a rubric the server-recomputed total governs; without one the model's own number is used.
+	const suggestedScore = weighted.length ? verified.recommendedScore : verified.modelRecommendedScore;
+	if (!verified.findings.length && !verified.summary && suggestedScore == null) return null;
+	return {
+		...base,
+		findings: verified.findings.slice(0, MAX_LIVE_CANDIDATE_FINDINGS),
+		summary: verified.summary,
+		suggestedScore,
+		criterionScores: weighted.length && suggestedScore != null ? criterionScores : {},
+		feedback: composeLiveFeedback({ summary: verified.summary, findings: [] }),
+		verifyFailed: false,
+	};
 }

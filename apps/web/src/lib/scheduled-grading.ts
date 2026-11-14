@@ -14,6 +14,7 @@ import type {GradingSetting, ScheduledActivity, ScheduledAssessment, ScheduledAt
 import {assessmentStatus} from './scheduled-session-workspace';
 import {requiresManual} from './session-review-verdict';
 import type {ScheduledAiCheckedAnswer, ScheduledAiFinding} from './scheduled-answer-marks';
+import {composeApprovedFeedback, reviewedFindings, type FindingDecision} from './scheduled-finding-review';
 
 /** Stored AI draft (collection `scheduled_ai_drafts`) as returned in lecturer state. */
 export type ScheduledAiDraftRecord = {
@@ -36,6 +37,12 @@ export type ScheduledAiDraftRecord = {
 		cefrLevel?: string;
 		/** Whether a rubric was sent to the AI. */
 		usedRubric?: boolean;
+		/** Whether the meeting's topic/notes/book reference/material text reached the AI. */
+		usedLessonContext?: boolean;
+		/** Whether Sub-CPMK (the meeting's, else the course RPS's) reached the AI. */
+		usedSubCpmk?: boolean;
+		/** Two-pass draft whose verification step failed: findings are all "mungkin", no score. */
+		verifyFailed?: boolean;
 	};
 	error?: string;
 	updated?: string;
@@ -187,10 +194,15 @@ export function aiDraftFor(records: ScheduledAiDraftRecord[] | undefined, attemp
 	return usableAi(records?.find((r) => r.attempt === attempt?.id), attempt);
 }
 
-/** AI proposal mapped onto the draft fields (points per criterion / overall points + feedback). */
-export function draftFromAi(settings: EffectiveSettings, record: ScheduledAiDraftRecord): GradeDraftState {
+/**
+ * AI proposal mapped onto the draft fields (points per criterion / overall
+ * points + feedback). The feedback is the AI summary plus ONLY the findings
+ * the lecturer approved in `decisions`; the stored draft's own `feedback`
+ * field is ignored because older drafts listed every finding in it.
+ */
+export function draftFromAi(settings: EffectiveSettings, record: ScheduledAiDraftRecord, decisions?: FindingDecision[]): GradeDraftState {
 	const ai = record.draft || {};
-	const feedback = (ai.feedback || ai.summary || '').slice(0, 10000);
+	const feedback = composeApprovedFeedback(ai.summary || '', reviewedFindings(ai.findings, decisions), 10000);
 	if (settings.mode === 'ungraded') return {feedback, points: '', criterionScores: {}};
 	if (settings.mode === 'points') {
 		const score = finite(ai.suggestedScore) ? ai.suggestedScore : null;
@@ -218,7 +230,7 @@ export function panelAiDraft(
 	const ai = record.draft || {};
 	const criterionScores: Record<string, number> = {};
 	for (const c of settings.criteria) if (finite(ai.criterionScores?.[c.id])) criterionScores[c.id] = ai.criterionScores![c.id];
-	return {status: 'ready', score: finite(ai.suggestedScore) ? ai.suggestedScore : null, criterionScores, summary: ai.feedback || ai.summary || ''};
+	return {status: 'ready', score: finite(ai.suggestedScore) ? ai.suggestedScore : null, criterionScores, summary: ai.summary || ''};
 }
 
 /** Unified status words, the same set as Tugas. */
@@ -412,4 +424,31 @@ export function referenceItemsOf(snapshot: Parameters<typeof writtenItemsOf>[0])
 			const key = keys[item.id];
 			return {prompt: item.prompt || '', modelAnswer: key?.mode === 'reference' ? key.modelAnswer || '' : '', rubric: key?.mode === 'reference' ? key.rubric || '' : ''};
 		});
+}
+
+type ContextSnapshot = {
+	content?: string;
+	lesson?: {goal?: {de?: string}; steps?: {de?: string}[]; source?: {sourceLabel?: string}};
+	worksheet?: {blocks?: unknown[]; sourceLabel?: string};
+	title?: string;
+};
+
+/** Where the activity's text material comes from, for the AI's lesson context. */
+export function activityMaterialExcerpt(snapshot: ContextSnapshot, max = 1500): string {
+	const parts: string[] = [];
+	const clean = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+	for (const raw of snapshot.worksheet?.blocks || []) {
+		const block = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+		if (block.type === 'passage' && Array.isArray(block.sections)) {
+			for (const section of block.sections as {segments?: {type?: string; text?: {de?: string}}[]}[]) {
+				parts.push((section.segments || []).map((seg) => (seg.type === 'text' ? clean(seg.text?.de) : '___')).join(' '));
+			}
+		} else if (block.type === 'instructions') {
+			parts.push(clean((block.body as {de?: string} | undefined)?.de));
+		}
+	}
+	parts.push(clean(snapshot.lesson?.goal?.de));
+	for (const step of snapshot.lesson?.steps || []) parts.push(clean(step.de));
+	parts.push(clean(snapshot.content));
+	return parts.filter(Boolean).join('\n').replace(/[ \t]+/g, ' ').trim().slice(0, max);
 }

@@ -39,8 +39,8 @@ beforeEach(() => {
 
 describe('persistOcrContent', () => {
 	it('versions are bumped', () => {
-		expect(AI_EVALUATION_PROMPT_VERSION).toBe('german-gfl-feedback-v4-ocr');
-		expect(AI_EVALUATION_SYSTEM_PROMPT_VERSION).toBe('german-gfl-feedback-v4-ocr');
+		expect(AI_EVALUATION_PROMPT_VERSION).toBe('german-gfl-feedback-v5-two-pass');
+		expect(AI_EVALUATION_SYSTEM_PROMPT_VERSION).toBe('german-gfl-feedback-v5-two-pass');
 	});
 
 	it('replaces empty content and keeps markers', async () => {

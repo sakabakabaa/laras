@@ -47,6 +47,7 @@ import { letterGrade } from '@/lib/assignments';
 import {
 	buildMarkedSegments,
 	findingAnchoredIn,
+	groupFindings,
 	deriveAiReviewFindings,
 	normalizeReviewFindings,
 	type MarkedSegment,
@@ -285,6 +286,10 @@ type ReviewContextValue = {
 	cancelReject: () => void;
 	/** Approves every AI finding still pending review ("Setujui semua temuan"). */
 	approveAllPending: () => void;
+	/** Approves the still-pending AI findings of one group ("Setujui grup"). */
+	approveGroup: (ids: string[]) => void;
+	/** Rejects the AI findings of one group without a reason ("Tolak grup"). */
+	rejectGroup: (ids: string[]) => void;
 	removeFinding: (id: string) => void;
 	focusFinding: (id: string | null) => void;
 	focusNote: () => void;
@@ -764,6 +769,30 @@ export function AiEvaluationReviewProvider({
 		);
 	};
 
+	const approveGroup = (ids: string[]) => {
+		const set = new Set(ids);
+		setNotice('');
+		setSaveError('');
+		setRejectingId(null);
+		setWorking((prev) =>
+			(prev ?? []).map((f) =>
+				set.has(f.id) && f.source === 'ai' && f.status === 'pending' ? { ...f, status: 'approved', rejectReason: '' } : f,
+			),
+		);
+	};
+
+	const rejectGroup = (ids: string[]) => {
+		const set = new Set(ids);
+		setNotice('');
+		setSaveError('');
+		setRejectingId(null);
+		setWorking((prev) =>
+			(prev ?? []).map((f) =>
+				set.has(f.id) && f.source === 'ai' && f.status !== 'rejected' ? { ...f, status: 'rejected', rejectReason: '' } : f,
+			),
+		);
+	};
+
 	const removeFinding = (id: string) => {
 		setNotice('');
 		setSaveError('');
@@ -1145,6 +1174,8 @@ export function AiEvaluationReviewProvider({
 		confirmReject,
 		cancelReject,
 		approveAllPending,
+		approveGroup,
+		rejectGroup,
 		removeFinding,
 		focusFinding: (id) => setActiveFindingId(id),
 		focusNote: () => setNoteTick((n) => n + 1),
@@ -1383,7 +1414,7 @@ export function AnswerScript({
 									<mark
 										key={partIndex}
                                         title={readOnly ? finding?.note : undefined}
-										className={`aev-mark ${part.severity}${pending ? ' pending' : ''}${focused ? ' focused' : ''}${finding && rejectingId === finding.id ? ' rejecting' : ''}`}
+										className={`aev-mark ${part.severity}${finding?.certainty === 'mungkin' ? ' maybe' : ''}${pending ? ' pending' : ''}${focused ? ' focused' : ''}${finding && rejectingId === finding.id ? ' rejecting' : ''}`}
 										onMouseDown={(event) => {
 											const target = event.target as HTMLElement;
 											if (target.closest('textarea, input, select')) return;
@@ -1616,6 +1647,13 @@ function aiDraftOf(ctx: ReviewContextValue): GradingAiDraft | null {
 						matchCriterion(entry, ctx.criteria)!.id!,
 						entry.score,
 					]),
+				)
+			: undefined,
+		criterionNotes: ctx.ready
+			? Object.fromEntries(
+					validatedRubric(parseRubric(ctx.ready.rubricBreakdown), ctx.criteria)
+						.filter((entry) => entry.note.trim())
+						.map((entry) => [matchCriterion(entry, ctx.criteria)!.id!, entry.note.trim()]),
 				)
 			: undefined,
 		summary: ctx.ready?.summary || '',
@@ -2032,6 +2070,7 @@ function FindingsUnderText() {
 	const [openId, setOpenId] = useState<string | null>(null);
 	// Open by default on desktop so every finding is reviewable without an extra click.
 	const [listOpen, setListOpen] = useState(isDesktopViewport);
+	const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set());
 	if (!ctx || !ctx.hasRecord) return null;
 	const { criteria } = ctx;
 	const annotations = ctx.researchAnnotations;
@@ -2040,42 +2079,7 @@ function FindingsUnderText() {
 	const submissionId = ctx.row?.submission ?? '';
 	const words = ctx.content.trim() ? ctx.content.trim().split(/\s+/).length : 0;
 	const anchored = ctx.visible.filter((f) => f.quote);
-	return (
-		<section className="evx-block aev-temuan" aria-label="Temuan">
-			<footer className="evx-script-foot aev-temuan-count">
-				<span>{t('aevr.wordsCount', { count: String(words) })}</span>
-				<span className="evx-ann">
-					{anchored.length} anotasi
-					<i className="minor">{anchored.filter((f) => f.severity === 'minor').length}</i>
-					<i className="major">{anchored.filter((f) => f.severity === 'major').length}</i>
-				</span>
-			</footer>
-			<button
-				type="button"
-				className="aev-temuan-toggle"
-				aria-expanded={listOpen}
-				onClick={() => setListOpen((open) => !open)}
-			>
-				<h4>{t('aevr.findingsHeading')}</h4>
-				<span>
-					AI {ctx.aiCount} · Dosen {ctx.lecturerCount}
-					{ctx.rejected.length > 0 ? ` · Ditolak ${ctx.rejected.length}` : ''}
-				</span>
-				<ChevronDown size={14} className={listOpen ? 'open' : ''} />
-			</button>
-			{ctx.pendingCount > 0 && (
-				<div className="aevr-item-actions aev-approve-all-row">
-					<button type="button" className="approve" onClick={ctx.approveAllPending}>
-						<CheckCircle2 size={12} /> Setujui semua temuan ({ctx.pendingCount})
-					</button>
-				</div>
-			)}
-			{listOpen && <div className="aev-findings evx-finding-list">
-				{ctx.visible.length === 0 ? (
-					<p className="asg-empty-line">{t('aevr.findingsEmpty')}</p>
-				) : (
-					<ul>
-						{ctx.visible.map((finding) => {
+	const renderItem = (finding: ReviewFinding) => {
 							const open = openId === finding.id;
 							const aiIndex =
 								finding.source === 'ai' && finding.id.startsWith('ai-')
@@ -2088,6 +2092,9 @@ function FindingsUnderText() {
 									<button type="button" className="evx-f-toggle" onClick={() => setOpenId(open ? null : finding.id)}>
 										<span className="aev-chip">{SEVERITY_LABEL[finding.severity]}</span>
 										<span className={`aevr-src ${finding.source}`}>{finding.source === 'ai' ? 'AI' : 'Dosen'}</span>
+										{finding.source === 'ai' && finding.certainty && (
+											<span className={`aev-cert ${finding.certainty}`}>{finding.certainty}</span>
+										)}
 										<span className="evx-f-note">{finding.note}</span>
 										<ChevronDown size={14} className={open ? 'open' : ''} />
 									</button>
@@ -2140,7 +2147,7 @@ function FindingsUnderText() {
 															<strong>{t('aevr.explanationLabel')}</strong> {finding.explanation}
 														</p>
 													)}
-													{typeof finding.confidence === 'number' && (
+													{!finding.certainty && typeof finding.confidence === 'number' && (
 														<small>{t('aevr.aiConfidence')} {Math.round(finding.confidence * 100)}%</small>
 													)}
 													{finding.anchorValid === false && (
@@ -2201,6 +2208,79 @@ function FindingsUnderText() {
 											)}
 										</div>
 									)}
+								</li>
+							);
+	};
+	return (
+		<section className="evx-block aev-temuan" aria-label="Temuan">
+			<footer className="evx-script-foot aev-temuan-count">
+				<span>{t('aevr.wordsCount', { count: String(words) })}</span>
+				<span className="evx-ann">
+					{anchored.length} anotasi
+					<i className="minor">{anchored.filter((f) => f.severity === 'minor').length}</i>
+					<i className="major">{anchored.filter((f) => f.severity === 'major').length}</i>
+				</span>
+			</footer>
+			<button
+				type="button"
+				className="aev-temuan-toggle"
+				aria-expanded={listOpen}
+				onClick={() => setListOpen((open) => !open)}
+			>
+				<h4>{t('aevr.findingsHeading')}</h4>
+				<span>
+					AI {ctx.aiCount} · Dosen {ctx.lecturerCount}
+					{ctx.rejected.length > 0 ? ` · Ditolak ${ctx.rejected.length}` : ''}
+				</span>
+				<ChevronDown size={14} className={listOpen ? 'open' : ''} />
+			</button>
+			{ctx.pendingCount > 0 && (
+				<div className="aevr-item-actions aev-approve-all-row">
+					<button type="button" className="approve" onClick={ctx.approveAllPending}>
+						<CheckCircle2 size={12} /> Setujui semua temuan ({ctx.pendingCount})
+					</button>
+				</div>
+			)}
+			{listOpen && <div className="aev-findings evx-finding-list">
+				{ctx.visible.length === 0 ? (
+					<p className="asg-empty-line">{t('aevr.findingsEmpty')}</p>
+				) : (
+					<ul>
+						{groupFindings(ctx.visible).map((group) => {
+							if (!group.key) return renderItem(group.items[0]);
+							const ids = group.items.map((f) => f.id);
+							const groupOpen = openGroups.has(group.key);
+							const pendingInGroup = group.items.filter((f) => f.source === 'ai' && f.status === 'pending').length;
+							const aiInGroup = group.items.filter((f) => f.source === 'ai').length;
+							return (
+								<li key={group.key} className="aev-group">
+									<div className="aev-group-head">
+										<button
+											type="button"
+											className="aev-group-toggle"
+											aria-expanded={groupOpen}
+											onClick={() =>
+												setOpenGroups((prev) => {
+													const next = new Set(prev);
+													if (next.has(group.key)) next.delete(group.key);
+													else next.add(group.key);
+													return next;
+												})
+											}
+										>
+											<strong>{group.label} ×{group.items.length}</strong>
+											<ChevronDown size={14} className={groupOpen ? 'open' : ''} />
+										</button>
+										{aiInGroup > 0 && (
+											<span className="aevr-item-actions">
+												<button type="button" className="approve" disabled={pendingInGroup === 0} onClick={() => ctx.approveGroup(ids)}>
+													<CheckCircle2 size={12} /> Setujui grup
+												</button>
+												<button type="button" onClick={() => ctx.rejectGroup(ids)}>Tolak grup</button>
+											</span>
+										)}
+									</div>
+									{groupOpen && <ul className="aev-group-items">{group.items.map(renderItem)}</ul>}
 								</li>
 							);
 						})}

@@ -79,6 +79,8 @@ export type GradingAiDraft = {
 	score: number | null;
 	/** The AI's proposed per-criterion scores, keyed by criterion id. */
 	criterionScores?: Record<string, number>;
+	/** The AI's per-criterion explanation (may quote evidence in "double quotes"), keyed by criterion id. */
+	criterionNotes?: Record<string, string>;
 	/** Proposed student feedback ("Gunakan saran AI"). */
 	summary?: string;
 	/** Lecturer-facing explanation of the current status. */
@@ -300,6 +302,7 @@ export function GradingPanel(props: GradingPanelProps) {
 							const open = rowOpen(criterion.id);
 							const score = scores[criterion.id];
 							const aiScore = aiDraft?.criterionScores?.[criterion.id];
+							const aiNote = aiDraft?.criterionNotes?.[criterion.id];
 							return (
 								<li key={criterion.id}>
 									<button type="button" aria-expanded={open} onClick={() => toggleRow(criterion.id)}>
@@ -311,6 +314,7 @@ export function GradingPanel(props: GradingPanelProps) {
 										<span className="assessment-weight">{criterion.weightPercent}%</span>
 										<ChevronDown size={12} aria-hidden="true" />
 									</button>
+									{aiNote && <AiCriterionNote note={aiNote} />}
 									{open && (
 										<div className="evx-criterion-achievement">
 											<label>
@@ -561,6 +565,37 @@ function AiDraftStatus({
 				<Info size={13} /> {draft.message || 'Evaluasi AI belum dijalankan untuk kiriman ini.'}
 			</p>
 			{action('Minta draf AI', <Sparkles size={13} />)}
+		</div>
+	);
+}
+
+/** Splits an AI criterion note into prose and quoted evidence ("..." / „...“ / “...”). */
+export function splitEvidenceQuotes(note: string): { text: string; quotes: string[] } {
+	const quotes: string[] = [];
+	const text = note
+		.replace(/[„“"]([^„“”"]{2,160})[”“"]/g, (_match, quote: string) => {
+			quotes.push(quote.trim());
+			return '';
+		})
+		.replace(/\s{2,}/g, ' ')
+		.replace(/\s+([.,;:])/g, '$1')
+		.trim();
+	return { text, quotes };
+}
+
+/** The AI's explanation of one criterion score, shown under the row; evidence quotes become chips. */
+function AiCriterionNote({ note }: { note: string }) {
+	const { text, quotes } = splitEvidenceQuotes(note);
+	return (
+		<div className="aevr-crit-ai" aria-label="Penjelasan skor AI">
+			{text && <span>{text}</span>}
+			{quotes.length > 0 && (
+				<span>
+					{quotes.map((quote, index) => (
+						<q key={index} className="aevr-crit-chip">{quote}</q>
+					))}
+				</span>
+			)}
 		</div>
 	);
 }

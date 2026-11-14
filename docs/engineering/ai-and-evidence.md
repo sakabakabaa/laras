@@ -64,3 +64,24 @@ The evaluation service records pending/ready/failed states and sufficient/insuff
 ## Extending recommendations safely
 
 Reuse scoped retrieval and reviewed findings before adding a separate knowledge graph. Keep recommendations grounded in approved excerpts and actual student evidence. Do not train or calibrate against unreviewed AI scores as if they were lecturer ground truth. Use held-out lecturer-reviewed submissions for comparisons, and exclude the evaluated answer's own reference correction from retrieval. Any production database analysis belongs in private analysis storage, not this repo.
+
+## Two-pass Tugas evaluation and the quality harness
+
+Prompt version `german-gfl-feedback-v5-two-pass` (`ai-evaluation.server.ts`). Set `AI_EVAL_TWO_PASS=0` to revert to the v4 single pass (drafts then record `german-gfl-feedback-v4-ocr`); any other value, or unset, means two-pass.
+
+- **Pass 1 (find)** is recall-oriented: up to 25 candidate findings, each with quote, severity, taxonomy, correction, explanation, note, and a `group` key shared by repeated errors of one type (e.g. `cap-noun`). No scores. The v4 OCR rules still apply.
+- **Pass 2 (verify + score)** receives the text (and images), rubric, CEFR guide and the candidates with ids. Per candidate it returns `keep|drop`, a reason, `certainty` (`pasti` = confidence 0.9, `mungkin` = 0.6) and optionally a corrected `correction`; it then scores the rubric from kept findings only. The server re-applies anchoring and the OCR guards to kept findings and recomputes `recommendedScore` as the weighted mean of `rubricBreakdown` (the model's own total is only recorded for audit).
+- **Audit:** dropped candidates with reasons go to `researchSnapshot.droppedFindings`; pass timings, the pass-2 prompt and the model-vs-recomputed score go to `researchSnapshot.passes`. `generationDurationMs` is the sum of both passes. `rawOutput` holds both replies.
+- **Fallback:** if pass 2 throws or returns invalid JSON, pass-1 findings (after guards) are stored with certainty `mungkin`, `recommendedScore` null and the note "Verifikasi AI gagal; skor tidak dihitung". If pass 1 fails, the normal failed-draft path applies.
+
+Findings carry optional `group` and `certainty`; older drafts and Kelas terjadwal findings without them still render.
+
+### Quality harness
+
+`apps/web/scripts/eval-ai-quality.mjs` re-runs the current pipeline in dry-run mode (`dryRunEvaluation`, nothing is stored) on gold submissions: `ai_evaluations` rows with `reviewedAt` set and lecturer decisions in `reviewFindings`, and/or a published `finalScore`. Run from `apps/web`:
+
+```
+node --env-file-if-exists=.env scripts/eval-ai-quality.mjs --limit 20 [--assignment ID] [--prompt v4|v5] [--json]
+```
+
+It needs the same env as the app (`POCKETBASE_URL`, `PB_SUPERUSER_EMAIL`, `PB_SUPERUSER_PASSWORD`, `HROUTER_*`) and makes 1 (v4) or 2 (v5) model calls per submission. Metrics (`src/lib/ai-eval-quality.ts`, matched by quote overlap): precision = new AI findings matching a lecturer-approved finding / those matching an approved or rejected one (undecided ignored); recall = lecturer-approved plus lecturer-added findings matched by a new finding / all of them; score MAE against the published `finalScore`; all per category. Compare prompts by running `--prompt v4` and `--prompt v5` with the same `--limit`.

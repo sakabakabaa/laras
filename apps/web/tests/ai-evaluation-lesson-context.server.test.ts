@@ -72,6 +72,8 @@ const settle = async () => {
 };
 
 beforeEach(() => {
+	// These cases cover the single-pass (v4) prompt; two-pass is covered in ai-evaluation-two-pass.server.test.ts.
+	process.env.AI_EVAL_TWO_PASS = '0';
 	state.row = null;
 	state.courseCode = 'A1 JR241';
 	state.submission = { ...state.submission, content: 'Ich bin Student. Ich wohne in Jakarta.' };

@@ -10,7 +10,7 @@ import { authenticateUser } from '@/lib/context-retrieval.server';
 import { activityTypeOf, type Assignment } from '@/lib/assignments';
 import { taskKindForShape } from '@/lib/task-types';
 import { speakingTranscriptUnavailable } from '@/lib/evaluation-scoring';
-import { sanitizeTaxonomy, type EvalSeverity, type ReviewFinding, type ReviewSource, type ReviewStatus } from '@/lib/ai-evaluation';
+import { parseCertainty, sanitizeGroup, sanitizeTaxonomy, type EvalSeverity, type ReviewFinding, type ReviewSource, type ReviewStatus } from '@/lib/ai-evaluation';
 
 const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
 const MAX_REVIEW_FINDINGS = 40;
@@ -230,6 +230,8 @@ export function validateReviewFindings(
 			correction: typeof f.correction === 'string' ? f.correction.trim().slice(0, 600) : '',
 			explanation: typeof f.explanation === 'string' ? f.explanation.trim().slice(0, 1000) : '',
 			...(confidence != null ? { confidence } : {}),
+			...(sanitizeGroup(f.group) ? { group: sanitizeGroup(f.group) } : {}),
+			...(parseCertainty(f.certainty) ? { certainty: parseCertainty(f.certainty) } : {}),
 			anchorValid: typeof f.anchorValid === 'boolean' ? f.anchorValid : undefined,
 			quoteStart: typeof f.quoteStart === 'number' ? f.quoteStart : null,
 			quoteEnd: typeof f.quoteEnd === 'number' ? f.quoteEnd : null,

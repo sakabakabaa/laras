@@ -1,4 +1,5 @@
 import PocketBase from 'pocketbase';
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import logger from '@/lib/logger.server';
 import { apiError, json, readFormData, readJsonBody, withApi } from '@/lib/api.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
@@ -307,7 +308,8 @@ async function runCheck(input: {
 			files: imageNames,
 			kind: kind || undefined,
 		});
-		const ocrText = ocrExtracted.text.trim();
+		// Students review this text: the ⟦ ⟧ uncertainty markers are for the lecturer's view only.
+		const ocrText = stripOcrMarkers(ocrExtracted.text).trim();
 		if (!ocrExtracted.ok || !ocrText) {
 			return apiError(
 				422,

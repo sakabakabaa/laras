@@ -20,6 +20,7 @@
  *   - Helpful refusal: never a bare "I can't help"; always redirect to an
  *     allowed alternative.
  */
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import type PocketBase from 'pocketbase';
 import { languageOf, type Language } from '@/lib/i18n';
 import { collectModel } from '@/lib/task-assist.server';
@@ -227,7 +228,7 @@ const clip = (value: string | undefined | null, max: number) => {
 export function renderStudentDraft(submission: AssignmentSubmission | null): string {
 	if (!submission) return '(Belum ada draf — mahasiswa belum menulis apa pun.)';
 	const parts: string[] = [];
-	if (submission.content?.trim()) parts.push(submission.content.trim());
+	if (submission.content?.trim()) parts.push(stripOcrMarkers(submission.content).trim());
 	if (submission.link?.trim()) parts.push(`Tautan: ${submission.link.trim()}`);
 	const ta = submission.taskAnswers as
 		| { writing?: { answers?: Record<string, { content?: string }> }; quiz?: { answers?: Record<string, unknown> } }

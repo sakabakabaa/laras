@@ -4,6 +4,8 @@
  * recommendations.
  */
 
+import { stripOcrMarkers } from '@/lib/ai-marks';
+
 export type StudentRecommendation = {
 	severity: 'minor' | 'major';
 	note: string;
@@ -13,7 +15,8 @@ export type StudentRecommendation = {
 const SCORE_LINE = /\b\d{1,3}\s*\/\s*100\b/;
 
 /** Drops final scores and rubric totals from already-published feedback text. */
-export function studentRecommendationText(raw: string): string {
+export function studentRecommendationText(input: string): string {
+	const raw = stripOcrMarkers(input);
 	if (!raw.trim()) return '';
 	const out: string[] = [];
 	let inRubric = false;
@@ -108,8 +111,9 @@ const TEKS_QUOTE = /\s*Pada teks:\s*"([^"]+)"\.?\s*$/i;
  * "Saran perbaikan:" list (`- Kesalahan berarti: note Pada teks: "quote".`)
  * and the older "Catatan penilaian:" list (`- [Kesalahan berarti] note — "quote"`).
  */
-export function parseStudentRecommendations(raw: string): StudentRecommendation[] {
-	if (!raw || !raw.trim()) return [];
+export function parseStudentRecommendations(input: string): StudentRecommendation[] {
+	const raw = stripOcrMarkers(input || '');
+	if (!raw.trim()) return [];
 	const out: StudentRecommendation[] = [];
 	for (const line of raw.split('\n')) {
 		const trimmed = line.trim();

@@ -21,7 +21,7 @@ import { collectHostingerText } from '@/lib/hostinger-model.server';
 
 const run = promisify(execFile);
 
-const OCR_PROMPT =
+export const OCR_PROMPT =
 	'Ekstrak seluruh teks yang terlihat pada halaman ini, apa adanya, dalam urutan baca. ' +
 	'Pertahankan bahasa aslinya dan pertahankan baris baru antar paragraf. ' +
 	'Jangan menambahkan komentar, penjelasan, atau terjemahan. ' +
@@ -37,13 +37,15 @@ const OCR_SYSTEM =
  * if the participant had written them, so the lecturer reviews (and the AI
  * quotes) text nobody answered. This prompt reads only the participant's part.
  */
-const ANSWER_OCR_PROMPT =
+export const ANSWER_OCR_PROMPT =
 	'Halaman ini adalah pekerjaan mahasiswa. Tulis HANYA jawaban yang ditulis atau diketik mahasiswa sendiri, apa adanya, dalam urutan baca. ' +
 	'JANGAN menyalin teks bawaan lembar kerja atau soal: judul, nomor bab, instruksi, perintah soal, label kolom atau isian (mis. "Name:", "Datum:"), ' +
 	'dan teks yang jelas dicetak. Jangan menyalin watermark atau cap aplikasi pemindai (mis. "Dipindai dengan CamScanner"), nomor halaman, atau logo. ' +
 	'Jika jawaban mengisi sebuah kolom, tulis isinya saja tanpa label kolom. ' +
 	'Pertahankan bahasa aslinya, ejaan mahasiswa (jangan dibetulkan), dan baris baru antar paragraf. ' +
-	'Bagian yang tidak terbaca tulis persis [tidak terbaca]; jangan menebak. Jangan menambahkan komentar atau terjemahan. ' +
+	'Bagian yang sama sekali tidak terbaca tulis persis [tidak terbaca]; jangan menebak. ' +
+	'Jika sebuah kata dapat Anda baca tetapi Anda ragu (huruf, huruf besar/kecil, umlaut, ß, atau tanda baca), bungkus kata itu dengan ⟦ dan ⟧ (U+27E6 dan U+27E7), dengan bacaan terbaik di dalamnya, mis. ⟦Abends⟧. Jangan mengoreksi ejaan; hanya tandai keraguan Anda. ' +
+	'Jangan menambahkan komentar atau terjemahan. ' +
 	'Jika halaman tidak memuat jawaban mahasiswa, balas tepat: TIDAK ADA TEKS';
 
 export type PdfOcrResult = {
@@ -141,6 +143,45 @@ export const ocrPdf = async (
 			totalPages: 0,
 			reason: error instanceof Error ? error.message : 'OCR PDF gagal.',
 		};
+	} finally {
+		await rm(dir, { recursive: true, force: true }).catch(() => {});
+	}
+};
+
+/**
+ * Renders the first pages of a PDF as JPEG data URLs (long edge `longEdge` px)
+ * so an evaluator can LOOK at a scanned worksheet instead of trusting OCR text.
+ * Returns [] when rendering fails; never throws.
+ */
+export const renderPdfPageImages = async (
+	buffer: Buffer,
+	options: { maxPages?: number; longEdge?: number; timeoutMs?: number } = {},
+): Promise<string[]> => {
+	const maxPages = Math.max(1, options.maxPages ?? 5);
+	const longEdge = options.longEdge ?? 1400;
+	const dir = await mkdtemp(path.join(tmpdir(), 'laras-pdfimg-'));
+	try {
+		const pdfPath = path.join(dir, 'input.pdf');
+		await writeFile(pdfPath, buffer);
+		const totalPages = await countPages(pdfPath);
+		const limit = Math.max(1, Math.min(maxPages, totalPages || maxPages));
+		await run(
+			'pdftoppm',
+			['-jpeg', '-jpegopt', 'quality=78', '-scale-to', String(longEdge), '-f', '1', '-l', String(limit), pdfPath, path.join(dir, 'page')],
+			{ timeout: options.timeoutMs ?? 60_000, maxBuffer: 64 * 1024 * 1024 },
+		);
+		const names = (await readdir(dir))
+			.filter((name) => name.startsWith('page') && name.endsWith('.jpg'))
+			.sort((a, b) => Number(a.replace(/\D+/g, '')) - Number(b.replace(/\D+/g, '')))
+			.slice(0, maxPages);
+		const out: string[] = [];
+		for (const name of names) {
+			const jpg = await readFile(path.join(dir, name));
+			out.push(`data:image/jpeg;base64,${jpg.toString('base64')}`);
+		}
+		return out;
+	} catch {
+		return [];
 	} finally {
 		await rm(dir, { recursive: true, force: true }).catch(() => {});
 	}

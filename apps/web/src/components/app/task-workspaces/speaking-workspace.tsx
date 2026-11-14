@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import { Button } from '@/components/ui/button';
 import { FileAudio, LoaderCircle, Mic, Save, Send, X } from 'lucide-react';
 import pb from '@/lib/pocketbase-client';
@@ -49,7 +50,7 @@ export function SpeakingWorkspace({
 	const finallySubmitted = Boolean(
 		submission && submission.status !== 'draft' && submission.status !== 'revision',
 	);
-	const [content, setContent] = useState(submission?.content || '');
+	const [content, setContent] = useState(stripOcrMarkers(submission?.content || ''));
 	const [link, setLink] = useState(submission?.link || '');
 	const [group, setGroup] = useState(submission?.group || '');
 	const [files, setFiles] = useState<File[]>([]);

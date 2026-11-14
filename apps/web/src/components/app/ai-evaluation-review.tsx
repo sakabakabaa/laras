@@ -34,9 +34,9 @@ import {
 	X,
 } from 'lucide-react';
 import { Link } from 'react-router';
-import { MarkLegend } from '@/components/app/grading/marked-text';
+import { MarkLegend, OcrBracketsHidden, renderAnswerPieces } from '@/components/app/grading/marked-text';
 import pb from '@/lib/pocketbase-client';
-import { greenAllowed, lineGreenEligible, OK_TITLE, splitUnreadable, UNREADABLE_LABEL } from '@/lib/ai-marks';
+import { findMarkerInsensitive, greenAllowed, lineGreenEligible } from '@/lib/ai-marks';
 import { aiScoreNotice, SETUP_NOTICE_TEXT } from '@/lib/evaluation-setup';
 import { parseAssessmentDraft } from '@/lib/assessment-draft';
 import { useUnsavedWork } from '@/hooks/use-unsaved-work';
@@ -1373,26 +1373,7 @@ export function AnswerScript({
 								if (!part.text) return null;
 								if (!part.severity || part.findingIndex == null) {
 									const okLine = checked && lineGreenEligible(shown.map((p) => p.text).join(''));
-									return splitUnreadable(part.text).map((piece, pieceIndex) => {
-										const key = `${partIndex}-${pieceIndex}`;
-										if (piece.unreadable) {
-											return (
-												<mark key={key} className="aev-mark unreadable" title={UNREADABLE_LABEL}>
-													{piece.text}
-													<span className="sr-only"> ({UNREADABLE_LABEL})</span>
-												</mark>
-											);
-										}
-										if (okLine && piece.text.trim()) {
-											return (
-												<mark key={key} className="aev-mark ok" title={OK_TITLE}>
-													{piece.text}
-													<span className="sr-only"> ({OK_TITLE})</span>
-												</mark>
-											);
-										}
-										return <span key={key}>{piece.text}</span>;
-									});
+									return renderAnswerPieces(part.text, okLine, String(partIndex));
 								}
 								const finding = marked[part.findingIndex];
 								const pending = part.findingIndex >= visibleCount;
@@ -1414,11 +1395,12 @@ export function AnswerScript({
 											onFocus(focused ? null : finding.id);
 										}}
 									>
-										{part.text}
+										<OcrBracketsHidden text={part.text} />
 										{finding && !pending && !readOnly && (
 											<span className="aev-mark-pop" role="tooltip">
 												<span className="aev-mark-pop-head">
 													<span className="aev-chip">{SEVERITY_LABEL[finding.severity]}</span>
+													{finding.imageChecked && <span className="aev-img-checked">dicek di foto</span>}
 													<span className={`aevr-src ${finding.source}`}>
 														{finding.source === 'ai' ? 'AI' : 'Dosen'}
 													</span>
@@ -2590,7 +2572,10 @@ export function AiEvaluationAnswer() {
             const sel = window.getSelection();
             if (!el || !sel || !sel.rangeCount || sel.isCollapsed) { setMarkPopup(null); return; }
             const range = sel.getRangeAt(0);
-            const text = sel.toString().trim();
+            const selected = sel.toString().trim();
+            // Hidden OCR brackets are not part of the selection: map it back to the marked text.
+            const loose = selected && !content.includes(selected) ? findMarkerInsensitive(content, selected) : null;
+            const text = loose ? content.slice(loose.start, loose.end) : selected;
             if (!el.contains(range.startContainer) || !el.contains(range.endContainer) || !text || text.length > 300 || !content.includes(text)) {
                 setMarkPopup(null); return;
             }

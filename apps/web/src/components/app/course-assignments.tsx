@@ -1,4 +1,5 @@
 import { PracticeMascot } from './practice-mascot';
+import { stripOcrMarkers } from '@/lib/ai-marks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
@@ -754,7 +755,7 @@ function SubmitForm({
 	const finallySubmitted = Boolean(
 		submission && submission.status !== 'draft' && submission.status !== 'revision',
 	);
-	const [content, setContent] = useState(submission?.content || '');
+	const [content, setContent] = useState(stripOcrMarkers(submission?.content || ''));
 	const [link, setLink] = useState(submission?.link || '');
 	const [group, setGroup] = useState(submission?.group || '');
 	const [files, setFiles] = useState<File[]>([]);

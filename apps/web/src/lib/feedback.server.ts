@@ -99,7 +99,8 @@ const IMAGE_READ_PROMPT = [
 	'Transkripsikan HANYA jawaban yang ditulis atau diketik mahasiswa sendiri.',
 	'JANGAN menyalin teks bawaan lembar kerja atau soal (judul, nomor bab, instruksi, perintah soal, label kolom atau isian, teks cetak) dan jangan menyalin watermark atau cap aplikasi pemindai seperti "Dipindai dengan CamScanner". Jika jawaban mengisi sebuah kolom, tulis isinya saja.',
 	'Jika gambar bukan tulisan (diagram, foto, logo, tangkapan layar, atau ilustrasi), jelaskan isi visual yang benar-benar terlihat dalam beberapa kalimat.',
-	'Bagian kabur atau tidak terbaca tulis persis sebagai [tidak terbaca]. Jangan menebak huruf, kata, atau isi yang tidak terlihat.',
+	'Bagian yang sama sekali kabur atau tidak terbaca tulis persis sebagai [tidak terbaca]. Jangan menebak huruf, kata, atau isi yang tidak terlihat.',
+	'Jika sebuah kata dapat Anda baca tetapi Anda ragu (huruf, huruf besar/kecil, umlaut, ß, atau tanda baca), bungkus kata itu dengan ⟦ dan ⟧ (U+27E6 dan U+27E7), dengan bacaan terbaik di dalamnya, mis. ⟦Abends⟧. Jangan mengoreksi ejaan mahasiswa; hanya tandai keraguan Anda.',
 	'Jika gambar sama sekali tidak dapat dilihat, balas hanya: [tidak terbaca]',
 	'Balas HANYA hasil bacaan, tanpa komentar.',
 ].join(' ');

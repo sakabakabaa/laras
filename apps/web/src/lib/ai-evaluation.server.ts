@@ -49,7 +49,10 @@ import {
 	taskKindForShape,
 } from '@/lib/task-types';
 import type { EvalFinding, EvalRubricRow } from '@/lib/ai-evaluation';
-import { parseStructuredFindings } from '@/lib/ai-evaluation';
+import { applyOcrGuards, parseStructuredFindings } from '@/lib/ai-evaluation';
+import { countUncertain } from '@/lib/ai-marks';
+import { scannedPdfPageImages } from '@/lib/evaluation-page-images.server';
+import { isPointerOnlyContent } from '@/lib/submission-content.server';
 
 type SubmissionRow = {
 	id: string;
@@ -76,8 +79,8 @@ const MAX_IMAGES = 5;
  * or system prompt materially changes so old drafts stay reproducible against
  * the version that generated them.
  */
-export const AI_EVALUATION_PROMPT_VERSION = 'german-gfl-feedback-v3-passages';
-export const AI_EVALUATION_SYSTEM_PROMPT_VERSION = 'german-gfl-feedback-v3-passages';
+export const AI_EVALUATION_PROMPT_VERSION = 'german-gfl-feedback-v4-ocr';
+export const AI_EVALUATION_SYSTEM_PROMPT_VERSION = 'german-gfl-feedback-v4-ocr';
 export const RESEARCH_SCHEMA_VERSION = 2;
 
 /** SHA-256 hex hash of a text, for reproducibility without storing the full input. */
@@ -99,6 +102,11 @@ const SYSTEM_PROMPT = [
 	'Jangan mengarang kriteria, materi, nilai, atau isi yang tidak dikirim.',
 	'Draf ini belum disetujui dosen dan bukan nilai resmi. Klasifikasi kategori/subkategori adalah hasil AI, bukan kebenaran ahli.',
 	'Tuliskan "note" yang ringkas, spesifik, dan langsung menunjuk masalah sebenarnya (mis. "Subjek jamak tidak cocok dengan kata kerja tunggal" atau "Tanda koma hilang sebelum anak kalimat") bukan "Bisa diperbaiki".',
+	'Aturan OCR (berlaku bila catatan permintaan menyebut teks berasal dari transkripsi lembar kerja): teks dari lembar kerja tulisan tangan atau pindaian adalah transkripsi OCR yang dapat memuat KESALAHAN BACA. Jangan melaporkan kesalahan baca OCR sebagai kesalahan peserta.',
+	'"[tidak terbaca]" berarti bagian itu tidak terbaca: JANGAN pernah mengutipnya dan jangan anggap isi yang hilang di sana sebagai kesalahan peserta.',
+	'Kata di dalam ⟦ ⟧ adalah bacaan OCR yang diragukan: JANGAN membuat temuan Orthography (spelling, capitalization, umlaut, ß, punctuation) pada kata itu. Saat mengutip, salin teks persis termasuk tanda ⟦ ⟧ bila kutipan memuatnya.',
+	'Bila gambar terlampir, buat temuan Orthography HANYA jika kesalahan itu terlihat pada gambar; jika tidak terlihat atau tidak pasti, HILANGKAN temuan. Bila tidak ada gambar untuk teks OCR, JANGAN membuat temuan capitalization atau punctuation sama sekali (paling rentan salah baca), dan temuan spelling hanya bila jelas kesalahan pembelajar serta kata itu tidak berada di dalam ⟦ ⟧.',
+	'Setiap temuan memuat boolean "imageChecked": true hanya bila temuan itu Anda verifikasi pada gambar terlampir, selain itu false.',
 	'Balas HANYA satu objek JSON valid, tanpa teks lain di luar objek.',
 ].join(' ');
 
@@ -237,10 +245,47 @@ const validScore = (value: unknown): number | null =>
  * whose quote is not an exact substring of the student text are dropped
  * (never kept as a guess); invented rubric criteria are dropped the same way.
  */
+/**
+ * Saves the cleaned OCR answer into submission.content so the lecturer sees
+ * exactly the text the AI quoted. Additive and conservative:
+ * - empty or import-pointer content is replaced by the OCR text;
+ * - a short typed note is kept and the OCR text appended below it;
+ * - anything else (a real answer) is never touched;
+ * - the row is re-read first, so a concurrent edit is never overwritten.
+ * Returns the saved content, or null when nothing was written.
+ */
+export async function persistOcrContent(input: {
+	collection: 'assignment_submissions';
+	recordId: string;
+	previous: string;
+	ocrText: string;
+	maxChars?: number;
+}): Promise<string | null> {
+	const max = input.maxChars ?? 8000;
+	const ocr = input.ocrText.trim().slice(0, max);
+	// Page markers or a lone "[tidak terbaca]" are not an answer.
+	const letters = ocr.replace(/\[\s*tidak terbaca\s*\]/gi, '').replace(/[^\p{L}]/gu, '');
+	if (letters.length < 40) return null;
+	const previous = (input.previous || '').trim();
+	const pointer = isPointerOnlyContent(previous);
+	if (!pointer && (previous.length >= 200 || previous.includes(ocr))) return null;
+	const next = pointer ? ocr : `${previous}\n\n${ocr}`.slice(0, max);
+	try {
+		const current = await pocketbaseAdmin.getRecord<{ content?: string }>(input.collection, input.recordId);
+		if ((current.content || '').trim() !== previous) return null;
+		await pocketbaseAdmin.updateRecord(input.collection, input.recordId, { content: next });
+		return next;
+	} catch (error) {
+		logger.error('evaluation ocr content persist failed', error);
+		return null;
+	}
+}
+
 function validateDraft(
 	raw: string,
 	studentText: string,
 	criteria: { id?: string; label: string; weight: number }[],
+	ocr: { ocrDerived: boolean; hasImages: boolean } = { ocrDerived: false, hasImages: false },
 ): ValidatedDraft | null {
 	const cleaned = raw.replace(/```json|```/g, '').trim();
 	const start = cleaned.indexOf('{');
@@ -261,7 +306,7 @@ function validateDraft(
 	// repeated quotes are marked ambiguous. category/subcategory are sanitized
 	// to the controlled taxonomy. The raw model output is preserved separately
 	// on the evaluation row for research reproducibility.
-	const findings = parseStructuredFindings(row.findings, studentText, criteria);
+	const findings = applyOcrGuards(parseStructuredFindings(row.findings, studentText, criteria), studentText, ocr);
 
 	let recommendedScore = validScore(row.recommendedScore);
 	const rubricBreakdown: EvalRubricRow[] = criteria.length ? validatedRubric(row.rubricBreakdown, criteria) : [];
@@ -294,11 +339,29 @@ async function runEvaluation(input: {
 		// content, structured answers, and photos are not the speaking evidence.
 		const studentText = studentTextOf(submission, isSpeaking);
 		const transcriptText = isSpeaking ? studentText : '';
-		const images = isSpeaking
+		const photoUrls = isSpeaking
 			? []
 			: imageFilenames(submission.files)
 					.slice(0, MAX_IMAGES)
 					.map((filename) => storedFileUrl(collection, recordId, filename));
+		// Scanned PDFs are rendered to page images (shared budget of MAX_IMAGES
+		// with photos, photos first) so the model can check orthography visually.
+		let pdfPages: { images: string[]; labels: string[] } = { images: [], labels: [] };
+		if (!isSpeaking && photoUrls.length < MAX_IMAGES) {
+			try {
+				pdfPages = await scannedPdfPageImages({
+					collection,
+					recordId,
+					files: submission.files || [],
+					budget: MAX_IMAGES - photoUrls.length,
+				});
+			} catch (error) {
+				logger.error('evaluation pdf page images failed', error);
+			}
+		}
+		const images = [...photoUrls, ...pdfPages.images];
+		// The research snapshot records references, never the page bytes.
+		const snapshotImages = [...photoUrls, ...pdfPages.labels];
 		const structured = isSpeaking ? '' : renderStructuredAnswers(assignment, submission.taskAnswers);
 		const hasFiles = (submission.files || []).length > 0;
 
@@ -308,6 +371,8 @@ async function runEvaluation(input: {
 		// reviews the work instead of a filename — extraction never guesses.
 		let evidenceText = studentText;
 		let usedAttachment = false;
+		// The stored answer text after this run: what the lecturer sees equals what the AI quoted.
+		let effectiveContent = submission.content || '';
 		// Stored content is usually the answer text already (typed by the student,
 		// or transcribed from the scan by the content refresh). Only pay for
 		// re-extraction when it is a pointer note, empty, or too short to review.
@@ -326,11 +391,29 @@ async function runEvaluation(input: {
 						.filter(Boolean)
 						.join('\n\n')
 						.slice(0, MAX_TEXT_CHARS * 2);
+					// One displayed text = evaluated text: save the cleaned OCR answer into
+					// submission.content so findings anchor to text the lecturer can see.
+					const persisted = await persistOcrContent({
+						collection,
+						recordId,
+						previous: submission.content || '',
+						ocrText: attachmentText,
+					});
+					if (persisted) {
+						effectiveContent = persisted;
+						evidenceText = persisted.slice(0, MAX_TEXT_CHARS);
+					}
 				}
 			} catch (error) {
 				logger.error('evaluation attachment extraction failed', error);
 			}
 		}
+
+		// Text that came from worksheets (scan/photo) is an OCR transcription.
+		const ocrDerived =
+			!isSpeaking &&
+			hasFiles &&
+			(usedAttachment || images.length > 0 || countUncertain(evidenceText) > 0 || /\[\s*tidak terbaca\s*\]/i.test(evidenceText));
 
 		if (isSpeaking) {
 			// No transcript yet (still processing, failed, or never requested):
@@ -392,7 +475,7 @@ async function runEvaluation(input: {
 		const lessonContext = await lessonContextOf(assignment);
 		const truncated = isSpeaking
 			? (submission.transcript || '').length > MAX_TEXT_CHARS
-			: (submission.content || '').length > MAX_TEXT_CHARS;
+			: effectiveContent.length > MAX_TEXT_CHARS;
 		const hasWeightedRubric = criteria.some((c) => c.weight > 0);
 		const materialLines = material
 			? material.sources
@@ -437,13 +520,22 @@ async function runEvaluation(input: {
 			structured ? `Jawaban terstruktur:\n${structured}` : '',
 			submission.link ? `Tautan kiriman: ${submission.link}` : '',
 			images.length > 0
-				? `Gambar kiriman: ${images.length} gambar terlampir (foto pekerjaan).`
+				? `Gambar kiriman: ${images.length} gambar terlampir (foto atau halaman pindaian pekerjaan).`
 				: '',
 			isSpeaking
 				? 'Catatan: bukti utama adalah transkripsi audio. Setiap temuan wajib mengutip substring PERSIS dari transkripsi di atas.'
 				: '',
 			!isSpeaking && (usedAttachment || hasFiles)
 				? 'Catatan: teks kiriman di atas berasal dari transkripsi lembar kerja peserta. Tulisan yang tercetak pada lembar (instruksi tugas, judul, label kolom, nama peserta) BUKAN jawaban peserta — jangan dinilai dan jangan dikutip sebagai temuan. Nilai hanya kalimat yang ditulis peserta sendiri.'
+				: '',
+			ocrDerived
+				? 'Catatan OCR: teks kiriman di atas adalah TRANSKRIPSI OCR dari tulisan tangan/pindaian dan dapat memuat kesalahan baca. "[tidak terbaca]" berarti bagian itu tidak terbaca: jangan dikutip dan jangan dianggap kesalahan peserta. Kata di dalam ⟦ ⟧ adalah bacaan yang diragukan: JANGAN membuat temuan Orthography (spelling, capitalization, umlaut, ß, punctuation) pada kata itu.'
+				: '',
+			ocrDerived && images.length > 0
+				? 'Gambar terlampir: buat temuan Orthography HANYA jika kesalahan itu terlihat pada gambar; jika tidak terlihat atau tidak pasti, HILANGKAN temuan. Isi "imageChecked": true hanya untuk temuan yang Anda verifikasi pada gambar.'
+				: '',
+			ocrDerived && images.length === 0
+				? 'Tidak ada gambar terlampir untuk teks OCR ini: JANGAN membuat temuan capitalization atau punctuation sama sekali; temuan spelling hanya bila jelas kesalahan pembelajar dan kata itu tidak berada di dalam ⟦ ⟧. Isi "imageChecked": false.'
 				: '',
 			truncated
 				? `Catatan: kiriman peserta lebih panjang dari batas ${MAX_TEXT_CHARS} karakter dan dipotong. Hanya bagian di atas yang ditinjau — jangan menyimpulkan apa pun tentang bagian yang tidak terlihat (mis. "tidak ada kesimpulan"), dan sebutkan di ringkasan bahwa penilaian hanya mencakup bagian awal.`
@@ -486,7 +578,7 @@ async function runEvaluation(input: {
 			'- Jangan menandai Bahasa Jerman yang dapat diterima sebagai kesalahan hanya karena rumusan lain lebih disukai. Jika ragu, hilangkan temuan.',
 			'Summary: jelaskan kekuatan yang terbukti, 1–3 prioritas perbaikan, lalu satu latihan konkret berikutnya. Jangan mengklaim semua teks sudah benar hanya karena tidak ada temuan.',
 			'Balas HANYA satu objek JSON dengan bentuk:',
-			'{"findings":[{"severity":"minor"|"major","quote":"...","category":"Morphology","subcategory":"article","errorDescription":"...","correction":"...","explanation":"...","note":"...","evidence":"...","criterion":"...","confidence":0.0-1.0}],"recommendedScore":0-100,"rubricBreakdown":[{"criterionId":"...","criterion":"...","score":0-100,"note":"..."}],"summary":"..."}',
+			'{"findings":[{"severity":"minor"|"major","quote":"...","category":"Morphology","subcategory":"article","errorDescription":"...","correction":"...","explanation":"...","note":"...","evidence":"...","criterion":"...","confidence":0.0-1.0,"imageChecked":true|false}],"recommendedScore":0-100,"rubricBreakdown":[{"criterionId":"...","criterion":"...","score":0-100,"note":"..."}],"summary":"..."}',
 		]
 			.filter(Boolean)
 			.join('\n');
@@ -496,7 +588,8 @@ async function runEvaluation(input: {
 			task: { id: assignment.id, title: assignment.title, shape: assignment.shape,
 				instructions: assignment.instructions || '', requirements: assignment.requirements || '',
 				groupInfo: assignment.groupInfo || '', taskConfig: assignment.taskConfig, levelGuide },
-			rubric: criteria, userPrompt: prompt, systemPrompt: SYSTEM_PROMPT, images,
+			rubric: criteria, userPrompt: prompt, systemPrompt: SYSTEM_PROMPT, images: snapshotImages,
+			...(ocrDerived ? { ocrUncertainCount: countUncertain(evidenceText) } : {}),
 			link: submission.link || '', promptVersion: AI_EVALUATION_PROMPT_VERSION,
 			systemPromptVersion: AI_EVALUATION_SYSTEM_PROMPT_VERSION,
 			providerConfig: { provider: 'hostinger', model: process.env.HROUTER_MODEL || 'gpt-6-luna', modelVersion: 'unknown' },
@@ -555,7 +648,7 @@ async function runEvaluation(input: {
 			return;
 		}
 
-		const draft = raw ? validateDraft(raw, evidenceText, criteria) : null;
+		const draft = raw ? validateDraft(raw, evidenceText, criteria, { ocrDerived, hasImages: usedImages }) : null;
 		const rawOutput = raw.slice(0, 100000);
 		const provenance = {
 			...provenanceBase,

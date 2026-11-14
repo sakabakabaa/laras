@@ -9,6 +9,7 @@
  * rendered as inline markings on top of it.
  */
 import pb from '@/lib/pocketbase-client';
+import { findMarkerInsensitive, stripOcrMarkers } from '@/lib/ai-marks';
 import {
 	autoAssignCriterion,
 	normalizeCriterionId,
@@ -291,8 +292,17 @@ export function parseStructuredFindings(
 		if (f.severity !== 'minor' && f.severity !== 'major') continue;
 		const note = typeof f.note === 'string' ? f.note.trim() : '';
 		if (!note) continue;
-		const quote = typeof f.quote === 'string' ? f.quote.trim() : '';
-		const anchor = resolveAnchor(quote, text);
+		let quote = typeof f.quote === 'string' ? f.quote.trim() : '';
+		let anchor = resolveAnchor(quote, text);
+		if (!anchor.anchorValid && quote) {
+			// The model may drop (or add) the ⟦⟧ OCR markers when quoting. Re-anchor on the
+			// marker-insensitive match and store the exact marked substring of the text.
+			const loose = findMarkerInsensitive(text, quote);
+			if (loose && loose.end - loose.start <= 300) {
+				quote = text.slice(loose.start, loose.end);
+				anchor = resolveAnchor(quote, text);
+			}
+		}
 		// A quote that is not an exact substring of the participant's own text
 		// cannot be highlighted in the panel and is usually the model paraphrasing
 		// the scan. Keep the finding (its note is still useful) but demote it to a
@@ -315,6 +325,7 @@ export function parseStructuredFindings(
 		out.push({
 			severity: f.severity,
 			quote: verifiedQuote,
+			...(f.imageChecked === true ? { imageChecked: true } : {}),
 			note: note.slice(0, 600),
 			evidence: typeof f.evidence === 'string' ? f.evidence.trim().slice(0, 600) : '',
 			criterion,
@@ -334,6 +345,54 @@ export function parseStructuredFindings(
 	return out;
 }
 
+const OCR_SENSITIVE_SUBCATEGORIES = new Set(['capitalization', 'punctuation']);
+
+/**
+ * Server-side enforcement of the OCR rules the prompt states, so one model
+ * slip cannot report a reading error as a student error:
+ * - a finding quoting "[tidak terbaca]" is dropped (never quote the unreadable);
+ * - an Orthography finding on a ⟦uncertain⟧ word is dropped;
+ * - without an attached image, capitalization / punctuation findings are dropped;
+ * - `imageChecked` is only kept when an image was actually attached.
+ * Only applied to text that came from OCR (`ocrDerived`).
+ */
+export function applyOcrGuards(
+	findings: EvalFinding[],
+	text: string,
+	options: { ocrDerived: boolean; hasImages: boolean },
+): EvalFinding[] {
+	const uncertainSpans: { start: number; end: number; inner: string }[] = [];
+	for (const match of text.matchAll(/\u27E6([^\u27E6\u27E7\n]*)\u27E7/g)) {
+		const start = match.index ?? 0;
+		uncertainSpans.push({ start, end: start + match[0].length, inner: match[1].trim() });
+	}
+	const out: EvalFinding[] = [];
+	for (const finding of findings) {
+		let next = finding;
+		if (!options.hasImages && next.imageChecked) {
+			const { imageChecked: _dropped, ...rest } = next;
+			void _dropped;
+			next = rest;
+		}
+		if (options.ocrDerived) {
+			if (/\[\s*tidak terbaca\s*\]/i.test(next.quote)) continue;
+			if (next.category === 'Orthography') {
+				if (!options.hasImages && next.subcategory && OCR_SENSITIVE_SUBCATEGORIES.has(next.subcategory)) continue;
+				const plainQuote = stripOcrMarkers(next.quote).trim();
+				const overlaps =
+					typeof next.quoteStart === 'number' && typeof next.quoteEnd === 'number'
+						? uncertainSpans.some((span) => span.start < (next.quoteEnd as number) && span.end > (next.quoteStart as number))
+						: !!plainQuote &&
+							(/[\u27E6\u27E7]/.test(next.quote) ||
+								uncertainSpans.some((span) => span.inner && (plainQuote === span.inner || plainQuote.includes(span.inner))));
+				if (overlaps) continue;
+			}
+		}
+		out.push(next);
+	}
+	return out;
+}
+
 export type EvalFinding = {
 	severity: EvalSeverity;
 	/** Exact substring of the student's text ('' = general finding). */
@@ -349,6 +408,8 @@ export type EvalFinding = {
 	correction?: string;
 	explanation?: string;
 	confidence?: number;
+	/** True when the AI verified this finding against an attached image (not only OCR text). */
+	imageChecked?: boolean;
 	/** Phase 2 — anchor validation. An invalid quote is preserved, never dropped. */
 	anchorValid?: boolean;
 	quoteStart?: number | null;
@@ -391,6 +452,7 @@ export type ReviewFinding = {
 	correction?: string;
 	explanation?: string;
 	confidence?: number;
+	imageChecked?: boolean;
 	anchorValid?: boolean;
 	quoteStart?: number | null;
 	quoteEnd?: number | null;
@@ -581,6 +643,7 @@ export function parseFindings(value: unknown): EvalFinding[] {
 			correction: typeof item.correction === 'string' ? item.correction.slice(0, 600) : '',
 			explanation: typeof item.explanation === 'string' ? item.explanation.slice(0, 1000) : '',
 			...(confidence != null ? { confidence } : {}),
+			...(item.imageChecked === true ? { imageChecked: true } : {}),
 			anchorValid: typeof item.anchorValid === 'boolean' ? item.anchorValid : undefined,
 			quoteStart: typeof item.quoteStart === 'number' ? item.quoteStart : null,
 			quoteEnd: typeof item.quoteEnd === 'number' ? item.quoteEnd : null,
@@ -666,6 +729,7 @@ export function parseReviewFindings(value: unknown): ReviewFinding[] {
 			...(typeof f.confidence === 'number' && Number.isFinite(f.confidence)
 				? { confidence: Math.max(0, Math.min(1, f.confidence)) }
 				: {}),
+			...(f.imageChecked === true ? { imageChecked: true } : {}),
 			anchorValid: typeof f.anchorValid === 'boolean' ? f.anchorValid : undefined,
 			quoteStart: typeof f.quoteStart === 'number' ? f.quoteStart : null,
 			quoteEnd: typeof f.quoteEnd === 'number' ? f.quoteEnd : null,
@@ -710,6 +774,7 @@ export function deriveAiReviewFindings(
 			correction: finding.correction,
 			explanation: finding.explanation,
 			confidence: finding.confidence,
+			imageChecked: finding.imageChecked,
 			anchorValid: finding.anchorValid,
 			quoteStart: finding.quoteStart,
 			quoteEnd: finding.quoteEnd,

@@ -5,7 +5,17 @@
  * never altered; findings are laid over it via `buildMarkedSegments`.
  */
 import {useId} from 'react';
-import {lineGreenEligible, OK_TITLE, splitUnreadable, UNREADABLE_LABEL} from '@/lib/ai-marks';
+import {
+	lineGreenEligible,
+	OCR_UNCERTAIN_CLOSE,
+	OCR_UNCERTAIN_OPEN,
+	OK_TITLE,
+	splitUncertain,
+	splitUnreadable,
+	UNCERTAIN_LABEL,
+	UNCERTAIN_TITLE,
+	UNREADABLE_LABEL,
+} from '@/lib/ai-marks';
 import {buildMarkedSegments, SEVERITY_LABEL, sliceSegments, type EvalFinding, type MarkedSegment} from '@/lib/ai-evaluation';
 
 
@@ -56,15 +66,68 @@ export function UnreadableMark({text}: {text: string}) {
 	);
 }
 
+/** Text with the ⟦ ⟧ OCR marker characters hidden (kept in the DOM so offsets stay intact). */
+export function OcrBracketsHidden({text}: {text: string}) {
+	return (
+		<>
+			{text.split(/([\u27E6\u27E7])/).map((piece, index) =>
+				piece === OCR_UNCERTAIN_OPEN || piece === OCR_UNCERTAIN_CLOSE ? (
+					<span key={index} className="aev-ocr-br" aria-hidden="true">
+						{piece}
+					</span>
+				) : (
+					piece
+				),
+			)}
+		</>
+	);
+}
+
+/** Uncertain OCR word: dotted underline, never green, brackets hidden. `text` includes the ⟦ ⟧ characters. */
+export function UncertainMark({text}: {text: string}) {
+	return (
+		<mark className="aev-mark uncertain" title={UNCERTAIN_TITLE}>
+			<OcrBracketsHidden text={text} />
+			<span className="sr-only"> ({UNCERTAIN_LABEL})</span>
+		</mark>
+	);
+}
+
+/** Pieces of an unmarked part of a line: unreadable, uncertain, green-eligible, or plain. */
+export function renderAnswerPieces(text: string, okLine: boolean, keyPrefix: string) {
+	return splitUnreadable(text).flatMap((piece, pieceIndex) => {
+		const key = `${keyPrefix}-${pieceIndex}`;
+		if (piece.unreadable) return [<UnreadableMark key={key} text={piece.text} />];
+		return splitUncertain(piece.text).map((sub, subIndex) => {
+			const subKey = `${key}-${subIndex}`;
+			if (sub.uncertain) return <UncertainMark key={subKey} text={sub.text} />;
+			if (okLine && sub.text.trim()) {
+				return (
+					<mark key={subKey} className="aev-mark ok" title={OK_TITLE}>
+						<OcrBracketsHidden text={sub.text} />
+						<span className="sr-only"> ({OK_TITLE})</span>
+					</mark>
+				);
+			}
+			return (
+				<span key={subKey}>
+					<OcrBracketsHidden text={sub.text} />
+				</span>
+			);
+		});
+	});
+}
+
 function FindingMark({finding, text}: {finding: EvalFinding; text: string}) {
 	const id = useId();
 	return (
 		<mark className={`aev-mark ${finding.severity}`} tabIndex={0} aria-describedby={id}>
-			{text}
+			<OcrBracketsHidden text={text} />
 			<span className="sr-only"> ({SEVERITY_LABEL[finding.severity]})</span>
 			<span className="aev-mark-pop sr-mark-pop" role="tooltip" id={id} lang="id">
 				<span className="aev-mark-pop-head">
 					<span className={`aev-chip ${finding.severity}`}>{SEVERITY_LABEL[finding.severity]}</span>
+					{finding.imageChecked && <span className="aev-img-checked">dicek di foto</span>}
 				</span>
 				{finding.note && <span className="aev-mark-pop-note">{finding.note}</span>}
 				{finding.correction && (
@@ -112,20 +175,8 @@ export function MarkedText({
 										if (part.severity && part.findingIndex != null && findings[part.findingIndex]) {
 											return <FindingMark key={partIndex} finding={findings[part.findingIndex]} text={part.text} />;
 										}
-										const okLine = part.ok && lineGreenEligible(line.text);
-										return splitUnreadable(part.text).map((piece, pieceIndex) => {
-											const key = `${partIndex}-${pieceIndex}`;
-											if (piece.unreadable) return <UnreadableMark key={key} text={piece.text} />;
-											if (okLine && piece.text.trim()) {
-												return (
-													<mark key={key} className="aev-mark ok" title={OK_TITLE}>
-														{piece.text}
-														<span className="sr-only"> ({OK_TITLE})</span>
-													</mark>
-												);
-											}
-											return <span key={key}>{piece.text}</span>;
-										});
+										const okLine = !!part.ok && lineGreenEligible(line.text);
+										return renderAnswerPieces(part.text, okLine, String(partIndex));
 									})
 								: ' '}
 						</span>
@@ -148,6 +199,7 @@ export function MarkLegend({ok = true}: {ok?: boolean}) {
 				</>
 			)}
 			<mark className="aev-mark unreadable">abu-abu</mark> tidak terbaca
+			<mark className="aev-mark uncertain">titik-titik</mark> OCR ragu
 		</p>
 	);
 }

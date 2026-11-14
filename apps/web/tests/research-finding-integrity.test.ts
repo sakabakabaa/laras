@@ -489,15 +489,18 @@ describe('synthetic fixture — two approved + two rejected findings', () => {
 		}
 	});
 
-	it('the malformed-quote finding (rejected) is explicit about its invalid anchor', () => {
+	it('the malformed-quote finding (rejected) is demoted to a general finding but keeps its invalid-anchor flag', () => {
 		const malformed = findings[2]!;
-		expect(malformed.quote).toBe('nicht im text vorhanden');
+		// An unverifiable quote is never shown: the finding becomes general (empty
+		// quote, no offsets), while the parsed finding still records anchorValid=false.
+		expect(malformed.quote).toBe('');
+		expect(malformed.quoteStart).toBeNull();
+		expect(malformed.quoteEnd).toBeNull();
 		expect(malformed.anchorValid).toBe(false);
 		const fields = buildAiContentFields(malformed, text);
-		expect(fields.anchorValid).toBe(false);
-		expect(fields.anchorError).toBe(ANCHOR_ERROR.QUOTE_NOT_IN_TEXT);
-		// The quote is preserved, not silently emptied.
-		expect(fields.quote).toBe('nicht im text vorhanden');
+		expect(fields.quote).toBe('');
+		expect(fields.quoteStart).toBeNull();
+		expect(fields.quoteEnd).toBeNull();
 		// Confidence is preserved, not zeroed.
 		expect(fields.aiConfidence).toBe(0.5);
 	});

@@ -8,7 +8,7 @@ Based on the public/lecturer/student audit in [ui-improvement-plan.md](ui-improv
 
 Dashboard and task list include enrolled and public channels. A public record linked to an enrolled record is counted once; the enrolled record is canonical. Evaluation participants use the same duplicate rule. The gradebook and learning-outcome averages exclude unpublished submission scores. No saved grades, feedback, publication status or submission records are changed by this work.
 
-Course analytics keeps roster collection/progress separate from the lecturer grading queue: roster collection measures enrolled students; grading completion includes unlinked public submissions. Student analytics always uses one student's expected assignments, filters requests by the signed-in owner, and never requests the roster or public submissions. Student alerts lead to `/app/kerja/:assignmentId` or their own course grades. Existing PocketBase rules remain the authority for access control.
+Course analytics keeps roster collection/progress separate from the lecturer grading queue: roster collection measures enrolled students; grading completion counts enrolled submissions. Student analytics always uses one student's expected assignments, filters requests by the signed-in owner, and never requests the roster. Student alerts lead to `/app/kerja/:assignmentId` or their own course grades. Existing PocketBase rules remain the authority for access control.
 
 ## Interface changes
 

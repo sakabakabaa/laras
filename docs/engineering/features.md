@@ -10,7 +10,7 @@ Each row gives the fastest route into an implementation. Use [routes](routes.md)
 | Course sections | `course.section.tsx` | Course-section components and domain helpers | roster, sessions, assignments, grades, resources |
 | Assignments | `app.tugas.tsx`, `app.tugas.buat.tsx`, assignment form | assignment-draft, task-config-draft, rubric-suggestions | `assignments` |
 | Student submission | `app.kerja.$assignmentId.tsx`, student work page | task-submit and task-assist; browser record operations | `assignment_submissions` |
-| Public-link submission | `tugas.$token.tsx` | Handler actions and public linking/drafts | `public_submissions`, linked enrolled submissions |
+| Task link gateway | `tugas.$token.tsx` | Login-gated redirect from a shared task link to the enrolled workspace | `assignments.publicToken` |
 | Lecturer assessment | `app.tugas.$assignmentId.tsx`, evaluation workspace | evaluation draft/review/annotation/publish routes | `ai_evaluations`, `ai_feedback_items`, submission grades and feedback |
 | File library and evidence | `app.berkas.tsx`, `app.berkas.$fileId.tsx`, file-context | berkas parse/process/suggest/snapshot/restore | file library, extraction, versions, contexts and sections |
 | Student practice | `app.latihan.tsx`, personal-practice | personal-practice, practice-assist | personal practice settings/rounds/attempts |
@@ -27,7 +27,7 @@ Each row gives the fastest route into an implementation. Use [routes](routes.md)
 
 ## Assignment evaluation, end to end
 
-1. The student submits to an enrolled or public submission record. The assignment defines requirements, activity shape, structured task configuration and rubric.
+1. The student submits to an enrolled submission record. The assignment defines requirements, activity shape, structured task configuration and rubric.
 2. `api.evaluation-draft.ts` verifies caller access and queues work through `ai-evaluation.server.ts`. An AI failure does not invalidate the saved submission.
 3. Evaluation collects student text/evidence, validated rubric and available scoped materials. Its parser validates findings and quotation anchors. See `ai-evaluation.ts`, `evaluation-rubric.ts`, `evaluation-scoring.ts` and `evaluation-snapshot.server.ts`.
 4. The evaluation workspace displays AI suggestions and lecturer editing controls. `evaluation-review.server.ts` and annotation services preserve review decisions separately from model output.

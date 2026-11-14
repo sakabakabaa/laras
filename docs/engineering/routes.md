@@ -4,12 +4,14 @@ Generated from [routes.ts](../../apps/web/src/routes.ts). Course child patterns 
 
 | Pattern | Source | Handler exports |
 |---|---|---|
-| `/` | [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx) | Component / route module |
+| `/` | [apps/web/src/routes/home.tsx](../../apps/web/src/routes/home.tsx) | loader |
 | `hcgi/platform/api/*` | [apps/web/src/routes/hcgi.platform.$.ts](../../apps/web/src/routes/hcgi.platform.$.ts) | action, loader |
 | `login` | [apps/web/src/routes/login.tsx](../../apps/web/src/routes/login.tsx) | Component / route module |
 | `app` | [apps/web/src/routes/app.tsx](../../apps/web/src/routes/app.tsx) | HydrateFallback, clientLoader |
 | `analytics` | [apps/web/src/routes/analytics.tsx](../../apps/web/src/routes/analytics.tsx) | HydrateFallback, clientLoader |
 | `app/penilaian` | [apps/web/src/routes/app.penilaian.tsx](../../apps/web/src/routes/app.penilaian.tsx) | HydrateFallback, clientLoader |
+| `app/kelas-terjadwal` | [apps/web/src/routes/app.scheduled-classes.tsx](../../apps/web/src/routes/app.scheduled-classes.tsx) | HydrateFallback, clientLoader |
+| `app/kelas-terjadwal/:courseId/:sessionId` | [apps/web/src/routes/app.scheduled-session.tsx](../../apps/web/src/routes/app.scheduled-session.tsx) | HydrateFallback, clientLoader |
 | `kalender` | [apps/web/src/routes/kalender.tsx](../../apps/web/src/routes/kalender.tsx) | HydrateFallback, clientLoader |
 | `app/courses` | [apps/web/src/routes/app.courses.tsx](../../apps/web/src/routes/app.courses.tsx) | HydrateFallback, clientLoader |
 | `app/student` | [apps/web/src/routes/app.student.tsx](../../apps/web/src/routes/app.student.tsx) | HydrateFallback, clientLoader |
@@ -18,6 +20,14 @@ Generated from [routes.ts](../../apps/web/src/routes.ts). Course child patterns 
 | `app/pengaturan` | [apps/web/src/routes/app.pengaturan.tsx](../../apps/web/src/routes/app.pengaturan.tsx) | HydrateFallback, clientLoader |
 | `app/coming/:slug` | [apps/web/src/routes/app.coming.$slug.tsx](../../apps/web/src/routes/app.coming.$slug.tsx) | HydrateFallback, clientLoader |
 | `app/tugas` | [apps/web/src/routes/app.tugas.tsx](../../apps/web/src/routes/app.tugas.tsx) | HydrateFallback, clientLoader |
+| `app/builder/new` | [apps/web/src/routes/app.builder-new.tsx](../../apps/web/src/routes/app.builder-new.tsx) | HydrateFallback, clientLoader |
+| `app/builder/:documentId` | [apps/web/src/routes/app.builder.tsx](../../apps/web/src/routes/app.builder.tsx) | HydrateFallback, clientLoader |
+| `app/builder/:documentId/pratinjau` | [apps/web/src/routes/app.builder-preview.tsx](../../apps/web/src/routes/app.builder-preview.tsx) | HydrateFallback, clientLoader |
+| `app/kegiatan/:runId` | [apps/web/src/routes/app.builder-run.tsx](../../apps/web/src/routes/app.builder-run.tsx) | HydrateFallback, clientLoader |
+| `api/builder-media` | [apps/web/src/routes/api.builder-media.ts](../../apps/web/src/routes/api.builder-media.ts) | action, loader |
+| `api/builder-import` | [apps/web/src/routes/api.builder-import.ts](../../apps/web/src/routes/api.builder-import.ts) | action |
+| `api/builder-capability` | [apps/web/src/routes/api.builder-capability.ts](../../apps/web/src/routes/api.builder-capability.ts) | action, loader |
+| `app/builder/impor/:jobId` | [apps/web/src/routes/app.builder-import.tsx](../../apps/web/src/routes/app.builder-import.tsx) | HydrateFallback, clientLoader |
 | `app/tugas/buat` | [apps/web/src/routes/app.tugas.buat.tsx](../../apps/web/src/routes/app.tugas.buat.tsx) | HydrateFallback, clientLoader |
 | `app/tugas/insights` | [apps/web/src/routes/app.tugas.insights.tsx](../../apps/web/src/routes/app.tugas.insights.tsx) | HydrateFallback, clientLoader |
 | `app/riset` | [apps/web/src/routes/app.riset.tsx](../../apps/web/src/routes/app.riset.tsx) | HydrateFallback, clientLoader |
@@ -30,6 +40,7 @@ Generated from [routes.ts](../../apps/web/src/routes.ts). Course child patterns 
 | `app/courses/:courseId` | [apps/web/src/routes/course.tsx](../../apps/web/src/routes/course.tsx) | HydrateFallback, clientLoader |
 | `app/courses/:courseId` | [apps/web/src/routes/course.index.tsx](../../apps/web/src/routes/course.index.tsx) | Component / route module |
 | `app/courses/:courseId/pertemuan/:sessionId/rencana` | [apps/web/src/routes/course.lesson-plan.tsx](../../apps/web/src/routes/course.lesson-plan.tsx) | Component / route module |
+| `pertemuan/:sessionId/terjadwal` | [apps/web/src/routes/course.scheduled-class.tsx](../../apps/web/src/routes/course.scheduled-class.tsx) | Component / route module |
 | `app/courses/:courseId/mahasiswa/:rosterId` | [apps/web/src/routes/course.student-profile.tsx](../../apps/web/src/routes/course.student-profile.tsx) | Component / route module |
 | `app/courses/:courseId/:section` | [apps/web/src/routes/course.section.tsx](../../apps/web/src/routes/course.section.tsx) | clientLoader |
 | `app/rps/:courseId` | [apps/web/src/routes/app.rps.$courseId.tsx](../../apps/web/src/routes/app.rps.$courseId.tsx) | HydrateFallback, clientLoader |
@@ -41,12 +52,15 @@ Generated from [routes.ts](../../apps/web/src/routes.ts). Course child patterns 
 | `api/assignment-revisions` | [apps/web/src/routes/api.assignment-revisions.ts](../../apps/web/src/routes/api.assignment-revisions.ts) | action |
 | `api/assignment-draft` | [apps/web/src/routes/api.assignment-draft.ts](../../apps/web/src/routes/api.assignment-draft.ts) | action |
 | `api/task-config-draft` | [apps/web/src/routes/api.task-config-draft.ts](../../apps/web/src/routes/api.task-config-draft.ts) | action |
+| `api/quiz-source` | [apps/web/src/routes/api.quiz-source.ts](../../apps/web/src/routes/api.quiz-source.ts) | action |
+| `api/scheduled-class-draft` | [apps/web/src/routes/api.scheduled-class-draft.ts](../../apps/web/src/routes/api.scheduled-class-draft.ts) | action |
 | `api/rubric-suggestions` | [apps/web/src/routes/api.rubric-suggestions.ts](../../apps/web/src/routes/api.rubric-suggestions.ts) | action |
 | `api/course-thumbnail` | [apps/web/src/routes/api.course-thumbnail.ts](../../apps/web/src/routes/api.course-thumbnail.ts) | action |
 | `api/task-submit` | [apps/web/src/routes/api.task-submit.ts](../../apps/web/src/routes/api.task-submit.ts) | action |
 | `api/task-assist` | [apps/web/src/routes/api.task-assist.ts](../../apps/web/src/routes/api.task-assist.ts) | action |
 | `api/feedback` | [apps/web/src/routes/api.feedback.ts](../../apps/web/src/routes/api.feedback.ts) | action |
 | `api/evaluation-draft` | [apps/web/src/routes/api.evaluation-draft.ts](../../apps/web/src/routes/api.evaluation-draft.ts) | action |
+| `api/submission-content-refresh` | [apps/web/src/routes/api.submission-content-refresh.ts](../../apps/web/src/routes/api.submission-content-refresh.ts) | action |
 | `api/evaluation-participants` | [apps/web/src/routes/api.evaluation-participants.ts](../../apps/web/src/routes/api.evaluation-participants.ts) | action |
 | `api/evaluation-review` | [apps/web/src/routes/api.evaluation-review.ts](../../apps/web/src/routes/api.evaluation-review.ts) | action |
 | `api/evaluation-annotation` | [apps/web/src/routes/api.evaluation-annotation.ts](../../apps/web/src/routes/api.evaluation-annotation.ts) | action |
@@ -75,6 +89,8 @@ Generated from [routes.ts](../../apps/web/src/routes.ts). Course child patterns 
 | `api/conversation-practice` | [apps/web/src/routes/api.conversation-practice.ts](../../apps/web/src/routes/api.conversation-practice.ts) | action |
 | `api/personal-practice` | [apps/web/src/routes/api.personal-practice.ts](../../apps/web/src/routes/api.personal-practice.ts) | action |
 | `api/course-grade-summary` | [apps/web/src/routes/api.course-grade-summary.ts](../../apps/web/src/routes/api.course-grade-summary.ts) | action |
+| `api/gradebook-commands` | [apps/web/src/routes/api.gradebook-commands.ts](../../apps/web/src/routes/api.gradebook-commands.ts) | action |
+| `api/gradebook-release` | [apps/web/src/routes/api.gradebook-release.ts](../../apps/web/src/routes/api.gradebook-release.ts) | action |
 | `api/student-profile` | [apps/web/src/routes/api.student-profile.ts](../../apps/web/src/routes/api.student-profile.ts) | action |
 | `api/practice-speaking` | [apps/web/src/routes/api.practice-speaking.ts](../../apps/web/src/routes/api.practice-speaking.ts) | action |
 | `api/berkas-parse` | [apps/web/src/routes/api.berkas-parse.ts](../../apps/web/src/routes/api.berkas-parse.ts) | action |
@@ -97,4 +113,10 @@ Generated from [routes.ts](../../apps/web/src/routes.ts). Course child patterns 
 | `api/agent-tasks` | [apps/web/src/routes/api.agent-tasks.ts](../../apps/web/src/routes/api.agent-tasks.ts) | action |
 | `api/assistant` | [apps/web/src/routes/api.assistant.ts](../../apps/web/src/routes/api.assistant.ts) | action |
 | `api/student-assistant` | [apps/web/src/routes/api.student-assistant.ts](../../apps/web/src/routes/api.student-assistant.ts) | action |
+| `api/ai-providers` | [apps/web/src/routes/api.ai-providers.ts](../../apps/web/src/routes/api.ai-providers.ts) | action, loader |
+| `api/ai-providers-test` | [apps/web/src/routes/api.ai-providers-test.ts](../../apps/web/src/routes/api.ai-providers-test.ts) | action |
+| `api/ai-providers-codex-start` | [apps/web/src/routes/api.ai-providers-codex-start.ts](../../apps/web/src/routes/api.ai-providers-codex-start.ts) | action |
+| `api/ai-providers-codex-poll` | [apps/web/src/routes/api.ai-providers-codex-poll.ts](../../apps/web/src/routes/api.ai-providers-codex-poll.ts) | action |
+| `api/ai-providers-codex-cancel` | [apps/web/src/routes/api.ai-providers-codex-cancel.ts](../../apps/web/src/routes/api.ai-providers-codex-cancel.ts) | action |
+| `api/ai-model-prefs` | [apps/web/src/routes/api.ai-model-prefs.ts](../../apps/web/src/routes/api.ai-model-prefs.ts) | action |
 | `api/*` | [apps/web/src/routes/api.$.ts](../../apps/web/src/routes/api.$.ts) | action, loader |

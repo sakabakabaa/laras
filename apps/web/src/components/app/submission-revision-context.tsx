@@ -6,14 +6,23 @@ import { submissionFileUrl } from '@/lib/assignments';
 import { AnswerScript } from './ai-evaluation-review';
 import { buildMarkedSegments, parseReviewFindings, parseFindings, deriveAiReviewFindings, type AiEvaluationRow } from '@/lib/ai-evaluation';
 import { SubmissionPdfPreview } from './submission-pdf-preview';
+import { greenAllowed } from '@/lib/ai-marks';
 export function SavedSubmissionText({submission}:{submission:AssignmentSubmission}) {
  const ref=useRef<HTMLDivElement|null>(null);
  const [evaluation,setEvaluation]=useState<AiEvaluationRow|null>(null);
- useEffect(()=>{let live=true;setEvaluation(null);pb.collection('ai_evaluations').getFirstListItem<AiEvaluationRow>(pb.filter('submission={:id}',{id:submission.id})).then(row=>{if(live)setEvaluation(row);}).catch(()=>{});return()=>{live=false;};},[submission.id]);
+ // Staleness is unknown until the server answers; AI marks stay hidden until then.
+ const [stale,setStale]=useState<boolean|null>(null);
+ useEffect(()=>{let live=true;setEvaluation(null);setStale(null);pb.collection('ai_evaluations').getFirstListItem<AiEvaluationRow>(pb.filter('submission={:id}',{id:submission.id})).then(row=>{if(live)setEvaluation(row);}).catch(()=>{});
+  fetch('/api/evaluation-stale',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${pb.authStore.token}`},body:JSON.stringify({submissionId:submission.id})}).then(r=>r.ok?r.json():null).then((body:{stale?:boolean}|null)=>{if(live)setStale(body?body.stale===true:null);}).catch(()=>{});
+  return()=>{live=false;};},[submission.id]);
  const content=submission.content||submission.transcript||'';
  const saved=parseReviewFindings(evaluation?.reviewFindings);
- const marked=(saved.length?saved:deriveAiReviewFindings(parseFindings(evaluation?.findings))).filter(f=>f.status!=='rejected');
- return content?<AnswerScript textRef={ref} content={content} segments={buildMarkedSegments(content,marked)} marked={marked} visibleCount={marked.length} activeId={null} onFocus={()=>{}} onApprove={()=>{}} onReject={()=>{}} onRemove={()=>{}} checked={evaluation?.status==='ready'&&marked.length>0} readOnly/>:<p>Lihat file asli.</p>;
+ const all=(saved.length?saved:deriveAiReviewFindings(parseFindings(evaluation?.findings))).filter(f=>f.status!=='rejected');
+ // A stale (or not yet checked) draft describes other text: keep only the lecturer's own marks.
+ const current=stale===false;
+ const marked=current?all:all.filter(f=>f.source==='lecturer');
+ const checked=greenAllowed({ready:evaluation?.status==='ready',stale:!current,insufficient:evaluation?.result==='insufficient'});
+ return content?<>{stale===true&&<p className="aev-stale-note" role="status">Teks berubah setelah draf AI dibuat. Tanda AI disembunyikan.</p>}<AnswerScript textRef={ref} content={content} segments={marked.some(f=>f.quote)?buildMarkedSegments(content,marked):null} marked={marked} visibleCount={marked.length} activeId={null} onFocus={()=>{}} onApprove={()=>{}} onReject={()=>{}} onRemove={()=>{}} checked={checked} readOnly/></>:<p>Lihat file asli.</p>;
 }
 export function LinkedRevisionAbove({original}:{original:AssignmentSubmission}) {
  const [revisions,setRevisions]=useState<AssignmentSubmission[]>([]);

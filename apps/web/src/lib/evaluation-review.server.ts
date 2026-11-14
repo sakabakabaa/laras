@@ -47,8 +47,19 @@ export async function loadEvaluationTarget(
 ): Promise<{ error: TargetError } | { target: EvaluationTarget }> {
 	const auth = await authenticateUser(request);
 	if ('error' in auth) return { error: auth.error };
+	return loadEvaluationTargetForUser({ id: auth.user.id, role: auth.user.role }, body.submissionId);
+}
 
-	const submissionId = typeof body.submissionId === 'string' ? body.submissionId.trim() : '';
+/**
+ * Loads one submission + its assignment for an already-authenticated caller,
+ * enforcing the same ownership and formality rules as `loadEvaluationTarget`.
+ * The batch publish route authenticates once and calls this per submission.
+ */
+export async function loadEvaluationTargetForUser(
+	user: { id: string; role?: string },
+	rawSubmissionId: unknown,
+): Promise<{ error: TargetError } | { target: EvaluationTarget }> {
+	const submissionId = typeof rawSubmissionId === 'string' ? rawSubmissionId.trim() : '';
 	if (!SAFE_ID.test(submissionId)) {
 		return { error: { status: 422, message: 'submissionId wajib dan harus valid.' } };
 	}
@@ -89,7 +100,7 @@ export async function loadEvaluationTarget(
 	}
 
 	// Only the owning lecturer may review or publish findings for this task.
-	if (auth.user.id !== assignment.owner) {
+	if (user.id !== assignment.owner) {
 		return {
 			error: {
 				status: 403,
@@ -113,7 +124,7 @@ export async function loadEvaluationTarget(
 
 	return {
 		target: {
-			user: { id: auth.user.id, role: auth.user.role },
+			user: { id: user.id, role: user.role },
 			assignment,
 			recordId,
 			content,

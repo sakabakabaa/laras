@@ -81,6 +81,7 @@ import {
 } from '@/lib/task-types';
 import {
 	EMPTY_SUGGESTED_CRITERIA,
+	acceptAllSuggestions,
 	acceptSuggestion,
 	canSuggestCriteria,
 	dismissSuggestion,
@@ -624,7 +625,8 @@ export function AssignmentForm({
 			: taskCfg?.kind === 'speaking'
 				? taskCfg.speaking.criteria.length
 				: 0;
-	const suggestEligible = editing && builderReady && (builderKind === 'writing' || builderKind === 'speaking');
+	// Offered on new tasks too: an unsaved task sends its draft prompt instead of an id.
+	const suggestEligible = builderReady && (builderKind === 'writing' || builderKind === 'speaking');
 	const showSuggestPanel =
 		suggestEligible &&
 		((suggestions?.pending.length ?? 0) > 0 ||
@@ -863,7 +865,7 @@ export function AssignmentForm({
 	}, [assignment]);
 
 	const handleGenerateSuggestions = async () => {
-		if (!assignment) return;
+		if (!assignment && !taskCfg) return;
 		setSuggestBusy(true);
 		setSuggestError('');
 		try {
@@ -873,7 +875,11 @@ export function AssignmentForm({
 					'Content-Type': 'application/json',
 					...(pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {}),
 				},
-				body: JSON.stringify({ assignmentId: assignment.id }),
+				body: JSON.stringify(
+					assignment
+						? { assignmentId: assignment.id }
+						: { draft: { shape, instructions, taskConfig: taskCfg ? splitTaskConfigForSave(taskCfg).taskConfig : null } },
+				),
 			});
 			const body = (await response.json()) as { suggestions?: SuggestedCriteria; error?: string };
 			if (!response.ok) {
@@ -888,19 +894,32 @@ export function AssignmentForm({
 		}
 	};
 
-	const handleAcceptSuggestion = async (id: string) => {
-		if (!assignment || !taskCfg) return;
+	const handleAcceptSuggestion = (id: string) => {
+		const { state, criterion } = acceptSuggestion(suggestions ?? EMPTY_SUGGESTED_CRITERIA, id);
+		if (criterion) void applyAcceptedSuggestions(state, [criterion]);
+	};
+
+	const handleAcceptAllSuggestions = () => {
+		const { state, criteria } = acceptAllSuggestions(suggestions ?? EMPTY_SUGGESTED_CRITERIA);
+		if (criteria.length > 0) void applyAcceptedSuggestions(state, criteria);
+	};
+
+	const applyAcceptedSuggestions = async (
+		state: SuggestedCriteria,
+		accepted: { label: string; weight: number }[],
+	) => {
+		if (!taskCfg) return;
 		const kind = taskCfg.kind;
 		if (kind !== 'writing' && kind !== 'speaking') return;
-		const { state, criterion } = acceptSuggestion(suggestions ?? EMPTY_SUGGESTED_CRITERIA, id);
-		if (!criterion) return;
-		const newCriterion = { id: newRowId('c'), label: criterion.label, weight: criterion.weight };
+		const added = accepted.map((criterion) => ({ id: newRowId('c'), label: criterion.label, weight: criterion.weight }));
 		const nextCfg =
 			kind === 'writing'
-				? { ...taskCfg, writing: { ...taskCfg.writing, criteria: [...taskCfg.writing.criteria, newCriterion] } }
-				: { ...taskCfg, speaking: { ...taskCfg.speaking, criteria: [...taskCfg.speaking.criteria, newCriterion] } };
+				? { ...taskCfg, writing: { ...taskCfg.writing, criteria: [...taskCfg.writing.criteria, ...added] } }
+				: { ...taskCfg, speaking: { ...taskCfg.speaking, criteria: [...taskCfg.speaking.criteria, ...added] } };
 		setTaskCfg(nextCfg);
 		setSuggestions(state);
+		// A new task keeps the accepted criteria in the form; they are saved with it.
+		if (!assignment) return;
 		// Persist both the new criterion (inside taskConfig) and the updated
 		// provisional suggestions atomically, so acceptance survives a reload
 		// even before the form is saved. Non-fatal on failure — the form save
@@ -917,9 +936,9 @@ export function AssignmentForm({
 	};
 
 	const handleDismissSuggestion = async (id: string) => {
-		if (!assignment) return;
 		const state = dismissSuggestion(suggestions ?? EMPTY_SUGGESTED_CRITERIA, id);
 		setSuggestions(state);
+		if (!assignment) return;
 		try {
 			await pb.collection('assignments').update(assignment.id, { suggestedCriteria: state });
 		} catch {
@@ -1114,7 +1133,7 @@ export function AssignmentForm({
 							aiAssistEnabled: aiAssistOn,
 						}),
 			};
-			if (editing && suggestions) data.suggestedCriteria = suggestions;
+			if (suggestions) data.suggestedCriteria = suggestions;
 			// Phase 3 — student AI assistance policy. 'default' stores null so the
 			// server derives from activity type (backward compatible); a concrete
 			// level or 'off' stores an explicit policy the server enforces.
@@ -1719,7 +1738,8 @@ export function AssignmentForm({
 												busy={suggestBusy}
 												error={suggestError}
 												onGenerate={() => void handleGenerateSuggestions()}
-												onAccept={(id) => void handleAcceptSuggestion(id)}
+												onAccept={handleAcceptSuggestion}
+												onAcceptAll={handleAcceptAllSuggestions}
 												onDismiss={(id) => void handleDismissSuggestion(id)}
 											/>
 										)}

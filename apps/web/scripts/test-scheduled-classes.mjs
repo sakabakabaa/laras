@@ -195,6 +195,42 @@ try {
   state = await call(teacher, 'saveGradingSettings', {activityId: exit, baseRevision: 0, mode: 'ungraded', maxPoints: 0, criteria: []});
   state = await call(teacher, 'saveAssessment', {attemptId: exitAttempt.id, baseRevision: 0, attemptRevision: exitAttempt.revision, settingsRevision: 1, status: 'reviewed', points: null, criterionScores: {}, feedback: 'Useful reflection.'});
   assert.equal(state.assessments.find(x => x.attempt === exitAttempt.id).points, null); assertions++;
+  // Stored AI drafts are lecturer-only state.
+  assert(Array.isArray(state.aiDrafts)); assertions++;
+  await create('scheduled_ai_drafts', {class: classId, activity: writing, attempt: writingAttempt.id, student: student.id, status: 'ready', attemptRevision: writingAttempt.revision, settingsRevision: 1, draft: {suggestedScore: 80, feedback: 'AI feedback'}});
+  state = await call(teacher, 'state');
+  const storedDraft = state.aiDrafts.find(x => x.attempt === writingAttempt.id);
+  assert.equal(storedDraft.draft.suggestedScore, 80); assert.equal(storedDraft.status, 'ready'); assertions += 2;
+  learner = await call(student, 'state'); assert.equal(learner.aiDrafts, undefined); assert(!JSON.stringify(learner).includes('AI feedback')); assertions += 2;
+  for (const actor of [teacher, student]) {const direct = await api(records('scheduled_ai_drafts'), {}, actor.token, 'GET'); assert(direct.status !== 200 || direct.data.items.length === 0); assertions++;}
+  // Bulk auto-score approval: valid items pass, stale/unknown items are reported per item.
+  const quizAttempts = state.attempts.filter(t => t.activity === quiz && typeof t.score === 'number');
+  const approveItems = quizAttempts.map(t => ({attemptId: t.id, attemptRevision: t.revision, assessmentRevision: state.assessments.find(x => x.attempt === t.id)?.revision || 0}));
+  await denied(student, 'approveAutoScores', {items: approveItems});
+  await denied(otherTeacher, 'approveAutoScores', {items: approveItems});
+  const approved = await call(teacher, 'approveAutoScores', {items: [...approveItems, {...approveItems[0], attemptId: 'missing00000000'}, {attemptId: writingAttempt.id, attemptRevision: writingAttempt.revision, assessmentRevision: 0}]});
+  assert.equal(approved.batch.ok, approveItems.length); assert.equal(approved.batch.failed, 2); assertions += 2;
+  assert(quizAttempts.every(t => approved.assessments.some(x => x.attempt === t.id && x.status === 'reviewed' && x.settingsRevision === 0))); assertions++;
+  const approvedAgain = await call(teacher, 'approveAutoScores', {items: approveItems.map(item => ({...item, assessmentRevision: approved.assessments.find(x => x.attempt === item.attemptId).revision}))});
+  assert.equal(approvedAgain.batch.ok, approveItems.length); assert(approvedAgain.batch.results.every(r => r.unchanged)); assertions += 2;
+  // Bulk publish reuses the single-publish rules per item.
+  state = await call(teacher, 'state');
+  const exitGrade = state.assessments.find(x => x.attempt === exitAttempt.id), writingGrade = state.assessments.find(x => x.attempt === writingAttempt.id);
+  const publishItems = [
+    {attemptId: exitAttempt.id, baseRevision: exitGrade.revision, attemptRevision: exitAttempt.revision, settingsRevision: 1},
+    {attemptId: writingAttempt.id, baseRevision: writingGrade.revision, attemptRevision: writingAttempt.revision, settingsRevision: 1},
+    {attemptId: exitAttempt.id, baseRevision: 0, attemptRevision: exitAttempt.revision, settingsRevision: 1},
+  ];
+  await denied(student, 'publishAssessments', {items: publishItems});
+  await denied(otherTeacher, 'publishAssessments', {items: publishItems});
+  await denied(teacher, 'publishAssessments', {items: []});
+  const stalePublishBatch = await call(teacher, 'publishAssessments', {items: [{...publishItems[0], baseRevision: exitGrade.revision + 5}]});
+  assert.equal(stalePublishBatch.batch.failed, 1); assert.equal(stalePublishBatch.assessments.find(x => x.attempt === exitAttempt.id).published, undefined); assertions += 2;
+  const published = await call(teacher, 'publishAssessments', {items: publishItems});
+  assert.equal(published.batch.ok, 2); assert.equal(published.batch.failed, 1); assertions += 2;
+  assert(published.batch.results.find(r => r.attemptId === writingAttempt.id).unchanged); assertions++;
+  assert.equal(published.assessments.find(x => x.attempt === exitAttempt.id).published.feedback, 'Useful reflection.'); assertions++;
+  learner = await call(student, 'state'); assert(learner.assessments.some(x => x.attempt === exitAttempt.id && x.feedback === 'Useful reflection.')); assertions++;
   // Check-in records official attendance, independently of submitted work.
   assert.equal(state.report.find(r => r.student === student.id).attendance, 'present'); assertions++;
   assert.equal(state.report.find(r => r.roster === roster[noShow.id].id).attendance, 'absent'); assertions++;

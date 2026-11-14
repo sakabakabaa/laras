@@ -65,6 +65,7 @@ export default [
 	route('api/evaluation-annotation', 'routes/api.evaluation-annotation.ts'),
 	route('api/evaluation-missed-error', 'routes/api.evaluation-missed-error.ts'),
 	route('api/evaluation-publish', 'routes/api.evaluation-publish.ts'),
+	route('api/evaluation-publish-batch', 'routes/api.evaluation-publish-batch.ts'),
 	route('api/research-export', 'routes/api.research-export.ts'),
 	route('api/research-analytics', 'routes/api.research-analytics.ts'),
 	route('api/personalization-analytics', 'routes/api.personalization-analytics.ts'),

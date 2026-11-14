@@ -234,3 +234,54 @@
 /* Student list: names wrap instead of truncating. */
 .sr-workspace .sr-students li strong { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
 .sr-workspace .sr-students li small { white-space: normal; }
+
+/* Shared grading panel inside the scheduled review (phase 2). */
+.sr-grading-section .evx-panel { border: 0; padding: 0; background: transparent; }
+.sr-grading-setup { display: grid; gap: 8px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--ss-border); border-radius: 10px; background: var(--ss-soft); font-size: 12px; line-height: 1.55; }
+.sr-grading-setup.is-provisional { border-style: dashed; }
+.sr-grading-setup p { margin: 0; display: grid; gap: 2px; }
+.sr-grading-setup p strong { display: inline-flex; align-items: center; gap: 6px; color: var(--ss-text); font-weight: 650; }
+.sr-grading-setup p span { color: var(--ss-muted); }
+.sr-grading-setup-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.sr-ai-findings ul { margin: 6px 0 0; padding-left: 16px; display: grid; gap: 4px; font-size: 12px; line-height: 1.6; }
+.sr-ai-findings summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 650; }
+.sr-status-ai { background: #f4f3ff; color: #5925dc; }
+.sr-status-unreviewed { background: #fffaeb; color: #a15c07; }
+:root.dark .sr-status-ai { background: #2b2350; color: #c9bcff; }
+:root.dark .sr-status-unreviewed { background: #3d311e; color: #ebc183; }
+
+/* "Dinilai otomatis": items needing attention without opening the details. */
+.sr-auto-summary { flex-wrap: wrap; }
+.sr-auto-attention { flex-basis: 100%; list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.sr-auto-attention button { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 8px; border: 1px solid #fedf89; border-radius: 8px; background: #fffaeb; color: var(--ss-text); font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.sr-auto-attention button svg { color: #b54708; }
+.sr-auto-attention em { margin-left: auto; font-style: normal; font-weight: 600; color: var(--ss-muted); }
+:root.dark .sr-auto-attention button { background: #2a2214; border-color: #5c4511; }
+
+/* "Selesaikan kelas" checklist (review tab header + Ringkasan). */
+.sr-finalize { display: grid; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--ss-border); border-radius: 12px; background: var(--ss-panel); }
+.sr-finalize > summary, .sr-finalize > h2 { display: flex; align-items: baseline; gap: 10px; margin: 0; font-size: 14px; font-weight: 700; cursor: pointer; }
+.sr-finalize > h2 { cursor: default; }
+.sr-finalize > summary em, .sr-finalize > h2 em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--ss-muted); }
+.sr-finalize-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.sr-finalize-list > li { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--ss-border); }
+.sr-finalize-list > li:first-child { border-top: 0; }
+.sr-finalize-list > li > svg { margin-top: 2px; color: var(--ss-muted); }
+.sr-finalize-list > li > svg.is-done { color: #067647; }
+.sr-finalize-list > li > div { display: grid; gap: 3px; min-width: 0; }
+.sr-finalize-list strong { font-size: 13px; font-weight: 650; }
+.sr-finalize-list small, .sr-finalize-footer small { font-size: 12px; line-height: 1.5; color: var(--ss-muted); }
+.sr-finalize-list small svg { vertical-align: -2px; }
+.sr-finalize-sub { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.sr-finalize-confirm, .sr-finalize-result { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; border: 1px solid #fedf89; background: #fffaeb; font-size: 12px; line-height: 1.55; }
+.sr-finalize-confirm > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.sr-finalize-result { border-color: #abefc6; background: #ecfdf3; }
+.sr-finalize-result.is-error { border-color: #fecdca; background: #fef3f2; }
+.sr-finalize-result ul { margin: 0; padding-left: 16px; }
+.sr-finalize-result button { justify-self: start; }
+.sr-finalize-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-top: 8px; border-top: 1px solid var(--ss-border); }
+.sr-finalize-done { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #067647; font-weight: 600; }
+:root.dark .sr-finalize-confirm { background: #2a2214; border-color: #5c4511; }
+:root.dark .sr-finalize-result { background: #153d2e; border-color: #1f5a43; }
+:root.dark .sr-finalize-result.is-error { background: #452825; border-color: #6b3a35; }
+@media (max-width: 640px) { .sr-finalize-list > li { grid-template-columns: auto 1fr; } .sr-finalize-list > li > button { grid-column: 2; justify-self: start; } }

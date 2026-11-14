@@ -26,14 +26,9 @@ import {
 	FileAudio,
 	FlaskConical,
 	Highlighter,
-	Info,
-	ListChecks,
 	LoaderCircle,
 	MessageSquare,
-	PenLine,
-	RotateCcw,
 	Send,
-	Sparkles,
 	Trash2,
 	X,
 } from 'lucide-react';
@@ -101,6 +96,19 @@ import {
 	type ResearchAnnotation,
 } from '@/lib/research-annotation';
 import { projectBlindResearchItems, assertBlindResearchRound, type BlindResearchLoad } from '@/lib/research-rater-client';
+import { GradingPanel, isDesktopViewport, mergeAiFeedback, type GradingAiDraft } from '@/components/app/grading/grading-panel';
+import { RubricSuggestionsPanel } from '@/components/app/task-builders/rubric-suggestions';
+import { newRowId } from '@/components/app/task-builders/builder-shared';
+import { taskKindForShape } from '@/lib/task-types';
+import {
+	acceptAllSuggestions,
+	acceptSuggestion,
+	appendCriteriaToTaskConfig,
+	dismissSuggestion,
+	parseSuggestedCriteria,
+	type SuggestedCriteria,
+	type SuggestedCriterion,
+} from '@/lib/rubric-suggestions';
 
 export type EvaluatedParticipant = {
 	/** The assignment_submissions row id. */
@@ -284,6 +292,8 @@ type ReviewContextValue = {
 	startReject: (id: string) => void;
 	confirmReject: (id: string) => void;
 	cancelReject: () => void;
+	/** Approves every AI finding still pending review ("Setujui semua temuan"). */
+	approveAllPending: () => void;
 	removeFinding: (id: string) => void;
 	focusFinding: (id: string | null) => void;
 	focusNote: () => void;
@@ -292,6 +302,12 @@ type ReviewContextValue = {
 	cancelSelection: () => void;
 	resetReview: () => void;
 	regenerate: () => void;
+	/** Background draft polling gave up while the draft was still pending. */
+	aiStalled: boolean;
+	retryAi: () => void;
+	assignment: Assignment;
+	/** Called after the assignment itself changed (e.g. rubric criteria saved). */
+	onAssignmentChanged?: () => void;
 	saveReview: () => void;
 	publish: () => void;
 	requestConfirmPublish: () => void;
@@ -322,6 +338,7 @@ export function AiEvaluationReviewProvider({
 	onPublished,
 	onAdvance,
 	onDirtyChange,
+	onAssignmentChanged,
 	children,
 }: {
 	assignment: Assignment;
@@ -340,6 +357,7 @@ export function AiEvaluationReviewProvider({
 	/** After a confirmed publish, move the lecturer to the next participant. */
 	onAdvance?: () => void;
 	onDirtyChange?: (dirty: boolean) => void;
+	onAssignmentChanged?: () => void;
 	children: ReactNode;
 }) {
 	const [row, setRow] = useState<AiEvaluationRow | null>(null);
@@ -367,6 +385,8 @@ export function AiEvaluationReviewProvider({
 	const [publishError, setPublishError] = useState('');
 	const [publishNotice, setPublishNotice] = useState('');
 	const [regenerating, setRegenerating] = useState(false);
+	const [aiStalled, setAiStalled] = useState(false);
+	const [pollEpoch, setPollEpoch] = useState(0);
 	const [activeFindingId, setActiveFindingId] = useState<string | null>(null);
 	const [noteTick, setNoteTick] = useState(0);
 	const triggered = useRef<string | null>(null);
@@ -531,17 +551,22 @@ export function AiEvaluationReviewProvider({
 			});
 	}, [loading, row, recordKey, participant, load]);
 
-	// While the background analysis runs, refresh until it settles.
+	// While the background analysis runs, refresh until it settles. After 40
+	// tries (~2.5 minutes) polling stops and the panel says so, with a retry.
 	useEffect(() => {
+		setAiStalled(false);
 		if (row?.status !== 'pending') return;
 		let tries = 0;
 		const timer = window.setInterval(() => {
 			tries += 1;
 			void load();
-			if (tries >= 40) window.clearInterval(timer);
+			if (tries >= 40) {
+				window.clearInterval(timer);
+				setAiStalled(true);
+			}
 		}, 4000);
 		return () => window.clearInterval(timer);
-	}, [row?.status, row?.id, load]);
+	}, [row?.status, row?.id, load, pollEpoch]);
 
 	// The assignment's stored rubric criteria (Menulis / Berbicara).
 	const criteria = useMemo(() => rubricCriteriaOf(assignment), [assignment]);
@@ -697,12 +722,10 @@ export function AiEvaluationReviewProvider({
 		setActiveFindingId(id);
 	};
 
+	// The rejection reason is optional — it helps research and later review,
+	// but must never slow down grading.
 	const confirmReject = (id: string) => {
 		const reason = rejectReason.trim();
-		if (reason.length < 4) {
-			setRejectError('Alasan penolakan wajib diisi (minimal 4 karakter).');
-			return;
-		}
 		updateFinding(id, { status: 'rejected', rejectReason: reason.slice(0, 600) });
 		setRejectingId(null);
 		setRejectReason('');
@@ -713,6 +736,15 @@ export function AiEvaluationReviewProvider({
 		setRejectingId(null);
 		setRejectReason('');
 		setRejectError('');
+	};
+
+	const approveAllPending = () => {
+		setNotice('');
+		setSaveError('');
+		setRejectingId(null);
+		setWorking((prev) =>
+			(prev ?? []).map((f) => (f.status === 'pending' ? { ...f, status: 'approved', rejectReason: '' } : f)),
+		);
 	};
 
 	const removeFinding = (id: string) => {
@@ -1093,6 +1125,7 @@ export function AiEvaluationReviewProvider({
 		startReject,
 		confirmReject,
 		cancelReject,
+		approveAllPending,
 		removeFinding,
 		focusFinding: (id) => setActiveFindingId(id),
 		focusNote: () => setNoteTick((n) => n + 1),
@@ -1101,6 +1134,14 @@ export function AiEvaluationReviewProvider({
 		cancelSelection,
 		resetReview,
 		regenerate: () => void regenerate(),
+		aiStalled,
+		retryAi: () => {
+			setAiStalled(false);
+			setPollEpoch((n) => n + 1);
+			void regenerate();
+		},
+		assignment,
+		onAssignmentChanged,
 		saveReview: () => void saveReview(),
 		publish: () => void publish(),
 		requestConfirmPublish: () => {
@@ -1131,7 +1172,7 @@ function RejectReasonFields({ id }: { id: string }) {
 	};
 	return (
 		<span className="fer-reject-form" onMouseDown={keepField} onClick={keepField}>
-			<strong>Alasan penolakan (wajib)</strong>
+			<strong>Alasan penolakan (opsional)</strong>
 			<textarea
 				ref={fieldRef}
 				rows={2}
@@ -1503,71 +1544,62 @@ function UnanchoredFindings() {
 
 /**
  * Distinguishes a completed AI run (with or without findings) from a run that
- * never started, is still pending, or failed. Does not change grades.
+ * never started, is still pending, stalled, or failed — for the AI status
+ * shown in the grading panel next to the score card. Does not change grades.
  */
-function DraftRunStatus() {
-	const ctx = useReview();
-	if (!ctx || !ctx.hasRecord) return null;
+function aiDraftOf(ctx: ReviewContextValue): GradingAiDraft | null {
+	if (!ctx.hasRecord) return null;
 	const when = ctx.row?.generatedAt ? stamp(ctx.row.generatedAt) : '';
-
+	const proposal = {
+		score: ctx.ready?.recommendedScore ?? null,
+		criterionScores: ctx.ready
+			? Object.fromEntries(
+					validatedRubric(parseRubric(ctx.ready.rubricBreakdown), ctx.criteria).map((entry) => [
+						matchCriterion(entry, ctx.criteria)!.id!,
+						entry.score,
+					]),
+				)
+			: undefined,
+		summary: ctx.ready?.summary || '',
+	};
 	if (!ctx.row) {
-		return (
-			<div className="aev-draft-status">
-				<p className="aev-note failed" role="status">
-					<Info size={13} />{' '}
-					{ctx.preparing
-						? 'Evaluasi AI belum tercatat untuk kiriman ini. Permintaan draf sedang dikirim dan tidak mengubah nilai resmi.'
-						: 'Evaluasi AI belum dijalankan untuk kiriman ini. Pengumpulan tetap tersimpan; meminta draf tidak mengubah nilai resmi.'}
-				</p>
-				<button type="button" className="ld-outline-action sm" onClick={ctx.regenerate} disabled={ctx.regenerating}>
-					{ctx.regenerating ? <LoaderCircle size={13} className="spin" /> : <Sparkles size={13} />} Minta draf AI
-				</button>
-			</div>
-		);
+		return {
+			...proposal,
+			status: ctx.preparing ? 'requesting' : 'none',
+			message: ctx.preparing
+				? 'Evaluasi AI belum tercatat untuk kiriman ini. Permintaan draf sedang dikirim dan tidak mengubah nilai resmi.'
+				: 'Evaluasi AI belum dijalankan untuk kiriman ini. Pengumpulan tetap tersimpan; meminta draf tidak mengubah nilai resmi.',
+		};
+	}
+	if (ctx.row.status === 'pending' && ctx.aiStalled) {
+		return {
+			...proposal,
+			status: 'stalled',
+			message: 'Pemeriksaan otomatis dihentikan setelah beberapa menit. Nilai resmi tidak berubah.',
+		};
 	}
 	if (ctx.row.status === 'pending' || ctx.preparing) {
-		return (
-			<p className="aev-note pending" aria-live="polite">
-				<LoaderCircle className="spin" size={13} /> Menyiapkan draf evaluasi AI
-				{ctx.row.created ? ` (dimulai ${stamp(ctx.row.created)})` : ''}. Temuan muncul otomatis
-				beberapa saat lagi. Nilai resmi tidak berubah.
-			</p>
-		);
+		return {
+			...proposal,
+			status: 'pending',
+			message: `Menyiapkan draf evaluasi AI${ctx.row.created ? ` (dimulai ${stamp(ctx.row.created)})` : ''}. Temuan muncul otomatis beberapa saat lagi. Nilai resmi tidak berubah.`,
+		};
 	}
 	if (ctx.row.status === 'failed') {
-		return (
-			<div className="aev-draft-status">
-				<p className="aev-note failed" role="alert">
-					<AlertTriangle size={13} /> Draf AI gagal{when ? ` pada ${when}` : ''}. {ctx.row.reason}
-				</p>
-				<button type="button" className="ld-outline-action sm" onClick={ctx.regenerate} disabled={ctx.regenerating}>
-					{ctx.regenerating ? <LoaderCircle size={13} className="spin" /> : <RotateCcw size={13} />} Minta draf AI
-				</button>
-			</div>
-		);
+		return { ...proposal, status: 'failed', message: `Draf AI gagal${when ? ` pada ${when}` : ''}. ${ctx.row.reason}`.trim() };
 	}
-	if (
-		ctx.row.status === 'ready' &&
-		(ctx.ready?.result === 'insufficient' || parseFindings(ctx.ready?.findings).length === 0)
-	) {
+	if (ctx.row.status === 'ready' && (ctx.ready?.result === 'insufficient' || parseFindings(ctx.ready?.findings).length === 0)) {
 		// The run finished but produced nothing to review. Without the stored
 		// explanation this looked like a silently broken checker, so always show
 		// why (model summary or recorded reason) before offering a re-run.
 		const why = (ctx.ready?.reason || ctx.ready?.summary || '').trim();
-		return (
-			<div className="aev-draft-status">
-				<p className="aev-note warn" role="status">
-					<Info size={13} /> Draf AI selesai tanpa temuan{when ? ` (${when})` : ''}.{' '}
-					{why ||
-						'Kiriman ini belum memuat bukti yang bisa dinilai. Minta peserta menuliskan jawabannya langsung, lalu minta draf ulang.'}
-				</p>
-				<button type="button" className="ld-outline-action sm" onClick={ctx.regenerate} disabled={ctx.regenerating}>
-					{ctx.regenerating ? <LoaderCircle size={13} className="spin" /> : <RotateCcw size={13} />} Minta draf AI ulang
-				</button>
-			</div>
-		);
+		return {
+			...proposal,
+			status: 'empty',
+			message: `Draf AI selesai tanpa temuan${when ? ` (${when})` : ''}. ${why || 'Kiriman ini belum memuat bukti yang bisa dinilai. Minta peserta menuliskan jawabannya langsung, lalu minta draf ulang.'}`,
+		};
 	}
-	return null;
+	return { ...proposal, status: 'ready' };
 }
 
 /** A single labeled select for one research-annotation judgment. */
@@ -1940,7 +1972,8 @@ function FindingsUnderText() {
 	const ctx = useReview();
 	const t = useT();
 	const [openId, setOpenId] = useState<string | null>(null);
-	const [listOpen, setListOpen] = useState(false);
+	// Open by default on desktop so every finding is reviewable without an extra click.
+	const [listOpen, setListOpen] = useState(isDesktopViewport);
 	if (!ctx || !ctx.hasRecord) return null;
 	const { criteria } = ctx;
 	const annotations = ctx.researchAnnotations;
@@ -1972,6 +2005,13 @@ function FindingsUnderText() {
 				</span>
 				<ChevronDown size={14} className={listOpen ? 'open' : ''} />
 			</button>
+			{ctx.pendingCount > 0 && (
+				<div className="aevr-item-actions aev-approve-all-row">
+					<button type="button" className="approve" onClick={ctx.approveAllPending}>
+						<CheckCircle2 size={12} /> Setujui semua temuan ({ctx.pendingCount})
+					</button>
+				</div>
+			)}
 			{listOpen && <div className="aev-findings evx-finding-list">
 				{ctx.visible.length === 0 ? (
 					<p className="asg-empty-line">{t('aevr.findingsEmpty')}</p>
@@ -2629,7 +2669,6 @@ export function AiEvaluationAnswer() {
 			<FindingsUnderText />
 			{ctx.researchMode && <MissedErrorsSection />}
 
-			<DraftRunStatus />
 		</div>
 	);
 }
@@ -2663,163 +2702,221 @@ export function EvaluationStatusBadge() {
 }
 
 /**
- * The single consolidated penilaian panel (right column): collapsible
- * findings review, the AI recommended score with its per-criteria reasoning
- * (which autofills the final score), rubric recalculation with the lecturer
- * override, and explicit publishing — one panel instead of two.
+ * The single consolidated penilaian panel (right column) for Tugas formal:
+ * maps the review context onto the presentational `GradingPanel` (rubric
+ * scoring, feedback, AI draft status/actions, final score, save/publish),
+ * and supplies the Tugas-only blocks (findings alerts, speaking confidence,
+ * research mode, citations, publish confirmation) through its slots.
  */
 export function AiEvaluationPanel() {
 	const ctx = useReview();
 	const t = useT();
-	const noteRef = useRef<HTMLTextAreaElement | null>(null);
-	const [openRubric, setOpenRubric] = useState<string | null>(null);
-    const [feedbackOpen, setFeedbackOpen] = useState(false);
-
-	useEffect(() => {
-		if (!ctx?.noteTick) return;
-		setFeedbackOpen(true);
-        window.setTimeout(() => noteRef.current?.focus(), 0);
-	}, [ctx?.noteTick]);
-
+	const [suggest, setSuggest] = useState<RubricSuggestState>(EMPTY_SUGGEST_STATE);
 	if (!ctx || !ctx.hasRecord) return null;
 
 	const { ready, criteria } = ctx;
 	const breakdown = ready ? parseRubric(ready.rubricBreakdown) : [];
 	const citations = ready ? parseCitations(ready.citations) : [];
-	const wordsNote = ctx.publishNote.length;
+	const weighted = criteria.filter((c) => c.weight > 0);
+	const missingScores = weighted.some((c) => ctx.criterionScores[c.id] == null);
+	const totalWeight = criteria.reduce((sum, criterion) => sum + Math.max(0, criterion.weight), 0) || 1;
+	const aiDraft = aiDraftOf(ctx);
+	const scoreInvalid = ctx.override.trim() !== '' && !ctx.overrideValid;
+
+	const disabledReasons = [
+		...(missingScores ? [`Nilai semua kriteria berbobot (${weighted.filter((c) => ctx.criterionScores[c.id] != null).length}/${weighted.length} terisi).`] : []),
+		...(ctx.ungradable ? ['Transkripsi kiriman berbicara belum siap.'] : []),
+		...(weighted.length === 0 && !ctx.overrideValid ? ['Tugas tanpa rubrik berbobot: isi nilai keseluruhan.'] : []),
+		...(ctx.pendingCount > 0 ? [`${ctx.pendingCount} temuan AI belum ditinjau — setujui atau tolak dulu.`] : []),
+		...(scoreInvalid ? ['Nilai harus angka 0–100.'] : []),
+	];
+	const publishDisabled = disabledReasons.length > 0 || ctx.publishing || ctx.saving;
+
+	const rubricSuggestions = (
+		<RubricSuggestInline state={suggest} setState={setSuggest} />
+	);
 
 	return (
-		<section className="evx-panel evx-compact assessment-clarity" aria-label="Tinjauan temuan dan penilaian">
-			<header className="evx-panel-head">
-				<h3>
-					<ListChecks size={14} /> Penilaian &amp; umpan balik
-				</h3>
-				<span className={`evx-draft${ctx.published ? ' live' : ''}`}>{ctx.published ? t('aevr.published') : t('aevr.draft')}</span>
-			</header>
-
-			<div className="assessment-status" aria-live="polite">
-				<span className="assessment-eyebrow">RUANG PENILAIAN DOSEN</span>
-				<strong>{ctx.published ? 'Nilai resmi sudah diterbitkan' : 'Tinjau sebelum menerbitkan'}</strong>
-				<p>{ctx.published ? `Nilai resmi saat ini ${ctx.published.finalScore ?? '—'}/100. Perubahan draf tidak mengubah nilai tersebut sampai diterbitkan ulang.` : 'Tinjau temuan, periksa skor rubrik, lalu terbitkan kepada mahasiswa.'}</p>
-				<span className={`assessment-save-state ${ctx.dirty ? 'unsaved' : ''}`}>
-					{ctx.saving ? 'Menyimpan draf…' : ctx.dirty ? 'Perubahan belum disimpan' : ctx.row?.reviewedAt ? `Draf tersimpan · ${stamp(ctx.row.reviewedAt)}` : 'Usulan AI · belum disimpan sebagai tinjauan'}
-				</span>
-			</div>
-			<div className="assessment-progress" aria-label="Progres penilaian">
-				<span><b>1</b> Tinjau temuan <em>{ctx.pendingCount ? `${ctx.pendingCount} tersisa` : 'Selesai'}</em></span>
-				<span><b>2</b> Periksa rubrik</span><span><b>3</b> Terbitkan</span>
-			</div>
-			<div className="evx-ai-card score-only">
-				<div className="evx-ai-score">
-					<strong>
-						{!ctx.criteria.some(c => c.weight > 0) || ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) ? 'Belum dinilai' : <>{ctx.calc.total}<small> / 100{letterGrade(ctx.calc.total) ? ` · ${letterGrade(ctx.calc.total)}` : ''}</small></>}
-					</strong>
-					<span>Skor rubrik pada draf ini</span>
-				</div>
-                <button type="button" className="evx-refresh" aria-label="Buat ulang draf AI" title="Buat ulang analisis AI menggunakan kriteria dan materi terbaru" onClick={ctx.regenerate} disabled={ctx.regenerating || ctx.preparing}>{ctx.regenerating || ctx.preparing ? <LoaderCircle size={14} className="spin" /> : <RotateCcw size={14} />}<span>Buat ulang AI</span></button>
-			</div>
-
-			<section className="evx-block">
-				<header>
-					<h4>
-						<ListChecks size={14} /> {t('aevr.rubric')}
-						<span className="evx-rubric-info" tabIndex={0} aria-label={t('aevr.rubricHowTo')}>
-							<Info size={13} />
-							<span className="evx-rubric-tip" role="tooltip">
-								Skor total adalah rata-rata tertimbang pencapaian setiap kriteria. Pilih tingkat pencapaian atau isi skor 0–100. Temuan merah/kuning menjadi bukti penilaian, tanpa pengurangan otomatis. Tidak ada bonus panjang atau batas minimum kata universal. Saran nilai bersifat sementara sampai dosen menyimpan &amp; lanjut.
-							</span>
-						</span>
-					</h4>
-					{ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) && <span>{ctx.criteria.filter(c => c.weight > 0 && ctx.criterionScores[c.id] != null).length}/{ctx.criteria.filter(c => c.weight > 0).length} kriteria terisi</span>}
-				</header>
-				<p className="assessment-rubric-help">Nilai setiap kriteria berdasarkan bukti pada jawaban. Total mengikuti bobot rubrik; jumlah koreksi tidak otomatis mengurangi skor.</p>
-				{ctx.calc.rows.length === 0 && (
+		<GradingPanel
+			ariaLabel="Tinjauan temuan dan penilaian"
+			title="Penilaian & umpan balik"
+			statusLabel={ctx.published ? t('aevr.published') : t('aevr.draft')}
+			live={Boolean(ctx.published)}
+			status={{
+				eyebrow: 'RUANG PENILAIAN DOSEN',
+				headline: ctx.published ? 'Nilai resmi sudah diterbitkan' : 'Tinjau sebelum menerbitkan',
+				description: ctx.published
+					? `Nilai resmi saat ini ${ctx.published.finalScore ?? '—'}/100. Perubahan draf tidak mengubah nilai tersebut sampai diterbitkan ulang.`
+					: 'Tinjau temuan, periksa skor rubrik, lalu terbitkan kepada mahasiswa.',
+				saveState: ctx.saving
+					? 'Menyimpan draf…'
+					: ctx.dirty
+						? 'Perubahan belum disimpan'
+						: ctx.row?.reviewedAt
+							? `Draf tersimpan · ${stamp(ctx.row.reviewedAt)}`
+							: 'Usulan AI · belum disimpan sebagai tinjauan',
+				unsaved: ctx.dirty,
+			}}
+			steps={[
+				{ label: 'Tinjau temuan', detail: ctx.pendingCount ? `${ctx.pendingCount} tersisa` : 'Selesai' },
+				{ label: 'Periksa rubrik' },
+				{ label: 'Terbitkan' },
+			]}
+			criteria={ctx.calc.rows.map((row) => {
+				const reason = breakdown.find((entry) => matchCriterion(entry, criteria)?.id === row.id);
+				return {
+					id: row.id,
+					label: row.label,
+					shortLabel: shortCriterionLabel(row.label),
+					weight: row.weight,
+					weightPercent: Math.round((100 * row.weight) / totalWeight),
+					evidence: `${row.major} merah · ${row.minor} kuning sebagai bukti. Skor pencapaian ditentukan dosen.${reason?.note ? ` Alasan AI: ${reason.note}` : ''}`,
+				};
+			})}
+			scores={ctx.criterionScores}
+			onScoreChange={ctx.setCriterionScore}
+			rubricTotal={weighted.length === 0 || missingScores ? null : ctx.calc.total}
+			rubricHeading={t('aevr.rubric')}
+			rubricTip="Skor total adalah rata-rata tertimbang pencapaian setiap kriteria. Pilih tingkat pencapaian atau isi skor 0–100. Temuan merah/kuning menjadi bukti penilaian, tanpa pengurangan otomatis. Tidak ada bonus panjang atau batas minimum kata universal. Saran nilai bersifat sementara sampai dosen menerbitkan."
+			rubricHelp="Nilai setiap kriteria berdasarkan bukti pada jawaban. Total mengikuti bobot rubrik; jumlah koreksi tidak otomatis mengurangi skor."
+			rubricEmpty={
+				<>
 					<p className="evx-muted">
-						Skor hitung {ctx.calc.total}/100 dari temuan yang disetujui
-						{criteria.length === 0 ? '. Tugas ini belum menyimpan kriteria rubrik.' : '.'}
+						Skor hitung {ctx.calc.total}/100 dari temuan yang disetujui. Tugas ini belum menyimpan kriteria rubrik.
 					</p>
-				)}
-				{(ctx.calc.rows.length > 0 || ctx.calc.general) && (
-					<ul className="evx-rubric">
-						{ctx.calc.rows.map((row) => {
-							const reason = breakdown.find(entry => matchCriterion(entry, ctx.criteria)?.id === row.id);
-							const open = openRubric === row.id;
-							return (
-								<li key={row.id}>
-									<button type="button" aria-expanded={open} onClick={() => setOpenRubric(open ? null : row.id)}>
-										<span>{shortCriterionLabel(row.label)}</span>
-										<span className="evx-bar"><i style={{ width: `${row.score}%` }} /></span>
-										<strong>{ctx.criterionScores[row.id] == null ? '—' : row.score}</strong><span className="assessment-weight">{Math.round(100 * row.weight / (ctx.criteria.reduce((sum, criterion) => sum + Math.max(0, criterion.weight), 0) || 1))}%</span><ChevronDown size={12} aria-hidden="true" />
-									</button>
-									{open && <div className="evx-criterion-achievement">
-    <label>Pencapaian · bobot {row.weight}
-        <select aria-label={'Pencapaian ' + row.label} value={ctx.criterionScores[row.id] ?? ''} onChange={e => ctx.setCriterionScore(row.id, e.target.value)}>
-            <option value="">Pilih tingkat pencapaian</option>
-            <option value="100">Sangat baik · 100</option>
-            <option value="85">Baik · 85</option>
-            <option value="70">Cukup · 70</option>
-            <option value="50">Perlu pengembangan · 50</option>
-            <option value="25">Bukti terbatas · 25</option>
-            <option value="0">Belum menunjukkan pencapaian · 0</option>
-            {ctx.criterionScores[row.id] != null && ![0,25,50,70,85,100].includes(ctx.criterionScores[row.id]) && <option value={ctx.criterionScores[row.id]}>Skor khusus · {ctx.criterionScores[row.id]}</option>}
-        </select>
-    </label>
-    <label>Skor 0–100<input aria-label={'Skor ' + row.label} type="number" min={0} max={100} step={1} value={ctx.criterionScores[row.id] ?? ''} onChange={e => ctx.setCriterionScore(row.id, e.target.value)} /></label>
-</div>}
-{open && (
-										<p>
-											{row.major} merah · {row.minor} kuning sebagai bukti. Skor pencapaian ditentukan dosen.
-											{reason?.note ? ` Alasan AI: ${reason.note}` : ''}
-										</p>
-									)}
-								</li>
-							);
-						})}
-						{ctx.calc.general && (
-							<li className="evx-rubric-general-row">
-								<strong>Catatan umum (tidak terpetakan ke kriteria)</strong>
-								<span>{ctx.calc.general.major} merah · {ctx.calc.general.minor} kuning</span>
-								<span>Bukti tambahan untuk ditinjau; tanpa penalti otomatis</span>
-							</li>
-						)}
-					</ul>
-				)}
-				{ctx.calc.general && (
-					<p className="evx-rubric-total-note">
-						Catatan umum menjadi bukti untuk ditinjau; tidak ada pengurangan skor otomatis.
-					</p>
-				)}
-			</section>
-
-			<details className="evx-block evx-feedback" open={feedbackOpen} onToggle={event => setFeedbackOpen(event.currentTarget.open)}>
-				<summary><div>
-					<h4><PenLine size={14} /> {t('aevr.feedback')}</h4>
-                {!feedbackOpen && <p className="evx-feedback-preview">{ctx.publishNote.trim() ? ctx.publishNote.trim().slice(0, 90) : 'Tambah feedback untuk mahasiswa'}</p>}
-                </div><ChevronDown size={14} /></summary>
-				<textarea
-					ref={noteRef}
-					className="aev-publish-note"
-					aria-label="Catatan untuk mahasiswa"
-					rows={4}
-					maxLength={2000}
-					value={ctx.publishNote}
-					onChange={(e) => ctx.setPublishNote(e.target.value)}
-					placeholder={t('aevr.feedbackPlaceholder')}
-				/>
-				<div className="evx-note-meta">
+					{rubricSuggestions}
+				</>
+			}
+			rubricExtra={criteria.length > 0 && suggest.suggestions && suggest.suggestions.pending.length > 0 ? rubricSuggestions : null}
+			rubricGeneral={ctx.calc.general ? { major: ctx.calc.general.major, minor: ctx.calc.general.minor } : null}
+			feedback={ctx.publishNote}
+			onFeedbackChange={ctx.setPublishNote}
+			feedbackLabel={t('aevr.feedback')}
+			feedbackPlaceholder={t('aevr.feedbackPlaceholder')}
+			feedbackFocusSignal={ctx.noteTick}
+			aiDraft={aiDraft}
+			onRequestAi={aiDraft?.status === 'stalled' ? ctx.retryAi : ctx.regenerate}
+			aiBusy={ctx.regenerating || (ctx.preparing && aiDraft?.status !== 'stalled')}
+			onApplyAi={() => ready?.summary && ctx.setPublishNote(mergeAiFeedback(ctx.publishNote, ready.summary))}
+			applyAiLabel={t('aevr.useAiSuggestion')}
+			finalScore={{
+				value: ctx.override,
+				onChange: ctx.changeOverride,
+				placeholder: missingScores ? 'Belum dinilai' : String(ctx.calc.total),
+				invalid: scoreInvalid,
+				inputId: 'evx-score-input',
+				ariaLabel: t('aevr.finalGradeAria'),
+				badge: ctx.overrideValid
+					? ctx.published && ctx.override === String(ctx.published.finalScore)
+						? 'Nilai tersimpan'
+						: ctx.adjustedByLecturer
+							? 'Disesuaikan dosen'
+							: 'Skor rubrik'
+					: undefined,
+				badgeTone: ctx.adjustedByLecturer ? 'lecturer' : 'ai',
+				delta:
+					ctx.adjustedByLecturer && !missingScores && ctx.finalScore !== ctx.calc.total ? (
+						<p className="aev-override-delta">
+							Skor hitung {ctx.calc.total} → nilai akhir {ctx.finalScore} (
+							<em>
+								{ctx.finalScore - ctx.calc.total > 0 ? '+' : ''}
+								{ctx.finalScore - ctx.calc.total}
+							</em>
+							, disesuaikan dosen)
+						</p>
+					) : null,
+				onClear: ctx.adjustedByLecturer ? ctx.clearOverride : undefined,
+			}}
+			publishHelp="Simpan draf untuk melanjutkan nanti. Terbitkan agar nilai dan umpan balik terlihat oleh mahasiswa."
+			secondaryAction={{ label: 'Simpan draf', onClick: ctx.saveReview, disabled: ctx.saving, busy: ctx.saving }}
+			primaryAction={{
+				label: ctx.published ? 'Terbitkan ulang & lanjut' : 'Terbitkan nilai & lanjut',
+				onClick: ctx.requestConfirmPublish,
+				disabled: publishDisabled,
+				icon: <Send size={14} />,
+			}}
+			disabledReasons={disabledReasons}
+			confirm={ctx.confirmPublish ? <PublishConfirm /> : undefined}
+			more={
+				<>
 					<button
 						type="button"
-						className="evx-ai-suggest"
-						disabled={!ready?.summary}
-						onClick={() => ready?.summary && ctx.setPublishNote(ready.summary.slice(0, 2000))}
+						className={`aev-research-toggle${ctx.researchMode ? ' on' : ''}`}
+						aria-pressed={ctx.researchMode}
+						onClick={() => ctx.setResearchMode(!ctx.researchMode)}
 					>
-						<Sparkles size={13} /> {t('aevr.useAiSuggestion')}
+						<FlaskConical size={13} /> {ctx.researchMode ? t('aevr.researchModeOn') : t('aevr.researchMode')}
 					</button>
-					<span>{wordsNote} / 2000</span>
-				</div>
-			</details>
-
-
+					{ctx.researchMode && <ResearchCounters />}
+					{ctx.researchMode && <ResearchMetadataPanel />}
+					{!missingScores && ctx.calc.factors.length > 0 && (
+						<details className="fer-score-details">
+							<summary>
+								<span>{t('aevr.detailScoring')}</span>
+								<ChevronDown size={16} aria-hidden="true" />
+							</summary>
+							<div className="fer-score-details-body">
+								<p className="evx-muted fer-rationale">{ctx.calc.rationale}</p>
+								<ul className="fer-factors" aria-label="Rincian perhitungan skor">
+									{ctx.calc.factors.map((factor) => {
+										const isBase = factor.key === 'base';
+										return (
+											<li key={factor.key}>
+												<span className="fer-factor-label">{factor.label}</span>
+												<span className="fer-factor-detail">{factor.detail}</span>
+												{isBase ? (
+													<em className="tolerance">100</em>
+												) : factor.impact !== 0 ? (
+													<em className={factor.impact < 0 ? 'penalty' : 'tolerance'}>
+														{factor.impact > 0 ? `+${factor.impact}` : factor.impact}
+													</em>
+												) : null}
+											</li>
+										);
+									})}
+								</ul>
+							</div>
+						</details>
+					)}
+					{(citations.length > 0 || ready?.contextNote) && (
+						<footer className="aev-foot">
+							{citations.length > 0 ? (
+								<div className="aev-citations">
+									<h6>Rujukan materi disetujui</h6>
+									<ul>
+										{citations.map((citation, index) => (
+											<li key={index}>
+												{citation.title} (versi {citation.version}): {citation.section}
+												{citation.pageRef ? ` · hal. ${citation.pageRef}` : ''}
+											</li>
+										))}
+									</ul>
+								</div>
+							) : (
+								ready && (
+									<p className="aev-context">
+										Konteks saat draf dibuat{ready.generatedAt ? ` (${stamp(ready.generatedAt)})` : ''}: {ready.contextNote}
+									</p>
+								)
+							)}
+						</footer>
+					)}
+				</>
+			}
+			footer={
+				<>
+					{ctx.dirty && (
+						<button type="button" className="evx-discard" disabled={ctx.saving} onClick={ctx.resetReview}>
+							{t('aevr.discardReview')}
+						</button>
+					)}
+					{ctx.publishError && <p className="form-error" role="alert"><AlertTriangle size={13} /> {ctx.publishError}</p>}
+					{ctx.publishNotice && <p className="eval-saved" role="status"><CheckCircle2 size={13} /> {ctx.publishNotice}</p>}
+					{ctx.saveError && <p className="form-error" role="alert"><AlertTriangle size={13} /> {ctx.saveError}</p>}
+					{ctx.notice && <p className="eval-saved" role="status"><CheckCircle2 size={13} /> {ctx.notice}</p>}
+				</>
+			}
+		>
 			{ctx.confidence && (
 				<section className="evx-block evx-confidence-block">
 					<header>
@@ -2866,10 +2963,10 @@ export function AiEvaluationPanel() {
 			{ctx.pendingCount > 0 && (
 				<p className="aev-note failed">
 					<AlertTriangle size={13} /> {ctx.pendingCount} temuan AI masih menunggu tinjauan. Setujui atau tolak sebelum mempublikasikan.
+					<button type="button" className="ld-outline-action sm aev-approve-all" onClick={ctx.approveAllPending}>
+						<CheckCircle2 size={13} /> Setujui semua temuan
+					</button>
 				</p>
-			)}
-			{ctx.preparing && (
-				<p className="aev-note pending" aria-live="polite"><LoaderCircle className="spin" size={13} /> Menyiapkan draf evaluasi AI.</p>
 			)}
 
 			{ctx.ungradable && (
@@ -2877,516 +2974,132 @@ export function AiEvaluationPanel() {
 					<AlertTriangle size={13} /> Kiriman berbicara belum dapat dinilai — transkripsi{ctx.transcriptStatus === 'failed' ? ' gagal' : ctx.transcriptStatus === 'processing' || ctx.transcriptStatus === 'pending' ? ' masih diproses' : ' belum tersedia'}.{ctx.transcriptError ? ` (${ctx.transcriptError})` : ''} Publikasi dinonaktifkan sampai transkripsi siap; minta peserta mengunggah ulang audio lalu transkripsi ulang bila perlu.
 				</div>
 			)}
-
-            <details className="evx-block evx-more"><summary>Lainnya <ChevronDown size={14} /></summary>
-			<button
-				type="button"
-				className={`aev-research-toggle${ctx.researchMode ? ' on' : ''}`}
-				aria-pressed={ctx.researchMode}
-				onClick={() => ctx.setResearchMode(!ctx.researchMode)}
-			>
-				<FlaskConical size={13} /> {ctx.researchMode ? t('aevr.researchModeOn') : t('aevr.researchMode')}
-			</button>
-			{ctx.researchMode && <ResearchCounters />}
-			{ctx.researchMode && <ResearchMetadataPanel />}
-				{!ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) && ctx.calc.factors.length > 0 && (
-					<details className="fer-score-details">
-						<summary>
-							<span>{t('aevr.detailScoring')}</span>
-							<ChevronDown size={16} aria-hidden="true" />
-						</summary>
-						<div className="fer-score-details-body">
-							<p className="evx-muted fer-rationale">{ctx.calc.rationale}</p>
-							<ul className="fer-factors" aria-label="Rincian perhitungan skor">
-								{ctx.calc.factors.map((factor) => {
-									const isBase = factor.key === 'base';
-									return (
-										<li key={factor.key}>
-											<span className="fer-factor-label">{factor.label}</span>
-											<span className="fer-factor-detail">{factor.detail}</span>
-											{isBase ? (
-												<em className="tolerance">100</em>
-											) : factor.impact !== 0 ? (
-												<em className={factor.impact < 0 ? 'penalty' : 'tolerance'}>
-													{factor.impact > 0 ? `+${factor.impact}` : factor.impact}
-												</em>
-											) : null}
-										</li>
-									);
-								})}
-							</ul>
-						</div>
-					</details>
-				)}
-
-			{(citations.length > 0 || ready?.contextNote) && (
-				<footer className="aev-foot">
-					{citations.length > 0 ? (
-						<div className="aev-citations">
-							<h6>Rujukan materi disetujui</h6>
-							<ul>
-								{citations.map((citation, index) => (
-									<li key={index}>{citation.title} (versi {citation.version}): {citation.section}{citation.pageRef ? ` · hal. ${citation.pageRef}` : ''}</li>
-								))}
-							</ul>
-						</div>
-					) : (
-						ready && <p className="aev-context">Konteks saat draf dibuat{ready.generatedAt ? ` (${stamp(ready.generatedAt)})` : ''}: {ready.contextNote}</p>
-					)}
-				</footer>
-			)}
-            </details>
-            <div className="evx-sticky-actions">
-			<p className="assessment-publish-help">Simpan draf untuk melanjutkan nanti. Terbitkan agar nilai dan umpan balik terlihat oleh mahasiswa.</p>
-			<section className="evx-block evx-final-block">
-				<label>
-					Nilai yang akan diterbitkan
-					<span className="evx-score-field">
-						<input
-							id="evx-score-input"
-							inputMode="decimal"
-							value={ctx.override}
-							onChange={(e) => ctx.changeOverride(e.target.value)}
-							placeholder={ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) ? 'Belum dinilai' : String(ctx.calc.total)}
-							aria-label={t('aevr.finalGradeAria')}
-						/>
-						<em>/ 100</em>
-					</span>
-				</label>
-				{ctx.overrideValid && (
-					<span className={`aev-adjust-badge${ctx.adjustedByLecturer ? '' : ' ai'}`}>
-						{ctx.published && ctx.override === String(ctx.published.finalScore) ? 'Nilai tersimpan' : ctx.adjustedByLecturer ? 'Disesuaikan dosen' : 'Skor rubrik'}
-					</span>
-				)}
-				{ctx.override.trim() !== '' && !ctx.overrideValid && <span className="aev-override-warn">Nilai harus angka 0–100.</span>}
-				{ctx.adjustedByLecturer && !ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) && ctx.finalScore !== ctx.calc.total && (
-					<p className="aev-override-delta">
-						Skor hitung {ctx.calc.total} → nilai akhir {ctx.finalScore}
-						{' '}(<em>{ctx.finalScore - ctx.calc.total > 0 ? '+' : ''}{ctx.finalScore - ctx.calc.total}</em>, disesuaikan dosen)
-					</p>
-				)}
-				{ctx.adjustedByLecturer && (
-					<button type="button" className="ld-outline-action sm" onClick={ctx.clearOverride}>Hapus penyesuaian</button>
-				)}
-			</section>
-			{ctx.confirmPublish ? (
-				<div className="aev-publish-confirm">
-					<div className="aev-publish-summary" aria-label="Ringkasan sebelum terbit">
-						<div className="aev-ps-row">
-							<span>Nilai akhir</span>
-							<strong>{ctx.finalScore}/100{letterGrade(ctx.finalScore) ? ` · ${letterGrade(ctx.finalScore)}` : ''}{ctx.adjustedByLecturer ? ' (disesuaikan dosen)' : ''}</strong>
-						</div>
-						<div className="aev-ps-row">
-							<span>Koreksi disetujui</span>
-							<strong>{ctx.visible.filter((f) => f.source === 'ai' && f.status === 'approved').length} saran AI</strong>
-						</div>
-						<div className="aev-ps-row">
-							<span>Ditolak</span>
-							<strong>{ctx.rejected.length}</strong>
-						</div>
-						{ctx.pendingCount > 0 && (
-							<div className="aev-ps-row warn">
-								<span>Belum ditinjau</span>
-								<strong>{ctx.pendingCount} temuan AI</strong>
-							</div>
-						)}
-						{ctx.publishNote.trim() && (
-							<div className="aev-ps-feedback">
-								<span>Umpan balik</span>
-								<p>{ctx.publishNote.trim().slice(0, 160)}{ctx.publishNote.trim().length > 160 ? '…' : ''}</p>
-							</div>
-						)}
-					</div>
-					<div className="aev-publish-actions">
-						<span>Publikasikan nilai {ctx.finalScore}/100{letterGrade(ctx.finalScore) ? ` · ${letterGrade(ctx.finalScore)}` : ''} lalu lanjut?</span>
-						<button type="button" className="ld-btn-primary" disabled={ctx.publishing} onClick={ctx.publish}>
-							{ctx.publishing ? <LoaderCircle size={14} className="spin" /> : <CheckCircle2 size={14} />} {t('aevr.yesSaveNext')}
-						</button>
-						<button type="button" className="ld-outline-action sm" disabled={ctx.publishing} onClick={ctx.cancelPublish}>Batal</button>
-					</div>
-				</div>
-			) : (
-				<div className="evx-actions">
-					<button type="button" className="evx-draft-btn" disabled={ctx.saving} onClick={ctx.saveReview}>
-						{ctx.saving ? <LoaderCircle size={14} className="spin" /> : null} Simpan draf
-					</button>
-					<button
-						type="button"
-						className="evx-next-btn"
-						disabled={ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.ungradable || (!ctx.criteria.some(c => c.weight > 0) && !ctx.overrideValid) || ctx.publishing || ctx.saving || ctx.pendingCount > 0 || (ctx.override.trim() !== '' && !ctx.overrideValid)}
-						onClick={ctx.requestConfirmPublish}
-					>
-						<Send size={14} /> {ctx.published ? 'Terbitkan ulang & lanjut' : 'Terbitkan nilai & lanjut'}
-					</button>
-				</div>
-			)}
-            </div>
-			{ctx.dirty && (
-				<button type="button" className="evx-discard" disabled={ctx.saving} onClick={ctx.resetReview}>{t('aevr.discardReview')}</button>
-			)}
-			{ctx.publishError && <p className="form-error" role="alert"><AlertTriangle size={13} /> {ctx.publishError}</p>}
-			{ctx.publishNotice && <p className="eval-saved" role="status"><CheckCircle2 size={13} /> {ctx.publishNotice}</p>}
-			{ctx.saveError && <p className="form-error" role="alert"><AlertTriangle size={13} /> {ctx.saveError}</p>}
-			{ctx.notice && <p className="eval-saved" role="status"><CheckCircle2 size={13} /> {ctx.notice}</p>}
-		</section>
+		</GradingPanel>
 	);
 }
 
-/*
-			<header className="aev-head">
-				<h4>
-					<PenLine size={13} /> Tinjauan temuan
-				</h4>
-				<span className="aev-badge">Tugas formal</span>
-			</header>
-			{ready?.summary && <p className="aev-summary">{ready.summary}</p>}
-
-			<CollapseSection
-				title="Temuan"
-				icon={<ListChecks size={13} />}
-				count={String(ctx.visible.length)}
-				defaultOpen
-			>
-				<div className="aev-findings">
-					{ctx.visible.length > 0 && (
-						<p className="aevr-counts-line">
-							AI {ctx.aiCount} · Dosen {ctx.lecturerCount}
-							{ctx.rejected.length > 0 ? ` · Ditolak ${ctx.rejected.length}` : ''}
-						</p>
-					)}
-
-					{ctx.visible.length > 0 ? (
-						<ul>
-							{ctx.visible.map((finding) => (
-								<li key={finding.id} className={finding.severity}>
-									<div className="aevr-item-head">
-										<span className="aev-chip">{SEVERITY_LABEL[finding.severity]}</span>
-										<span className={`aevr-src ${finding.source}`}>
-											{finding.source === 'ai' ? 'AI · rekomendasi' : 'Dosen'}
-										</span>
-										<span className={`aevr-status ${finding.status}`}>
-											{REVIEW_STATUS_LABEL[finding.status]}
-										</span>
-									</div>
-									{finding.quote && <blockquote>{finding.quote}</blockquote>}
-									{ctx.editingId === finding.id ? (
-										<div className="aevr-edit">
-											<SeverityToggle value={ctx.editSeverity} onChange={ctx.setEditSeverity} />
-											<textarea
-												rows={3}
-												maxLength={600}
-												value={ctx.editNote}
-												onChange={(e) => ctx.setEditNote(e.target.value)}
-											/>
-											{ctx.manualError && (
-												<p className="form-error" role="alert">
-													{ctx.manualError}
-												</p>
-											)}
-											<div className="aevr-mark-form-actions">
-												<button
-													type="button"
-													className="ld-btn-primary"
-													onClick={() => ctx.saveEdit(finding)}
-												>
-													Simpan perubahan
-												</button>
-												<button
-													type="button"
-													className="ld-outline-action sm"
-													onClick={ctx.cancelEdit}
-												>
-													Batal
-												</button>
-											</div>
-										</div>
-									) : (
-										<p>{finding.note}</p>
-									)}
-									{finding.evidence && <small>Bukti: {finding.evidence}</small>}
-									{criteria.length > 0 && (
-										<label className="aevr-crit">
-											Kriteria rubrik
-											<select
-												value={finding.criterion || ''}
-												onChange={(e) => ctx.updateFinding(finding.id, { criterion: e.target.value })}
-												aria-label={`Kriteria rubrik untuk temuan ${finding.id}`}
-											>
-												<option value="">— umum (tanpa kriteria) —</option>
-												{criteria.map((c) => (
-													<option key={c.id} value={c.id}>
-														{c.label}
-													</option>
-												))}
-											</select>
-										</label>
-									)}
-									{ctx.rejectingId === finding.id ? (
-										<RejectReasonFields id={finding.id} />
-									) : ctx.editingId !== finding.id && (
-										<div className="aevr-item-actions">
-											{finding.source === 'ai' && finding.status !== 'approved' && (
-												<button
-													type="button"
-													className="approve"
-													onClick={() => ctx.updateFinding(finding.id, { status: 'approved', rejectReason: '' })}
-												>
-													<CheckCircle2 size={12} /> Setujui
-												</button>
-											)}
-											<button type="button" onClick={() => ctx.startEdit(finding)}>
-												Edit catatan
-											</button>
-											{finding.source === 'ai' ? (
-												<button type="button" onClick={() => ctx.startReject(finding.id)}>
-													Tolak
-												</button>
-											) : (
-												<button type="button" onClick={() => ctx.removeFinding(finding.id)}>
-													Hapus
-												</button>
-											)}
-										</div>
-									)}
-								</li>
-							))}
-						</ul>
-					) : (
-						<p className="asg-empty-line">
-							Belum ada temuan — setujui temuan AI dari tanda pada teks, atau tandai teks manual.
-						</p>
-					)}
-
-					{ctx.rejected.length > 0 && (
-						<div className="aevr-rejected">
-							<span>Ditolak ({ctx.rejected.length}) — tidak ditandai pada teks</span>
-							{ctx.rejected.map((finding) => (
-								<RejectedFinding key={finding.id} finding={finding} />
-							))}
-						</div>
-					)}
-
-					<p className="aev-legend">
-						<span>
-							<mark className="aev-mark minor">kuning</mark> perlu perbaikan / saran
-						</span>
-						<span>
-							<mark className="aev-mark major">merah</mark> kesalahan berarti
-						</span>
-					</p>
+/** Summary + explicit confirmation before a Tugas grade is published. */
+function PublishConfirm() {
+	const ctx = useReview();
+	const t = useT();
+	if (!ctx) return null;
+	const grade = `${ctx.finalScore}/100${letterGrade(ctx.finalScore) ? ` · ${letterGrade(ctx.finalScore)}` : ''}`;
+	return (
+		<div className="aev-publish-confirm">
+			<div className="aev-publish-summary" aria-label="Ringkasan sebelum terbit">
+				<div className="aev-ps-row">
+					<span>Nilai akhir</span>
+					<strong>{grade}{ctx.adjustedByLecturer ? ' (disesuaikan dosen)' : ''}</strong>
 				</div>
-			</CollapseSection>
-
-			<CollapseSection title="Skor rekomendasi AI" icon={<Sparkles size={13} />}>
-				{ctx.aiScore != null ? (
-					<div className="aev-score">
-						<p className="aev-score-value">
-							{ctx.aiScore}
-							<small>/100 — rekomendasi AI</small>
-						</p>
-						{ctx.overrideValid && !ctx.adjustedByLecturer ? (
-							<p className="aev-autofill-note">
-								<CheckCircle2 size={12} /> Terisi otomatis pada nilai akhir — ubah atau hapus pada
-								bagian Rubrik &amp; nilai akhir bila perlu.
-							</p>
-						) : (
-							<button type="button" className="ld-outline-action sm" onClick={ctx.applyAiScore}>
-								Gunakan skor AI ({ctx.aiScore})
-							</button>
-						)}
-						<div className="aev-why">
-							<h6>Alasan per kriteria</h6>
-							<ul className="aev-breakdown">
-								{breakdown.map((entry, index) => (
-									<li key={index}>
-										<span>{entry.criterion}</span>
-										<strong>{entry.score}</strong>
-										{entry.note && <small>{entry.note}</small>}
-									</li>
-								))}
-							</ul>
-						</div>
-					</div>
-				) : (
-					<p className="asg-empty-line">Belum ada skor rekomendasi AI untuk kiriman ini.</p>
-				)}
-			</CollapseSection>
-
-			<CollapseSection title="Rubrik & nilai akhir" icon={<Calculator size={13} />} defaultOpen>
-				<p className="aev-phase3-note">
-					Skor dihitung ulang dari temuan yang Anda setujui atau buat sendiri dan tugaskan ke
-					kriteria rubrik — temuan AI yang ditolak tidak dihitung. Setiap kriteria mulai dari
-					pencapaian tiap kriteria; total adalah rata-rata tertimbang.
-					{criteria.length === 0 &&
-						' Tugas ini belum menyimpan kriteria rubrik — skor dihitung dari seluruh temuan yang disetujui.'}
-				</p>
-				{ctx.calc.rows.length > 0 && (
-					<ul className="aev-rubric">
-						{ctx.calc.rows.map((r) => (
-							<li key={r.id}>
-								<span className="aevr-crit-label">{shortCriterionLabel(r.label)}</span>
-								<span className="aevr-crit-count">
-									{r.major > 0 || r.minor > 0 ? `${r.major} merah · ${r.minor} kuning` : 'tanpa temuan'}
-								</span>
-								<strong className="aevr-crit-score">{r.score}</strong>
-							</li>
-						))}
-					</ul>
-				)}
-				<div className="aev-rubric-total">
-					<span>
-						Skor hitung{' '}
-						{ctx.calc.hasRubric ? '(rata-rata tertimbang rubrik)' : '(pengurangan temuan)'}
-					</span>
-					<strong>{ctx.calc.total}</strong>
+				<div className="aev-ps-row">
+					<span>Koreksi disetujui</span>
+					<strong>{ctx.visible.filter((f) => f.source === 'ai' && f.status === 'approved').length} saran AI</strong>
 				</div>
-				<div className="aev-final">
-					<div className="aev-final-row">
-						<span className="aev-final-value">
-							{ctx.finalScore}
-							<small>/100 — nilai akhir</small>
-						</span>
-						{ctx.overrideValid && (
-							<span className={`aev-adjust-badge${ctx.adjustedByLecturer ? '' : ' ai'}`}>
-								{ctx.adjustedByLecturer ? 'Disesuaikan dosen' : 'Skor rekomendasi AI'}
-							</span>
-						)}
-					</div>
-					<div className="aev-override">
-						<label>
-							Penyesuaian dosen (0–100)
-							<input
-								inputMode="decimal"
-								value={ctx.override}
-								onChange={(e) => ctx.changeOverride(e.target.value)}
-								placeholder="—"
-								aria-label="Penyesuaian nilai akhir oleh dosen"
-							/>
-						</label>
-						{ctx.override.trim() !== '' && (
-							<button type="button" className="ld-outline-action sm" onClick={ctx.clearOverride}>
-								Hapus penyesuaian
-							</button>
-						)}
-						{ctx.override.trim() !== '' && !ctx.overrideValid && (
-							<span className="aev-override-warn">Nilai harus angka 0–100.</span>
-						)}
-					</div>
+				<div className="aev-ps-row">
+					<span>Ditolak</span>
+					<strong>{ctx.rejected.length}</strong>
 				</div>
-			</CollapseSection>
-
-			<CollapseSection title="Publikasi ke peserta" icon={<Send size={13} />} defaultOpen>
-				{ctx.published && (
-					<p className="aev-published">
-						<CheckCircle2 size={13} /> Sudah dipublikasikan {stamp(ctx.published.publishedAt)} — nilai{' '}
-						{ctx.published.finalScore ?? '—'}/100
-						{ctx.published.scoreAdjusted ? ' (disesuaikan dosen)' : ''}. Mempublikasikan ulang akan
-						menimpa nilai dan umpan balik sebelumnya.
-					</p>
-				)}
 				{ctx.pendingCount > 0 && (
-					<p className="aev-note failed">
-						<AlertTriangle size={13} /> {ctx.pendingCount} temuan AI masih menunggu tinjauan — setujui
-						atau tolak sebelum mempublikasikan.
-					</p>
-				)}
-				<textarea
-					className="aev-publish-note"
-					rows={3}
-					maxLength={2000}
-					value={ctx.publishNote}
-					onChange={(e) => ctx.setPublishNote(e.target.value)}
-					placeholder="Catatan dosen untuk peserta (opsional, ikut dipublikasikan)..."
-				/>
-				{ctx.confirmPublish ? (
-					<div className="aev-publish-actions">
-						<span>Publikasikan nilai {ctx.finalScore}/100 ke peserta?</span>
-						<button
-							type="button"
-							className="ld-btn-primary"
-							disabled={ctx.publishing}
-							onClick={ctx.publish}
-						>
-							{ctx.publishing ? <LoaderCircle size={14} className="spin" /> : <CheckCircle2 size={14} />}{' '}
-							Ya, publikasikan
-						</button>
-						<button
-							type="button"
-							className="ld-outline-action sm"
-							disabled={ctx.publishing}
-							onClick={ctx.cancelPublish}
-						>
-							Batal
-						</button>
+					<div className="aev-ps-row warn">
+						<span>Belum ditinjau</span>
+						<strong>{ctx.pendingCount} temuan AI</strong>
 					</div>
-				) : (
-					<button
-						type="button"
-						className="ld-btn-primary"
-						disabled={
-							ctx.criteria.some(c => c.weight > 0 && ctx.criterionScores[c.id] == null) || ctx.publishing || ctx.pendingCount > 0 || (ctx.override.trim() !== '' && !ctx.overrideValid)
-						}
-						onClick={ctx.requestConfirmPublish}
-					>
-						<Send size={14} /> {ctx.published ? 'Publikasikan ulang' : 'Publikasikan ke peserta'}
-					</button>
 				)}
-				{ctx.publishError && (
-					<p className="form-error" role="alert">
-						<AlertTriangle size={13} /> {ctx.publishError}
-					</p>
-				)}
-				{ctx.publishNotice && (
-					<p className="eval-saved" role="status">
-						<CheckCircle2 size={13} /> {ctx.publishNotice}
-					</p>
-				)}
-			</CollapseSection>
-
-			<footer className="aev-foot">
-				{citations.length > 0 ? (
-					<div className="aev-citations">
-						<h6>Rujukan materi disetujui</h6>
-						<ul>
-							{citations.map((citation, index) => (
-								<li key={index}>
-									{citation.title} (versi {citation.version}) — {citation.section}
-									{citation.pageRef ? ` · hal. ${citation.pageRef}` : ''}
-								</li>
-							))}
-						</ul>
+				{ctx.publishNote.trim() && (
+					<div className="aev-ps-feedback">
+						<span>Umpan balik</span>
+						<p>{ctx.publishNote.trim().slice(0, 160)}{ctx.publishNote.trim().length > 160 ? '…' : ''}</p>
 					</div>
-				) : (
-					ready && <p className="aev-context">Konteks saat draf dibuat{ready.generatedAt ? ` (${stamp(ready.generatedAt)})` : ''}: {ready.contextNote}</p>
 				)}
-				{ctx.row?.reviewedAt ? (
-					<small>Tinjauan terakhir disimpan {stamp(ctx.row.reviewedAt)}</small>
-				) : (
-					ready?.generatedAt && <small>Draf AI disusun {stamp(ready.generatedAt)}</small>
-				)}
-			</footer>
+			</div>
+			<div className="aev-publish-actions">
+				<span>Terbitkan nilai {grade} ke mahasiswa, lalu lanjut ke peserta berikutnya yang belum dinilai?</span>
+				<button type="button" className="ld-btn-primary" disabled={ctx.publishing} onClick={ctx.publish}>
+					{ctx.publishing ? <LoaderCircle size={14} className="spin" /> : <CheckCircle2 size={14} />} {t('aevr.yesSaveNext')}
+				</button>
+				<button type="button" className="ld-outline-action sm" disabled={ctx.publishing} onClick={ctx.cancelPublish}>Batal</button>
+			</div>
+		</div>
+	);
+}
 
-			{ctx.dirty && (
-				<div className="aevr-savebar">
-					<span>Ada perubahan tinjauan yang belum disimpan.</span>
-					<div>
-						<button
-							type="button"
-							className="ld-outline-action sm"
-							disabled={ctx.saving}
-							onClick={ctx.resetReview}
-						>
-							Buang perubahan
-						</button>
-						<button
-							type="button"
-							className="ld-btn-primary"
-							disabled={ctx.saving}
-							onClick={ctx.saveReview}
-						>
-							{ctx.saving ? (
-								<LoaderCircle size={14} className="spin" />
-							) : (
-								<CheckCircle2 size={14} />
-							)}{' '}
-*/
+type RubricSuggestState = { suggestions: SuggestedCriteria | null; busy: boolean; error: string; saving: boolean };
+const EMPTY_SUGGEST_STATE: RubricSuggestState = { suggestions: null, busy: false, error: '', saving: false };
+
+/**
+ * "Sarankan rubrik" while grading a task that has no rubric criteria yet:
+ * asks /api/rubric-suggestions for provisional criteria and saves the ones
+ * the lecturer accepts (one by one or "Terima semua") into the assignment's
+ * `taskConfig.criteria` — the same persistence the task editor uses
+ * (assignments update; PocketBase only lets the owning lecturer write).
+ */
+function RubricSuggestInline({
+	state,
+	setState,
+}: {
+	state: RubricSuggestState;
+	setState: (update: (prev: RubricSuggestState) => RubricSuggestState) => void;
+}) {
+	const ctx = useReview();
+	if (!ctx) return null;
+	const { assignment } = ctx;
+	const kind = taskKindForShape(assignment.shape);
+	if (kind !== 'writing' && kind !== 'speaking') return null;
+	const current = state.suggestions ?? parseSuggestedCriteria(assignment.suggestedCriteria);
+
+	const generate = async () => {
+		setState((prev) => ({ ...prev, busy: true, error: '' }));
+		try {
+			const response = await fetch('/api/rubric-suggestions', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					...(pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {}),
+				},
+				body: JSON.stringify({ assignmentId: assignment.id }),
+			});
+			const body = (await response.json().catch(() => ({}))) as { suggestions?: SuggestedCriteria; error?: string };
+			if (!response.ok) throw new Error(body.error || 'Saran rubrik gagal dimuat.');
+			setState((prev) => ({ ...prev, busy: false, suggestions: body.suggestions ?? null }));
+		} catch (error) {
+			setState((prev) => ({ ...prev, busy: false, error: error instanceof Error ? error.message : 'Saran rubrik gagal dimuat.' }));
+		}
+	};
+
+	const save = async (next: SuggestedCriteria, accepted: SuggestedCriterion[]) => {
+		setState((prev) => ({ ...prev, saving: true, error: '', suggestions: next }));
+		try {
+			await pb.collection('assignments').update(assignment.id, {
+				taskConfig: appendCriteriaToTaskConfig(assignment.taskConfig, accepted, () => newRowId('c')),
+				suggestedCriteria: next,
+			});
+			setState((prev) => ({ ...prev, saving: false }));
+			ctx.onAssignmentChanged?.();
+		} catch {
+			setState((prev) => ({ ...prev, saving: false, suggestions: current, error: 'Kriteria belum tersimpan ke tugas. Coba lagi.' }));
+		}
+	};
+
+	return (
+		<RubricSuggestionsPanel
+			suggestions={current}
+			busy={state.busy || state.saving}
+			error={state.error}
+			generateLabel="Sarankan rubrik"
+			onGenerate={() => void generate()}
+			onAccept={(id) => {
+				const { state: next, criterion } = acceptSuggestion(current, id);
+				if (criterion) void save(next, [criterion]);
+			}}
+			onAcceptAll={() => {
+				const { state: next, criteria } = acceptAllSuggestions(current);
+				if (criteria.length > 0) void save(next, criteria);
+			}}
+			onDismiss={(id) => {
+				const next = dismissSuggestion(current, id);
+				setState((prev) => ({ ...prev, suggestions: next }));
+				void pb.collection('assignments').update(assignment.id, { suggestedCriteria: next }).catch(() => {});
+			}}
+		/>
+	);
+}

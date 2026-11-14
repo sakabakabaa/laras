@@ -28,6 +28,8 @@ import {
 	ScanText,
 	RotateCcw,
 	Search,
+	Send,
+	Sparkles,
 } from 'lucide-react';
 import { OverflowMenu } from '@/components/app/overflow-menu';
 import { hasExtractionArtifacts } from '@/lib/ocr-clean';
@@ -76,6 +78,8 @@ import { CheckFeedbackBody, CheckEvidence } from '@/components/app/task-workspac
 import { AssignmentForm } from '@/components/app/assignment-form';
 import { BulkPaperInput } from '@/components/app/bulk-paper-input';
 import { useT } from '@/lib/i18n';
+import { aiStateLabel, type EvaluationAiSummary } from '@/lib/evaluation-readiness';
+import { publishReadyBatch, runAiForAll, type WaveProgress } from '@/lib/evaluation-bulk';
 
 type AttemptRow = {
 	id: string;
@@ -109,6 +113,8 @@ type Participant = {
 	transcriptError: string;
 	transcriptFile: string;
 	transcriptConfidence: unknown;
+	/** AI draft / grading summary from /api/evaluation-participants. */
+	ai?: EvaluationAiSummary;
 };
 
 const LEVEL: Record<number, string> = {
@@ -183,6 +189,13 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	// server-side because the `users` viewRule blocks expanding other students'
 	// owner records in the browser. Keyed by submission id.
 	const [ownerMap, setOwnerMap] = useState<Record<string, { name: string; nim: string; email: string }>>({});
+	const [aiSummaries, setAiSummaries] = useState<Record<string, EvaluationAiSummary>>({});
+	// Bulk actions: "Jalankan AI untuk semua" progress and "Terbitkan yang siap".
+	const [bulkAi, setBulkAi] = useState<(WaveProgress & { running: boolean }) | null>(null);
+	const stopBulkAi = useRef(false);
+	const [publishBatchOpen, setPublishBatchOpen] = useState(false);
+	const [publishingBatch, setPublishingBatch] = useState(false);
+	const [batchResult, setBatchResult] = useState<{ text: string; failures: string[] } | null>(null);
 	// Practices linked to this formal task (parentAssignment = this id).
 	// Batch 4: editing an existing (linked) practice from this workspace,
 	// including the explicit review-and-re-copy flow for outdated practices.
@@ -233,8 +246,10 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 			if (response.ok) {
 				const body = (await response.json()) as {
 					identities?: Record<string, { name: string; nim: string; email: string }>;
+					aiSummaries?: Record<string, EvaluationAiSummary>;
 				};
 				if (body.identities) setOwnerMap(body.identities);
+				if (body.aiSummaries) setAiSummaries(body.aiSummaries);
 			}
 		} catch {
 			/* non-fatal — display falls back to expand/email */
@@ -351,10 +366,11 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				transcriptError: s.transcriptError || '',
 				transcriptFile: s.transcriptFile || '',
 				transcriptConfidence: s.transcriptConfidence,
+				ai: aiSummaries[s.id],
 			};
 		});
 		return enrolled;
-	}, [subs, ownerMap]);
+	}, [subs, ownerMap, aiSummaries]);
 
 	const collected = participants.filter((p) => p.status !== 'draft');
 	// Scans read before the answer-only OCR still hold worksheet text, file headers
@@ -390,6 +406,42 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	const late = collected.filter(
 		(p) => p.status === 'late' || (assignment ? isPastDeadline(assignment.deadline) && p.status !== 'graded' && new Date(p.created).getTime() > new Date(assignment.deadline).getTime() : false),
 	);
+	// Bulk AI: final, ungraded submissions with no usable AI draft yet.
+	const needsAi = pending.filter((p) => p.enrolled && (!p.ai || p.ai.state === 'none' || p.ai.state === 'failed'));
+	const readyToPublish = pending.filter((p) => p.enrolled && p.ai?.ready);
+	const readyFromAi = readyToPublish.filter((p) => p.ai?.state === 'ai');
+	const runBulkAi = async () => {
+		if (bulkAi?.running || needsAi.length === 0) return;
+		stopBulkAi.current = false;
+		setBulkAi({ done: 0, total: needsAi.length, failed: 0, running: true });
+		const result = await runAiForAll(
+			needsAi.map((p) => p.enrolled!.id),
+			(progress) => setBulkAi({ ...progress, running: true }),
+			() => stopBulkAi.current,
+		);
+		setBulkAi({ ...result, running: false });
+		void reload();
+	};
+	const publishReady = async () => {
+		if (publishingBatch || readyToPublish.length === 0) return;
+		setPublishingBatch(true);
+		setBatchResult(null);
+		try {
+			const result = await publishReadyBatch(assignmentId, readyToPublish.map((p) => p.enrolled!.id));
+			const nameOf = (id: string) => participants.find((p) => p.enrolled?.id === id)?.name || 'Kiriman';
+			setBatchResult({
+				text: `${result.published} nilai diterbitkan${result.failed ? `, ${result.failed} gagal` : ''}.`,
+				failures: result.results.filter((r) => !r.ok).map((r) => `${nameOf(r.submissionId)}: ${r.error || 'gagal'}`),
+			});
+			invalidate('assignment_submissions');
+			void reload();
+		} catch (error) {
+			setBatchResult({ text: error instanceof Error ? error.message : 'Penerbitan massal gagal.', failures: [] });
+		} finally {
+			setPublishingBatch(false);
+			setPublishBatchOpen(false);
+		}
+	};
 	const grades = graded.map((p) => p.grade).filter((n): n is number => typeof n === 'number');
 	const avg = grades.length ? Math.round((grades.reduce((a, b) => a + b, 0) / grades.length) * 10) / 10 : null;
 
@@ -495,6 +547,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 		: [
 				{ value: 'all', label: 'Semua' },
 				{ value: 'pending', label: 'Belum dinilai' },
+				{ value: 'ready', label: 'Siap disetujui' },
 				{ value: 'graded', label: 'Sudah dinilai' },
 				{ value: 'late', label: 'Terlambat' },
 			];
@@ -562,6 +615,28 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 					</div>
 				</div>
 				<div className="eval-head-actions">
+					{!formative && (
+						<>
+							<button
+								type="button"
+								className="ld-outline-action sm"
+								disabled={Boolean(bulkAi?.running) || needsAi.length === 0}
+								title="Minta draf AI untuk setiap kiriman final yang belum memilikinya. Tidak mengubah nilai resmi."
+								onClick={() => void runBulkAi()}
+							>
+								{bulkAi?.running ? <LoaderCircle size={14} className="spin" /> : <Sparkles size={14} />} Jalankan AI untuk semua ({needsAi.length})
+							</button>
+							<button
+								type="button"
+								className="ld-outline-action sm"
+								disabled={publishingBatch || readyToPublish.length === 0}
+								title="Terbitkan kiriman yang draf penilaiannya sudah lengkap."
+								onClick={() => { setBatchResult(null); setPublishBatchOpen(true); }}
+							>
+								<Send size={14} /> Terbitkan yang siap ({readyToPublish.length})
+							</button>
+						</>
+					)}
 					<OverflowMenu label="Tindakan tugas">
 						{formative ? null : (
 							<>
@@ -644,6 +719,78 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 							Tutup
 						</button>
 					) : null}
+				</section>
+			) : null}
+
+			{bulkAi ? (
+				<section className="evx-sync" role="status" aria-live="polite" aria-label="Status AI massal">
+					{bulkAi.running ? <LoaderCircle size={15} className="spin" /> : <Sparkles size={15} />}
+					<div>
+						<strong>
+							{bulkAi.running
+								? `Menjalankan AI: ${bulkAi.done} dari ${bulkAi.total} kiriman selesai…`
+								: `AI selesai untuk ${bulkAi.done - bulkAi.failed} dari ${bulkAi.total} kiriman${bulkAi.failed ? `, ${bulkAi.failed} gagal diminta` : ''}.`}
+						</strong>
+						<span>
+							{bulkAi.running
+								? 'Draf diminta tiga kiriman sekaligus agar layanan AI tidak kewalahan. Biarkan halaman ini terbuka. Nilai resmi tidak berubah.'
+								: 'Draf AI hanya usulan. Tinjau lalu terbitkan; nilai resmi tidak berubah sebelum diterbitkan.'}
+						</span>
+					</div>
+					{bulkAi.running ? (
+						<button type="button" className="ld-outline-action sm" onClick={() => { stopBulkAi.current = true; }}>
+							Hentikan
+						</button>
+					) : (
+						<button type="button" className="ld-outline-action sm" onClick={() => setBulkAi(null)}>
+							Tutup
+						</button>
+					)}
+				</section>
+			) : null}
+
+			{publishBatchOpen ? (
+				<section className="evx-sync" role="alert" aria-label="Konfirmasi terbitkan yang siap">
+					<AlertTriangle size={15} />
+					<div>
+						<strong>Terbitkan {readyToPublish.length} nilai sekarang?</strong>
+						<span>
+							Nilai dan umpan balik akan terlihat oleh mahasiswa. Yang diterbitkan: kiriman final yang belum dinilai dengan
+							semua kriteria berbobot sudah terisi ({readyToPublish.length - readyFromAi.length} draf dosen, {readyFromAi.length} draf AI).
+						</span>
+						{readyFromAi.length > 0 ? (
+							<span>
+								Untuk {readyFromAi.length} draf AI yang belum Anda tinjau, memilih tindakan ini berarti menyetujui semua temuan
+								AI yang masih menunggu, memakai skor rubrik AI, dan ringkasan AI sebagai umpan balik.
+							</span>
+						) : null}
+						<span>Draf dosen yang masih memiliki temuan AI belum ditinjau tidak ikut diterbitkan. Kegagalan dilaporkan per kiriman.</span>
+					</div>
+					<button type="button" className="ld-outline-action sm" disabled={publishingBatch} onClick={() => void publishReady()}>
+						{publishingBatch ? <LoaderCircle size={14} className="spin" /> : <Send size={14} />} Ya, terbitkan {readyToPublish.length}
+					</button>
+					<button type="button" className="ld-outline-action sm" disabled={publishingBatch} onClick={() => setPublishBatchOpen(false)}>
+						Batal
+					</button>
+				</section>
+			) : null}
+
+			{batchResult ? (
+				<section className="evx-sync" role="status" aria-label="Hasil terbitkan yang siap">
+					{batchResult.failures.length ? <AlertTriangle size={15} /> : <CheckCircle2 size={15} />}
+					<div>
+						<strong>{batchResult.text}</strong>
+						{batchResult.failures.length > 0 ? (
+							<ul className="evx-bulk-list">
+								{batchResult.failures.map((failure) => (
+									<li key={failure}>{failure}</li>
+								))}
+							</ul>
+						) : null}
+					</div>
+					<button type="button" className="ld-outline-action sm" onClick={() => setBatchResult(null)}>
+						Tutup
+					</button>
 				</section>
 			) : null}
 
@@ -797,14 +944,14 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 						void reload();
 					}}
 					onDirtyChange={reportReviewDirty}
+					onAssignmentChanged={() => {
+						invalidate('assignments');
+						void reload();
+					}}
 					onAdvance={() => {
 						reviewDirty.current = false;
-						const index = filtered.findIndex((p) => p.key === active?.key);
-						const next = filtered[index + 1];
-						if (next) {
-							void selectParticipant(next.key);
-
-						}
+						const next = nextToGrade(filtered, active?.key ?? null);
+						if (next) void selectParticipant(next.key);
 					}}
 				>
 				<FormativeReviewProvider
@@ -915,13 +1062,20 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 												: p.status === 'graded' && p.grade != null
 													? lecturerGradeLabel(p.grade)
 													: p.status === 'draft'
-														? 'Draf'
-														: '—'}
+														? '—'
+														: aiStateLabel(p.ai) || '—'}
 										</em>
 										<span className={`asg-tag sub-${p.status || 'submitted'}`}>
 											{SUBMISSION_STATUS_LABEL[p.status as SubmissionStatus] || p.status}
 										</span>
-									</button>
+										{!formative && p.status !== 'graded' && p.status !== 'draft' && p.ai?.ready ? (
+											<span className={`evx-ai-state ready ${p.ai.state === 'lecturer' ? 'lecturer' : 'ai'}`} title="Draf lengkap — siap diterbitkan">
+												Siap disetujui
+											</span>
+										) : !formative && p.ai?.state === 'failed' && p.status !== 'graded' ? (
+											<span className="evx-ai-state failed">AI gagal</span>
+										) : null}
+					</button>
 								</li>
 							))}
 						</ul>
@@ -962,7 +1116,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 								<div className="eval-answer">
 {!assignment.revisionOf && active.enrolled && <LinkedRevisionAbove original={active.enrolled} />}
 									{active.status === 'draft' && (
-										<p className="eval-note">Masih draf, belum dikumpulkan secara resmi.</p>
+										<p className="eval-note">Dalam pengerjaan, belum dikumpulkan secara resmi.</p>
 									)}
 									{active.autoScore != null && ['quiz', 'reading', 'listening'].includes(taskKindForShape(assignment.shape) || '') && (
 										<p className="evx-autoscore">Skor otomatis {active.autoScore}/100 (bukan nilai resmi). Lihat analisis AI di panel kanan.</p>
@@ -1207,7 +1361,7 @@ function EmptyGradePanel() {
 			</section>
 			<div className="evx-actions">
 				<button type="button" className="evx-draft-btn" disabled>Simpan draf</button>
-				<button type="button" className="evx-next-btn" disabled>Simpan & lanjut</button>
+				<button type="button" className="evx-next-btn" disabled>Terbitkan nilai & lanjut</button>
 			</div>
 			<p className="evx-muted">Panel ini nonaktif sampai ada peserta untuk dinilai.</p>
 		</div>
@@ -1227,10 +1381,23 @@ function EmptyPracticePanel() {
 	);
 }
 
+/**
+ * After a publish: the next participant in the list that still needs grading
+ * (final submission, not graded), searching forward and wrapping around;
+ * falls back to the next participant in the list.
+ */
+export function nextToGrade<T extends { key: string; status: string }>(list: T[], currentKey: string | null): T | null {
+	const index = list.findIndex((p) => p.key === currentKey);
+	const ordered = [...list.slice(index + 1), ...list.slice(0, Math.max(index, 0))];
+	return ordered.find((p) => p.status !== 'graded' && p.status !== 'draft') ?? list[index + 1] ?? null;
+}
+
 function matchesFilter(p: Participant, value: string, checkedKeys: Set<string>) {
 	switch (value) {
 		case 'pending':
 			return p.status !== 'graded' && p.status !== 'draft';
+		case 'ready':
+			return p.status !== 'graded' && p.status !== 'draft' && Boolean(p.ai?.ready);
 		case 'graded':
 			return p.status === 'graded';
 		case 'late':

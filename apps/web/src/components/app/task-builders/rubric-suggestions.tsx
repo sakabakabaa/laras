@@ -1,4 +1,4 @@
-import { Check, LoaderCircle, Sparkles, X } from 'lucide-react';
+import { Check, CheckCheck, LoaderCircle, Sparkles, X } from 'lucide-react';
 import type { SuggestedCriteria, SuggestedCriterion } from '@/lib/rubric-suggestions';
 
 /**
@@ -18,14 +18,19 @@ export function RubricSuggestionsPanel({
 	error,
 	onGenerate,
 	onAccept,
+	onAcceptAll,
 	onDismiss,
+	generateLabel = 'Sarankan kriteria rubrik',
 }: {
 	suggestions: SuggestedCriteria | null;
 	busy: boolean;
 	error: string;
 	onGenerate: () => void;
 	onAccept: (id: string) => void;
+	/** Accepts every pending suggestion at once ("Terima semua"). */
+	onAcceptAll?: () => void;
 	onDismiss: (id: string) => void;
+	generateLabel?: string;
 }) {
 	const pending = suggestions?.pending ?? [];
 	const hasPending = pending.length > 0;
@@ -38,7 +43,7 @@ export function RubricSuggestionsPanel({
 		return (
 			<div className="tkb-suggest">
 				<button type="button" className="ld-text-btn" onClick={onGenerate}>
-					<Sparkles size={13} /> Sarankan kriteria rubrik
+					<Sparkles size={13} /> {generateLabel}
 				</button>
 				<span className="tkb-suggest-hint">
 					Saran diturunkan dari prompt tugas ini — bersifat sementara, tidak memengaruhi
@@ -69,6 +74,11 @@ export function RubricSuggestionsPanel({
 						<Sparkles size={13} />
 						<span>Saran kriteria rubrik</span>
 						<em>Saran · tidak memengaruhi penilaian sampai diterima</em>
+						{onAcceptAll && (
+							<button type="button" className="ld-text-btn" onClick={onAcceptAll}>
+								<CheckCheck size={13} /> Terima semua
+							</button>
+						)}
 					</div>
 					<ul className="tkb-suggest-list">
 						{pending.map((s) => (

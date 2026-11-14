@@ -1,30 +1,35 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowDownUp,ArrowLeft,ArrowRight,BookOpen,Check,CheckCheck,ChevronDown,Clock3,FileCheck2,KeyRound,ListFilter,Minus,Search,Send,Settings2,Sparkles,Users,X} from 'lucide-react';
+import {AlertTriangle,ArrowDownUp,ArrowLeft,ArrowRight,BookOpen,Check,CheckCheck,ChevronDown,Clock3,FileCheck2,KeyRound,ListFilter,LoaderCircle,Lock,Minus,Search,Sparkles,Users,X} from 'lucide-react';
 import {activityBookReference} from '@/lib/scheduled-book-reference';
 import type {ClassReportRow,ScheduledAssessment,ScheduledClassState} from '@/lib/scheduled-classes';
-import {buildAssessmentPayload,buildGradingSettingsPayload,buildPublishPayload,emptyGradeDraft,hydrateGradeDraft,validateManualGrade,type GradeDraftState} from '@/lib/scheduled-review';
-import {ASSESSMENT_LABELS,assessmentStatus,manualActivities} from '@/lib/scheduled-session-workspace';
+import {buildAssessmentPayload,buildGradingSettingsPayload,buildPublishPayload,emptyGradeDraft,hydrateGradeDraft,type GradeDraftState} from '@/lib/scheduled-review';
 import {gradingModeLabel,nextManualTarget,requiresManual,responseVerdicts,reviewTally,verdictTally} from '@/lib/session-review-verdict';
+import {aiDraftFor,aiRowLabel,AUTO_STATUS_LABELS,autoApproved,autoAttention,draftFromAi,effectiveSettings,gradeFromDraft,suggestionToCriteria,writtenItemsOf,writtenStatus,WRITTEN_STATUS_LABELS,type EffectiveSettings,type ScheduledAiDraftRecord,type WrittenStatus} from '@/lib/scheduled-grading';
+import {requestScheduledAiDraft,runScheduledAiForAll,scheduledRubricSuggestions} from '@/lib/scheduled-grading-aids';
+import type {WaveProgress} from '@/lib/evaluation-bulk';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter} from '@/components/ui/dialog';
-import {pointsFromPercent,requestLiveDraft,type LiveDraft} from '@/lib/live-answer-review';
+import {ScheduledGradingPanel,type ScheduledSuggestionState} from './grading/scheduled-grading-panel';
+import {ScheduledFinalizeChecklist} from './scheduled-finalize-checklist';
 import {isExactResponse,ScheduledExactAnswerOverview} from './scheduled-exact-answer-overview';
 import {ScheduledAnswerIdentity,ScheduledWrittenAnswer} from './scheduled-written-answer';
 import '@/styles/scheduled-review-overview.css';
 
 type Selection={student?:string;activity?:string};
-type Props={state:ScheduledClassState;onAction:(action:string,body?:Record<string,unknown>)=>Promise<void>;onDirtyChange?:(dirty:boolean)=>void;initialSelection?:Selection;onSelectionChange?:(selection:Selection)=>void};
+type Props={state:ScheduledClassState;onAction:(action:string,body?:Record<string,unknown>)=>Promise<unknown>;onDirtyChange?:(dirty:boolean)=>void;initialSelection?:Selection;onSelectionChange?:(selection:Selection)=>void};
 type CriterionDraft={id:string;label:string;maxPoints:string};
 const personKey=(row:ClassReportRow)=>row.student||row.roster;
 const VERDICT_LABELS={correct:'Benar',wrong:'Salah',manual:'Perlu dinilai',ungraded:'Belum dijawab'} as const;
 const VERDICT_ICONS={correct:Check,wrong:X,manual:Minus,ungraded:Minus} as const;
-const FILTERS=[['all','Semua mahasiswa'],['unreviewed','Perlu dinilai'],['reviewed','Sudah ditinjau'],['published','Sudah diterbitkan'],['missing','Belum mengirim']] as const;
+// One vocabulary with Tugas: Perlu dinilai → Siap disetujui (AI) / Draf dosen → Siap diterbitkan → Diterbitkan.
+const FILTERS=[['all','Semua mahasiswa'],['unreviewed','Perlu dinilai'],['ai','Siap disetujui'],['draft','Draf dosen'],['reviewed','Siap diterbitkan'],['published','Diterbitkan'],['missing','Belum mengirim']] as const;
+const STATUS_CLASS:Record<WrittenStatus,string>={missing:'missing',needs:'unreviewed',ai:'ai',draft:'draft',ready:'reviewed',published:'published'};
 const DENSITY_KEY='laras.review.density';
-const assessmentApproved=(assessment?:ScheduledAssessment)=>assessment?.settingsRevision===0&&assessment.status==='reviewed';
+const FALLBACK_CRITERIA:CriterionDraft[]=[{id:'clarity',label:'Kejelasan',maxPoints:'10'}];
 const assessmentScore=(attempt?:ScheduledClassState['attempts'][number],assessment?:ScheduledAssessment)=>assessment?.settingsRevision===0&&Object.keys(assessment.answerOverrides||{}).length>0&&typeof assessment.points==='number'?assessment.points:attempt?.score;
+const NO_SUGGESTION:ScheduledSuggestionState={loading:false,criteria:[],reason:''};
 
 export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSelection,onSelectionChange}:Props){
   const activities=state.activities.filter(a=>a.kind==='assignment'||a.kind==='exit_ticket'||a.kind==='quiz');
-  const manualIds=new Set(manualActivities(state.activities).map(a=>a.id));
   // Work that needs a human comes first; auto-graded activities fold into one summary line.
   const orderedActivities=[...activities.filter(a=>requiresManual(a)),...activities.filter(a=>!requiresManual(a))];
   const autoActivities=activities.filter(a=>!requiresManual(a));
@@ -40,40 +45,72 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[failed,setFailed]=useState(false);
   const [settingsOpen,setSettingsOpen]=useState(false),[settingsEdited,setSettingsEdited]=useState(false);
   const [settingsMode,setSettingsMode]=useState<'ungraded'|'points'|'rubric'>('ungraded'),[maxPoints,setMaxPoints]=useState('10');
-  const [criteria,setCriteria]=useState<CriterionDraft[]>([{id:'clarity',label:'Kejelasan',maxPoints:'10'}]);
+  const [criteria,setCriteria]=useState<CriterionDraft[]>(FALLBACK_CRITERIA);
   const [compact,setCompact]=useState(true);
-  const [aiDraft,setAiDraft]=useState<LiveDraft|null>(null),[aiBusy,setAiBusy]=useState(false),[aiError,setAiError]=useState('');
+  // AI drafts are stored per answer on the server; local copies show a fresh draft before the next state refresh.
+  const [localAi,setLocalAi]=useState<Record<string,ScheduledAiDraftRecord>>({});
+  const [aiRequesting,setAiRequesting]=useState<Record<string,boolean>>({}),[aiErrors,setAiErrors]=useState<Record<string,string>>({});
+  const [bulkAi,setBulkAi]=useState<(WaveProgress&{running:boolean;activity:string})|null>(null);
+  const stopBulkAi=useRef(false);
+  const [suggestions,setSuggestions]=useState<Record<string,ScheduledSuggestionState>>({});
   const student=state.report.find(r=>personKey(r)===studentKey)||state.report[0];
   const activity=activities.find(a=>a.id===activityId)||activities[0];
   const attempt=attempts.find(a=>a.student===student?.student&&a.activity===activity?.id);
   const assessment=state.assessments?.find(a=>a.attempt===attempt?.id);
   const displayedScore=assessmentScore(attempt,assessment);
   const settings=state.gradingSettings?.find(s=>s.activity===activity?.id);
-  const activityManualAttempts=activity&&requiresManual(activity)?attempts.filter(item=>item.activity===activity.id):[];
-  const activityReviewedCount=activityManualAttempts.filter(item=>['reviewed','published'].includes(assessmentStatus(state.assessments?.find(row=>row.attempt===item.id)))).length;
-  const activityPendingCount=activityManualAttempts.length-activityReviewedCount;
+  const aiRecords=useMemo(()=>{const merged=new Map((state.aiDrafts||[]).map(r=>[r.attempt,r]));for(const r of Object.values(localAi)){const stored=merged.get(r.attempt);if(!stored||(r.updated||'')>=(stored.updated||''))merged.set(r.attempt,r);}return [...merged.values()];},[state.aiDrafts,localAi]);
+  const aiFor=(tryItem:typeof attempt)=>aiDraftFor(aiRecords,tryItem);
+  const suggestionFor=(id:string)=>suggestions[id]||NO_SUGGESTION;
+  const effectiveFor=(a:typeof activity):EffectiveSettings=>effectiveSettings(state.gradingSettings?.find(s=>s.activity===a?.id),a?suggestionFor(a.id).criteria:[]);
+  const effective=effectiveFor(activity);
   const canGrade=['closed','reviewed'].includes(state.class?.phase||'');
-  const lockedSettings=state.assessments?.some(a=>a.activity===activity?.id);
+  const lockedFor=(id?:string)=>!!state.assessments?.some(a=>a.activity===id);
+  const lockedSettings=lockedFor(activity?.id);
   const dirty=JSON.stringify(draft)!==savedDraft;
   const unsaved=dirty||settingsEdited;
   const attemptId=attempt?.id||null,ownerRef=useRef<string|null>(attemptId);
-  const status=assessmentStatus(assessment);
-  const automaticallyScored=!!activity&&(activity.kind==='quiz'||!requiresManual(activity));
-  const autoApproved=assessment?.settingsRevision===0&&status==='reviewed';
+  const currentAi=aiFor(attempt);
+  const aiKey=currentAi?`${currentAi.status}:${currentAi.updated||''}:${currentAi.draft?.suggestedScore??''}`:'';
+  const effectiveKey=`${effective.source}:${effective.mode}:${effective.criteria.map(c=>c.id).join(',')}`;
   const cards=useMemo(()=>activity&&attempt?responseVerdicts(activity,attempt):[],[activity,attempt]);
   const cardsFor=(a:typeof activities[number],tryItem:typeof attempts[number]|undefined)=>responseVerdicts(a,tryItem);
   const cardsWithOverrides=(a:typeof activities[number],tryItem:typeof attempts[number]|undefined,graded:typeof assessment)=>cardsFor(a,tryItem).map(card=>{const override=graded?.answerOverrides?.[card.id];return override==='correct'?{...card,verdict:'correct' as const,earned:card.points}:override==='wrong'?{...card,verdict:'wrong' as const,earned:0}:card;});
   const cardTally=useMemo(()=>verdictTally(cards,attempt),[cards,attempt]);
-  const autoScores=student?autoActivities.map(a=>{const own=attempts.find(t=>t.student===student.student&&t.activity===a.id);return assessmentScore(own,state.assessments?.find(g=>g.attempt===own?.id));}).filter((v):v is number=>typeof v==='number'):[];
+  const autoEntries=student?autoActivities.map(a=>{const own=attempts.find(t=>t.student===student.student&&t.activity===a.id);const graded=state.assessments?.find(g=>g.attempt===own?.id);return {activity:a,attempt:own,assessment:graded,score:assessmentScore(own,graded),wrong:own?cardsWithOverrides(a,own,graded).filter(c=>c.verdict==='wrong').length:0};}):[];
+  const autoScores=autoEntries.map(e=>e.score).filter((v):v is number=>typeof v==='number');
   const autoAverage=autoScores.length?Math.round(autoScores.reduce((sum,v)=>sum+v,0)/autoScores.length):null;
-  const loadSettings=()=>{setSettingsMode(settings?.mode||'ungraded');setMaxPoints(String(settings?.maxPoints||10));setCriteria(settings?.criteria.map(c=>({...c,maxPoints:String(c.maxPoints)}))||[{id:'clarity',label:'Kejelasan',maxPoints:'10'}]);setSettingsEdited(false);};
-  useEffect(()=>{loadSettings();},[activity?.id,settings?.revision]);
+  const autoPending=autoEntries.filter(e=>e.attempt&&typeof e.attempt.score==='number'&&!autoApproved(e.attempt,e.assessment)).length;
+  const attention=autoAttention(autoEntries);
+  const loadSettings=()=>{
+    const suggested=!settings&&activity?suggestionToCriteria(suggestionFor(activity.id).criteria):[];
+    if(settings){setSettingsMode(settings.mode);setMaxPoints(String(settings.maxPoints||10));setCriteria(settings.criteria.length?settings.criteria.map(c=>({...c,maxPoints:String(c.maxPoints)})):FALLBACK_CRITERIA);}
+    else if(suggested.length){setSettingsMode('rubric');setMaxPoints('100');setCriteria(suggested.map(c=>({...c,maxPoints:String(c.maxPoints)})));}
+    else{setSettingsMode('points');setMaxPoints('100');setCriteria(FALLBACK_CRITERIA);}
+    setSettingsEdited(false);
+  };
+  // Never overwrite settings the lecturer is editing in the dialog.
+  const suggestionCount=activity?suggestions[activity.id]?.criteria.length||0:0;
+  useEffect(()=>{if(!settingsEdited)loadSettings();},[activity?.id,settings?.revision,suggestionCount]);
   useEffect(()=>{try{setCompact(localStorage.getItem(DENSITY_KEY)!=='full');}catch{/* storage blocked */}},[]);
+  // Suggested rubric: written activities without saved settings get criteria derived from their model answers + guidance.
+  const fetchSuggestion=(id:string,refresh=false)=>{
+    setSuggestions(prev=>({...prev,[id]:{loading:true,criteria:[],reason:''}}));
+    scheduledRubricSuggestions(state.session.id,id,refresh)
+      .then(result=>setSuggestions(prev=>({...prev,[id]:{loading:false,criteria:result.pending,reason:result.reason}})))
+      .catch((error:Error)=>setSuggestions(prev=>({...prev,[id]:{loading:false,criteria:[],reason:error.message}})));
+  };
+  useEffect(()=>{
+    if(!activity||!canGrade||!requiresManual(activity)||settings||suggestions[activity.id])return;
+    fetchSuggestion(activity.id);
+  },[activity?.id,canGrade,settings?.revision]);
   useEffect(()=>{
     const next=hydrateGradeDraft(draft,ownerRef.current,attemptId,assessment,dirty);
-    if(next.changedIdentity||!dirty){setDraft(next.draft);setSavedDraft(JSON.stringify(next.draft));ownerRef.current=attemptId;}
-  },[attemptId,assessment?.revision,dirty]);
-  useEffect(()=>{setAiDraft(null);setAiError('');},[attemptId,activity?.id]);
+    if(!(next.changedIdentity||!dirty))return;
+    // Without a lecturer assessment the stored AI draft is the starting point, as in Tugas.
+    const hydrated=!assessment&&currentAi?.status==='ready'?draftFromAi(effective,currentAi):next.draft;
+    setDraft(hydrated);setSavedDraft(JSON.stringify(hydrated));ownerRef.current=attemptId;
+  },[attemptId,assessment?.revision,dirty,aiKey,effectiveKey]);
   useEffect(()=>{onDirtyChange?.(unsaved);return()=>onDirtyChange?.(false);},[unsaved,onDirtyChange]);
   useEffect(()=>{if(!unsaved)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[unsaved]);
   useEffect(()=>{
@@ -94,28 +131,35 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
   const select=(nextStudent:string,nextActivity=activity?.id||'',afterSave=false)=>{
     if(nextStudent===personKey(student||{student:'',roster:''} as ClassReportRow)&&nextActivity===activity?.id){setExpandedActivity(nextActivity);return true;}
     if(!afterSave&&!guard())return false;
-    loadSettings();setStudentKey(nextStudent);setActivityId(nextActivity);setExpandedActivity(nextActivity);setMessage('');onSelectionChange?.({student:nextStudent,activity:nextActivity});return true;
+    setStudentKey(nextStudent);setActivityId(nextActivity);setExpandedActivity(nextActivity);setMessage('');onSelectionChange?.({student:nextStudent,activity:nextActivity});return true;
   };
   const showError=(error:unknown)=>{setFailed(true);setMessage((error as Error).message||'Perubahan belum dapat disimpan. Coba lagi.');};
   const criteriaPayload=criteria.map(c=>({id:c.id,label:c.label.trim(),maxPoints:Number(c.maxPoints)}));
+  const saveSettingsPayload=(forActivity:string,mode:EffectiveSettings['mode'],max:number,list:EffectiveSettings['criteria'])=>onAction('saveGradingSettings',buildGradingSettingsPayload({activityId:forActivity,settingsRevision:state.gradingSettings?.find(item=>item.activity===forActivity)?.revision||0,mode,maxPoints:mode==='ungraded'?0:max,criteria:mode==='rubric'?list:[]}));
   const saveSettings=async()=>{
     if(!activity)return;
     if(settingsMode==='rubric'&&(!criteriaPayload.length||criteriaPayload.some(c=>!c.label||!Number.isFinite(c.maxPoints)||c.maxPoints<=0)||Math.abs(criteriaPayload.reduce((sum,c)=>sum+c.maxPoints,0)-Number(maxPoints))>1e-8)){showError(new Error('Lengkapi kriteria rubrik. Total poin kriteria harus sama dengan nilai maksimum.'));return;}
     setBusy(true);setFailed(false);
-    try{await onAction('saveGradingSettings',buildGradingSettingsPayload({activityId:activity.id,settingsRevision:settings?.revision||0,mode:settingsMode,maxPoints:settingsMode==='ungraded'?0:Number(maxPoints),criteria:settingsMode==='rubric'?criteriaPayload:[]}));setSettingsEdited(false);setSettingsOpen(false);setMessage('Pengaturan penilaian tersimpan untuk kegiatan ini.');}catch(e){showError(e);}finally{setBusy(false);}
+    try{await saveSettingsPayload(activity.id,settingsMode,Number(maxPoints),criteriaPayload);setSettingsEdited(false);setSettingsOpen(false);setMessage('Pengaturan penilaian tersimpan untuk kegiatan ini.');}catch(e){showError(e);}finally{setBusy(false);}
   };
   const saveGrade=async(reviewStatus:'draft'|'reviewed',next=false)=>{
-    if(!attempt||!settings)return;
-    const scores:Record<string,number>={};for(const [id,value] of Object.entries(draft.criterionScores))if(value!=='')scores[id]=Number(value);
-    if(settings.mode==='points'&&draft.points.trim()===''){showError(new Error('Isi nilai sebelum menyimpan penilaian.'));return;}
-    const points=settings.mode==='ungraded'?null:settings.mode==='rubric'?settings.criteria.reduce((sum,c)=>sum+(scores[c.id]||0),0):Number(draft.points);
-    const grade={points,criterionScores:settings.mode==='rubric'?scores:{}};
-    const error=validateManualGrade(settings,grade);if(error){showError(new Error(error));return;}
+    if(!attempt||!activity)return;
+    // The server validates drafts like final grades, so a draft also needs every score.
+    const payloadGrade=gradeFromDraft(effective,draft);
+    if('error' in payloadGrade){showError(new Error(payloadGrade.error));return;}
     setBusy(true);setFailed(false);
-    try{await onAction('saveAssessment',buildAssessmentPayload({attemptId:attempt.id,assessmentRevision:assessment?.revision||0,attemptRevision:attempt.revision,settingsRevision:settings.revision,status:reviewStatus,...grade,feedback:draft.feedback}));setSavedDraft(JSON.stringify(draft));setMessage(reviewStatus==='draft'?'Draf penilaian tersimpan.':'Penilaian ditinjau. Terbitkan saat siap dibagikan kepada mahasiswa.');if(next){const nextTarget=nextManualTarget(state,activities,{student:attempt.student,activity:activity.id});if(nextTarget&&nextTarget.id!==attempt.id)select(nextTarget.student,nextTarget.activity,true);}}catch(e){showError(e);}finally{setBusy(false);}
+    try{
+      let settingsRevision=effective.revision;
+      // Grading is never blocked behind setup: the suggested (or 0–100) settings are saved with the first grade.
+      if(effective.provisional){await saveSettingsPayload(activity.id,effective.mode,effective.maxPoints,effective.criteria);settingsRevision=1;}
+      await onAction('saveAssessment',buildAssessmentPayload({attemptId:attempt.id,assessmentRevision:assessment?.revision||0,attemptRevision:attempt.revision,settingsRevision,status:reviewStatus,...payloadGrade,feedback:draft.feedback}));
+      setSavedDraft(JSON.stringify(draft));
+      setMessage(reviewStatus==='draft'?'Draf penilaian tersimpan. Hanya dosen yang dapat melihatnya.':'Penilaian disimpan · Siap diterbitkan.');
+      if(next){const nextTarget=nextManualTarget(state,activities,{student:attempt.student,activity:activity.id});if(nextTarget&&nextTarget.id!==attempt.id)select(nextTarget.student,nextTarget.activity,true);else setMessage('Penilaian disimpan · Siap diterbitkan. Tidak ada jawaban lain yang perlu dinilai.');}
+    }catch(e){showError(e);}finally{setBusy(false);}
   };
   const approveAutoScoreFor=async(tryItem:typeof attempt,graded:typeof assessment)=>{
-    if(!tryItem||typeof tryItem.score!=='number'||assessmentApproved(graded))return;
+    if(!tryItem||typeof tryItem.score!=='number'||autoApproved(tryItem,graded))return;
     setBusy(true);setFailed(false);setMessage('');
     try{await onAction('approveAutoScore',{attemptId:tryItem.id,attemptRevision:tryItem.revision,assessmentRevision:graded?.revision||0});setMessage('Nilai otomatis disetujui.');}catch(e){showError(e);}finally{setBusy(false);}
   };
@@ -124,36 +168,49 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
     setBusy(true);setFailed(false);setMessage('');
     try{await onAction('overrideAutoAnswer',{attemptId:tryItem.id,attemptRevision:tryItem.revision,assessmentRevision:graded?.revision||0,itemId,verdict});setMessage('Penilaian jawaban diperbarui.');}catch(e){showError(e);}finally{setBusy(false);}
   };
-  const approveAutoScore=()=>approveAutoScoreFor(attempt,assessment);
-  const askAi=async(a:typeof activities[number],ownAttempt:typeof attempt,ownAssessment:typeof assessment,grading:typeof settings)=>{
-    if(!ownAttempt)return;
-    const written=cardsWithOverrides(a,ownAttempt,ownAssessment).filter(card=>!isExactResponse(a,card)&&card.answer.trim());
-    if(!written.length){setAiError('Belum ada jawaban tertulis untuk ditinjau.');return;}
-    setAiBusy(true);setAiError('');setAiDraft(null);
-    try{setAiDraft(await requestLiveDraft({sessionId:state.session.id,activityTitle:a.title,items:written.map(card=>({prompt:card.prompt,answer:card.answer,modelAnswer:card.modelAnswer,rubric:card.rubric})),criteria:grading?.mode==='rubric'?grading.criteria:[]}));}
-    catch(e){setAiError((e as Error).message);}finally{setAiBusy(false);}
-  };
-  const applyAiFeedback=()=>{if(aiDraft)setDraft(d=>({...d,feedback:aiDraft.feedback}));};
-  const applyAiScore=(grading:NonNullable<typeof settings>)=>{
-    if(!aiDraft||aiDraft.suggestedScore==null)return;
-    if(grading.mode==='points')setDraft(d=>({...d,points:String(pointsFromPercent(aiDraft.suggestedScore as number,grading.maxPoints))}));
-    else if(grading.mode==='rubric')setDraft(d=>({...d,criterionScores:Object.fromEntries(grading.criteria.map(c=>[c.id,String(pointsFromPercent(aiDraft.criterionScores[c.id]??aiDraft.suggestedScore as number,c.maxPoints))]))}));
-  };
   const applyPreset=async(mode:'points'|'ungraded',forActivity:typeof activities[number])=>{
     setBusy(true);setFailed(false);
-    try{await onAction('saveGradingSettings',buildGradingSettingsPayload({activityId:forActivity.id,settingsRevision:state.gradingSettings?.find(item=>item.activity===forActivity.id)?.revision||0,mode,maxPoints:mode==='points'?100:0,criteria:[]}));setMessage('Pengaturan penilaian tersimpan untuk kegiatan ini.');}catch(e){showError(e);}finally{setBusy(false);}
+    try{await saveSettingsPayload(forActivity.id,mode,100,[]);setMessage('Pengaturan penilaian tersimpan untuk kegiatan ini.');}catch(e){showError(e);}finally{setBusy(false);}
+  };
+  const acceptSuggestion=async(forActivity:typeof activities[number])=>{
+    const suggested=effectiveFor(forActivity);
+    if(suggested.source!=='suggested')return;
+    setBusy(true);setFailed(false);
+    try{await saveSettingsPayload(forActivity.id,'rubric',suggested.maxPoints,suggested.criteria);setMessage('Saran rubrik disimpan sebagai cara menilai kegiatan ini.');}catch(e){showError(e);}finally{setBusy(false);}
   };
   const publish=async()=>{
-    if(!attempt||!settings||!assessment||dirty||!window.confirm(`Terbitkan nilai dan umpan balik ${student?.name} untuk ${activity?.title}?`))return;
+    if(!attempt||!settings||!assessment||dirty)return;
     setBusy(true);setFailed(false);
     try{await onAction('publishAssessment',buildPublishPayload({attemptId:attempt.id,assessmentRevision:assessment.revision||0,attemptRevision:attempt.revision,settingsRevision:settings.revision}));setMessage('Nilai dan umpan balik sudah diterbitkan kepada mahasiswa.');}catch(e){showError(e);}finally{setBusy(false);}
   };
-  const matchesFilter=(entry:{work:typeof attempts;relevant:typeof attempts[number]|undefined;status:string},value:string)=>{
+  const writtenOf=(a:typeof activities[number],tryItem:typeof attempt)=>tryItem?writtenItemsOf(a,tryItem.answers):[];
+  const provisionalCriteria=(a:typeof activities[number])=>{const eff=effectiveFor(a);return eff.provisional&&eff.mode==='rubric'?eff.criteria:[];};
+  const requestAiFor=async(a:typeof activities[number],tryItem:NonNullable<typeof attempt>)=>{
+    setAiRequesting(prev=>({...prev,[tryItem.id]:true}));setAiErrors(prev=>({...prev,[tryItem.id]:''}));
+    try{const record=await requestScheduledAiDraft(state.session.id,tryItem.id,provisionalCriteria(a));setLocalAi(prev=>({...prev,[tryItem.id]:{...record,updated:new Date().toISOString()}}));return true;}
+    catch(e){setAiErrors(prev=>({...prev,[tryItem.id]:(e as Error).message}));return false;}
+    finally{setAiRequesting(prev=>({...prev,[tryItem.id]:false}));}
+  };
+  // "Jalankan AI untuk semua" for the open activity: answers without a lecturer grade and without a usable AI draft.
+  const needsAi=activity&&requiresManual(activity)&&canGrade?attempts.filter(t=>t.activity===activity.id&&!state.assessments?.some(g=>g.attempt===t.id)&&aiFor(t)?.status!=='ready'&&writtenOf(activity,t).length>0):[];
+  const runBulkAi=async()=>{
+    if(!activity||bulkAi?.running||!needsAi.length)return;
+    const forActivity=activity,targets=needsAi;
+    stopBulkAi.current=false;
+    setBulkAi({done:0,total:targets.length,failed:0,running:true,activity:forActivity.id});
+    const result=await runScheduledAiForAll(targets.map(t=>t.id),async id=>{const target=targets.find(t=>t.id===id);return target?requestAiFor(forActivity,target):false;},progress=>setBulkAi({...progress,running:true,activity:forActivity.id}),()=>stopBulkAi.current);
+    setBulkAi({...result,running:false,activity:forActivity.id});
+    void onAction('state').catch(()=>{});
+  };
+  const statusOf=(tryItem:typeof attempt)=>writtenStatus(tryItem,state.assessments?.find(g=>g.attempt===tryItem?.id),aiFor(tryItem));
+  const matchesFilter=(entry:{work:typeof attempts;relevant:typeof attempts[number]|undefined;status:WrittenStatus},value:string)=>{
     if(value==='missing')return !entry.work.length;
-    if(!entry.relevant)return false;
-    if(!activity||!requiresManual(activity))return false;
-    if(value==='unreviewed')return entry.status==='unreviewed'||entry.status==='draft';
-    if(value==='reviewed')return entry.status==='reviewed'||entry.status==='published';
+    if(!entry.relevant||!activity)return false;
+    if(!requiresManual(activity)){const approved=autoApproved(entry.relevant,state.assessments?.find(g=>g.attempt===entry.relevant?.id));return value==='unreviewed'?!approved:value==='reviewed'?approved:false;}
+    if(value==='unreviewed')return entry.status==='needs';
+    if(value==='ai')return entry.status==='ai';
+    if(value==='draft')return entry.status==='draft';
+    if(value==='reviewed')return entry.status==='ready';
     if(value==='published')return entry.status==='published';
     return true;
   };
@@ -161,46 +218,39 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
     const rows=state.report.map(row=>{
     const work=attempts.filter(a=>a.student===row.student);
     const relevant=activity?work.find(a=>a.activity===activity.id):undefined;
-    const related=activity?state.assessments?.find(g=>g.attempt===relevant?.id):undefined;
-    return {row,work,relevant,status:assessmentStatus(related)};
+    return {row,work,relevant,status:statusOf(relevant)};
     }).filter(entry=>{
     const {row}=entry;
     if(!`${row.name} ${row.nim}`.toLowerCase().includes(search.toLowerCase()))return false;
     if(filters.length&&!filters.includes('all')&&!filters.some(value=>matchesFilter(entry,value)))return false;
     return true;
     });
-    return rows.sort((a,b)=>sort==='name'?a.row.name.localeCompare(b.row.name,'id'):sort==='pending'?Number(['reviewed','published'].includes(a.status))-Number(['reviewed','published'].includes(b.status))||a.row.name.localeCompare(b.row.name,'id'):state.report.findIndex(row=>personKey(row)===personKey(a.row))-state.report.findIndex(row=>personKey(row)===personKey(b.row)));
-  },[state,attempts,activity,search,filters,sort,matchesFilter]);
+    const done=(status:WrittenStatus)=>status==='ready'||status==='published';
+    return rows.sort((a,b)=>sort==='name'?a.row.name.localeCompare(b.row.name,'id'):sort==='pending'?Number(done(a.status))-Number(done(b.status))||a.row.name.localeCompare(b.row.name,'id'):state.report.findIndex(row=>personKey(row)===personKey(a.row))-state.report.findIndex(row=>personKey(row)===personKey(b.row)));
+  },[state,attempts,activity,search,filters,sort,matchesFilter,statusOf]);
   const activeIndex=visible.findIndex(({row})=>personKey(row)===personKey(student||{student:'',roster:''} as ClassReportRow));
   const step=(delta:number)=>{const next=visible[activeIndex+delta];if(next)select(personKey(next.row));};
-  const countOf=(value:string)=>value==='all'?state.report.length:state.report.filter(row=>{const work=attempts.filter(item=>item.student===row.student);const relevant=activity?work.find(item=>item.activity===activity.id):undefined;const status=assessmentStatus(state.assessments?.find(item=>item.attempt===relevant?.id));return matchesFilter({work,relevant,status},value);}).length;
+  const countOf=(value:string)=>value==='all'?state.report.length:state.report.filter(row=>{const work=attempts.filter(item=>item.student===row.student);const relevant=activity?work.find(item=>item.activity===activity.id):undefined;return matchesFilter({work,relevant,status:statusOf(relevant)},value);}).length;
   const toggleFilter=(value:string)=>setFilters(previous=>value==='all'?[]:previous.includes(value)?previous.filter(item=>item!==value):[...previous.filter(item=>item!=='all'),value]);
   const filterLabel=filters.length===0||filters.includes('all')?'Semua mahasiswa':FILTERS.filter(([value])=>filters.includes(value)).map(([,label])=>label).join(' · ');
   const pendingCount=tally.pending,autoCount=tally.autoScored;
-  const renderAi=(a:typeof activities[number],ownAttempt:typeof attempt,ownAssessment:typeof assessment,grading:typeof settings)=>{
-    if(!ownAttempt||!grading)return null;
-    return <div className="sr-ai">
-      <button type="button" className="ss-button" disabled={!canGrade||busy||aiBusy} onClick={()=>void askAi(a,ownAttempt,ownAssessment,grading)}><Sparkles size={14}/>{aiBusy?'Menyusun draf…':aiDraft?'Susun ulang draf AI':'Draf AI'}</button>
-      <small>Hanya usulan untuk Anda. Tidak disimpan atau dinilai otomatis.</small>
-      {aiError&&<p role="alert" className="sr-message is-error">{aiError}</p>}
-      {aiDraft&&<div className="sr-ai-draft" aria-live="polite">
-        {aiDraft.summary&&<p>{aiDraft.summary}</p>}
-        {aiDraft.findings.length>0&&<ul>{aiDraft.findings.slice(0,6).map((f,i)=><li key={i}>{f.quote?<q lang="de">{f.quote}</q>:<em>Umum</em>} — {f.note}{f.correction?<> → <span lang="de">{f.correction}</span></>:null}</li>)}</ul>}
-        {aiDraft.truncated&&<p className="sr-ai-note">Jawaban panjang dipotong; hanya bagian awal yang ditinjau.</p>}
-        <div className="sr-ai-actions"><button type="button" className="ss-button ss-button-small" onClick={applyAiFeedback}>Pakai sebagai umpan balik</button>{aiDraft.suggestedScore!=null&&grading.mode!=='ungraded'&&<button type="button" className="ss-button ss-button-small" onClick={()=>applyAiScore(grading)}>Pakai usulan nilai ({aiDraft.suggestedScore}/100)</button>}</div>
-        <small className="sr-ai-note">Periksa sebelum dipakai. Nilai resmi tetap keputusan dosen.</small>
-      </div>}
-    </div>;
-  };
+  const openAuto=(id:string)=>{if(student&&select(personKey(student),id))setExactDetailsOpen(true);};
   return <section className="sr-workspace" aria-label="Tinjau jawaban tugas">
     <div className="evx-stats sr-summary" aria-label="Ringkasan pengumpulan kelas">
       <div className="evx-stat"><span className="evx-stat-ico blue"><Users size={16}/></span><div><strong>{state.report.length}</strong><span>Mahasiswa</span></div></div>
       <div className="evx-stat"><span className="evx-stat-ico blue"><FileCheck2 size={16}/></span><div><strong>{attempts.length}</strong><span>Jawaban terkumpul</span></div></div>
       <div className="evx-stat"><span className="evx-stat-ico amber"><Clock3 size={16}/></span><div><strong>{pendingCount}</strong><span>Perlu dinilai</span></div></div>
-      <div className="evx-stat"><span className="evx-stat-ico green"><CheckCheck size={16}/></span><div><strong>{tally.reviewed}</strong><span>Sudah ditinjau</span></div></div>
+      <div className="evx-stat"><span className="evx-stat-ico green"><CheckCheck size={16}/></span><div><strong>{tally.reviewed}</strong><span>Sudah dinilai</span></div></div>
       <div className="evx-stat quiet"><div><strong>{autoCount}</strong><span>Dinilai otomatis</span></div></div>
     </div>
-    <div className="sr-toolbar"><div><h2>Jawaban & nilai</h2><p>{tally.reviewed} dari {tally.manual} kiriman ditinjau{tally.auto>0?` · ${tally.auto} dinilai otomatis`:''}</p></div><div className="sr-toolbar-actions">{tally.pending>0&&queue&&<button className="ss-button ss-button-small ss-button-primary" disabled={busy} onClick={()=>select(queue.student,queue.activity)}>Perlu nilai {tally.pending}<ArrowRight size={15}/></button>}<span className="sr-review-progress" aria-label={`${tally.reviewed} dari ${tally.manual} ditinjau`}><span style={{width:`${tally.manual?tally.reviewed/tally.manual*100:0}%`}}/></span></div></div>
+    <div className="sr-toolbar"><div><h2>Jawaban & nilai</h2><p>{tally.reviewed} dari {tally.manual} kiriman dinilai{tally.auto>0?` · ${tally.auto} dinilai otomatis`:''}</p></div><div className="sr-toolbar-actions">{activity&&requiresManual(activity)&&canGrade&&<button type="button" className="ss-button ss-button-small" disabled={Boolean(bulkAi?.running)||needsAi.length===0} title="Minta draf AI untuk setiap jawaban kegiatan ini yang belum dinilai dan belum memiliki draf. Tidak mengubah nilai resmi." onClick={()=>void runBulkAi()}>{bulkAi?.running?<LoaderCircle size={14} className="spin"/>:<Sparkles size={14}/>}Jalankan AI untuk semua ({needsAi.length})</button>}{tally.pending>0&&queue&&<button className="ss-button ss-button-small ss-button-primary" disabled={busy} onClick={()=>select(queue.student,queue.activity)}>Perlu dinilai {tally.pending}<ArrowRight size={15}/></button>}<span className="sr-review-progress" aria-label={`${tally.reviewed} dari ${tally.manual} dinilai`}><span style={{width:`${tally.manual?tally.reviewed/tally.manual*100:0}%`}}/></span></div></div>
+    <ScheduledFinalizeChecklist state={state} onAction={onAction} busy={busy} collapsible onGrade={queue?()=>select(queue.student,queue.activity):undefined}/>
+    {bulkAi&&<section className="evx-sync" role="status" aria-live="polite" aria-label="Status AI massal">
+      {bulkAi.running?<LoaderCircle size={15} className="spin"/>:<Sparkles size={15}/>}
+      <div><strong>{bulkAi.running?`Menjalankan AI: ${bulkAi.done} dari ${bulkAi.total} jawaban selesai…`:`AI selesai untuk ${bulkAi.done-bulkAi.failed} dari ${bulkAi.total} jawaban${bulkAi.failed?`, ${bulkAi.failed} gagal`:''}.`}</strong>
+      <span>{bulkAi.running?'Draf diminta tiga jawaban sekaligus agar layanan AI tidak kewalahan. Biarkan halaman ini terbuka. Nilai resmi tidak berubah.':'Draf AI tersimpan per jawaban dan hanya usulan. Tinjau, Simpan & berikutnya, lalu terbitkan.'}</span></div>
+      {bulkAi.running?<button type="button" className="ld-outline-action sm" onClick={()=>{stopBulkAi.current=true;}}>Hentikan</button>:<button type="button" className="ld-outline-action sm" onClick={()=>setBulkAi(null)}>Tutup</button>}
+    </section>}
     {!canGrade&&<p className="sr-notice"><Clock3 size={17}/>Jawaban dapat dipantau sekarang. Penilaian dan penerbitan tersedia setelah kelas selesai.</p>}
     <div className="sr-review-bar">
       <div className="sr-review-bar-person">{student?<><span className="ss-avatar">{student.name.split(/\s+/).slice(0,2).map(n=>n[0]).join('')}</span><span><strong>{student.name}</strong><small>{student.nim||'NIM belum tersedia'}</small></span></>:<strong>Belum ada mahasiswa</strong>}</div>
@@ -217,16 +267,29 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
           {filterOpen&&<div className="evx-filter-menu" role="group" aria-label="Saring mahasiswa">{FILTERS.map(([value,label])=>{const checked=value==='all'?filters.length===0:filters.includes(value);return <label key={value} className="evx-filter-item"><input type="checkbox" checked={checked} onChange={()=>toggleFilter(value)} aria-label={label}/><span>{label}</span><em>{countOf(value)}</em></label>;})}</div>}
         </div>
         <label className="eval-sort"><ArrowDownUp size={13}/><select value={sort} onChange={event=>setSort(event.target.value as typeof sort)} aria-label="Urutkan mahasiswa"><option value="roster">Urut: Daftar kelas</option><option value="name">Nama A–Z</option><option value="pending">Perlu dinilai dulu</option></select></label>
-        {visible.length? <ul className="eval-people">{visible.map(({row,relevant,status:studentStatus})=>{const current=personKey(row)===personKey(student||{student:'',roster:''} as ClassReportRow),assessmentForRow=state.assessments?.find(item=>item.attempt===relevant?.id),score=assessmentScore(relevant,assessmentForRow),approved=assessmentForRow?.settingsRevision===0&&assessmentForRow?.status==='reviewed';const statusLabel=!relevant?'Belum mengirim':activity&&!requiresManual(activity)?approved?'Disetujui':'Perlu disetujui':studentStatus==='published'?'Diterbitkan':studentStatus==='reviewed'?'Sudah ditinjau':studentStatus==='draft'?'Draf tersimpan':'Terkirim';return <li key={personKey(row)}><button type="button" className={`evx-person${current?' active':''}${['reviewed','published'].includes(studentStatus)||approved?' graded':' pending-grade'}`} aria-current={current?'true':undefined} onClick={()=>select(personKey(row))}><span className="cw-student-avatar">{row.name.split(/\s+/).slice(0,2).map(name=>name[0]).join('').toUpperCase()}</span><span><strong>{row.name}</strong><small>{row.nim||'NIM belum tersedia'}</small></span><em>{score==null?'—':score}</em>{statusLabel!=='Terkirim'&&<span className={`asg-tag sub-${studentStatus}`}>{statusLabel}</span>}</button></li>;})}</ul>:<div className="evx-empty-card" role="status"><Users size={18}/><strong>Belum ada mahasiswa</strong><p>{state.report.length?'Tidak ada mahasiswa pada saringan ini. Ubah filter atau kata kunci.':'Daftar mahasiswa akan tampil di sini.'}</p></div>}
+        {visible.length? <ul className="eval-people">{visible.map(({row,relevant,status:studentStatus})=>{
+          const current=personKey(row)===personKey(student||{student:'',roster:''} as ClassReportRow),assessmentForRow=state.assessments?.find(item=>item.attempt===relevant?.id);
+          const auto=!!activity&&!requiresManual(activity),approved=autoApproved(relevant,assessmentForRow);
+          const rowAi=auto?undefined:aiFor(relevant);
+          const score=auto?assessmentScore(relevant,assessmentForRow):typeof assessmentForRow?.points==='number'?assessmentForRow.points:undefined;
+          const scoreLabel=score==null?(rowAi&&!assessmentForRow?aiRowLabel(rowAi):'—'):String(score);
+          const statusLabel=!relevant?'Belum mengirim':auto?(approved?AUTO_STATUS_LABELS.approved:AUTO_STATUS_LABELS.pending):WRITTEN_STATUS_LABELS[studentStatus];
+          const done=auto?approved:studentStatus==='ready'||studentStatus==='published';
+          return <li key={personKey(row)}><button type="button" className={`evx-person${current?' active':''}${done?' graded':' pending-grade'}`} aria-current={current?'true':undefined} onClick={()=>select(personKey(row))}><span className="cw-student-avatar">{row.name.split(/\s+/).slice(0,2).map(name=>name[0]).join('').toUpperCase()}</span><span><strong>{row.name}</strong><small>{row.nim||'NIM belum tersedia'}</small></span><em>{scoreLabel}</em><span className={`asg-tag sr-review-status sr-status-${auto?(approved?'published':'unreviewed'):STATUS_CLASS[studentStatus]}`}>{statusLabel}</span>{rowAi?.status==='failed'&&!assessmentForRow&&<span className="evx-ai-state failed">AI gagal</span>}</button></li>;
+        })}</ul>:<div className="evx-empty-card" role="status"><Users size={18}/><strong>Belum ada mahasiswa</strong><p>{state.report.length?'Tidak ada mahasiswa pada saringan ini. Ubah filter atau kata kunci.':'Daftar mahasiswa akan tampil di sini.'}</p></div>}
         <p className="sr-student-count">{visible.length} dari {state.report.length} mahasiswa</p>
       </aside>
       <div className="sr-answer-area">
         {student&&activity?<>
-         {autoActivities.length>0&&<section className="sr-auto-summary" aria-label="Ringkasan penilaian otomatis"><div><strong>Dinilai otomatis</strong><span>{autoActivities.length} kegiatan{autoAverage!==null?` · rata-rata ${autoAverage}`:''}</span></div><button type="button" className="sr-exact-toggle" aria-expanded={exactDetailsOpen} aria-controls="sr-activity-reviews" onClick={()=>setExactDetailsOpen(open=>!open)}><ChevronDown size={16} aria-hidden="true"/>{exactDetailsOpen?'Sembunyikan rincian':'Lihat rincian'}</button></section>}
+         {autoActivities.length>0&&<section className="sr-auto-summary" aria-label="Ringkasan penilaian otomatis">
+           <div><strong>Dinilai otomatis</strong><span>{autoActivities.length} kegiatan{autoAverage!==null?` · rata-rata ${autoAverage}`:''}{autoPending?` · ${autoPending} perlu disetujui`:''}</span></div>
+           <button type="button" className="sr-exact-toggle" aria-expanded={exactDetailsOpen} aria-controls="sr-activity-reviews" onClick={()=>setExactDetailsOpen(open=>!open)}><ChevronDown size={16} aria-hidden="true"/>{exactDetailsOpen?'Sembunyikan rincian':'Lihat rincian'}</button>
+           {attention.length>0&&<ul className="sr-auto-attention" aria-label="Perlu perhatian">{attention.map(item=><li key={item.activity}><button type="button" onClick={()=>openAuto(item.activity)}><AlertTriangle size={13} aria-hidden="true"/><strong>{item.title}</strong><span>{item.score==null?'—':`${item.score}/100`}{item.wrong?` · ${item.wrong} salah`:''}{item.low?' · nilai rendah':''}{item.overrides?` · ${item.overrides} jawaban disesuaikan`:''}{item.overrides&&!item.approved?' · penyesuaian belum terlihat mahasiswa':''}</span><em>{item.approved?AUTO_STATUS_LABELS.approved:AUTO_STATUS_LABELS.pending}</em></button></li>)}</ul>}
+         </section>}
          {exactDetailsOpen&&<ScheduledExactAnswerOverview entries={activities.map((a,index)=>{const own=attempts.find(item=>item.student===student.student&&item.activity===a.id);const graded=state.assessments?.find(item=>item.attempt===own?.id);return {activity:a,index,cards:cardsWithOverrides(a,own,graded),score:assessmentScore(own,graded),submitted:!!own};})} selectedActivity={activity.id} onSelect={id=>{if(select(personKey(student),id))setExactDetailsOpen(true);}}/>}
          <div id="sr-activity-reviews">
-         {orderedActivities.map(a=>{const index=activities.indexOf(a);const own=attempts.find(t=>t.student===student?.student&&t.activity===a.id);const ownAssessment=state.assessments?.find(g=>g.attempt===own?.id);const ownStatus=assessmentStatus(ownAssessment);const ownScore=assessmentScore(own,ownAssessment);const ownCards=cardsWithOverrides(a,own,ownAssessment);const sectionSettings=state.gradingSettings?.find(item=>item.activity===a.id);const sectionAuto=a.kind==='quiz'||!requiresManual(a);const sectionApproved=assessmentApproved(ownAssessment);const sectionSelected=activity?.id===a.id;return <section key={a.id} id={'review-activity-'+a.id} data-activity-id={a.id} hidden={sectionAuto&&!exactDetailsOpen} className={'sr-activity-block'+(!sectionAuto?' sr-written-activity':'')+(sectionSelected?' is-active':'')} aria-labelledby={'review-activity-title-'+a.id}>
-           <header className="sr-activity-head"><h3 id={'review-activity-title-'+a.id}><button type="button" className="sr-activity-select" aria-expanded={expandedActivity===a.id} aria-controls={`review-response-${a.id} review-assessment-${a.id}`} onClick={()=>{if(expandedActivity===a.id)setExpandedActivity(null);else select(personKey(student),a.id);}}><ChevronDown size={16} className="sr-activity-chevron" aria-hidden="true"/><span className="sr-activity-index">{index+1}</span>{a.title}</button></h3><span className="sr-mode-chip">{gradingModeLabel(a)}</span>{own&&typeof ownScore==='number'&&<span className="sr-activity-total">{ownScore} / 100</span>}<span className={'sr-review-status sr-status-'+(own?ownStatus:'missing')}>{own?((a.kind==='quiz'||!requiresManual(a))?(assessmentApproved(ownAssessment)?'Disetujui':'Perlu disetujui'):ASSESSMENT_LABELS[ownStatus]):'Belum mengirim'}</span></header>
+         {orderedActivities.map(a=>{const index=activities.indexOf(a);const own=attempts.find(t=>t.student===student?.student&&t.activity===a.id);const ownAssessment=state.assessments?.find(g=>g.attempt===own?.id);const ownScore=assessmentScore(own,ownAssessment);const ownCards=cardsWithOverrides(a,own,ownAssessment);const sectionAuto=a.kind==='quiz'||!requiresManual(a);const sectionApproved=autoApproved(own,ownAssessment);const sectionSelected=activity?.id===a.id;const ownStatus=writtenStatus(own,ownAssessment,aiFor(own));return <section key={a.id} id={'review-activity-'+a.id} data-activity-id={a.id} hidden={sectionAuto&&!exactDetailsOpen} className={'sr-activity-block'+(!sectionAuto?' sr-written-activity':'')+(sectionSelected?' is-active':'')} aria-labelledby={'review-activity-title-'+a.id}>
+           <header className="sr-activity-head"><h3 id={'review-activity-title-'+a.id}><button type="button" className="sr-activity-select" aria-expanded={expandedActivity===a.id} aria-controls={`review-response-${a.id} review-assessment-${a.id}`} onClick={()=>{if(expandedActivity===a.id)setExpandedActivity(null);else select(personKey(student),a.id);}}><ChevronDown size={16} className="sr-activity-chevron" aria-hidden="true"/><span className="sr-activity-index">{index+1}</span>{a.title}</button></h3><span className="sr-mode-chip">{gradingModeLabel(a)}</span>{!sectionAuto&&lockedFor(a.id)&&<span className="sr-mode-chip" title="Cara menilai terkunci karena sudah ada penilaian"><Lock size={11} aria-hidden="true"/> Terkunci</span>}{own&&typeof ownScore==='number'&&<span className="sr-activity-total">{ownScore} / 100</span>}<span className={'sr-review-status sr-status-'+(own?(sectionAuto?(sectionApproved?'published':'unreviewed'):STATUS_CLASS[ownStatus]):'missing')}>{own?(sectionAuto?(sectionApproved?AUTO_STATUS_LABELS.approved:AUTO_STATUS_LABELS.pending):WRITTEN_STATUS_LABELS[ownStatus]):'Belum mengirim'}</span></header>
            <div id={`review-response-${a.id}`} className="sr-activity-response" hidden={expandedActivity!==a.id}>
            {(activityBookReference(a)||a.worksheet?.sourceLabel)&&<p className="ss-source-label"><BookOpen size={15}/>{activityBookReference(a)||a.worksheet?.sourceLabel}</p>}
            {own?<>{!sectionAuto&&<ScheduledAnswerIdentity student={student} attempt={own}/>}<ol className={'sr-response-list'+(compact?' is-compact':'')}>{ownCards.map(card=>{const Icon=VERDICT_ICONS[card.verdict];const showKey=card.verdict==='wrong';const exact=isExactResponse(a,card);return <li key={card.id} hidden={exact&&!exactDetailsOpen} className={`sr-response-row is-${card.verdict}${!exact?' is-written':''}`}>
@@ -234,24 +297,22 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
                {exact?<><div className="sr-row-head"><span className="sr-row-number">{card.number}</span><p className="sr-row-prompt" lang="de">{card.prompt}</p>{card.points!==undefined&&<span className="sr-row-points">{card.earned||0}/{card.points}</span>}</div><div className="sr-row-answer"><span>Jawaban</span><p className={card.answer?'':'is-empty'}>{card.answer||'Belum dijawab'}</p></div></>:<ScheduledWrittenAnswer card={card}/>}
                {showKey&&card.accepted?.length?<div className="sr-row-key"><KeyRound size={13}/><span>Diterima</span><p>{card.accepted.join(' / ')}</p></div>:null}
                {(a.kind==='quiz'||!requiresManual(a))&&card.points!==undefined&&card.answer&&<div className="sr-answer-override" aria-label={`Ubah penilaian jawaban ${card.number}`}><span>{ownAssessment?.answerOverrides?.[card.id]?'Penilaian dosen':'Jawaban kunci'}</span><button type="button" className={card.verdict==='correct'?'is-selected':''} disabled={!canGrade||busy||card.verdict==='correct'} onClick={()=>void overrideAutoAnswer(own,ownAssessment,card.id,'correct')}>Tandai benar</button><button type="button" className={card.verdict==='wrong'?'is-selected':''} disabled={!canGrade||busy||card.verdict==='wrong'} onClick={()=>void overrideAutoAnswer(own,ownAssessment,card.id,'wrong')}>Tandai salah</button>{ownAssessment?.answerOverrides?.[card.id]&&<button type="button" disabled={!canGrade||busy} onClick={()=>void overrideAutoAnswer(own,ownAssessment,card.id,null)}>Reset ke kunci</button>}</div>}
-               {card.modelAnswer&&<details className="sr-row-reference" open><summary><BookOpen size={13}/>Contoh jawaban & rubrik</summary><p className="sr-reference-answer">{card.modelAnswer}</p>{card.rubric&&<p className="sr-reference-rubric">{card.rubric}</p>}{settings&&<button type="button" className="ss-button ss-button-small" disabled={!canGrade||busy} onClick={()=>setDraft(d=>({...d,feedback:[card.rubric,card.modelAnswer?`Contoh jawaban:\n${card.modelAnswer}`:''].filter(Boolean).join('\n\n')}))}>Pakai sebagai umpan balik</button>}</details>}
+               {card.modelAnswer&&<details className="sr-row-reference" open><summary><BookOpen size={13}/>Contoh jawaban & rubrik</summary><p className="sr-reference-answer">{card.modelAnswer}</p>{card.rubric&&<p className="sr-reference-rubric">{card.rubric}</p>}{sectionSelected&&!sectionAuto&&<button type="button" className="ss-button ss-button-small" disabled={!canGrade||busy} onClick={()=>setDraft(d=>({...d,feedback:[card.rubric,card.modelAnswer?`Contoh jawaban:\n${card.modelAnswer}`:''].filter(Boolean).join('\n\n')}))}>Pakai sebagai umpan balik</button>}</details>}
              </div></li>;})}</ol></>:<p className="sr-activity-empty">Belum ada jawaban untuk kegiatan ini.</p>}
            {a.kind==='exit_ticket'&&typeof own?.answers.feedback==='string'&&own.answers.feedback.trim()&&<section className="sr-exit-feedback"><h4>Masukan untuk pembelajaran</h4><p>{own.answers.feedback}</p><small>Masukan mahasiswa · tidak dinilai</small></section>}
            </div>
            <section id={`review-assessment-${a.id}`} hidden={expandedActivity!==a.id} className={`sr-grading-section sr-activity-assessment${sectionSelected?' is-current':''}`} aria-label={`Penilaian kegiatan ${a.title}`}>
-           {/* The activity header above already names the activity, its mode and its
-               review status; repeating them here only added a second column of the
-               same words. This header carries just the panel's own control. */}
-           {sectionSelected&&!sectionAuto&&<header className="sr-assessment-tools"><button className="ss-icon-button" aria-label="Pengaturan penilaian kegiatan" disabled={busy} onClick={()=>{setFailed(false);setMessage('');setSettingsOpen(true);}}><Settings2 size={17}/></button></header>}
-          {sectionAuto?<><p>{ownAssessment?.answerOverrides&&Object.keys(ownAssessment.answerOverrides).length?`Penilaian otomatis · ${Object.keys(ownAssessment.answerOverrides).length} jawaban disesuaikan`:own?'Penilaian otomatis dihitung dari kunci jawaban.':'Penilaian otomatis belum tersedia.'}</p><button type="button" className="ss-button ss-button-primary" disabled={!own||typeof own.score!=='number'||!canGrade||busy||sectionApproved} onClick={()=>void approveAutoScoreFor(own,ownAssessment)}>{busy?'Menyimpan…':sectionApproved?'Nilai disetujui':'Setujui nilai otomatis'}</button></>:sectionSelected?(!sectionSettings?<div className="sr-configure"><h4>Atur cara menilai</h4><p>Pilih sekali untuk seluruh mahasiswa pada kegiatan ini.</p><div className="sr-presets"><button type="button" className="ss-button ss-button-primary" disabled={!canGrade||busy} onClick={()=>void applyPreset('points',a)}>Nilai 0–100</button><button type="button" className="ss-button" disabled={!canGrade||busy} onClick={()=>void applyPreset('ungraded',a)}>Umpan balik saja</button><button type="button" className="ss-button" disabled={!canGrade||busy} onClick={()=>setSettingsOpen(true)}>Rubrik…</button></div></div>:<>
-            {own&&<>{sectionSettings.mode==='points'&&<label className="sr-points">Nilai<div><input type="number" min="0" max={sectionSettings.maxPoints} step="any" disabled={!canGrade||busy} value={draft.points} onChange={e=>setDraft(d=>({...d,points:e.target.value}))}/><span>/ {sectionSettings.maxPoints}</span></div></label>}{sectionSettings.mode==='rubric'&&<fieldset className="sr-rubric-scores"><legend>Nilai per kriteria</legend>{sectionSettings.criteria.map(c=><label key={c.id}><span>{c.label}<small>Maks. {c.maxPoints}</small></span><input aria-label={`Nilai ${c.label}`} type="number" min="0" max={c.maxPoints} step="any" disabled={!canGrade||busy} value={draft.criterionScores[c.id]??''} onChange={e=>setDraft(d=>({...d,criterionScores:{...d.criterionScores,[c.id]:e.target.value}}))}/></label>)}<p>Total <strong>{sectionSettings.criteria.reduce((sum,c)=>sum+Number(draft.criterionScores[c.id]||0),0)} / {sectionSettings.maxPoints}</strong></p></fieldset>}
-            {renderAi(a,own,ownAssessment,sectionSettings)}
-            <label className="sr-feedback">Umpan balik<textarea rows={5} placeholder="Tulis komentar untuk mahasiswa..." maxLength={10000} disabled={!canGrade||busy} value={draft.feedback} onChange={e=>setDraft(d=>({...d,feedback:e.target.value}))}/></label><p className="sr-draft-hint">{dirty?'Perubahan belum disimpan.':ownAssessment?'Penilaian tersimpan.':'Belum ada penilaian tersimpan.'}</p>
-            <div className="sr-save-actions"><button className="ss-button" disabled={!canGrade||busy||settingsEdited} onClick={()=>void saveGrade('draft')}>Simpan draf</button><button className="ss-button" aria-label="Tandai penilaian sudah ditinjau" disabled={!canGrade||busy||settingsEdited} onClick={()=>void saveGrade('reviewed')}>Ditinjau</button><button className="ss-button ss-button-primary" disabled={!canGrade||busy||settingsEdited} onClick={()=>void saveGrade('reviewed',true)}>Simpan & berikutnya<ArrowRight size={16}/></button></div>
-            <p className="sr-save-hint">Draf hanya tersimpan untuk dosen. Tandai ditinjau saat siap; terbitkan secara terpisah untuk membagikan nilai dan umpan balik kepada mahasiswa.</p>
-            {ownAssessment?.status==='reviewed'&&<div className="sr-publish"><p>{ownStatus==='published'?'Mahasiswa dapat melihat penilaian ini.':'Siap dibagikan kepada mahasiswa.'}</p><button className="ss-button" disabled={!canGrade||busy||dirty||ownStatus==='published'} onClick={()=>void publish()}><Send size={15}/>{ownStatus==='published'?'Sudah diterbitkan':'Terbitkan penilaian'}</button></div>}</>}
-            {!own&&<p className="sr-notice">Mahasiswa belum mengirim jawaban untuk bagian ini.</p>}
-          </>):<button type="button" className="ss-button sr-grade-open" onClick={()=>select(personKey(student||{student:'',roster:''} as ClassReportRow),a.id)}>Buka penilaian manual</button>}
+          {sectionAuto?<><p>{ownAssessment?.answerOverrides&&Object.keys(ownAssessment.answerOverrides).length?`Penilaian otomatis · ${Object.keys(ownAssessment.answerOverrides).length} jawaban disesuaikan`:own?'Penilaian otomatis dihitung dari kunci jawaban.':'Penilaian otomatis belum tersedia.'}</p><button type="button" className="ss-button ss-button-primary" disabled={!own||typeof own.score!=='number'||!canGrade||busy||sectionApproved} onClick={()=>void approveAutoScoreFor(own,ownAssessment)}>{busy?'Menyimpan…':sectionApproved?'Nilai disetujui':'Setujui nilai otomatis'}</button></>:sectionSelected?(own?<ScheduledGradingPanel
+              activity={a} attempt={own} assessment={ownAssessment} settings={effective} locked={lockedSettings}
+              draft={draft} onDraftChange={setDraft} dirty={dirty}
+              aiRecord={aiFor(own)} aiRequesting={!!aiRequesting[own.id]} aiError={aiErrors[own.id]||''} hasWritten={writtenOf(a,own).length>0}
+              onRequestAi={()=>void requestAiFor(a,own)}
+              suggestion={suggestionFor(a.id)} canGrade={canGrade} busy={busy}
+              onSave={(status,next)=>void saveGrade(status,next)} onPublish={()=>void publish()}
+              onAcceptSuggestion={()=>void acceptSuggestion(a)} onPreset={mode=>void applyPreset(mode,a)}
+              onOpenSettings={()=>{setFailed(false);setMessage('');loadSettings();setSettingsOpen(true);}}
+              onRetrySuggestion={()=>fetchSuggestion(a.id,true)}
+            />:<p className="sr-notice">Mahasiswa belum mengirim jawaban untuk bagian ini.</p>):<button type="button" className="ss-button sr-grade-open" onClick={()=>select(personKey(student||{student:'',roster:''} as ClassReportRow),a.id)}>Buka penilaian</button>}
            </section>
          </section>;})}
          </div>
@@ -259,7 +320,7 @@ export function ScheduledReviewWorkspace({state,onAction,onDirtyChange,initialSe
         {message&&<p className={`sr-message${failed?' is-error':''}`} role={failed?'alert':'status'}>{message}</p>}
       </div>
     </div>
-    <Dialog open={settingsOpen} onOpenChange={open=>{if(!open&&settingsEdited){if(!window.confirm('Buang perubahan pengaturan penilaian?'))return;loadSettings();}setSettingsOpen(open);}}><DialogContent className="ss-create-dialog sr-settings-dialog"><DialogHeader><DialogTitle>Pengaturan penilaian</DialogTitle><DialogDescription>{activity?.title} · Berlaku untuk seluruh mahasiswa pada kegiatan ini.</DialogDescription></DialogHeader>{lockedSettings&&<p className="sr-notice">Pengaturan dikunci karena penilaian sudah dibuat.</p>}<label>Mode penilaian<select disabled={lockedSettings||!canGrade} value={settingsMode} onChange={e=>{setSettingsMode(e.target.value as typeof settingsMode);setSettingsEdited(true);}}><option value="ungraded">Tanpa nilai — umpan balik saja</option><option value="points">Poin</option><option value="rubric">Rubrik</option></select></label>{settingsMode!=='ungraded'&&<label>Nilai maksimum<input type="number" min="1" max="100000" disabled={lockedSettings||!canGrade} value={maxPoints} onChange={e=>{setMaxPoints(e.target.value);setSettingsEdited(true);}}/></label>}{settingsMode==='rubric'&&<div className="sr-criteria-editor">{criteria.map((c,i)=><div key={c.id}><label>Kriteria {i+1}<input value={c.label} disabled={lockedSettings||!canGrade} onChange={e=>{setCriteria(prev=>prev.map((r,j)=>j===i?{...r,label:e.target.value}:r));setSettingsEdited(true);}}/></label><label>Poin<input type="number" min="1" disabled={lockedSettings||!canGrade} value={c.maxPoints} onChange={e=>{setCriteria(prev=>prev.map((r,j)=>j===i?{...r,maxPoints:e.target.value}:r));setSettingsEdited(true);}}/></label>{!lockedSettings&&canGrade&&<button className="ss-button ss-button-small" onClick={()=>{setCriteria(prev=>prev.filter((_,j)=>j!==i));setSettingsEdited(true);}}>Hapus</button>}</div>)}{!lockedSettings&&canGrade&&<button className="ss-button" onClick={()=>{setCriteria(prev=>[...prev,{id:`c${Date.now().toString(36)}`,label:'',maxPoints:'5'}]);setSettingsEdited(true);}}>Tambah kriteria</button>}</div>}{message&&failed&&<p role="alert" className="sr-message is-error">{message}</p>}<DialogFooter><button className="ss-button" onClick={()=>{if(!settingsEdited||window.confirm('Buang perubahan pengaturan penilaian?')){loadSettings();setSettingsOpen(false);}}}>Tutup</button>{!lockedSettings&&<button className="ss-button ss-button-primary" disabled={!canGrade||busy} onClick={()=>void saveSettings()}>Simpan pengaturan</button>}</DialogFooter></DialogContent></Dialog>
+    <Dialog open={settingsOpen} onOpenChange={open=>{if(!open&&settingsEdited){if(!window.confirm('Buang perubahan pengaturan penilaian?'))return;loadSettings();}setSettingsOpen(open);}}><DialogContent className="ss-create-dialog sr-settings-dialog"><DialogHeader><DialogTitle>Pengaturan penilaian</DialogTitle><DialogDescription>{activity?.title} · Berlaku untuk seluruh mahasiswa pada kegiatan ini.</DialogDescription></DialogHeader>{lockedSettings&&<p className="sr-notice"><Lock size={15}/>Pengaturan terkunci karena sudah ada penilaian untuk kegiatan ini. Mengubah mode atau kriteria akan membatalkan nilai yang sudah dibuat.</p>}{!settings&&activity&&suggestionFor(activity.id).criteria.length>0&&!lockedSettings&&<p className="sr-notice"><Sparkles size={15}/>Kriteria di bawah disarankan dari contoh jawaban & panduan penilaian. Ubah sesuai kebutuhan sebelum menyimpan.</p>}<label>Mode penilaian<select disabled={lockedSettings||!canGrade} value={settingsMode} onChange={e=>{setSettingsMode(e.target.value as typeof settingsMode);setSettingsEdited(true);}}><option value="ungraded">Tanpa nilai — umpan balik saja</option><option value="points">Poin</option><option value="rubric">Rubrik</option></select></label>{settingsMode!=='ungraded'&&<label>Nilai maksimum<input type="number" min="1" max="100000" disabled={lockedSettings||!canGrade} value={maxPoints} onChange={e=>{setMaxPoints(e.target.value);setSettingsEdited(true);}}/></label>}{settingsMode==='rubric'&&<div className="sr-criteria-editor">{criteria.map((c,i)=><div key={c.id}><label>Kriteria {i+1}<input value={c.label} disabled={lockedSettings||!canGrade} onChange={e=>{setCriteria(prev=>prev.map((r,j)=>j===i?{...r,label:e.target.value}:r));setSettingsEdited(true);}}/></label><label>Poin<input type="number" min="1" disabled={lockedSettings||!canGrade} value={c.maxPoints} onChange={e=>{setCriteria(prev=>prev.map((r,j)=>j===i?{...r,maxPoints:e.target.value}:r));setSettingsEdited(true);}}/></label>{!lockedSettings&&canGrade&&<button className="ss-button ss-button-small" onClick={()=>{setCriteria(prev=>prev.filter((_,j)=>j!==i));setSettingsEdited(true);}}>Hapus</button>}</div>)}{!lockedSettings&&canGrade&&<button className="ss-button" onClick={()=>{setCriteria(prev=>[...prev,{id:`c${Date.now().toString(36)}`,label:'',maxPoints:'5'}]);setSettingsEdited(true);}}>Tambah kriteria</button>}</div>}{message&&failed&&<p role="alert" className="sr-message is-error">{message}</p>}<DialogFooter><button className="ss-button" onClick={()=>{if(!settingsEdited||window.confirm('Buang perubahan pengaturan penilaian?')){loadSettings();setSettingsOpen(false);}}}>Tutup</button>{!lockedSettings&&<button className="ss-button ss-button-primary" disabled={!canGrade||busy} onClick={()=>void saveSettings()}>Simpan pengaturan</button>}</DialogFooter></DialogContent></Dialog>
   </section>;
 }
 export default ScheduledReviewWorkspace;

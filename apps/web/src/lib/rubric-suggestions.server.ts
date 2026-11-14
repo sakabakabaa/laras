@@ -175,3 +175,75 @@ export async function buildRubricSuggestions(assignment: Assignment): Promise<{
 		};
 	}
 }
+
+/** What a scheduled-class written activity offers for deriving a rubric. */
+export type ScheduledSuggestionInput = {
+	title: string;
+	content: string;
+	items: { prompt: string; modelAnswer: string; rubric: string }[];
+};
+
+/** Enough lecturer-authored text (prompt + model answer / guidance) to derive criteria. */
+export function scheduledSuggestionText(input: ScheduledSuggestionInput): string {
+	return [input.content, ...input.items.flatMap((item) => [item.prompt, item.modelAnswer, item.rubric])]
+		.map((value) => (value || '').trim())
+		.filter(Boolean)
+		.join(' ');
+}
+
+export function buildScheduledPrompt(input: ScheduledSuggestionInput): string {
+	const items = input.items
+		.slice(0, 12)
+		.map((item, index) =>
+			[
+				`Soal ${index + 1}: ${clip(item.prompt, 600) || '(tanpa teks soal)'}`,
+				item.modelAnswer ? `Contoh jawaban dosen: ${clip(item.modelAnswer, 1200)}` : '',
+				item.rubric ? `Panduan penilaian dosen: ${clip(item.rubric, 1000)}` : '',
+			]
+				.filter(Boolean)
+				.join('\n'),
+		)
+		.join('\n\n');
+	return [
+		'Anda menyarankan kriteria rubrik untuk SATU kegiatan menulis/refleksi pada kelas Bahasa Jerman, dalam Bahasa Indonesia.',
+		'Gunakan HANYA data kegiatan berikut: soal, contoh jawaban dosen, dan panduan penilaian dosen. Jika panduan penilaian sudah menyebut aspek (mis. "Anrede, Nachricht, Gruß"), turunkan kriteria dari aspek itu.',
+		'Jangan menambah level (mis. A1/A2), buku teks, atau penilaian yang tidak disebut di data.',
+		'Usulkan 2–5 kriteria yang SPESIFIK dan terukur dari jawaban mahasiswa. Setiap kriteria: label singkat (maks 80 karakter), bobot relatif 1–3, dan alasan singkat.',
+		'Jika data terlalu singkat atau samar untuk menurunkan kriteria yang berarti, kembalikan criteria kosong dan isi reason — jangan menebak.',
+		`Kegiatan: ${clip(input.title, 200) || '(tanpa judul)'}`,
+		input.content ? `Instruksi kegiatan: ${clip(input.content, 1500)}` : '',
+		items,
+		'Balas HANYA JSON: {"criteria":[{"label":"","weight":1,"rationale":""}],"reason":""}',
+	]
+		.filter(Boolean)
+		.join('\n\n');
+}
+
+/**
+ * Provisional criteria for a scheduled-class written activity, derived from
+ * its prompts, model answers and the lecturer's rubric guidance. Never
+ * persisted here; the lecturer accepts them through the grading settings.
+ */
+export async function buildScheduledRubricSuggestions(input: ScheduledSuggestionInput): Promise<{
+	pending: SuggestedCriterion[];
+	generatedAt: string;
+	reason: string;
+}> {
+	if (scheduledSuggestionText(input).length < MIN_PROMPT_CHARS) {
+		return { pending: [], generatedAt: '', reason: 'Kegiatan belum memiliki contoh jawaban atau panduan penilaian yang cukup untuk menyarankan rubrik.' };
+	}
+	try {
+		const parsed = parseModelJson(await collectModel(buildScheduledPrompt(input)));
+		if (!parsed) {
+			return { pending: [], generatedAt: new Date().toISOString(), reason: 'Model tidak mengembalikan saran yang bisa dibaca. Atur rubrik secara manual.' };
+		}
+		const pending = sanitizeCriteria(parsed);
+		const modelReason = typeof parsed.reason === 'string' ? clip(parsed.reason, 1000) : '';
+		return pending.length
+			? { pending, generatedAt: new Date().toISOString(), reason: '' }
+			: { pending: [], generatedAt: new Date().toISOString(), reason: modelReason || 'Data kegiatan terlalu samar untuk menurunkan kriteria. Atur rubrik secara manual.' };
+	} catch (error) {
+		logger.error('scheduled rubric suggestions model failed', error);
+		return { pending: [], generatedAt: new Date().toISOString(), reason: 'Asisten AI tidak tersedia saat ini. Atur rubrik secara manual.' };
+	}
+}

@@ -54,7 +54,7 @@ export default function ScheduledClassPage() {
   }, [boundary, clock, refresh]);
   const actOrThrow = async (action: string, body: Record<string, unknown> = {}) => {
     setBusy(true); setError('');
-    try {accept(await scheduledRequest(sessionId, action, body));}
+    try {const next = await scheduledRequest(sessionId, action, body); accept(next); return next;}
     catch (e) {setError((e as Error).message); throw e;}
     finally {setBusy(false);}
   };

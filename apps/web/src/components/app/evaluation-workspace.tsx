@@ -25,10 +25,13 @@ import {
 	LoaderCircle,
 	Pencil,
 	Repeat,
+	ScanText,
 	RotateCcw,
 	Search,
 } from 'lucide-react';
 import { OverflowMenu } from '@/components/app/overflow-menu';
+import { hasExtractionArtifacts } from '@/lib/ocr-clean';
+import { refreshSubmissionText } from '@/lib/submission-refresh-client';
 import pb from '@/lib/pocketbase-client';
 import { invalidate } from '@/lib/local-cache';
 import type { Course } from '@/lib/learning';
@@ -153,6 +156,8 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	const [course, setCourse] = useState<Course | null>(null);
 	const [subs, setSubs] = useState<AssignmentSubmission[]>([]);
 	const [attempts, setAttempts] = useState<AttemptRow[]>([]);
+	const [refreshing, setRefreshing] = useState(false);
+	const [refreshNote, setRefreshNote] = useState('');
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [query, setQuery] = useState('');
@@ -351,6 +356,39 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	}, [subs, ownerMap]);
 
 	const collected = participants.filter((p) => p.status !== 'draft');
+	// Scans read before the answer-only OCR still hold worksheet text, file headers
+	// or a scanner watermark; the lecturer can re-read them from the task menu.
+	const staleTextIds = participants
+		.filter((p) => p.enrolled && p.files.length > 0 && hasExtractionArtifacts(p.content))
+		.map((p) => p.enrolled!.id);
+	const refreshStaleText = async () => {
+		if (refreshing || staleTextIds.length === 0) return;
+		if (
+			!window.confirm(
+				`Baca ulang ${staleTextIds.length} kiriman dari berkas lampirannya? Teks kiriman akan diganti dengan jawaban mahasiswa saja (tanpa teks cetak lembar kerja). Kiriman yang tidak terbaca tetap seperti semula.`,
+			)
+		)
+			return;
+		setRefreshing(true);
+		setRefreshNote(`Membaca ulang 0 dari ${staleTextIds.length} kiriman…`);
+		try {
+			const result = await refreshSubmissionText(assignmentId, staleTextIds, (done, total) =>
+				setRefreshNote(`Membaca ulang ${done} dari ${total} kiriman…`),
+			);
+			setRefreshNote(
+				`Selesai: ${result.refreshed} diperbarui` +
+					(result.unreadable ? `, ${result.unreadable} tidak terbaca (tetap seperti semula)` : '') +
+					(result.failed ? `, ${result.failed} gagal` : '') +
+					'.',
+			);
+			invalidate('assignment_submissions');
+			void reload();
+		} catch (error) {
+			setRefreshNote(error instanceof Error ? error.message : 'Teks kiriman gagal diperbarui.');
+		} finally {
+			setRefreshing(false);
+		}
+	};
 	const graded = collected.filter((p) => p.status === 'graded');
 	const pending = collected.filter((p) => p.status !== 'graded');
 	const late = collected.filter(
@@ -547,6 +585,11 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 								<Pencil size={16} /> Edit latihan
 							</button>
 						) : null}
+						{!formative && staleTextIds.length > 0 ? (
+							<button type="button" role="menuitem" disabled={refreshing} onClick={() => void refreshStaleText()}>
+								<ScanText size={16} /> Perbarui teks kiriman ({staleTextIds.length})
+							</button>
+						) : null}
 						<Link to={`/app/tugas/${assignment.id}/pratinjau`} role="menuitem">
 							<Eye size={16} /> Pratinjau tampilan mahasiswa
 						</Link>
@@ -559,6 +602,12 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 					</OverflowMenu>
 				</div>
 			</header>
+
+			{refreshNote ? (
+				<p className="sr-message" role="status">
+					{refreshNote}
+				</p>
+			) : null}
 
 			{formative && parentRecord && syncOutdated && syncState && (
 				<section className="evx-sync" role="alert" aria-label="Peringatan sinkronisasi latihan">

@@ -75,3 +75,18 @@ describe('answerTextFromExtraction', () => {
 		expect(answerTextFromExtraction(raw)).toBe('Sie heißt Naya. Sie ist Studentin.');
 	});
 });
+
+import { hasExtractionArtifacts } from '@/lib/ocr-clean';
+describe('hasExtractionArtifacts', () => {
+	it('flags stored text with an extractor header or a scanner watermark', () => {
+		expect(hasExtractionArtifacts('[DOKUMEN PINDAI: a.pdf]\nText')).toBe(true);
+		expect(hasExtractionArtifacts('[LAMPIRAN GAMBAR: a.jpg]\nText')).toBe(true);
+		expect(hasExtractionArtifacts('Sie ist Studentin. Dipindai dengan CamScanner')).toBe(true);
+	});
+	it('does not flag a clean answer, and is stable across repeated calls', () => {
+		expect(hasExtractionArtifacts('Sie heißt Naya. Sie ist Studentin.')).toBe(false);
+		expect(hasExtractionArtifacts('Er sagte [tidak terbaca] und ging.')).toBe(false);
+		const dirty = 'x Scanned with CamScanner';
+		expect([hasExtractionArtifacts(dirty), hasExtractionArtifacts(dirty), hasExtractionArtifacts(dirty)]).toEqual([true, true, true]);
+	});
+});

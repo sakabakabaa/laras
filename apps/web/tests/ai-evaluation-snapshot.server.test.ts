@@ -13,7 +13,7 @@ import { queueEvaluationDraft } from '@/lib/ai-evaluation.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 const assignment = { id: 'a1', owner: 'f1', course: 'c1', title: 'Original task', shape: 'writing', activityType: 'formal', instructions: 'Write German', requirements: 'Text', taskConfig: {} } as any;
 const settle = async () => { for (let n = 0; n < 30; n++) await new Promise((resolve) => setTimeout(resolve, 0)); };
-beforeEach(() => { state.row = null; state.bundle = null; state.retrieval.mockReset(); state.retrieval.mockImplementation(async () => state.bundle); state.writes = []; state.model.mockReset(); state.model.mockResolvedValue({ content: '{"findings":[],"summary":"Review","recommendedScore":80}', model: 'gpt-6-luna', modelVersion: 'unknown', durationMs: 3 }); });
+beforeEach(() => { process.env.AI_EVAL_TWO_PASS = '0'; state.row = null; state.bundle = null; state.retrieval.mockReset(); state.retrieval.mockImplementation(async () => state.bundle); state.writes = []; state.model.mockReset(); state.model.mockResolvedValue({ content: '{"findings":[],"summary":"Review","recommendedScore":80}', model: 'gpt-6-luna', modelVersion: 'unknown', durationMs: 3 }); });
 describe('generation-time persistence', () => {
  it('sends verified section passages beyond the old 1600-character cutoff with their own citations', async () => {
   const text = 'a'.repeat(1700) + ' Das Verb steht an zweiter Stelle.';

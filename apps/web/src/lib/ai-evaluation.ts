@@ -281,13 +281,15 @@ export function parseStructuredFindings(
 	rawFindings: unknown,
 	studentText: string,
 	criteria: { label: string; weight: number }[],
+	options: { max?: number } = {},
 ): EvalFinding[] {
 	if (!Array.isArray(rawFindings)) return [];
+	const max = options.max ?? MAX_STRUCTURED_FINDINGS;
 	const text = studentText || '';
 	const out: EvalFinding[] = [];
 	for (const item of rawFindings) {
 		if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
-		if (out.length >= MAX_STRUCTURED_FINDINGS) break;
+		if (out.length >= max) break;
 		const f = item as Record<string, unknown>;
 		if (f.severity !== 'minor' && f.severity !== 'major') continue;
 		const note = typeof f.note === 'string' ? f.note.trim() : '';
@@ -321,7 +323,9 @@ export function parseStructuredFindings(
 			if (match) criterion = match.label;
 		}
 		const tax = sanitizeTaxonomy(f.category, f.subcategory);
-		const confidence = clampConfidence(f.confidence);
+		const certainty = parseCertainty(f.certainty);
+		const group = sanitizeGroup(f.group);
+		const confidence = certainty ? CERTAINTY_CONFIDENCE[certainty] : clampConfidence(f.confidence);
 		out.push({
 			severity: f.severity,
 			quote: verifiedQuote,
@@ -336,6 +340,8 @@ export function parseStructuredFindings(
 			correction: typeof f.correction === 'string' ? f.correction.trim().slice(0, 600) : '',
 			explanation: typeof f.explanation === 'string' ? f.explanation.trim().slice(0, 1000) : '',
 			...(confidence != null ? { confidence } : {}),
+			...(group ? { group } : {}),
+			...(certainty ? { certainty } : {}),
 			anchorValid: anchor.anchorValid,
 			quoteStart: verifiedQuote ? anchor.quoteStart : null,
 			quoteEnd: verifiedQuote ? anchor.quoteEnd : null,
@@ -393,6 +399,27 @@ export function applyOcrGuards(
 	return out;
 }
 
+/** AI certainty tag (two-pass evaluation). Replaces the numeric confidence in the UI. */
+export type EvalCertainty = 'pasti' | 'mungkin';
+
+/** Compatibility mapping into the numeric `confidence` field. */
+export const CERTAINTY_CONFIDENCE: Record<EvalCertainty, number> = { pasti: 0.9, mungkin: 0.6 };
+
+export function parseCertainty(value: unknown): EvalCertainty | undefined {
+	return value === 'pasti' || value === 'mungkin' ? value : undefined;
+}
+
+/** Short grouping key for recurring errors of the same type ("cap-noun"). */
+export function sanitizeGroup(value: unknown): string {
+	if (typeof value !== 'string') return '';
+	return value
+		.trim()
+		.toLowerCase()
+		.replace(/[^\p{L}\p{N}_-]+/gu, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 40);
+}
+
 export type EvalFinding = {
 	severity: EvalSeverity;
 	/** Exact substring of the student's text ('' = general finding). */
@@ -408,6 +435,10 @@ export type EvalFinding = {
 	correction?: string;
 	explanation?: string;
 	confidence?: number;
+	/** Two-pass evaluation: same key = same recurring error type (optional, absent on older drafts). */
+	group?: string;
+	/** Two-pass evaluation: verified certainty (optional, absent on older drafts). */
+	certainty?: EvalCertainty;
 	/** True when the AI verified this finding against an attached image (not only OCR text). */
 	imageChecked?: boolean;
 	/** Phase 2 — anchor validation. An invalid quote is preserved, never dropped. */
@@ -452,6 +483,8 @@ export type ReviewFinding = {
 	correction?: string;
 	explanation?: string;
 	confidence?: number;
+	group?: string;
+	certainty?: EvalCertainty;
 	imageChecked?: boolean;
 	anchorValid?: boolean;
 	quoteStart?: number | null;
@@ -643,6 +676,8 @@ export function parseFindings(value: unknown): EvalFinding[] {
 			correction: typeof item.correction === 'string' ? item.correction.slice(0, 600) : '',
 			explanation: typeof item.explanation === 'string' ? item.explanation.slice(0, 1000) : '',
 			...(confidence != null ? { confidence } : {}),
+			...(sanitizeGroup(item.group) ? { group: sanitizeGroup(item.group) } : {}),
+			...(parseCertainty(item.certainty) ? { certainty: parseCertainty(item.certainty) } : {}),
 			...(item.imageChecked === true ? { imageChecked: true } : {}),
 			anchorValid: typeof item.anchorValid === 'boolean' ? item.anchorValid : undefined,
 			quoteStart: typeof item.quoteStart === 'number' ? item.quoteStart : null,
@@ -729,6 +764,8 @@ export function parseReviewFindings(value: unknown): ReviewFinding[] {
 			...(typeof f.confidence === 'number' && Number.isFinite(f.confidence)
 				? { confidence: Math.max(0, Math.min(1, f.confidence)) }
 				: {}),
+			...(sanitizeGroup(f.group) ? { group: sanitizeGroup(f.group) } : {}),
+			...(parseCertainty(f.certainty) ? { certainty: parseCertainty(f.certainty) } : {}),
 			...(f.imageChecked === true ? { imageChecked: true } : {}),
 			anchorValid: typeof f.anchorValid === 'boolean' ? f.anchorValid : undefined,
 			quoteStart: typeof f.quoteStart === 'number' ? f.quoteStart : null,
@@ -774,6 +811,8 @@ export function deriveAiReviewFindings(
 			correction: finding.correction,
 			explanation: finding.explanation,
 			confidence: finding.confidence,
+			...(finding.group ? { group: finding.group } : {}),
+			...(finding.certainty ? { certainty: finding.certainty } : {}),
 			imageChecked: finding.imageChecked,
 			anchorValid: finding.anchorValid,
 			quoteStart: finding.quoteStart,
@@ -798,6 +837,108 @@ export function normalizeReviewFindings(
 		...finding,
 		criterion: normalizeCriterionId(finding.criterion || '', criteria),
 	}));
+}
+
+/** Indonesian labels for recurring-error groups (keys the model is asked to use). */
+const GROUP_KEY_LABEL: Record<string, string> = {
+	'cap-noun': 'Kapitalisasi kata benda',
+	'cap-sentence': 'Kapitalisasi awal kalimat',
+	'verb-pos': 'Posisi kata kerja',
+	'verb-conj': 'Konjugasi kata kerja',
+	'art-gender': 'Artikel dan gender',
+	'adj-decl': 'Deklinasi kata sifat',
+	punct: 'Tanda baca',
+	comma: 'Tanda koma',
+	umlaut: 'Umlaut dan ß',
+	spelling: 'Ejaan',
+	prep: 'Preposisi',
+	case: 'Kasus',
+	plural: 'Bentuk jamak',
+	'word-order': 'Urutan kata',
+};
+
+const SUBCATEGORY_LABEL: Record<string, string> = {
+	capitalization: 'Kapitalisasi',
+	punctuation: 'Tanda baca',
+	spelling: 'Ejaan',
+	umlaut: 'Umlaut',
+	article: 'Artikel',
+	gender: 'Gender',
+	case: 'Kasus',
+	adjective_declension: 'Deklinasi kata sifat',
+	verb_conjugation: 'Konjugasi kata kerja',
+	tense: 'Kala',
+	modal: 'Kata kerja modal',
+	pronoun: 'Pronomina',
+	plural: 'Bentuk jamak',
+	agreement: 'Kesesuaian',
+	word_order: 'Urutan kata',
+	V2: 'Posisi kata kerja (V2)',
+	subordinate_clause: 'Anak kalimat',
+	verb_final: 'Kata kerja di akhir',
+	inversion: 'Inversi',
+	clause_structure: 'Struktur klausa',
+	word_choice: 'Pilihan kata',
+	collocation: 'Kolokasi',
+	wrong_preposition: 'Preposisi salah',
+	case_government: 'Kasus setelah preposisi',
+};
+
+function humanizeKey(key: string): string {
+	const text = key.replace(/[-_]+/g, ' ').trim();
+	return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
+}
+
+/** Grouping key of a finding: explicit `group`, else category/subcategory ('' = ungrouped). */
+export function findingGroupKey(f: { group?: string; category?: string; subcategory?: string }): string {
+	if (f.group) return `g:${f.group}`;
+	if (f.category && f.subcategory) return `c:${f.category}/${f.subcategory}`;
+	return '';
+}
+
+/** Indonesian header label for a group key produced by {@link findingGroupKey}. */
+export function findingGroupLabel(key: string): string {
+	if (key.startsWith('g:')) {
+		const raw = key.slice(2);
+		return GROUP_KEY_LABEL[raw] ?? humanizeKey(raw);
+	}
+	if (key.startsWith('c:')) {
+		const [category, sub] = key.slice(2).split('/');
+		return SUBCATEGORY_LABEL[sub] ?? `${category} · ${humanizeKey(sub)}`;
+	}
+	return '';
+}
+
+export type FindingGroup<T> = { key: string; label: string; items: T[] };
+
+/**
+ * Groups findings for the "Temuan" list, keeping first-appearance order. A
+ * finding with no group or taxonomy stays alone (key ''), as does every
+ * singleton so only recurring errors get a group header.
+ */
+export function groupFindings<T extends { group?: string; category?: string; subcategory?: string }>(
+	findings: T[],
+): FindingGroup<T>[] {
+	const byKey = new Map<string, T[]>();
+	for (const finding of findings) {
+		const key = findingGroupKey(finding);
+		if (!key) continue;
+		byKey.set(key, [...(byKey.get(key) ?? []), finding]);
+	}
+	const out: FindingGroup<T>[] = [];
+	const emitted = new Set<string>();
+	for (const finding of findings) {
+		const key = findingGroupKey(finding);
+		const members = key ? byKey.get(key) ?? [] : [];
+		if (key && members.length >= 2) {
+			if (emitted.has(key)) continue;
+			emitted.add(key);
+			out.push({ key, label: findingGroupLabel(key), items: members });
+		} else {
+			out.push({ key: '', label: '', items: [finding] });
+		}
+	}
+	return out;
 }
 
 export type MarkedSegment = {

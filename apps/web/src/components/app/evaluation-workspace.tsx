@@ -158,6 +158,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 	const [attempts, setAttempts] = useState<AttemptRow[]>([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const [refreshNote, setRefreshNote] = useState('');
+	const [refreshConfirm, setRefreshConfirm] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [query, setQuery] = useState('');
@@ -363,12 +364,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 		.map((p) => p.enrolled!.id);
 	const refreshStaleText = async () => {
 		if (refreshing || staleTextIds.length === 0) return;
-		if (
-			!window.confirm(
-				`Baca ulang ${staleTextIds.length} kiriman dari berkas lampirannya? Teks kiriman akan diganti dengan jawaban mahasiswa saja (tanpa teks cetak lembar kerja). Kiriman yang tidak terbaca tetap seperti semula.`,
-			)
-		)
-			return;
+		setRefreshConfirm(false);
 		setRefreshing(true);
 		setRefreshNote(`Membaca ulang 0 dari ${staleTextIds.length} kiriman…`);
 		try {
@@ -586,7 +582,7 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 							</button>
 						) : null}
 						{!formative && staleTextIds.length > 0 ? (
-							<button type="button" role="menuitem" disabled={refreshing} onClick={() => void refreshStaleText()}>
+							<button type="button" role="menuitem" disabled={refreshing} onClick={() => { setRefreshNote(''); setRefreshConfirm(true); }}>
 								<ScanText size={16} /> Perbarui teks kiriman ({staleTextIds.length})
 							</button>
 						) : null}
@@ -603,10 +599,52 @@ export function EvaluationWorkspace({ assignmentId }: { assignmentId: string }) 
 				</div>
 			</header>
 
+			{!formative && staleTextIds.length > 0 && !refreshConfirm && !refreshing && !refreshNote ? (
+				<section className="evx-sync" role="status" aria-label="Teks kiriman perlu dibaca ulang">
+					<ScanText size={15} />
+					<div>
+						<strong>{staleTextIds.length} kiriman masih memuat teks lembar kerja atau watermark pemindai.</strong>
+						<span>Baca ulang berkasnya agar yang tampil hanya jawaban mahasiswa.</span>
+					</div>
+					<button type="button" className="ld-outline-action sm" onClick={() => setRefreshConfirm(true)}>
+						<ScanText size={14} /> Baca ulang ({staleTextIds.length})
+					</button>
+				</section>
+			) : null}
+
+			{refreshConfirm && !refreshing ? (
+				<section className="evx-sync" role="alert" aria-label="Konfirmasi baca ulang teks kiriman">
+					<AlertTriangle size={15} />
+					<div>
+						<strong>Baca ulang {staleTextIds.length} kiriman dari berkas lampirannya?</strong>
+						<span>
+							Teks kiriman akan diganti dengan jawaban mahasiswa saja (tanpa teks cetak lembar kerja
+							dan watermark pemindai). Kiriman yang tidak terbaca tetap seperti semula. Biarkan halaman ini
+							tetap terbuka sampai selesai.
+						</span>
+					</div>
+					<button type="button" className="ld-outline-action sm" onClick={() => void refreshStaleText()}>
+						<ScanText size={14} /> Ya, baca ulang
+					</button>
+					<button type="button" className="ld-outline-action sm" onClick={() => setRefreshConfirm(false)}>
+						Batal
+					</button>
+				</section>
+			) : null}
+
 			{refreshNote ? (
-				<p className="sr-message" role="status">
-					{refreshNote}
-				</p>
+				<section className="evx-sync" role="status" aria-live="polite" aria-label="Status baca ulang teks kiriman">
+					{refreshing ? <LoaderCircle size={15} className="spin" /> : <ScanText size={15} />}
+					<div>
+						<strong>{refreshNote}</strong>
+						{refreshing ? <span>Jangan tutup halaman ini. Angka bertambah setiap 4 kiriman selesai dibaca.</span> : null}
+					</div>
+					{!refreshing ? (
+						<button type="button" className="ld-outline-action sm" onClick={() => setRefreshNote('')}>
+							Tutup
+						</button>
+					) : null}
+				</section>
 			) : null}
 
 			{formative && parentRecord && syncOutdated && syncState && (

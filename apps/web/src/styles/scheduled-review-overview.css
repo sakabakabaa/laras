@@ -218,8 +218,9 @@
 .sr-workspace .sr-activity-block.is-active .sr-activity-index { background: var(--ss-accent); color: #fff; }
 
 /* Quick grading setup instead of an empty red-outlined box. */
-.sr-presets { display: flex; flex-wrap: wrap; gap: 8px; }
-.sr-presets .ss-button { flex: 1 1 auto; width: auto; font-size: 12px; padding: 9px 12px; }
+.sr-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sr-presets .ss-button { width: auto; font-size: 12px; padding: 9px 12px; }
+.sr-presets .ss-button-primary { grid-column: 1 / -1; }
 
 /* AI draft: clearly a suggestion, never styled like a result. */
 .sr-ai { display: grid; gap: 8px; padding: 10px; border: 1px dashed var(--ss-border); border-radius: 10px; }

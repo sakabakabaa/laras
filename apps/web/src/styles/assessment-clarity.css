@@ -55,3 +55,14 @@
  .assessment-clarity .evx-rubric .evx-bar { display: none; }
  .assessment-status > strong { font-size: 18px; }
 }
+/* Grading panel: why the publish action is disabled, visible under the buttons. */
+.assessment-clarity .evx-disabled-reasons { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 3px; font-size: 11px; line-height: 1.55; color: var(--clarity-soft); }
+.assessment-clarity .aev-approve-all { margin-left: 8px; }
+/* Evaluation list: per-row AI draft state. */
+.evx-ai-state { display: inline-block; font: 600 10px/1.4 var(--body); color: #475467; background: #F2F4F7; border-radius: 999px; padding: 1px 7px; margin-top: 2px; }
+.evx-ai-state.ai { color: #1D4ED8; background: #DBEAFE; }
+.evx-ai-state.failed { color: #B42318; background: #FEE4E2; }
+.evx-ai-state.lecturer { color: #8A6500; background: #FEF3C7; }
+.evx-ai-state.ready { box-shadow: inset 0 0 0 1px currentColor; }
+:root.dark .evx-ai-state { color: #CBD5E1; background: #252B33; }
+.evx-bulk-list { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; }

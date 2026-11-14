@@ -11,12 +11,23 @@
  * lecturer could not already see through the roster they own; other students
  * are still blocked by the browser-side `users` rule.
  *
+ * It also returns a minimal per-submission AI/grading summary (`aiSummaries`)
+ * so the list can show "AI 94" / "AI gagal" / "Draf dosen" and the
+ * "Siap disetujui" filter without loading every evaluation row in the
+ * browser. Readiness uses the same rule as /api/evaluation-publish-batch.
+ *
  * Permission: the caller must be the faculty user who owns the assignment.
  */
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { authenticateUser } from '@/lib/context-retrieval.server';
 import type { Assignment } from '@/lib/assignments';
+import {
+	EVALUATION_SUMMARY_FIELDS,
+	summarizeEvaluation,
+	type EvaluationAiSummary,
+	type EvaluationRowLike,
+} from '@/lib/evaluation-readiness';
 
 const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
 
@@ -55,6 +66,8 @@ export const action = withApi(async ({ request }) => {
 	const result = await pocketbaseAdmin.listRecords<{
 		id: string;
 		owner: string;
+		status: string;
+		transcriptStatus?: string;
 		expand?: { owner?: { name?: string; nim?: string; email?: string } };
 	}>('assignment_submissions', {
 		filter: `assignment="${assignmentId}"`,
@@ -72,5 +85,26 @@ export const action = withApi(async ({ request }) => {
 		};
 	}
 
-	return json({ identities });
+	// Latest evaluation row per submission → compact AI/grading summary.
+	const aiSummaries: Record<string, EvaluationAiSummary> = {};
+	try {
+		const rows = (
+			await pocketbaseAdmin.listRecords<EvaluationRowLike & { submission: string }>('ai_evaluations', {
+				filter: `assignment="${assignmentId}"`,
+				perPage: 1000,
+				sort: '-created',
+				fields: EVALUATION_SUMMARY_FIELDS,
+			})
+		).items;
+		const latest = new Map<string, EvaluationRowLike>();
+		for (const row of rows) if (!latest.has(row.submission)) latest.set(row.submission, row);
+		for (const row of result.items) {
+			const { publish: _publish, ...summary } = summarizeEvaluation({ assignment, submission: row, row: latest.get(row.id) });
+			aiSummaries[row.id] = summary;
+		}
+	} catch {
+		/* non-fatal — the list simply shows no AI state */
+	}
+
+	return json({ identities, aiSummaries });
 });

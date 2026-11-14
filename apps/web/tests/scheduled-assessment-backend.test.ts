@@ -88,3 +88,26 @@ describe('scheduled assessment service safeguards', () => {
     expect(service).not.toContain("setting.getString('mode') === 'ungraded'");
   });
 });
+
+describe('scheduled grading bulk actions and AI drafts', () => {
+  const service = readFileSync(new URL('../../pocketbase/pb_hooks/scheduled-classes-service.js', import.meta.url), 'utf8');
+  const aiMigration = readFileSync(new URL('../../pocketbase/pb_migrations/1793600100_scheduled_ai_drafts.js', import.meta.url), 'utf8');
+  it('runs bulk approval and publication through the single-item checks with per-item results', () => {
+    expect(service).toContain("runBatch(body.items, item => approveAutoScoreItem(app, c, user, now, item))");
+    expect(service).toContain("runBatch(body.items, item => publishAssessmentItem(app, c, user, now, item))");
+    expect(service).toContain("approveAutoScoreItem(app, c, user, now, body);");
+    expect(service).toContain("publishAssessmentItem(app, c, user, now, body);");
+    expect(service).toMatch(/'approveAutoScores', 'publishAssessments'\]\.includes\(action\) && !ctx\.owner\)/);
+  });
+  it('exposes stored AI drafts to the owner only', () => {
+    expect(service.indexOf("if (!owner) return {assessments:published};")).toBeLessThan(service.indexOf("rows(app, 'scheduled_ai_drafts'"));
+    expect(service).toContain('aiDrafts:assess.aiDrafts} : {assessments:assess.assessments}');
+  });
+  it('adds the AI draft collection additively and superuser-only', () => {
+    expect(aiMigration).toContain("name:'scheduled_ai_drafts'");
+    expect(aiMigration).toContain('listRule:null,viewRule:null,createRule:null,updateRule:null,deleteRule:null');
+    expect(aiMigration).toContain('cascadeDelete: false');
+    expect(aiMigration).toContain('CREATE UNIQUE INDEX idx_scheduled_ai_draft_attempt');
+    expect(aiMigration).not.toMatch(/scheduled_assessments|removeByName/);
+  });
+});

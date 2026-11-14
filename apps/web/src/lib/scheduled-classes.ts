@@ -1,4 +1,5 @@
 import type {ScheduledLesson} from './scheduled-lesson';
+import type {ScheduledAiDraftRecord} from './scheduled-grading';
 import pb from '@/lib/pocketbase-client';
 import type { QuizQuestionEditable } from '@/lib/task-types';
 
@@ -45,14 +46,19 @@ export type ClassReportRow = {
   suggestion: string; completed: number; total: number; reason: string; attendance: string; attempts: ScheduledAttempt[];
 };
 export type GradingSetting = {id: string;activity: string;revision: number;mode: 'ungraded'|'points'|'rubric';maxPoints: number;criteria: {id: string;label: string;maxPoints: number}[]};
-export type ScheduledAssessment = {attempt: string;activity: string;points: number|null;maxPoints: number;feedback?: string;publishedAt?: string;status?: string;revision?: number;settingsRevision?:number;criterionScores?: Record<string,number>;answerOverrides?:Record<string,'correct'|'wrong'>;published?:{points:number|null;maxPoints:number;feedback:string;publishedAt:string;publishedRevision:number}};
+export type ScheduledAssessment = {id?: string;attempt: string;attemptRevision?: number;activity: string;points: number|null;maxPoints: number;feedback?: string;publishedAt?: string;status?: string;revision?: number;settingsRevision?:number;criterionScores?: Record<string,number>;answerOverrides?:Record<string,'correct'|'wrong'>;published?:{points:number|null;maxPoints:number;feedback:string;publishedAt:string;publishedRevision:number}};
 export type ScheduledClassState = {
   serverNow: string; owner: boolean; session: {id: string; title: string; course: string; section?: string};
   class: ScheduledClass | null; activities: ScheduledActivity[]; attempts: ScheduledAttempt[];
   gradingSettings?: GradingSetting[]; assessments?: ScheduledAssessment[];
+  /** Lecturer only: stored AI drafts for written answers. */
+  aiDrafts?: ScheduledAiDraftRecord[];
+  /** Present on bulk-action responses: per-item outcome. */
+  batch?: ScheduledBatchResult;
   participant?: {checkedInAt: string; lastSeenAt: string} | null; report: ClassReportRow[];
   events: {id: string; action: string; created: string; detail: Record<string, unknown>}[];
 };
+export type ScheduledBatchResult = {ok: number; failed: number; results: {attemptId: string; ok: boolean; unchanged?: boolean; error?: string}[]};
 export async function scheduledRequest(sessionId: string, action: string, body: Record<string, unknown> = {}) {
   try {
     return await pb.send<ScheduledClassState>('/api/laras/scheduled-classes', {

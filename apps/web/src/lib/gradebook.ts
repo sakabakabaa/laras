@@ -243,6 +243,23 @@ export function totalWeight(components: GradeComponent[]): number {
 		.reduce((sum, c) => sum + (c.weight ?? 0), 0);
 }
 
+/**
+ * Why the course's final grades cannot be published yet — the same rules the
+ * publish action enforces, so the button can be disabled with a visible
+ * reason instead of failing after a click.
+ */
+export function coursePublishBlocker(
+	components: GradeComponent[],
+	finals: Iterable<{ countingCount: number; gradedCount: number } | undefined>,
+): { reason: 'noStudents' | 'weights' | 'incomplete' | null; incompleteCount: number } {
+	const rows = [...finals];
+	const incompleteCount = rows.filter((f) => !f || f.countingCount === 0 || f.gradedCount < f.countingCount).length;
+	if (rows.length === 0) return { reason: 'noStudents', incompleteCount };
+	if (totalWeight(components) !== 100) return { reason: 'weights', incompleteCount };
+	if (incompleteCount > 0) return { reason: 'incomplete', incompleteCount };
+	return { reason: null, incompleteCount };
+}
+
 export type StudentStatus =
 	| 'ungraded'
 	| 'incomplete'

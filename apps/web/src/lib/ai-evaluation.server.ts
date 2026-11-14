@@ -640,6 +640,8 @@ async function runEvaluation(input: {
 // Serializes queue decisions in this server process; PocketBase pending rows guard later requests.
 // Multi-instance deployments require a database-backed compare-and-set/lease.
 const queueLocks = new Set<string>();
+/** A forced retry may restart a draft that has been pending longer than this. */
+const STALE_PENDING_MS = 10 * 60_000;
 export async function queueEvaluationDraft(input: {
 	assignment: Assignment;
 	submissionId: string;
@@ -694,7 +696,12 @@ async function prepareEvaluationDraft(input: {
 		).items[0];
 
 		if (existing) {
-			if (existing.status === 'pending') {
+			// A pending row older than STALE_PENDING_MS whose run never finished
+			// (e.g. the server restarted mid-generation) may be re-run by an
+			// explicit lecturer retry; otherwise a pending row is left alone.
+			const pendingSince = Date.parse(String(existing.updated || existing.created || ''));
+			const stalePending = Number.isFinite(pendingSince) && Date.now() - pendingSince > STALE_PENDING_MS;
+			if (existing.status === 'pending' && !(input.force && stalePending)) {
 				return { queued: false, status: 'pending', reason: 'Draf evaluasi sedang disiapkan.' };
 			}
 			const generatedAt = existing.generatedAt ? Date.parse(existing.generatedAt) : NaN;

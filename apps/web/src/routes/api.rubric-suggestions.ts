@@ -15,17 +15,32 @@
  * editor and persists only the `suggestedCriteria` field (plus, on accept, a
  * new normal criterion inside `taskConfig`). This route never blocks saving
  * and never recomputes a grade. scoringVersion is not bumped.
+ *
+ * A task that is not saved yet (new task in the editor) sends `draft`
+ * ({ shape, instructions, taskConfig }) instead of `assignmentId`: the
+ * suggestions are derived from that unsaved data and returned only — nothing
+ * is persisted, and the editor stores them with the task when it is created.
+ *
+ * A scheduled-class written activity sends `scheduledActivity`
+ * ({ sessionId, activityId }): suggestions come from the activity's prompts,
+ * model answers and rubric guidance, only for the owner of the class, and are
+ * returned only — accepting them saves normal grading settings.
  */
 import { apiError, json, readJsonBody, withApi } from '@/lib/api.server';
 import { authenticateUser } from '@/lib/context-retrieval.server';
-import { buildRubricSuggestions } from '@/lib/rubric-suggestions.server';
+import { buildRubricSuggestions, buildScheduledRubricSuggestions } from '@/lib/rubric-suggestions.server';
+import { scheduledSuggestionInput } from '@/lib/scheduled-grading.server';
 import { mergeGenerated, parseSuggestedCriteria, type SuggestedCriteria } from '@/lib/rubric-suggestions';
 import { taskKindForShape } from '@/lib/task-types';
 import type { Assignment } from '@/lib/assignments';
 
 const SAFE_ID = /^[A-Za-z0-9]{5,40}$/;
 
-type Body = { assignmentId?: string };
+type Body = {
+	assignmentId?: string;
+	draft?: { shape?: unknown; instructions?: unknown; taskConfig?: unknown };
+	scheduledActivity?: { sessionId?: unknown; activityId?: unknown };
+};
 
 export const action = withApi(async ({ request }) => {
 	if (request.method !== 'POST') return apiError(405, 'Method not allowed');
@@ -45,6 +60,30 @@ export const action = withApi(async ({ request }) => {
 	}
 
 	const body = await readJsonBody<Body>(request);
+	if (!body.assignmentId && body.scheduledActivity && typeof body.scheduledActivity === 'object') {
+		const { sessionId, activityId } = body.scheduledActivity;
+		const source = await scheduledSuggestionInput(
+			user.id,
+			typeof sessionId === 'string' ? sessionId : '',
+			typeof activityId === 'string' ? activityId : '',
+		);
+		if ('error' in source) return apiError(source.error.status, source.error.message);
+		const generated = await buildScheduledRubricSuggestions(source.input);
+		return json({ suggestions: mergeGenerated(parseSuggestedCriteria(null), generated) });
+	}
+	if (!body.assignmentId && body.draft && typeof body.draft === 'object') {
+		const draft = {
+			shape: typeof body.draft.shape === 'string' ? body.draft.shape : '',
+			instructions: typeof body.draft.instructions === 'string' ? body.draft.instructions.slice(0, 5000) : '',
+			taskConfig: body.draft.taskConfig && typeof body.draft.taskConfig === 'object' ? body.draft.taskConfig : null,
+		} as Assignment;
+		const draftKind = taskKindForShape(draft.shape);
+		if (draftKind !== 'writing' && draftKind !== 'speaking') {
+			return apiError(422, 'Saran rubrik hanya tersedia untuk tugas Menulis atau Berbicara.');
+		}
+		const generated = await buildRubricSuggestions(draft);
+		return json({ suggestions: mergeGenerated(parseSuggestedCriteria(null), generated) });
+	}
 	const assignmentId = (body.assignmentId || '').trim();
 	if (!SAFE_ID.test(assignmentId)) {
 		return apiError(422, 'assignmentId wajib dan harus valid.');

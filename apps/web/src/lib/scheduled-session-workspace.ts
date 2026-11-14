@@ -11,7 +11,8 @@ export function assessmentStatus(assessment?:ScheduledAssessment):'unreviewed'|'
   if (assessment.published && assessment.published.publishedRevision === (assessment.revision || 0)-1) return 'published';
   return assessment.status==='reviewed'?'reviewed':'draft';
 }
-export const ASSESSMENT_LABELS = {unreviewed:'Belum ditinjau',draft:'Draf tersimpan',reviewed:'Siap diterbitkan',published:'Diterbitkan'};
+// Same words as Tugas and `WRITTEN_STATUS_LABELS` in scheduled-grading.ts.
+export const ASSESSMENT_LABELS = {unreviewed:'Perlu dinilai',draft:'Draf dosen',reviewed:'Siap diterbitkan',published:'Diterbitkan'};
 export type ResponseCard = {id:string;number:number;prompt:string;translation?:string;answer:string;options?:string[];expected?:string;correct?:boolean;modelAnswer?:string;rubric?:string};
 function keyMatch(key:any, answer:string):{expected?:string;correct?:boolean;modelAnswer?:string;rubric?:string} {
   if (!key) return {};

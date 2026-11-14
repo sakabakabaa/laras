@@ -183,3 +183,53 @@ export function canSuggestCriteria(args: {
 	if (args.criteriaCount > 0) return false;
 	return args.prompt.trim().length >= MIN_PROMPT_CHARS;
 }
+
+/**
+ * Accept every pending suggestion at once ("Terima semua"): returns the next
+ * state (pending emptied, labels remembered as accepted) and the accepted
+ * criteria in their suggested order, for the caller to add to the rubric.
+ */
+export function acceptAllSuggestions(state: SuggestedCriteria): {
+	state: SuggestedCriteria;
+	criteria: SuggestedCriterion[];
+} {
+	let next = state;
+	const criteria: SuggestedCriterion[] = [];
+	for (const pending of state.pending) {
+		const result = acceptSuggestion(next, pending.id);
+		next = result.state;
+		if (result.criterion) criteria.push(result.criterion);
+	}
+	return { state: next, criteria };
+}
+
+/**
+ * Returns a stored writing/speaking `taskConfig` with accepted suggestions
+ * appended to its rubric `criteria`. Every other stored field is kept exactly
+ * as it was; existing criteria are never changed or reordered.
+ */
+export function appendCriteriaToTaskConfig(
+	taskConfig: unknown,
+	accepted: SuggestedCriterion[],
+	makeId: () => string,
+): Record<string, unknown> {
+	let raw: unknown = taskConfig;
+	if (typeof raw === 'string') {
+		try {
+			raw = JSON.parse(raw);
+		} catch {
+			raw = null;
+		}
+	}
+	const base = raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...(raw as Record<string, unknown>) } : {};
+	const existing = Array.isArray(base.criteria) ? (base.criteria as unknown[]) : [];
+	const taken = new Set(
+		existing
+			.map((c) => (c && typeof c === 'object' ? String((c as { label?: unknown }).label || '').trim().toLowerCase() : ''))
+			.filter(Boolean),
+	);
+	const added = accepted
+		.filter((c) => !taken.has(c.label.trim().toLowerCase()))
+		.map((c) => ({ id: makeId(), label: c.label, weight: c.weight }));
+	return { ...base, criteria: [...existing, ...added] };
+}

@@ -118,8 +118,10 @@ describe('review layout removes duplicated controls and labels', () => {
 	it('still renders the grading controls a lecturer needs', () => {
 		const html = render();
 		expect(html).toContain('Simpan draf');
-		expect(html).toContain('Ditinjau');
-		expect(html).toContain('Pengaturan penilaian kegiatan');
+		// The scheduled review reuses the Tugas GradingPanel: one primary action, no look-alike "Ditinjau" button.
+		expect(html).toContain('Simpan &amp; berikutnya');
+		expect(html).not.toContain('aria-label="Tandai penilaian sudah ditinjau"');
+		expect(html).toContain('Ubah pengaturan');
 		expect(html).toContain('My response');
 	});
 });

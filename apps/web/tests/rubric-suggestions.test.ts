@@ -1,6 +1,11 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { RubricSuggestionsPanel } from '@/components/app/task-builders/rubric-suggestions';
 import {
 	EMPTY_SUGGESTED_CRITERIA,
+	acceptAllSuggestions,
+	appendCriteriaToTaskConfig,
 	MAX_RUBRIC_SUGGESTIONS,
 	acceptSuggestion,
 	canSuggestCriteria,
@@ -213,5 +218,30 @@ describe('save independence — suggestions never become criteria until accepted
 		editable.writing.criteria = [{ id: 'c1', label: 'Kelancaran', weight: 2 }];
 		const { taskConfig } = splitTaskConfigForSave(editable);
 		expect((taskConfig as { criteria: { label: string }[] }).criteria[0].label).toBe('Kelancaran');
+	});
+});
+
+describe('accept all suggestions + saving into taskConfig', () => {
+	it('accepts every pending suggestion in order and remembers the labels', () => {
+		const { state: next, criteria } = acceptAllSuggestions(state([criterion('s1', 'Isi'), criterion('s2', 'Tata bahasa', 2)]));
+		expect(criteria.map((c) => c.label)).toEqual(['Isi', 'Tata bahasa']);
+		expect(next.pending).toEqual([]);
+		expect(next.accepted).toEqual(['Isi', 'Tata bahasa']);
+	});
+
+	it('appends accepted criteria while keeping every other stored field', () => {
+		let n = 0;
+		const config = { prompt: 'Tulis esai.', minWords: 100, criteria: [{ id: 'c0', label: 'Isi', weight: 1 }], extra: { keep: true } };
+		const next = appendCriteriaToTaskConfig(config, [criterion('s1', 'isi'), criterion('s2', 'Kosakata', 2)], () => `n${++n}`);
+		expect(next).toEqual({ ...config, criteria: [{ id: 'c0', label: 'Isi', weight: 1 }, { id: 'n1', label: 'Kosakata', weight: 2 }] });
+		expect(config.criteria).toHaveLength(1);
+		expect(appendCriteriaToTaskConfig('not json', [criterion('s1', 'Isi')], () => 'x')).toEqual({ criteria: [{ id: 'x', label: 'Isi', weight: 1 }] });
+	});
+
+	it('offers "Terima semua" in the suggestions panel', () => {
+		const props = { suggestions: state([criterion('s1', 'Isi')]), busy: false, error: '', onGenerate: () => {}, onAccept: () => {}, onDismiss: () => {} };
+		expect(renderToStaticMarkup(createElement(RubricSuggestionsPanel, { ...props, onAcceptAll: () => {} }))).toContain('Terima semua');
+		expect(renderToStaticMarkup(createElement(RubricSuggestionsPanel, props))).not.toContain('Terima semua');
+		expect(renderToStaticMarkup(createElement(RubricSuggestionsPanel, { ...props, suggestions: null, generateLabel: 'Sarankan rubrik' }))).toContain('Sarankan rubrik');
 	});
 });

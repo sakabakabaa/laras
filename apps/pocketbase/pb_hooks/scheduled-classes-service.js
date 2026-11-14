@@ -128,8 +128,11 @@ function gradingState(app, c, owner, user) {
     return assess.studentPublished({attempt:r.getString('attempt'),activity:r.getString('activity'),...published});
   });
   if (!owner) return {assessments:published};
+  // Lecturer-only AI drafts for written answers (written by the web app's AI route).
+  const aiDrafts = rows(app, 'scheduled_ai_drafts', 'class={:c}', {c:c.id}).map(r => ({attempt:r.getString('attempt'),activity:r.getString('activity'),status:r.getString('status'),attemptRevision:r.getInt('attemptRevision'),settingsRevision:r.getInt('settingsRevision'),draft:json(r,'draft'),error:r.getString('error'),updated:r.getString('updated')}));
   const settingsByActivity = Object.fromEntries(settings.map(r => [r.getString('activity'), r.getString('mode')]));
   return {
+    aiDrafts,
     gradingSettings: settings.map(r => ({id:r.id,activity:r.getString('activity'),revision:r.getInt('revision'),mode:r.getString('mode'),maxPoints:r.getFloat('maxPoints'),criteria:json(r,'criteria')||[]})),
     assessments: assessments.map(r => ({id:r.id,attempt:r.getString('attempt'),activity:r.getString('activity'),student:r.getString('student'),revision:r.getInt('revision'),attemptRevision:r.getInt('attemptRevision'),settingsRevision:r.getInt('settingsRevision'),status:r.getString('status'),points:settingsByActivity[r.getString('activity')] === 'ungraded' ? null : r.get('points'),criterionScores:json(r,'criterionScores')||{},answerOverrides:json(r,'answerOverrides')||{},feedback:r.getString('feedback'),...(json(r,'published')&&Object.keys(json(r,'published')).length?{published:json(r,'published')}:{})}))
   };
@@ -172,17 +175,84 @@ function view(app, c, ctx, user, now) {
       return {...meta, content: snapshot.content, url: snapshot.url, ...(snapshot.lesson?{lesson:snapshot.lesson}:{}), ...(worksheet ? {worksheet}:{}), sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
     }),
     attempts: safeAttempts,
-    ...(owner ? {gradingSettings:assess.gradingSettings,assessments:assess.assessments} : {assessments:assess.assessments}),
+    ...(owner ? {gradingSettings:assess.gradingSettings,assessments:assess.assessments,aiDrafts:assess.aiDrafts} : {assessments:assess.assessments}),
     report: owner ? rosterReport(app, c, plan, participants, attempts, currentPhase) : [],
     events: owner ? rows(app, 'scheduled_class_events', 'class={:c}', {c: c.id}, '-created').map(data).slice(0, 100) : [],
   };
+}
+const MAX_BATCH = 200;
+function errorMessage(error) { return String((error && error.message) || error || 'Gagal.').slice(0, 300); }
+function runBatch(items, apply) {
+  if (!Array.isArray(items) || !items.length || items.length > MAX_BATCH) bad('Pilih 1–' + MAX_BATCH + ' jawaban.');
+  const results = [], seen = {};
+  for (const item of items) {
+    const attemptId = item && typeof item.attemptId === 'string' ? item.attemptId : '';
+    if (!attemptId || seen[attemptId]) { results.push({attemptId, ok:false, error:'Jawaban tidak valid atau ganda.'}); continue; }
+    seen[attemptId] = true;
+    try { const outcome = apply(item); results.push({attemptId, ok:true, ...(outcome === 'unchanged' ? {unchanged:true} : {})}); }
+    catch (error) { results.push({attemptId, ok:false, error:errorMessage(error)}); }
+  }
+  return {ok:results.filter(r => r.ok).length, failed:results.filter(r => !r.ok).length, results};
+}
+// One auto-score approval; throws on any check that fails.
+function approveAutoScoreItem(app, c, user, now, body) {
+  const attempt = app.findRecordById('scheduled_activity_attempts', String(body.attemptId||''));
+  if (attempt.getString('class') !== c.id) throw new ForbiddenError('Jawaban bukan dari kelas ini.');
+  if (attempt.getString('status') === 'draft') bad('Jawaban belum dikumpulkan.');
+  if (!Number.isInteger(body.attemptRevision) || body.attemptRevision !== attempt.getInt('revision')) bad('Jawaban berubah. Muat ulang sebelum menyetujui.');
+  const activity = activities(app,c).find(item => item.id === attempt.getString('activity'));
+  if (!activity || activity.class !== c.id) throw new ForbiddenError('Kegiatan bukan dari kelas ini.');
+  if (!isAutoScoredActivity(activity)) bad('Persetujuan satu klik hanya tersedia untuk nilai otomatis dari kunci jawaban.');
+  const answers=json(attempt,'answers'), existing=rows(app,'scheduled_assessments','attempt={:a}',{a:attempt.id})[0], overrides=existing?.getInt('settingsRevision')===0?json(existing,'answerOverrides')||{}:{};
+  const calculated=autoScoreItems(activity,answers,overrides);
+  const baseline=autoScoreItems(activity,answers,{});
+  if (!calculated || !baseline || Math.abs(baseline.score-attempt.getFloat('score'))>0.01) bad('Nilai otomatis tidak tersedia atau sudah berubah.');
+  if (existing && existing.getInt('settingsRevision') !== 0) bad('Penilaian manual sudah dimulai untuk jawaban ini.');
+  const expectedAssessmentRevision=existing?.getInt('revision')||0;
+  if (!Number.isInteger(body.assessmentRevision)||body.assessmentRevision!==expectedAssessmentRevision) bad('Penilaian berubah. Muat ulang sebelum menyetujui.');
+  if (existing?.getString('status') === 'reviewed' && existing.getInt('attemptRevision') === attempt.getInt('revision')) return 'unchanged';
+  if (existing) {
+    existing.load({...data(existing),revision:expectedAssessmentRevision+1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'reviewed',points:calculated.score,answerOverrides:overrides});app.save(existing);
+  } else {
+    create(app,'scheduled_assessments',{class:c.id,activity:activity.id,attempt:attempt.id,student:attempt.getString('student'),revision:1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'reviewed',points:calculated.score,criterionScores:{},answerOverrides:{},feedback:'',published:{},publishedRevision:0});
+  }
+  event(app,c,user.id,'auto_score_approved',{attempt:attempt.id,activity:activity.id,score:calculated.score});
+  return 'approved';
+}
+// One written-grade publication; throws on any check that fails.
+function publishAssessmentItem(app, c, user, now, body) {
+  const assess = require(__hooks + '/scheduled-assessment.js');
+  const attempt = app.findRecordById('scheduled_activity_attempts',String(body.attemptId||''));
+  if (attempt.getString('class') !== c.id) throw new ForbiddenError('Jawaban bukan dari kelas ini.');
+  const activity = app.findRecordById('scheduled_class_activities',attempt.getString('activity'));
+  if (attempt.getString('activity') !== activity.id) throw new ForbiddenError('Kegiatan bukan dari jawaban ini.');
+  if (activity.getString('class') !== c.id) throw new ForbiddenError('Kegiatan bukan dari kelas ini.');
+  assess.assertGradable(activity.getString('kind'));
+  if (attempt.getString('status') === 'draft') bad('Jawaban belum dikumpulkan.');
+  const setting = rows(app,'scheduled_grading_settings','class={:c} && activity={:a}',{c:c.id,a:activity.id})[0];
+  if (!setting) bad('Pengaturan penilaian tidak tersedia.');
+  const record = rows(app,'scheduled_assessments','attempt={:a}',{a:attempt.id})[0];
+  if (!record || record.getString('status') !== 'reviewed') bad('Tinjau penilaian sebelum menerbitkan.');
+  const alreadyPublishedRevision = record.getInt('publishedRevision');
+  const isUnchangedPublishRetry = body.baseRevision === alreadyPublishedRevision && record.getInt('revision') === alreadyPublishedRevision + 1;
+  if (!Number.isInteger(body.baseRevision) || (body.baseRevision !== record.getInt('revision') && !isUnchangedPublishRetry)) bad('Penilaian berubah. Muat ulang sebelum menerbitkan.');
+  if (body.attemptRevision !== attempt.getInt('revision') || body.settingsRevision !== setting.getInt('revision') || record.getInt('attemptRevision') !== attempt.getInt('revision') || record.getInt('settingsRevision') !== setting.getInt('revision')) bad('Jawaban atau pengaturan berubah. Muat ulang sebelum menerbitkan.');
+  const grade = assess.validateGrade({mode:setting.getString('mode'),maxPoints:setting.getFloat('maxPoints'),criteria:json(setting,'criteria')||[]},json(record,'criterionScores'),record.get('points'));
+  if (record.getString('feedback').length > 10000) bad('Umpan balik tidak valid.');
+  const current = json(record,'published');
+  if (current && current.publishedRevision === record.getInt('revision') - 1) return 'unchanged';
+  const publishedRevision = record.getInt('revision');
+  const snapshot={points:grade.points,maxPoints:setting.getFloat('maxPoints'),feedback:record.getString('feedback'),publishedAt:new Date(now).toISOString(),publishedRevision};
+  record.set('published',snapshot);record.set('publishedRevision',publishedRevision);record.set('revision',publishedRevision+1);app.save(record);
+  event(app,c,user.id,'assessment_published',{attempt:attempt.id,status:record.getString('status')});
+  return 'published';
 }
 function handle(app, body, user, now) {
   const ctx = context(app, body.sessionId, user);
   let c = rows(app, 'scheduled_classes', 'session={:s}', {s: ctx.session.id})[0];
   const action = body.action;
-  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore', 'overrideAutoAnswer'].includes(action)) bad('Aksi tidak dikenal.');
-  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore', 'overrideAutoAnswer'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
+  if (!['state', 'amendContent', 'savePlan', 'schedule', 'cancel', 'join', 'heartbeat', 'saveAnswer', 'submit', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore', 'overrideAutoAnswer', 'approveAutoScores', 'publishAssessments'].includes(action)) bad('Aksi tidak dikenal.');
+  if (['amendContent', 'savePlan', 'schedule', 'cancel', 'release', 'review', 'saveGradingSettings', 'saveAssessment', 'publishAssessment', 'approveAutoScore', 'overrideAutoAnswer', 'approveAutoScores', 'publishAssessments'].includes(action) && !ctx.owner) throw new ForbiddenError('Hanya dosen pemilik yang dapat mengubah kelas.');
   if(action==='amendContent'){
     if(!c||c.getString('status')!=='scheduled'||now>=Date.parse(c.getString('startsAt')))bad('Materi hanya dapat direvisi sebelum kelas terjadwal dimulai.');
     if(body.baseRevision!==c.getInt('revision'))bad('Draf berubah. Muat ulang sebelum menyimpan.');
@@ -230,27 +300,15 @@ function handle(app, body, user, now) {
   if (action === 'approveAutoScore') {
     const phaseNow = rules.phase(data(c), now);
     if (!['closed','reviewed'].includes(phaseNow)) bad('Persetujuan nilai tersedia setelah kelas selesai.');
-    const attempt = app.findRecordById('scheduled_activity_attempts', String(body.attemptId||''));
-    if (attempt.getString('class') !== c.id) throw new ForbiddenError('Jawaban bukan dari kelas ini.');
-    if (attempt.getString('status') === 'draft') bad('Jawaban belum dikumpulkan.');
-    if (!Number.isInteger(body.attemptRevision) || body.attemptRevision !== attempt.getInt('revision')) bad('Jawaban berubah. Muat ulang sebelum menyetujui.');
-    const activity = activities(app,c).find(item => item.id === attempt.getString('activity'));
-    if (!activity || activity.class !== c.id) throw new ForbiddenError('Kegiatan bukan dari kelas ini.');
-    if (!isAutoScoredActivity(activity)) bad('Persetujuan satu klik hanya tersedia untuk nilai otomatis dari kunci jawaban.');
-    const answers=json(attempt,'answers'), existing=rows(app,'scheduled_assessments','attempt={:a}',{a:attempt.id})[0], overrides=existing?.getInt('settingsRevision')===0?json(existing,'answerOverrides')||{}:{};
-    const calculated=autoScoreItems(activity,answers,overrides);
-    const baseline=autoScoreItems(activity,answers,{});
-    if (!calculated || !baseline || Math.abs(baseline.score-attempt.getFloat('score'))>0.01) bad('Nilai otomatis tidak tersedia atau sudah berubah.');
-    if (existing && existing.getInt('settingsRevision') !== 0) bad('Penilaian manual sudah dimulai untuk jawaban ini.');
-    const expectedAssessmentRevision=existing?.getInt('revision')||0;
-    if (!Number.isInteger(body.assessmentRevision)||body.assessmentRevision!==expectedAssessmentRevision) bad('Penilaian berubah. Muat ulang sebelum menyetujui.');
-    if (existing?.getString('status') === 'reviewed' && existing.getInt('attemptRevision') === attempt.getInt('revision')) return view(app,c,ctx,user,now);
-    if (existing) {
-      existing.load({...data(existing),revision:expectedAssessmentRevision+1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'reviewed',points:calculated.score,answerOverrides:overrides});app.save(existing);
-    } else {
-      create(app,'scheduled_assessments',{class:c.id,activity:activity.id,attempt:attempt.id,student:attempt.getString('student'),revision:1,attemptRevision:attempt.getInt('revision'),settingsRevision:0,status:'reviewed',points:calculated.score,criterionScores:{},answerOverrides:{},feedback:'',published:{},publishedRevision:0});
-    }
-    event(app,c,user.id,'auto_score_approved',{attempt:attempt.id,activity:activity.id,score:calculated.score});
+    approveAutoScoreItem(app, c, user, now, body);
+  }
+  // Bulk "Setujui semua nilai otomatis": every item goes through the same
+  // checks as the single action; one failure never blocks the others.
+  if (action === 'approveAutoScores') {
+    const phaseNow = rules.phase(data(c), now);
+    if (!['closed','reviewed'].includes(phaseNow)) bad('Persetujuan nilai tersedia setelah kelas selesai.');
+    const batch = runBatch(body.items, item => approveAutoScoreItem(app, c, user, now, item));
+    return {...view(app, c, ctx, user, now), batch};
   }
   if (action === 'overrideAutoAnswer') {
     const phaseNow=rules.phase(data(c),now);
@@ -312,15 +370,7 @@ function handle(app, body, user, now) {
       if (!setting) bad('Pengaturan penilaian tidak tersedia.');
       let record = rows(app,'scheduled_assessments','attempt={:a}',{a:attempt.id})[0];
       if (action === 'publishAssessment') {
-        if (!record || record.getString('status') !== 'reviewed') bad('Tinjau penilaian sebelum menerbitkan.');
-        const alreadyPublishedRevision = record.getInt('publishedRevision');
-        const isUnchangedPublishRetry = body.baseRevision === alreadyPublishedRevision && record.getInt('revision') === alreadyPublishedRevision + 1;
-        if (!Number.isInteger(body.baseRevision) || (body.baseRevision !== record.getInt('revision') && !isUnchangedPublishRetry)) bad('Penilaian berubah. Muat ulang sebelum menerbitkan.');
-        if (body.attemptRevision !== attempt.getInt('revision') || body.settingsRevision !== setting.getInt('revision') || record.getInt('attemptRevision') !== attempt.getInt('revision') || record.getInt('settingsRevision') !== setting.getInt('revision')) bad('Jawaban atau pengaturan berubah. Muat ulang sebelum menerbitkan.');
-        const grade = assess.validateGrade({mode:setting.getString('mode'),maxPoints:setting.getFloat('maxPoints'),criteria:json(setting,'criteria')||[]},json(record,'criterionScores'),record.get('points'));
-        if (record.getString('feedback').length > 10000) bad('Umpan balik tidak valid.');
-        const current = json(record,'published');
-        if (!current || current.publishedRevision !== record.getInt('revision') - 1) {const publishedRevision = record.getInt('revision'); const snapshot={points:grade.points,maxPoints:setting.getFloat('maxPoints'),feedback:record.getString('feedback'),publishedAt:new Date(now).toISOString(),publishedRevision};record.set('published',snapshot);record.set('publishedRevision',publishedRevision);record.set('revision',publishedRevision+1);app.save(record);event(app,c,user.id,'assessment_published',{attempt:attempt.id,status:record.getString('status')});}
+        publishAssessmentItem(app, c, user, now, body);
       } else {
         if (!Number.isInteger(body.baseRevision)||body.baseRevision!==(record?.getInt('revision')||0)) bad('Penilaian berubah. Muat ulang sebelum menyimpan.');
         if (body.attemptRevision!==attempt.getInt('revision')||body.settingsRevision!==setting.getInt('revision')) bad('Jawaban atau pengaturan berubah. Muat ulang sebelum menyimpan.');
@@ -332,6 +382,13 @@ function handle(app, body, user, now) {
         event(app,c,user.id,'assessment_saved',{attempt:attempt.id,status:body.status});
       }
     }
+  }
+  // Bulk "Terbitkan yang siap": the single-publish rules apply per item.
+  if (action === 'publishAssessments') {
+    const phaseNow = rules.phase(data(c), now);
+    if (!['closed','reviewed'].includes(phaseNow)) bad('Penilaian tersedia setelah kelas selesai.');
+    const batch = runBatch(body.items, item => publishAssessmentItem(app, c, user, now, item));
+    return {...view(app, c, ctx, user, now), batch};
   }
   const phase = rules.phase(data(c), now);
   if (action === 'cancel') {

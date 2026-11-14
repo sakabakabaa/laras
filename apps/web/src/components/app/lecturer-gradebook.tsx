@@ -36,6 +36,7 @@ import { activityTypeOf, type Assignment, type AssignmentSubmission } from '@/li
 import {
 	calculateFinalGrade,
 	chapterCounts,
+	coursePublishBlocker,
 	componentScore,
 	isChapterComponent,
 	LETTER_GRADES,
@@ -153,6 +154,8 @@ export function LecturerGradebook({ course }: { course: Course }) {
 	const [addOpen, setAddOpen] = useState<'assignment' | 'manual' | null>(null);
 	const [editingComponent, setEditingComponent] = useState<GradeComponent | 'new' | null>(null);
 	const [publishOpen, setPublishOpen] = useState(false);
+	// Visible failure message for gradebook actions (instead of a browser alert).
+	const [actionError, setActionError] = useState('');
 
 	// ── Data loads ────────────────────────────────────────────────────────
 	const componentsQuery = useCachedQuery<GradeComponent[]>(
@@ -235,7 +238,7 @@ export function LecturerGradebook({ course }: { course: Course }) {
         try {
             await pb.collection('assignments').update(assignment.id, patch);
             invalidate('assignments:formal-gradebook=' + courseId); assignmentsQuery.reload(); submissionsQuery.reload();
-        } catch { window.alert('Pemetaan belum tersimpan. Coba lagi.'); }
+        } catch { setActionError('Pemetaan belum tersimpan. Coba lagi.'); }
     };
     const syncRps = async () => {
         if (!(await confirmDialog({ title: 'Sinkronkan komponen ke RPS?', message: 'Bobot Kehadiran, Tugas, UTS, UAS dan bonus Keaktivan mengikuti Penilaian. Komponen RPS lainnya tetap disimpan dengan bobot 0 agar tidak dihitung ganda.', confirmLabel: 'Sinkronkan' }))) return;
@@ -251,7 +254,7 @@ export function LecturerGradebook({ course }: { course: Course }) {
             }
             for(const old of existing) if(!used.has(old.id)) await pb.collection('assessments').update(old.id,{weight:0,componentType:''});
             invalidate('assessments:course='+courseId);
-        } catch {window.alert('Sinkronisasi belum selesai. Coba lagi.');}
+        } catch { setActionError('Sinkronisasi belum selesai. Coba lagi.'); }
     };
     const adoptDefaults = async () => {
         if (!(await confirmDialog({ title: 'Gunakan komponen standar?', message: 'Komponen lama akan diarsipkan dan tidak dihitung ganda. Nilai tugas tetap tersimpan. Bobot awal 10/30/25/35 dan bonus maksimal +5. Periksa pemetaan UTS/UAS setelahnya.', confirmLabel: 'Terapkan' }))) return;
@@ -266,7 +269,7 @@ export function LecturerGradebook({ course }: { course: Course }) {
                     await pb.collection('grade_components').create({ owner: me, course: courseId, sourceType, name, weight, kind: 'manual', maxScore: sourceType === 'bonus' ? 5 : 100, bonusMax: sourceType === 'bonus' ? 5 : 0, attendanceLateCredit: 1, attendanceExcusedCredit: 0, status: 'active', order });
             }
             componentsQuery.reload(); assignmentsQuery.reload();
-        } catch { window.alert('Pengaturan belum selesai tersimpan. Muat ulang dan coba lagi.'); }
+        } catch { setActionError('Pengaturan belum selesai tersimpan. Muat ulang dan coba lagi.'); }
     };
 
     // ── Derived maps ──────────────────────────────────────────────────────
@@ -511,21 +514,18 @@ export function LecturerGradebook({ course }: { course: Course }) {
 	);
 
 	// ── Publish workflow ─────────────────────────────────────────────────
-	const incompleteCount = useMemo(
-		() =>
-			students.filter((s) => {
-				const f = finals.get(s.id);
-				return f && f.countingCount > 0 && f.gradedCount < f.countingCount;
-			}).length,
-		[students, finals],
+	// One rule for the bar, the dialog, and the action: publishing is blocked
+	// (button disabled with the reason shown) until the weights total 100% and
+	// every student has every weighted component graded.
+	const publishBlocker = useMemo(
+		() => coursePublishBlocker(components, students.map((s) => finals.get(s.id))),
+		[components, students, finals],
 	);
+	const incompleteCount = publishBlocker.incompleteCount;
 
     const publish = useCallback(async () => {
-        if (totalWeight(components) !== 100) { window.alert('Total bobot komponen utama harus 100%.'); return; }
-        if ([...finals.values()].some(f => f.countingCount === 0 || f.gradedCount < f.countingCount)) {
-            window.alert('Lengkapi semua komponen nilai berbobot untuk setiap mahasiswa sebelum menerbitkan nilai akhir.');
-            return;
-        }
+		if (publishBlocker.reason) return;
+		setActionError('');
 		try {
 			const existing = publicationQuery.data;
 			const payload = {
@@ -544,8 +544,10 @@ export function LecturerGradebook({ course }: { course: Course }) {
 			setPublishOpen(false);
 		} catch (err) {
 			console.error(err);
+			setPublishOpen(false);
+			setActionError(t('gb.pubBar.error'));
 		}
-	}, [publicationQuery.data, me, courseId, finals, components]);
+	}, [publicationQuery.data, me, courseId, publishBlocker.reason, t]);
 
 	const unpublish = useCallback(async () => {
 		if (!publicationQuery.data) return;
@@ -604,7 +606,7 @@ export function LecturerGradebook({ course }: { course: Course }) {
 
 	return (
 		<div className="gb-wrap">
-			{gradeProposal && <AppModal open title="Review grade changes" onClose={closeGradeReview} className="gb-review-modal">
+			{gradeProposal && <AppModal open title={t('gb.review.title')} onClose={closeGradeReview} className="gb-review-modal">
 				<GradeChangeReview proposal={gradeProposal} students={students} components={allComponents}
 					courseLabel={`${course.code || ''} ${course.title} / ${sections.find(section => section.id === classFilter)?.name || 'All sections'}`}
 					language={languageOf(pb.authStore.record)} onClose={closeGradeReview} onApprove={approveManualChanges}
@@ -614,6 +616,14 @@ export function LecturerGradebook({ course }: { course: Course }) {
 					}}
 					onRefresh={async () => updateGradeProposal(await gradeCommandRequest(pb.authStore.token, { action: 'status', proposalId: gradeProposal.id }))} />
 			</AppModal>}
+			{actionError && (
+				<div className="ld-alert" role="alert">
+					{actionError}{' '}
+					<button type="button" onClick={() => setActionError('')}>
+						{t('gb.drawer.close')}
+					</button>
+				</div>
+			)}
 			{loadError && (
 				<div className="ld-alert" role="alert">
 					{loadError}{' '}
@@ -752,10 +762,15 @@ export function LecturerGradebook({ course }: { course: Course }) {
 							<CheckCircle2 size={16} />
 							<span>{t('gb.pubBar.published')}</span>
 						</>
-					) : incompleteCount > 0 ? (
+					) : publishBlocker.reason === 'weights' ? (
 						<>
 							<AlertTriangle size={16} />
-							<span>{t('gb.pubBar.incomplete', { count: String(incompleteCount) })}</span>
+							<span id="gb-publish-blocker">{t('gb.pubBar.weights')}</span>
+						</>
+					) : publishBlocker.reason === 'incomplete' ? (
+						<>
+							<AlertTriangle size={16} />
+							<span id="gb-publish-blocker">{t('gb.pubBar.incomplete', { count: String(incompleteCount) })}</span>
 						</>
 					) : students.length > 0 ? (
 						<>
@@ -775,7 +790,8 @@ export function LecturerGradebook({ course }: { course: Course }) {
 						type="button"
 						className="ld-btn-primary"
 						onClick={() => setPublishOpen(true)}
-						disabled={students.length === 0}
+						disabled={Boolean(publishBlocker.reason)}
+						aria-describedby={publishBlocker.reason === 'weights' || publishBlocker.reason === 'incomplete' ? 'gb-publish-blocker' : undefined}
 					>
 						<CheckCircle2 size={16} /> {t('gb.pubBar.publish')}
 					</button>
@@ -2067,7 +2083,7 @@ function PublishDialog({
 					<button type="button" className="ld-btn-quiet" onClick={onClose}>
 						{t('gb.pubDialog.review')}
 					</button>
-					<button type="button" className="ld-btn-primary" onClick={onConfirm}>
+					<button type="button" className="ld-btn-primary" onClick={onConfirm} disabled={incompleteCount > 0}>
 						<CheckCircle2 size={16} /> {t('gb.pubDialog.confirm')}
 					</button>
 				</div>

@@ -201,8 +201,16 @@ export async function draftLiveAnswerReview(
 ): Promise<{ draft: LiveDraft } | { error: LiveDraftFailure }> {
 	const authorized = await authorizeLiveSession(userId, input.sessionId);
 	if ('error' in authorized) return authorized;
+	return generateLiveDraft(input, authorized.courseCode);
+}
+
+/** Runs the model for an already-authorized request. Nothing is stored here. */
+export async function generateLiveDraft(
+	input: LiveDraftInput,
+	courseCode: string,
+): Promise<{ draft: LiveDraft } | { error: LiveDraftFailure }> {
 	const lessonContext = await lessonContextOf({ session: input.sessionId, subCpmk: '' });
-	const levelGuide = cefrLevelGuide(extractCefrLevel(authorized.courseCode));
+	const levelGuide = cefrLevelGuide(extractCefrLevel(courseCode));
 	const prompt = buildLivePrompt(input, { levelGuide, lessonContext });
 	let raw = '';
 	try {

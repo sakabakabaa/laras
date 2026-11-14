@@ -90,3 +90,20 @@ describe('hasExtractionArtifacts', () => {
 		expect([hasExtractionArtifacts(dirty), hasExtractionArtifacts(dirty), hasExtractionArtifacts(dirty)]).toEqual([true, true, true]);
 	});
 });
+
+import { clipKeepLines } from '@/lib/ocr-clean';
+describe('flattened scans and line breaks', () => {
+	it('strips a page marker that earlier extraction left inline', () => {
+		expect(stripExtractionMarkers('[Halaman 1] Naya Ramasha 14.09.2026 Bandung')).toBe('Naya Ramasha 14.09.2026 Bandung');
+		expect(answerTextFromExtraction('[DOKUMEN PINDAI: a.pdf]\n[Halaman 1] Sie heißt Naya. Dipindai dengan CamScanner')).toBe('Sie heißt Naya.');
+	});
+	it('flags a flattened stored scan so it can be re-read', () => {
+		expect(hasExtractionArtifacts('[Halaman 1] Naya Ramasha 14.09.2026 Bandung')).toBe(true);
+	});
+	it('keeps the participant\'s line breaks and only tidies spacing', () => {
+		expect(clipKeepLines('Zeile  eins \n\n\n\nZeile\tzwei\r\nZeile drei', 500)).toBe('Zeile eins\n\nZeile zwei\nZeile drei');
+	});
+	it('bounds length', () => {
+		expect(clipKeepLines('a'.repeat(50), 10)).toBe(`${'a'.repeat(10)}…`);
+	});
+});

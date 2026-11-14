@@ -10,7 +10,8 @@
  */
 import { pocketbaseAdmin } from '@/lib/pocketbase-client.server';
 import { generateLiveDraft, parseLiveDraftInput, type LiveDraft, type LiveDraftFailure } from '@/lib/live-answer-review.server';
-import { referenceItemsOf, writtenItemsOf, type ScheduledAiDraftRecord } from '@/lib/scheduled-grading';
+import { referenceItemsOf, writtenEntriesOf, writtenItemsOf, type ScheduledAiDraftRecord } from '@/lib/scheduled-grading';
+import { anchorDraftFindings } from '@/lib/scheduled-answer-marks';
 import type { ScheduledSuggestionInput } from '@/lib/rubric-suggestions.server';
 import logger from '@/lib/logger.server';
 
@@ -136,7 +137,7 @@ export async function draftScheduledAttempt(
 	const activity = await activityOf(cls, attempt.activity);
 	if ('error' in activity) return activity;
 	const snapshot = snapshotOf(activity);
-	const items = writtenItemsOf(snapshot, parse<Record<string, unknown>>(attempt.answers, {}));
+	const items = writtenEntriesOf(snapshot, parse<Record<string, unknown>>(attempt.answers, {}));
 	const settingsList = await pocketbaseAdmin.listRecords<SettingsRecord>('scheduled_grading_settings', {
 		filter: `class="${cls.id}" && activity="${activity.id}"`,
 		perPage: 1,
@@ -165,12 +166,19 @@ export async function draftScheduledAttempt(
 		}
 		return result;
 	}
+	// Offsets are verified against the answers exactly as the model saw them
+	// (trimmed/clipped, same order as `items`); map them back to each answer.
+	const anchored = anchorDraftFindings(
+		result.draft.findings.slice(0, 8),
+		parsed.input.items.map((item, index) => ({ id: items[index]?.id || '', answer: item.answer })),
+	);
 	const stored = {
 		summary: result.draft.summary,
 		feedback: result.draft.feedback,
 		suggestedScore: result.draft.suggestedScore,
 		criterionScores: result.draft.criterionScores,
-		findings: result.draft.findings.slice(0, 8).map((f) => ({ quote: f.quote, note: f.note, correction: f.correction })),
+		findings: anchored.findings,
+		answers: anchored.answers,
 		truncated: result.draft.truncated,
 	};
 	try {

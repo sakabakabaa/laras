@@ -13,6 +13,7 @@ import type {GradeDraftState} from './scheduled-review';
 import type {GradingSetting, ScheduledActivity, ScheduledAssessment, ScheduledAttempt, ScheduledClassState} from './scheduled-classes';
 import {assessmentStatus} from './scheduled-session-workspace';
 import {requiresManual} from './session-review-verdict';
+import type {ScheduledAiCheckedAnswer, ScheduledAiFinding} from './scheduled-answer-marks';
 
 /** Stored AI draft (collection `scheduled_ai_drafts`) as returned in lecturer state. */
 export type ScheduledAiDraftRecord = {
@@ -26,7 +27,10 @@ export type ScheduledAiDraftRecord = {
 		feedback?: string;
 		suggestedScore?: number | null;
 		criterionScores?: Record<string, number>;
-		findings?: {quote?: string; note?: string; correction?: string}[];
+		/** Older drafts carry only quote/note/correction; newer ones add severity and anchors. */
+		findings?: ScheduledAiFinding[];
+		/** Present on drafts with inline anchors: how much of each answer the AI read. */
+		answers?: ScheduledAiCheckedAnswer[];
 		truncated?: boolean;
 	};
 	error?: string;
@@ -359,15 +363,25 @@ export function autoAttention(entries: {activity: ScheduledActivity; attempt?: S
 
 /** Written answers of one attempt that an AI draft can review (server mirrors this). */
 export function writtenItemsOf(
-	snapshot: {title?: string; content?: string; worksheet?: {items?: {id: string; prompt?: string}[]; answerKey?: {items?: Record<string, {mode?: string; modelAnswer?: string; rubric?: string}>}}},
+	snapshot: WrittenSnapshot,
 	answers: Record<string, unknown> | null | undefined,
 ): {prompt: string; answer: string; modelAnswer: string; rubric: string}[] {
+	return writtenEntriesOf(snapshot, answers).map(({prompt, answer, modelAnswer, rubric}) => ({prompt, answer, modelAnswer, rubric}));
+}
+
+type WrittenSnapshot = {title?: string; content?: string; worksheet?: {items?: {id: string; prompt?: string}[]; answerKey?: {items?: Record<string, {mode?: string; modelAnswer?: string; rubric?: string}>}}};
+
+/** {@link writtenItemsOf} plus the answer card id (worksheet item id, or 'text'). */
+export function writtenEntriesOf(
+	snapshot: WrittenSnapshot,
+	answers: Record<string, unknown> | null | undefined,
+): {id: string; prompt: string; answer: string; modelAnswer: string; rubric: string}[] {
 	const items = snapshot.worksheet?.items || [];
 	const keys = snapshot.worksheet?.answerKey?.items || {};
 	const values = (answers || {}) as {responses?: Record<string, unknown>; text?: unknown};
 	if (!items.length) {
 		const text = typeof values.text === 'string' ? values.text.trim() : '';
-		return text ? [{prompt: snapshot.content || snapshot.title || '', answer: text, modelAnswer: '', rubric: ''}] : [];
+		return text ? [{id: 'text', prompt: snapshot.content || snapshot.title || '', answer: text, modelAnswer: '', rubric: ''}] : [];
 	}
 	return items
 		.filter((item) => keys[item.id]?.mode !== 'exact')
@@ -375,6 +389,7 @@ export function writtenItemsOf(
 			const key = keys[item.id];
 			const raw = values.responses?.[item.id];
 			return {
+				id: item.id,
 				prompt: item.prompt || '',
 				answer: typeof raw === 'string' ? raw : raw == null ? '' : String(raw),
 				modelAnswer: key?.mode === 'reference' ? key.modelAnswer || '' : '',

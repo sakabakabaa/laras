@@ -797,6 +797,23 @@ export function buildMarkedSegments(text: string, findings: EvalFinding[]): Mark
 	return segments;
 }
 
+/** The part of marked segments that covers [start, end) of the text (e.g. one line). */
+export function sliceSegments<T extends MarkedSegment>(segments: T[], start: number, end: number): T[] {
+	let pos = 0;
+	const parts: T[] = [];
+	for (const segment of segments) {
+		const segStart = pos;
+		const segEnd = pos + segment.text.length;
+		pos = segEnd;
+		const from = Math.max(segStart, start);
+		const to = Math.min(segEnd, end);
+		if (to > from) {
+			parts.push({ ...segment, text: segment.text.slice(from - segStart, to - segStart) });
+		}
+	}
+	return parts;
+}
+
 /**
  * Fire-and-forget request for an AI evaluation draft right after a successful
  * final submission (enrolled channel). The submission is already stored — a

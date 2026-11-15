@@ -30,6 +30,13 @@ For each evaluation, the service collects:
 1. **Student evidence** — the submitted text, images, extracted PDF text, or audio transcription (see [Submissions and evidence](/docs/how-it-works/submissions-and-evidence)).
 2. **The validated lecturer rubric** — the definition of the assessment task. Suggestions are not enough; the rubric must be validated.
 3. **Grounding material** — excerpts from the file library, but **only** sections a lecturer has reviewed and marked suitable, each anchored to an exact quotation from the current file version (see [Grounding and evidence](/docs/how-it-works/ai-feedback/grounding-and-evidence)).
+4. **Lesson context** — the assignment's linked class session (week, topic, learning indicator, teaching material) and its Sub-CPMK/CPMK outcomes: what the course actually taught.
+
+The two context inputs have strictly separate jobs — and one thing neither ever does:
+
+- **Lesson context** informs *content-fit* judgment: whether the answer matches what was taught, in the expected vocabulary and structure. It is never a source of language rules.
+- **Approved sources** provide *citable evidence*: a finding may reference them only via a verified quotation that genuinely supports the explanation.
+- **Neither ever feeds the score.** Scoring happens from the student's text and the kept findings only.
 
 Anything the student wrote is treated as *evidence to inspect*, never as instructions. Assignment requirements come only from the lecturer-side configuration.
 

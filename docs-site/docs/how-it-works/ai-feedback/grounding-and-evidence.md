@@ -54,6 +54,19 @@ The evaluation pipeline is versioned so results remain comparable:
 
 Prompt versions are recorded in every draft's snapshot. Changing a prompt does not retroactively change old drafts.
 
+## Lesson context vs. approved sources
+
+The evaluation prompt carries two distinct context inputs, and their roles are deliberately separated:
+
+| | Lesson context | Approved sources |
+|---|---|---|
+| Comes from | The linked class session (topic, learning indicator, teaching material) and Sub-CPMK/CPMK outcomes | File-library sections marked suitable, each anchored to an exact quotation |
+| Prompt label | `KONTEKS PEMBELAJARAN` | `MATERI KONTEKS YANG DISETUJUI DOSEN` |
+| Role | Judge *content fit* — whether the answer matches what was taught, in expected vocabulary and structure | Citable *evidence* for content judgments |
+| Limit | Never used as a language rule | A finding may cite a source only by pointing at a verified quotation that actually supports the explanation; a section label or page number alone is not evidence |
+
+Neither input feeds the score: pass 2 scores the rubric **only** from the student's text and the findings it kept. If no approved material qualifies, the prompt states explicitly that the model must not invent any, and the evaluation still drafts from the student's work, assignment, and rubric.
+
 ## What grounding does not claim
 
 Grounding makes feedback *traceable*, not automatically *correct*. Structured parsing and validation constrain output shape; they do not guarantee pedagogical soundness. That is why lecturer review remains the final gate — see [Human review](/docs/how-it-works/ai-feedback/human-review).

@@ -54,6 +54,19 @@ Alur evaluasi diverisi (per versi) agar hasil dapat dibandingkan:
 
 Versi prompt terekam dalam rekam jejak setiap draf. Mengubah prompt tidak mengubah draf lama secara surut.
 
+## Konteks pembelajaran vs. bahan yang disetujui
+
+Prompt evaluasi membawa dua masukan konteks yang berbeda, dan perannya sengaja dipisahkan:
+
+| | Konteks pembelajaran | Bahan yang disetujui dosen |
+|---|---|---|
+| Berasal dari | Pertemuan terkait (topik, indikator capaian, materi ajar) beserta capaian Sub-CPMK/CPMK | Bagian perpustakaan berkas yang ditandai sesuai, masing-masing dikaitkan kutipan persis |
+| Label dalam prompt | `KONTEKS PEMBELAJARAN` | `MATERI KONTEKS YANG DISETUJUI DOSEN` |
+| Peran | Menilai *kesesuaian isi* — apakah jawaban sesuai apa yang diajarkan, dalam kosakata dan struktur yang diharapkan | *Bukti* yang dapat dikutip untuk penilaian isi |
+| Batasan | Tidak pernah dipakai sebagai aturan bahasa | Temuan hanya boleh mengutip bahan dengan menunjuk kutipan terverifikasi yang benar-benar mendukung penjelasan; label bagian atau nomor halaman saja bukan bukti |
+
+Tidak ada satu pun yang memberi skor: tahap 2 menilai rubrik **hanya** dari teks mahasiswa dan temuan yang dipertahankannya. Bila tidak ada bahan disetujui yang memenuhi syarat, prompt menyatakan secara eksplisit bahwa model tidak boleh mengarangnya, dan evaluasi tetap menyusun draf dari karya mahasiswa, tugas, dan rubrik.
+
 ## Apa yang tidak diklaim oleh pengaitan
 
 Pengaitan membuat umpan balik *terlacak*, bukan otomatis *benar*. Parsing terstruktur dan validasi membatasi bentuk keluaran; keduanya tidak menjamin kebenaran pedagogis. Karena itulah peninjauan dosen tetap menjadi gerbang akhir — lihat [Peninjauan manusia](/docs/id/how-it-works/ai-feedback/human-review).

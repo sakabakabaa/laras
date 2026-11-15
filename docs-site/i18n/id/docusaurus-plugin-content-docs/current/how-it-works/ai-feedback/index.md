@@ -30,6 +30,13 @@ Untuk setiap evaluasi, layanannya mengumpulkan:
 1. **Bukti mahasiswa** — teks kiriman, gambar, teks hasil ekstraksi PDF, atau transkripsi audio (lihat [Kiriman dan bukti](/docs/id/how-it-works/submissions-and-evidence)).
 2. **Rubrik dosen yang tervalidasi** — definisi soal penilaian. Sekadar usulan tidak cukup; rubrik harus tervalidasi.
 3. **Bahan dasar (grounding)** — kutipan dari perpustakaan berkas, tetapi **hanya** bagian yang telah dosen tinjau dan tandai sesuai, masing-masing dikaitkan pada kutipan persis dari versi berkas yang aktif (lihat [Bukti dan pengaitan](/docs/id/how-it-works/ai-feedback/grounding-and-evidence)).
+4. **Konteks pembelajaran** — pertemuan yang terkait dengan tugas (minggu, topik, indikator capaian, materi yang diajarkan) beserta Sub-CPMK/CPMK-nya: apa yang benar-benar diajarkan.
+
+Kedua masukan konteks memiliki tugas yang terpisah tegas — dan satu hal yang tidak pernah mereka lakukan:
+
+- **Konteks pembelajaran** memandu penilaian *kesesuaian isi*: apakah jawaban sesuai apa yang diajarkan, dengan kosakata dan struktur yang diharapkan. Ia tidak pernah menjadi sumber aturan bahasa.
+- **Bahan yang disetujui dosen** menyediakan *bukti yang dapat dikutip*: temuan hanya boleh merujuknya lewat kutipan terverifikasi yang benar-benar mendukung penjelasan.
+- **Tidak ada yang pernah memberi skor.** Penilaian dihitung hanya dari teks mahasiswa dan temuan yang dipertahankan.
 
 Apa pun yang ditulis mahasiswa diperlakukan sebagai *bukti untuk diperiksa*, bukan sebagai instruksi. Persyaratan tugas hanya berasal dari konfigurasi di sisi dosen.
 

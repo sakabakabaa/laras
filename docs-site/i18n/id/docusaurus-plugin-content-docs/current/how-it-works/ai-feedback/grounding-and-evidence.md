@@ -16,6 +16,24 @@ Model AI dapat menghasilkan umpan balik yang terdengar masuk akal tetapi salah. 
 - Materi konteks harus berasal dari **bagian yang telah ditinjau dosen**. Sekadar label draf bukanlah gerbang persetujuan; status bagian diperiksa pada saat pengambilan.
 - Semua yang dipakai terekam dalam **rekam jejak evaluasi**, sehingga setiap hasil dapat dilacak ke masukannya.
 
+## Rantai persetujuan dari awal sampai akhir
+
+```mermaid
+flowchart TD
+  UP["Dosen mengunggah bahan<br/>ke perpustakaan berkas"] --> EXT["Server mengekstraksi teks<br/>(berkas diversi)"]
+  EXT --> MARK["Dosen menandai bagian sesuai<br/>dan menyimpan kutipan persis<br/>(Kutipan sumber untuk evaluasi AI)"]
+  MARK --> STANDBY["Disetujui dan siap"]
+  REQ["Evaluasi AI diminta"] --> RET["retrieveContextBundle<br/>(requirePassages: true)"]
+  RET --> C1{"Ada bagian yang ditandai<br/>sesuai?"}
+  C1 -- "tidak" --> INS["Dicatat konteks hilang:<br/>evaluasi tetap menyusun draf dari karya + rubrik"]
+  C1 -- "ya" --> C2{"Versi bagian cocok dengan<br/>versi berkas aktif?"}
+  C2 -- "tidak" --> DROP["Bagian dibuang<br/>(tanda versi lama tidak dipercaya)"]
+  C2 -- "ya" --> C3{"Kutipan muncul tepat satu kali<br/>dalam ekstraksi saat ini?"}
+  C3 -- "tidak" --> DROP
+  C3 -- "ya" --> BOUND["Terapkan batas:<br/>2.000 karakter/bagian, 8.000/berkas, 20.000 total"]
+  BOUND --> PROMPT["Kutipan diteruskan dengan id bagian + offset<br/>hanya ini yang boleh dikutip temuan"]
+  PROMPT --> AUDIT["Pengambilan dicatat untuk audit<br/>(context_retrievals)"]
+
 ## Pengambilan kutipan persis
 
 Untuk evaluasi formal, pengambilan materi mensyaratkan **kutipan persis** (`requirePassages: true`). Alurnya:

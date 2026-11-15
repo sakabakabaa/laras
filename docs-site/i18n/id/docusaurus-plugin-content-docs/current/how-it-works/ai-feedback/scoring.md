@@ -10,6 +10,18 @@ Evaluasi AI menghasilkan **usulan skor** — bukan nilai final. Halaman ini menj
 
 ## Dari rubrik ke usulan nilai
 
+```mermaid
+flowchart TD
+  P1["Tahap 1: hingga 25 kandidat temuan"] --> P2["Tahap 2: pertahankan atau tolak tiap kandidat"]
+  P2 --> KF["Temuan yang dipertahankan"]
+  KF --> RB["rubricBreakdown per kriteria (0–100)<br/>hanya dari temuan yang dipertahankan"]
+  RB --> WM["recommendedScore = rata-rata tertimbang<br/>dihitung ulang oleh server"]
+  MT["Total skor milik model"] -.->|"hanya audit"| SNAP["Rekam jejak generasi"]
+  WM --> DRAFT["Draf AI<br/>(tanpa skor bila rubrik tak berbobot atau teks sumber hilang)"]
+  LEC["Peninjauan + penyesuaian dosen"] --> PUB["finalScore yang diterbitkan"]
+  DRAFT --> GOLD["Perangkat kualitas:<br/>presisi / recall / MAE vs kiriman emas dosen"]
+  PUB --> GOLD
+
 1. **Rubrik tervalidasi** milik tugas menentukan kriteria dan bobotnya.
 2. Pada tahap 2 evaluasi, model memberi umpan balik dan skor per kriteria — tetapi hanya dari **temuan yang dipertahankan** (lihat [Bagaimana umpan balik AI diberikan](/docs/id/how-it-works/ai-feedback)).
 3. Platform **menghitung ulang** usulan nilai sebagai **rata-rata tertimbang dari rincian rubrik**.

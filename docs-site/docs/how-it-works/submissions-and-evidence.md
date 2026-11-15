@@ -18,6 +18,30 @@ Before AI feedback can be generated, a student's submission must become machine-
 | PDF (scanned) | Pages rendered to images server-side, then read with OCR |
 | Audio | Transcribed to text by a speech-to-text service (a self-hosted Whisper sidecar or a hosted provider) |
 
+## From submission to evidence
+
+```mermaid
+flowchart TD
+  SUB["Student submits"] --> T["Typed or pasted text"]
+  SUB --> I["Images (handwritten work)"]
+  SUB --> PDF["PDF file"]
+  SUB --> AU["Audio recording"]
+  T --> EV["Evidence text"]
+  I --> EVI["Multimodal input to the model"]
+  PDF --> EX{"Scanned pages?"}
+  EX -- "no" --> TXT["Server-side text extraction"]
+  EX -- "yes" --> OCR["Pages rendered to images, read with OCR"]
+  TXT --> EVP["Extracted text + parser status"]
+  OCR --> EVP
+  AU --> TR["Transcription: Whisper sidecar or hosted STT"]
+  TR --> EVT["Transcript"]
+  EVP --> GATE["EVIDENCE, NOT INSTRUCTIONS:<br/>content is inspected, never obeyed"]
+  EV --> GATE
+  EVI --> GATE
+  EVT --> GATE
+  GATE --> EVAL["Inputs to the AI evaluation<br/>(rubric + lesson context + approved sources added there)"]
+```
+
 The original file always remains available. Extracted text is kept with parser and status information, so a lecturer comparing "what the student actually wrote" against "what the machine read" can tell the two apart. When replacing or re-extracting a file, quotation anchoring for AI feedback is rechecked against the new version (see [Grounding](/docs/how-it-works/ai-feedback/grounding-and-evidence)).
 
 ## Evidence, not instructions

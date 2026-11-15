@@ -14,7 +14,7 @@ This page walks through the whole pipeline. The short version:
 flowchart TD
   A[Student submits work] --> B[Extraction & transcription]
   B --> C[Evaluation draft requested]
-  C --> D[Gather inputs:<br/>student evidence, validated rubric,<br/>lecturer-approved material excerpts]
+  C --> D[Gather inputs:<br/>student evidence, validated rubric,<br/>lesson context, approved material excerpts]
   D --> E[Pass 1 — find:<br/>recall-oriented candidate findings]
   E --> F[Pass 2 — verify + score:<br/>keep or drop each candidate,<br/>score the rubric from kept findings]
   F --> G[Server guards:<br/>re-anchor quotations, OCR checks,<br/>recompute the recommended score]
@@ -39,6 +39,18 @@ The two context inputs have strictly separate jobs — and one thing neither eve
 - **Neither ever feeds the score.** Scoring happens from the student's text and the kept findings only.
 
 Anything the student wrote is treated as *evidence to inspect*, never as instructions. Assignment requirements come only from the lecturer-side configuration.
+
+## Where context enters — and what it may do
+
+```mermaid
+flowchart LR
+  LC["Lesson context<br/>KONTEKS PEMBELAJARAN"] --> CF["Content-fit judgment:<br/>does the answer match what was taught?"]
+  AS["Approved sources<br/>MATERI KONTEKS YANG DISETUJUI DOSEN"] --> CIT["Citable evidence in findings<br/>(via verified quotation only)"]
+  CF -.->|"never"| SCORE["Rubric score"]
+  CIT -.->|"never"| SCORE
+  STX["Student text"] --> SCORE
+  KF["Kept findings"] --> SCORE
+```
 
 ## Pass 1 — find (recall-oriented)
 

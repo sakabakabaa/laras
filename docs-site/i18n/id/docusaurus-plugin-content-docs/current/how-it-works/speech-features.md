@@ -19,6 +19,16 @@ Latihan percakapan adalah latihan berbicara berbasis giliran:
 
 Deteksi aktivitas suara berjalan di peramban. Alurnya adalah rangkaian giliran HTTP — bukan soket realtime yang terus-menerus — sehingga tetap andal pada koneksi sederhana.
 
+```mermaid
+flowchart LR
+  REC["Mahasiswa berbicara"] --> VAD["Deteksi aktivitas suara (peramban)"]
+  VAD --> STT["Transkripsi:<br/>sidecar Whisper atau STT hosting"]
+  STT --> MODEL["Balasan model"]
+  MODEL --> TTS["Sintesis suara:<br/>Hostinger atau ElevenLabs"]
+  TTS --> PLAY["Diputar ke mahasiswa"]
+  PLAY -->|"giliran berikutnya (batas tetap)"| REC
+  STT -.->|"transkrip giliran"| REF["Refleksi disimpan<br/>ke profil mahasiswa"]
+
 ## Pengenal ucapan (speech-to-text)
 
 | Aspek | Detail |

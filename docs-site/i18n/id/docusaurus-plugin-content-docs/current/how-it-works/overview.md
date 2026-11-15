@@ -8,6 +8,24 @@ sidebar_position: 1
 
 LARAS digunakan oleh dua peran utama: **dosen**, yang merancang mata kuliah, membuat tugas, dan menilai karya mahasiswa; serta **mahasiswa**, yang mengikuti pertemuan, mengumpulkan tugas, dan berlatih.
 
+## Platform dalam satu gambar
+
+```mermaid
+flowchart TD
+  L["Dosen"] --> PLAN["Mata kuliah + RPS: capaian, pertemuan mingguan"]
+  L --> LIB["Perpustakaan berkas: bahan, versi,<br/>bagian konteks yang disetujui"]
+  L --> TUGAS["Tugas: ketentuan + rubrik tervalidasi"]
+  ST["Mahasiswa"] --> SUB["Kiriman: teks, gambar, PDF, audio"]
+  TUGAS --> SUB
+  SUB --> AI["Draf evaluasi AI:<br/>temuan + usulan skor"]
+  LIB -.->|hanya kutipan yang disetujui| AI
+  AI --> REV["Peninjauan dosen di ruang kerja evaluasi"]
+  REV --> PUB["Terbitkan (aksi eksplisit)"]
+  PUB --> GRADE["Nilai + umpan balik yang diterbitkan"]
+  ST --> PRACT["Latihan pribadi & percakapan<br/>(tidak pernah dinilai)"]
+  L --> SCHED["Kelas terjadwal<br/>(tanpa pendampingan, aktivitas terwaktu)"]
+```
+
 ## Mata kuliah dan perencanaan
 
 Sebuah **mata kuliah** adalah wadah utama. Setiap mata kuliah membawa rencana pembelajaran semester (**RPS**) yang memuat:

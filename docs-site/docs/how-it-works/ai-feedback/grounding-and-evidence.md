@@ -16,6 +16,24 @@ An AI model can produce plausible-sounding but wrong feedback. LARAS mitigates t
 - Context material must come from **lecturer-reviewed sections**. A draft label alone is not the approval gate; section status is checked at retrieval time.
 - Everything used is recorded in the evaluation's **provenance snapshot**, so any result can be traced to its inputs.
 
+## The approval chain, end to end
+
+```mermaid
+flowchart TD
+  UP["Lecturer uploads material<br/>to the file library"] --> EXT["Server extracts text<br/>(files are versioned)"]
+  EXT --> MARK["Lecturer marks sections suitable<br/>and saves an exact quotation<br/>(Kutipan sumber untuk evaluasi AI)"]
+  MARK --> STANDBY["Approved and standby"]
+  REQ["AI evaluation requested"] --> RET["retrieveContextBundle<br/>(requirePassages: true)"]
+  RET --> C1{"Sections marked<br/>suitable?"}
+  C1 -- "no" --> INS["Recorded as missing context:<br/>evaluation still drafts from student work + rubric"]
+  C1 -- "yes" --> C2{"Section version matches<br/>active file version?"}
+  C2 -- "no" --> DROP["Section dropped<br/>(stale marking never trusted)"]
+  C2 -- "yes" --> C3{"Quotation occurs exactly once<br/>in the current extraction?"}
+  C3 -- "no" --> DROP
+  C3 -- "yes" --> BOUND["Apply bounds:<br/>2,000 chars/section, 8,000/file, 20,000 total"]
+  BOUND --> PROMPT["Passages supplied with section id + offsets<br/>only these can be cited by findings"]
+  PROMPT --> AUDIT["Retrieval recorded for audit<br/>(context_retrievals)"]
+
 ## Exact-passage retrieval
 
 For formal evaluation, retrieval requires **exact passages** (`requirePassages: true`). The workflow is:

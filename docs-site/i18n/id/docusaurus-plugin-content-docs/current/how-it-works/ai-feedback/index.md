@@ -14,11 +14,11 @@ Halaman ini menelusuri seluruh alurnya. Versi singkatnya:
 flowchart TD
   A[Mahasiswa mengumpulkan karya] --> B[Ekstraksi & transkripsi]
   B --> C[Permintaan draf evaluasi]
-  C --> D[Kumpulkan masukan:<br/>bukti mahasiswa, rubrik tervalidasi,<br/>kutipan bahan yang disetujui dosen]
+  C --> D[Kumpulkan masukan:<br/>bukti mahasiswa, rubrik tervalidasi,<br/>konteks pembelajaran, kutipan bahan yang disetujui]
   D --> E[Tahap 1 — temukan:<br/>kandidat temuan selengkap mungkin]
   E --> F[Tahap 2 — verifikasi + skor:<br/>pertahankan atau tolak tiap kandidat,<br/>nilai rubrik dari temuan tersaring]
   F --> G[Penjagaan sisi server:<br/>kutipan dijangkakan ulang, penjagaan OCR,<br/>usulan nilai dihitung ulang]
-  G --> H[Draf AI disimpan dengan<br/>rekam jejak (provenance)]
+  G --> H["Draf AI disimpan dengan<br/>rekam jejak (provenance)"]
   H --> I[Dosen meninjau temuan,<br/>menyesuaikan skor, menganotasi]
   I --> J[Terbitkan — hanya dosen<br/>yang melepas hasil ke mahasiswa]
 ```
@@ -39,6 +39,18 @@ Kedua masukan konteks memiliki tugas yang terpisah tegas — dan satu hal yang t
 - **Tidak ada yang pernah memberi skor.** Penilaian dihitung hanya dari teks mahasiswa dan temuan yang dipertahankan.
 
 Apa pun yang ditulis mahasiswa diperlakukan sebagai *bukti untuk diperiksa*, bukan sebagai instruksi. Persyaratan tugas hanya berasal dari konfigurasi di sisi dosen.
+
+## Di mana konteks masuk — dan apa yang boleh dilakukannya
+
+```mermaid
+flowchart LR
+  LC["Konteks pembelajaran<br/>KONTEKS PEMBELAJARAN"] --> CF["Penilaian kesesuaian isi:<br/>apakah jawaban sesuai apa yang diajarkan?"]
+  AS["Bahan disetujui dosen<br/>MATERI KONTEKS YANG DISETUJUI DOSEN"] --> CIT["Bukti yang dapat dikutip dalam temuan<br/>(hanya lewat kutipan terverifikasi)"]
+  CF -.->|"tidak pernah"| SCORE["Skor rubrik"]
+  CIT -.->|"tidak pernah"| SCORE
+  STX["Teks mahasiswa"] --> SCORE
+  KF["Temuan yang dipertahankan"] --> SCORE
+```
 
 ## Tahap 1 — temukan (mengutamakan cakupan)
 

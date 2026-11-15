@@ -18,6 +18,30 @@ Sebelum umpan balik AI dapat dihasilkan, kiriman mahasiswa harus menjadi **bukti
 | PDF (hasil pindai) | Halaman dirender menjadi gambar di sisi server, lalu dibaca dengan OCR |
 | Audio | Ditranskripsikan menjadi teks oleh layanan pengenal ucapan (sidecar Whisper mandiri atau penyedia hosting) |
 
+## Dari kiriman menjadi bukti
+
+```mermaid
+flowchart TD
+  SUB["Mahasiswa mengumpulkan"] --> T["Teks ketikan atau tempelan"]
+  SUB --> I["Gambar (tulisan tangan)"]
+  SUB --> PDF["Berkas PDF"]
+  SUB --> AU["Rekaman audio"]
+  T --> EV["Teks bukti"]
+  I --> EVI["Masukan multimodal ke model"]
+  PDF --> EX{"Halaman hasil pindai?"}
+  EX -- "tidak" --> TXT["Ekstraksi teks di sisi server"]
+  EX -- "ya" --> OCR["Halaman dirender jadi gambar, dibaca OCR"]
+  TXT --> EVP["Teks hasil ekstraksi + status parser"]
+  OCR --> EVP
+  AU --> TR["Transkripsi: sidecar Whisper atau STT hosting"]
+  TR --> EVT["Transkrip"]
+  EVP --> GATE["BUKTI, BUKAN INSTRUKSI:<br/>konten diperiksa, tidak pernah ditaati"]
+  EV --> GATE
+  EVI --> GATE
+  EVT --> GATE
+  GATE --> EVAL["Masukan evaluasi AI<br/>(rubrik + konteks pembelajaran + bahan disetujui ditambahkan di sana)"]
+```
+
 Berkas asli selalu tersedia. Teks hasil ekstraksi disimpan dengan informasi parser dan statusnya, sehingga dosen yang membandingkan "apa yang benar-benar ditulis mahasiswa" dengan "apa yang dibaca mesin" dapat membedakan keduanya. Saat berkas diganti atau diekstraksi ulang, pengaitan kutipan untuk umpan balik AI diperiksa ulang terhadap versi baru (lihat [Pengaitan bukti](/docs/id/how-it-works/ai-feedback/grounding-and-evidence)).
 
 ## Bukti, bukan instruksi

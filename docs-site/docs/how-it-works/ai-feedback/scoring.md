@@ -10,6 +10,18 @@ AI evaluation produces **suggested scores** — never final grades. This page ex
 
 ## From rubric to recommended score
 
+```mermaid
+flowchart TD
+  P1["Pass 1: up to 25 candidate findings"] --> P2["Pass 2: keep or drop each candidate"]
+  P2 --> KF["Kept findings"]
+  KF --> RB["Per-criterion rubricBreakdown (0–100)<br/>from kept findings only"]
+  RB --> WM["recommendedScore = weighted mean<br/>recomputed by the server"]
+  MT["Model's own total"] -.->|"audit only"| SNAP["Generation snapshot"]
+  WM --> DRAFT["AI draft<br/>(no score if rubric unweighted or source text missing)"]
+  LEC["Lecturer review + adjustments"] --> PUB["Published finalScore"]
+  DRAFT --> GOLD["Quality harness:<br/>precision / recall / MAE vs lecturer gold"]
+  PUB --> GOLD
+
 1. The assignment's **validated rubric** defines criteria and weights.
 2. In pass 2 of the evaluation, the model assigns per-criterion feedback and scores — but only from **kept** findings (see [How AI feedback is provided](/docs/how-it-works/ai-feedback)).
 3. The platform **recomputes** the recommended score as the **weighted mean of the rubric breakdown**.

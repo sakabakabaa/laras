@@ -8,6 +8,24 @@ sidebar_position: 1
 
 LARAS is used by two main roles: **lecturers**, who plan courses, create assignments, and grade student work; and **students**, who attend sessions, submit assignments, and practise.
 
+## The platform in one picture
+
+```mermaid
+flowchart TD
+  L["Lecturer"] --> PLAN["Course + RPS: outcomes, weekly sessions"]
+  L --> LIB["File library: materials, versions,<br/>approved context sections"]
+  L --> TUGAS["Assignments: requirements + validated rubric"]
+  ST["Student"] --> SUB["Submission: text, images, PDF, audio"]
+  TUGAS --> SUB
+  SUB --> AI["AI evaluation draft:<br/>findings + suggested scores"]
+  LIB -.->|approved excerpts only| AI
+  AI --> REV["Lecturer review in evaluation workspace"]
+  REV --> PUB["Publish (explicit action)"]
+  PUB --> GRADE["Published grade + feedback"]
+  ST --> PRACT["Personal & conversation practice<br/>(never graded)"]
+  L --> SCHED["Scheduled class<br/>(unattended, timed activities)"]
+```
+
 ## Courses and planning
 
 A **course** (*mata kuliah*) is the central container. Each course carries a semester learning plan (**RPS**) that defines:

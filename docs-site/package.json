@@ -10,7 +10,8 @@
     "clear": "docusaurus clear",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "port:engineering": "node scripts/port-engineering.mjs"
+    "port:engineering": "node scripts/port-engineering.mjs",
+    "verify:mermaid": "node scripts/verify-mermaid.mjs"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.2",
@@ -20,5 +21,8 @@
     "@mermaid-js/layout-elk": "0.1.9",
     "react": "19.3.1",
     "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "happy-dom": "^21.0.4"
   }
 }

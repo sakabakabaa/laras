@@ -19,6 +19,16 @@ Conversation practice (*percakapan*) is a turn-based speaking exercise:
 
 Voice-activity detection runs in the browser. The pipeline is a sequence of HTTP turns — not a continuous realtime socket — which keeps it reliable on modest connections.
 
+```mermaid
+flowchart LR
+  REC["Student speaks"] --> VAD["Voice activity detection (browser)"]
+  VAD --> STT["Transcription:<br/>Whisper sidecar or hosted STT"]
+  STT --> MODEL["Model reply"]
+  MODEL --> TTS["Speech synthesis:<br/>Hostinger or ElevenLabs"]
+  TTS --> PLAY["Played to the student"]
+  PLAY -->|"next turn (fixed limit)"| REC
+  STT -.->|"turn transcript"| REF["Reflection saved<br/>to the student profile"]
+
 ## Speech-to-text
 
 | Aspect | Detail |

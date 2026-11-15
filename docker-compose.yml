@@ -125,6 +125,28 @@ services:
       - traefik.http.middlewares.laras-domain-redirect.redirectregex.replacement=https://laraslernen.com/$${1}
       - traefik.http.middlewares.laras-domain-redirect.redirectregex.permanent=true
 
+  # Static documentation site (Docusaurus), served at https://laraslernen.com/docs.
+  # Built from docs-site/; nginx serves the pre-rendered files, Traefik routes
+  # only the /docs prefix here. Deploys independently of the app image.
+  docs:
+    build:
+      context: .
+      dockerfile: docs-site/Dockerfile
+    image: laras-docs:deploy
+    restart: unless-stopped
+    networks:
+      - laras-app-net
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=laras-app-net
+      - traefik.http.routers.laras-docs.rule=Host(`laraslernen.com`) && PathPrefix(`/docs`)
+      - traefik.http.routers.laras-docs.entrypoints=websecure
+      - traefik.http.routers.laras-docs.tls=true
+      - traefik.http.routers.laras-docs.tls.certresolver=letsencrypt
+      - traefik.http.routers.laras-docs.priority=50
+      - traefik.http.routers.laras-docs.service=laras-docs
+      - traefik.http.services.laras-docs.loadbalancer.server.port=80
+
 networks:
   laras-app-net:
     name: laras-app-net

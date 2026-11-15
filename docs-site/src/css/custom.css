@@ -1,0 +1,27 @@
+:root {
+  --ifm-color-primary: #b3261e;
+  --ifm-color-primary-dark: #a5231c;
+  --ifm-color-primary-darker: #9c211a;
+  --ifm-color-primary-darkest: #7e1a14;
+  --ifm-color-primary-light: #c22c24;
+  --ifm-color-primary-lighter: #cb342c;
+  --ifm-color-primary-lightest: #d8534c;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(179, 38, 30, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #e05a52;
+  --ifm-color-primary-dark: #dc453d;
+  --ifm-color-primary-darker: #d43b33;
+  --ifm-color-primary-darkest: #b3261e;
+  --ifm-color-primary-light: #e57069;
+  --ifm-color-primary-lighter: #e87d75;
+  --ifm-color-primary-lightest: #f09e98;
+  --docusaurus-highlighted-code-line-bg: rgba(224, 90, 82, 0.25);
+}
+
+/* Keep long Indonesian/English body text readable. */
+article {
+  max-width: 80ch;
+}

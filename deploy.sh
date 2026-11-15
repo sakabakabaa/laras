@@ -13,6 +13,7 @@ APP_DIR="/opt/laras-git"
 COMPOSE="docker compose"
 WEB_IMAGE="laras-horizon-web:deploy"
 PB_IMAGE="laras-horizon-pocketbase:deploy"
+DOCS_IMAGE="laras-docs:deploy"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 cd "$APP_DIR"
@@ -34,7 +35,7 @@ if [ ! -f .env ]; then
 fi
 
 echo "=== 2/5 tag current images for rollback ==="
-for img in "$WEB_IMAGE" "$PB_IMAGE"; do
+for img in "$WEB_IMAGE" "$PB_IMAGE" "$DOCS_IMAGE"; do
 	if docker image inspect "$img" >/dev/null 2>&1; then
 		docker tag "$img" "${img%:*}:backup-$STAMP"
 		echo "saved ${img%:*}:backup-$STAMP"
@@ -43,7 +44,7 @@ done
 echo "rollback with: ./rollback.sh $STAMP"
 
 echo "=== 3/5 build ==="
-$COMPOSE build pocketbase web
+$COMPOSE build pocketbase web docs
 
 echo "=== 4/5 restart ==="
 $COMPOSE up -d

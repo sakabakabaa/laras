@@ -28,6 +28,7 @@ flowchart LR
   TTS --> PLAY["Diputar ke mahasiswa"]
   PLAY -->|"giliran berikutnya (batas tetap)"| REC
   STT -.->|"transkrip giliran"| REF["Refleksi disimpan<br/>ke profil mahasiswa"]
+```
 
 ## Pengenal ucapan (speech-to-text)
 

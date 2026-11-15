@@ -21,6 +21,7 @@ flowchart TD
   LEC["Peninjauan + penyesuaian dosen"] --> PUB["finalScore yang diterbitkan"]
   DRAFT --> GOLD["Perangkat kualitas:<br/>presisi / recall / MAE vs kiriman emas dosen"]
   PUB --> GOLD
+```
 
 1. **Rubrik tervalidasi** milik tugas menentukan kriteria dan bobotnya.
 2. Pada tahap 2 evaluasi, model memberi umpan balik dan skor per kriteria — tetapi hanya dari **temuan yang dipertahankan** (lihat [Bagaimana umpan balik AI diberikan](/docs/id/how-it-works/ai-feedback)).

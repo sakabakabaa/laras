@@ -24,9 +24,21 @@ function walk(dir) {
     if (statSync(p).isDirectory()) walk(p);
     else if (name.endsWith('.md')) {
       const text = readFileSync(p, 'utf8');
+      const openings = (text.match(/^```mermaid$/gm) || []).length;
       const re = /```mermaid\n([\s\S]*?)```/g;
       let m;
-      while ((m = re.exec(text))) blocks.push({ file: p, src: m[1] });
+      let found = 0;
+      while ((m = re.exec(text))) {
+        blocks.push({ file: p, src: m[1] });
+        found += 1;
+      }
+      if (openings !== found) {
+        blocks.push({
+          file: p,
+          src: 'graph TD\nA["UNCLOSED FENCE"]',
+        });
+        console.log(`WARN  ${p}: ${openings} mermaid openings but ${found} closed blocks`);
+      }
     }
   }
 }

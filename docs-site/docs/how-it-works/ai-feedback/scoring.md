@@ -21,6 +21,7 @@ flowchart TD
   LEC["Lecturer review + adjustments"] --> PUB["Published finalScore"]
   DRAFT --> GOLD["Quality harness:<br/>precision / recall / MAE vs lecturer gold"]
   PUB --> GOLD
+```
 
 1. The assignment's **validated rubric** defines criteria and weights.
 2. In pass 2 of the evaluation, the model assigns per-criterion feedback and scores — but only from **kept** findings (see [How AI feedback is provided](/docs/how-it-works/ai-feedback)).

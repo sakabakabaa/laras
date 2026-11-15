@@ -33,6 +33,7 @@ flowchart TD
   C3 -- "ya" --> BOUND["Terapkan batas:<br/>2.000 karakter/bagian, 8.000/berkas, 20.000 total"]
   BOUND --> PROMPT["Kutipan diteruskan dengan id bagian + offset<br/>hanya ini yang boleh dikutip temuan"]
   PROMPT --> AUDIT["Pengambilan dicatat untuk audit<br/>(context_retrievals)"]
+```
 
 ## Pengambilan kutipan persis
 

@@ -33,6 +33,7 @@ flowchart TD
   C3 -- "yes" --> BOUND["Apply bounds:<br/>2,000 chars/section, 8,000/file, 20,000 total"]
   BOUND --> PROMPT["Passages supplied with section id + offsets<br/>only these can be cited by findings"]
   PROMPT --> AUDIT["Retrieval recorded for audit<br/>(context_retrievals)"]
+```
 
 ## Exact-passage retrieval
 

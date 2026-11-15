@@ -28,6 +28,7 @@ flowchart LR
   TTS --> PLAY["Played to the student"]
   PLAY -->|"next turn (fixed limit)"| REC
   STT -.->|"turn transcript"| REF["Reflection saved<br/>to the student profile"]
+```
 
 ## Speech-to-text
 

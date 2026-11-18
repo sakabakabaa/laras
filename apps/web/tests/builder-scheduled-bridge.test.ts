@@ -439,22 +439,23 @@ describe('Builder <-> Scheduled Classes unified bridge', () => {
 					startsAt: '2026-11-12T06:00:00.000Z',
 					endsAt: '2026-11-12T06:25:00.000Z',
 					required: true,
+					lesson: {
+						goal: { de: 'Wer sagt was?', id: 'Siapa mengatakan apa?' },
+						steps: [{ de: 'Ordnen Sie zu.', id: 'Cocokkan.' }],
+						scenes: [],
+					},
 					sources: [
 						{
 							id: 'img00000000000A',
 							title: 'Beim Arzt · Bild A',
 							version: 1,
 							filename: 'bild_a.jpg',
-							url: '/files/imgA/bild_a.jpg',
-							available: true,
 						},
 						{
 							id: 'img00000000000B',
 							title: 'Beim Arzt · Bild B',
 							version: 1,
 							filename: 'bild_b.jpg',
-							url: '/files/imgB/bild_b.jpg',
-							available: true,
 						},
 					],
 					worksheet: {
@@ -513,8 +514,8 @@ describe('Builder <-> Scheduled Classes unified bridge', () => {
 			'https://laras.test',
 		);
 		expect(copied.document.title).toBe('Beim Arzt — Pertemuan 1 (salinan)');
-		expect(copied.document.activities[0].blocks.map((b) => b.type)).toEqual(['image', 'matching']);
-		expect(copied.document.activities[0].blocks[1].destinations?.map((d) => d.label)).toEqual(['A', 'B']);
+		expect(copied.document.activities[0].blocks.map((b) => b.type)).toEqual(['instructions', 'image', 'matching']);
+		expect(copied.document.activities[0].blocks[2].destinations?.map((d) => d.label)).toEqual(['A', 'B']);
 		expect(copied.document.activities[1].blocks.map((b) => b.type)).toEqual(['gap_passage']);
 		expect(copied.document.activities[1].blocks[0].sections?.[0].segments).toHaveLength(5);
 	});

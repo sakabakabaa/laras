@@ -2116,20 +2116,34 @@ export function scheduledStateToBuilder(
 			activity.blocks.find((b) => b.id === id)!.body = rich(source.content);
 		}
 		if (source.lesson) {
-			const id = appendBlock(next, activity.id, 'lesson');
-			activity.blocks.find((b) => b.id === id)!.lesson = structuredClone({
-				goal: source.lesson.goal,
-				steps: source.lesson.steps,
-				scenes: source.lesson.scenes,
-				...(source.lesson.videos ? { videos: source.lesson.videos } : {}),
-				...(source.lesson.videoNote ? { videoNote: source.lesson.videoNote } : {}),
-				...(source.lesson.note ? { note: source.lesson.note } : {}),
-				...(source.lesson.source ? { source: source.lesson.source } : {}),
-			});
+			if (source.lesson.scenes?.length) {
+				const id = appendBlock(next, activity.id, 'lesson');
+				activity.blocks.find((b) => b.id === id)!.lesson = structuredClone({
+					goal: source.lesson.goal,
+					steps: source.lesson.steps,
+					scenes: source.lesson.scenes,
+					...(source.lesson.videos ? { videos: source.lesson.videos } : {}),
+					...(source.lesson.videoNote ? { videoNote: source.lesson.videoNote } : {}),
+					...(source.lesson.note ? { note: source.lesson.note } : {}),
+					...(source.lesson.source ? { source: source.lesson.source } : {}),
+				});
+			} else if (!source.content) {
+				const parts = [
+					source.lesson.goal?.de,
+					source.lesson.goal?.id,
+					...(source.lesson.steps || []).flatMap((s) => [s.de, s.id]),
+					source.lesson.note?.de,
+					source.lesson.note?.id,
+				].filter(Boolean);
+				if (parts.length) {
+					const id = appendBlock(next, activity.id, 'instructions');
+					activity.blocks.find((b) => b.id === id)!.body = rich(parts.join('\n'));
+				}
+			}
 			for (const video of source.lesson.videos || []) {
 				const bid = appendBlock(next, activity.id, 'video'),
 					b = activity.blocks.find((b) => b.id === bid)!;
-				b.url = new URL(video.src, origin).href;
+				b.url = new URL(video.src, origin || 'https://laras.ulil.org').href;
 				b.label = video.title.de;
 			}
 		}
@@ -2154,6 +2168,42 @@ export function scheduledStateToBuilder(
 					b.asset = asset;
 					b.label = src.title;
 				}
+			}
+		}
+
+		const normalizedSourceForMatching: ScheduledActivity = {
+			...source,
+			sources: (source.sources || []).map((s) => ({ ...s, available: s.available !== false })),
+		};
+		if (!wsBlocks.length && cardMatchingTargets(normalizedSourceForMatching).length < 2) {
+			const legacyImages: BuilderImage[] = [];
+			for (const src of source.sources || []) {
+				const nameOrUrl = src.filename || src.url || '';
+				if (src.available !== false && /\.(jpe?g|png|webp|gif|svg)$/i.test(nameOrUrl)) {
+					const asset = sourceToAsset(src);
+					if (asset) {
+						legacyImages.push({
+							id: uid(),
+							asset,
+							alt: src.title || 'Gambar',
+							caption: src.title || '',
+						});
+					}
+				}
+			}
+			if (legacyImages.length > 1) {
+				activity.blocks.push({
+					id: uid(),
+					type: 'image',
+					images: legacyImages,
+					columns: Math.min(4, legacyImages.length),
+				});
+			} else if (legacyImages.length === 1) {
+				const bid = appendBlock(next, activity.id, 'image');
+				const b = activity.blocks.find((x) => x.id === bid)!;
+				b.asset = legacyImages[0].asset;
+				b.alt = legacyImages[0].alt;
+				b.label = legacyImages[0].caption;
 			}
 		}
 
@@ -2316,14 +2366,14 @@ export function scheduledStateToBuilder(
 					}
 				}
 			} else {
-				const targets = cardMatchingTargets(source);
+				const targets = cardMatchingTargets(normalizedSourceForMatching);
 				if (targets.length >= 2) {
 					const destImages: BuilderImage[] = [];
 					for (const target of targets) {
 						const label = target.value;
 						const src = (source.sources || []).find(
 							(s) =>
-								s.available &&
+								s.available !== false &&
 								((s.title.match(/\bBild ([A-Z])\b/i)?.[1] ||
 									s.title.match(/^([A-Z])\s*·/)?.[1]) === label ||
 									s.title === target.title),

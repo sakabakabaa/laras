@@ -79,12 +79,13 @@ import {
 	hasBuilderAnchors,
 	type BuilderCapabilityPayload,
 } from '@/lib/builder-capability';
-import { toWibInput, fromWibInput } from '@/lib/scheduled-classes';
+import { scheduledRequest, toWibInput, fromWibInput } from '@/lib/scheduled-classes';
 import {
 	appendBlock,
 	appendQuestion,
 	BLOCK_LABELS,
 	builderIssues,
+	builderToScheduledPlan,
 	hasBuilderVisibility,
 	builderNodeVisibilitySafe,
 	hasBuilderThemePalette,
@@ -813,6 +814,22 @@ export function BuilderWorkspace({ id }: { id: string }) {
 			const hasAnchors = hasBuilderAnchors(draft);
 			const hasVisibility = hasBuilderVisibility(draft);
 			const hasThemePalette = hasBuilderThemePalette(draft);
+			if (draft.document.kind === 'kelas' && draft.document.context.meetingId) {
+				const meetingId = draft.document.context.meetingId;
+				const currentState = await scheduledRequest(meetingId, 'state');
+				if (!currentState.class || currentState.class.status === 'draft') {
+					const plan = builderToScheduledPlan(draft);
+					await scheduledRequest(meetingId, 'schedule', {
+						baseRevision: currentState.class?.revision || 0,
+						...plan,
+					});
+					try {
+						await deliveryRequest<{ runId: string }>(hasThemePalette ? 'themePalette:publish' : hasVisibility ? 'presentationVisibility:publish' : hasAnchors ? 'documentAnchors:publish' : hasPlayback ? 'mediaPlayback:publish' : hasNestedLists ? 'nestedLists:publish' : hasCaptions ? 'mediaCaptions:publish' : hasResponsiveDetails ? 'responsiveStyles:publish' : 'publish', { id, baseRevision: revision, commandId: publishCommand.current.id, ...(hasThemePalette ? { themePalette: true } : {}), ...(hasVisibility ? { presentationVisibility: true } : {}), ...(hasAnchors ? { documentAnchors: true } : {}), ...(hasResponsiveDetails ? { responsiveBorderRadius: true } : {}), ...(hasCaptions ? { mediaCaptions: true } : {}), ...(hasNestedLists ? { nestedRichText: true } : {}), ...(hasPlayback ? { mediaPlayback: true } : {}) });
+					} catch { /* Immutable builder snapshot is optional when scheduled_classes is primary */ }
+					navigate(`/app/courses/${draft.document.context.courseId}/pertemuan/${meetingId}/terjadwal`);
+					return;
+				}
+			}
 			const result = await deliveryRequest<{ runId: string }>(hasThemePalette ? 'themePalette:publish' : hasVisibility ? 'presentationVisibility:publish' : hasAnchors ? 'documentAnchors:publish' : hasPlayback ? 'mediaPlayback:publish' : hasNestedLists ? 'nestedLists:publish' : hasCaptions ? 'mediaCaptions:publish' : hasResponsiveDetails ? 'responsiveStyles:publish' : 'publish', { id, baseRevision: revision, commandId: publishCommand.current.id, ...(hasThemePalette ? { themePalette: true } : {}), ...(hasVisibility ? { presentationVisibility: true } : {}), ...(hasAnchors ? { documentAnchors: true } : {}), ...(hasResponsiveDetails ? { responsiveBorderRadius: true } : {}), ...(hasCaptions ? { mediaCaptions: true } : {}), ...(hasNestedLists ? { nestedRichText: true } : {}), ...(hasPlayback ? { mediaPlayback: true } : {}) });
 			navigate('/app/kegiatan/' + result.runId);
 		} catch (failure) {

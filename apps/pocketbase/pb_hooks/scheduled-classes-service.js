@@ -172,7 +172,7 @@ function view(app, c, ctx, user, now) {
           worksheet = {...studentWorksheet, ...(Object.keys(exactItems).length ? {answerKey: {...answerKey, items: exactItems}} : {})};
         } else worksheet = studentWorksheet;
       }
-      return {...meta, content: snapshot.content, url: snapshot.url, ...(snapshot.lesson?{lesson:snapshot.lesson}:{}), ...(worksheet ? {worksheet}:{}), sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
+      return {...meta, content: snapshot.content, url: snapshot.url, ...(snapshot.lesson?{lesson:snapshot.lesson}:{}), ...(worksheet ? {worksheet}:{}), sources:require(__hooks+'/scheduled-class-academic.js').studentSources(app,snapshot.sources,ctx.course.id,snapshot.worksheet),questions: snapshot.questions.map(q => ({id: q.id, text: q.text, options: q.options, points: q.points, ...(released ? {correctIndex: q.correctIndex, explanation: q.explanation} : {})}))};
     }),
     attempts: safeAttempts,
     ...(owner ? {gradingSettings:assess.gradingSettings,assessments:assess.assessments,aiDrafts:assess.aiDrafts} : {assessments:assess.assessments}),
@@ -287,8 +287,20 @@ function handle(app, body, user, now) {
     if (section && app.findRecordById('course_sections', section).getString('course') !== ctx.course.id) bad('Rombel bukan dari mata kuliah ini.');
     const fields = {session: ctx.session.id, course: ctx.course.id, owner: user.id, section, title: plan.title, instructions: plan.instructions, startsAt: plan.startsAt, endsAt: plan.endsAt, joinUntil: plan.joinUntil, lateAfterMin: plan.lateAfterMin, status: action === 'schedule' ? 'scheduled' : 'draft', revision: (c?.getInt('revision') || 0) + 1,academicSnapshot};
     if (!c) c = create(app, 'scheduled_classes', fields); else {c.load(fields); app.save(c);}
+    for (const old of rows(app, 'scheduled_grading_settings', 'class={:c}', {c: c.id})) app.delete(old);
     for (const old of rows(app, 'scheduled_class_activities', 'class={:c}', {c: c.id})) app.delete(old);
-    for (const a of plan.activities) create(app, 'scheduled_class_activities', {...a, class: c.id});
+    const createdActivities = plan.activities.map(a => create(app, 'scheduled_class_activities', {...a, class: c.id}));
+    if (Array.isArray(body.gradingSettings) && body.gradingSettings.length) {
+      const assess = require(__hooks + '/scheduled-assessment.js');
+      for (const gs of body.gradingSettings) {
+        const actRecord = createdActivities[Number(gs && gs.activityIndex)];
+        if (!actRecord || !['assignment', 'exit_ticket'].includes(actRecord.getString('kind'))) continue;
+        try {
+          const validGs = assess.validateSettings({mode: gs.mode, maxPoints: gs.maxPoints, criteria: gs.criteria});
+          create(app, 'scheduled_grading_settings', {class: c.id, activity: actRecord.id, revision: 1, mode: validGs.mode, maxPoints: validGs.maxPoints, criteria: validGs.criteria});
+        } catch (_) {}
+      }
+    }
     event(app, c, user.id, action);
   }
   if (!c) {

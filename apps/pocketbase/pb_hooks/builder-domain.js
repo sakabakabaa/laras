@@ -118,7 +118,7 @@ function pair(v) {
 }
 function lesson(v) {
 	obj(v);
-	return {
+	const out = {
 		goal: pair(v.goal),
 		steps: list(v.steps, 30).map(pair),
 		scenes: list(v.scenes, 30).map((s) => {
@@ -163,6 +163,43 @@ function lesson(v) {
 			return out;
 		}),
 	};
+	if (v.videos !== undefined) {
+		const videos = list(v.videos, 5);
+		if (videos.length) {
+			out.videos = videos.map((item) => {
+				obj(item);
+				const src = str(item.src, 300);
+				const poster = str(item.poster, 300);
+				if (
+					!/^\/media\/lessons\/[a-z0-9/-]+\.mp4$/.test(src) ||
+					!/^\/media\/lessons\/[a-z0-9/-]+\.jpg$/.test(poster)
+				)
+					fail('Berkas video pelajaran tidak valid.');
+				return {
+					id: str(item.id, 60),
+					title: pair(item.title),
+					src,
+					poster,
+					duration: str(item.duration, 10),
+				};
+			});
+		}
+	}
+	if (v.videoNote) out.videoNote = pair(v.videoNote);
+	if (v.note) out.note = pair(v.note);
+	if (v.source) {
+		obj(v.source);
+		const sourceMaterialId = str(v.source.sourceMaterialId, 30);
+		const sourcePage = num(v.source.sourcePage, 10000);
+		if (!/^[a-z0-9]{15}$/.test(sourceMaterialId) || !Number.isInteger(sourcePage) || sourcePage < 1)
+			fail('ID sumber materi pelajaran tidak valid.');
+		out.source = {
+			sourceMaterialId,
+			sourcePage,
+			sourceLabel: str(v.source.sourceLabel, 160),
+		};
+	}
+	return out;
 }
 function asset(value) {
 	const a = obj(value);

@@ -41,6 +41,7 @@
 .sc-match-two-targets .sc-match-target{padding:12px}
 .sc-match-two-targets .sc-match-drop-area{margin-top:10px}
 .sc-match-bank .sc-match-stack.sc-match-deck{position:relative;min-height:278px}
+.sc-match-bank .sc-match-stack.sc-match-deck.is-empty{min-height:0;padding:0}
 .sc-match-deck-front.is-lifted{position:absolute;inset:12px 12px auto;width:calc(100% - 24px);margin-inline:auto;z-index:20}
 .sc-match-deck-front.is-lifted::before,.sc-match-deck-front.is-lifted::after{display:none}
 .sc-match-deck-front.is-native-dragging{opacity:0!important;pointer-events:none}

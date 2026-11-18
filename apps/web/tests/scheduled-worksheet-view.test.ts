@@ -20,4 +20,22 @@ describe('scheduled worksheet response feedback',()=>{
   expect(html).toContain('7 / 2,000 characters');
   expect(html).toContain('>Antwort</textarea>');
  });
+ it('prefers explicit source page over legacy 10a/10b/10c fallback and avoids duplicate badge when disabled',async()=>{
+  const {activityBookReference}=await import('@/lib/scheduled-book-reference');
+  const {WorksheetSource}=await import('@/components/app/scheduled-worksheet');
+  const activity={id:'act',title:'10a · Was möchten Herr und Frau Wagner kaufen?',kind:'assignment' as const,required:true,minutes:20,startsAt:'',endsAt:'',lesson:{goal:{de:'x',id:'x'},steps:[],scenes:[],source:{sourceMaterialId:'img1',sourcePage:131,sourceLabel:'Netzwerk neu A1 · Kursbuch S. 131 · Aufgabe 10a'}},sources:[{id:'img1',title:'Kaufhaustafel',version:1,available:true,filename:'tafel.jpg'}],worksheet:{items:[{id:'i1',prompt:'Wählen',type:'select' as const,options:['JA','NEIN']}]}};
+  expect(activityBookReference(activity)).toBe('KB (Kursbuch) · 10a · S. 131');
+  expect(activityBookReference({...activity,lesson:undefined})).toBe('KB (Kursbuch) · 10a · S. 95');
+  const withoutRef=renderToStaticMarkup(createElement(WorksheetAnswers,{activity,sheet:activity.worksheet,responses:{},onChange:()=>{},showBookReference:false}));
+  expect(withoutRef).not.toContain('sc-book-reference');
+  const pics=renderToStaticMarkup(createElement(WorksheetSource,{activity}));
+  expect(pics).toContain('sc-picture-reference');
+  expect(pics).toContain('tafel.jpg');
+ });
+ it('adds a space before inline gap inputs when preceding text segment was trimmed',()=>{
+  const gapSheet:ScheduledWorksheet={items:[{id:'g1',prompt:'Gap 1',type:'text'}],blocks:[{id:'b1',type:'gap',segments:[{type:'text',text:{de:'Wo'}},{type:'gap',itemId:'g1'},{type:'text',text:{de:'es Tee?'}}]}]};
+  const html=renderToStaticMarkup(createElement(WorksheetAnswers,{sheet:gapSheet,responses:{},onChange:()=>{}}));
+  expect(html).toContain('Wo <span class="sc-inline-gap">');
+  expect(html).toContain('</span> es Tee?');
+ });
 });

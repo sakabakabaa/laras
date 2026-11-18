@@ -38,4 +38,11 @@ describe('image matching with existing response IDs',()=>{
     expect(markup).toContain('class="sc-match-deck-media"');
     expect(markup).toContain('src="/hcgi/platform/api/files/file_library/img000000000001/pen.jpg"');
   });
+  it('uses category help copy when targets have no images and marks deck empty once all cards are placed',()=>{
+    const sheet={items:[{id:'one',type:'select' as const,prompt:'Satz 1',options:['A','B']}]};
+    const textTargets=[{value:'A',title:'A · Text A',url:''},{value:'B',title:'B · Text B',url:''}];
+    const markup=renderToStaticMarkup(createElement(ScheduledCardMatching,{sheet,targets:textTargets,responses:{one:'A'},onChange:()=>{}}));
+    expect(markup).toContain('kotak tujuan yang sesuai');
+    expect(markup).toContain('sc-match-deck is-empty');
+  });
 });

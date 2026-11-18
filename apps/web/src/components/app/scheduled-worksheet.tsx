@@ -1,6 +1,6 @@
 import {activityBookReference} from '@/lib/scheduled-book-reference';
 import {BookOpen} from 'lucide-react';
-import {useEffect,useId,useState} from 'react';
+import {Fragment,useEffect,useId,useState} from 'react';
 import type {PDFDocumentProxy} from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import pb from '@/lib/pocketbase-client';
@@ -11,11 +11,11 @@ import {cardMatchingItemImages,cardMatchingTargets} from '@/lib/card-matching';
 import {ScheduledCardMatching} from './scheduled-card-matching';
 import {PDFPreview} from './task-builders/quiz-source-builder';
 
-export function WorksheetAnswers({sheet,responses,onChange,activity,maxLengths,rowsById}:{maxLengths?:Record<string,number>;rowsById?:Record<string,number>;sheet:ScheduledWorksheet;activity?:ScheduledActivity;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
+export function WorksheetAnswers({sheet,responses,onChange,activity,maxLengths,rowsById,showBookReference=true}:{maxLengths?:Record<string,number>;rowsById?:Record<string,number>;sheet:ScheduledWorksheet;activity?:ScheduledActivity;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void;showBookReference?:boolean}){
   const t=useT(),group=useId(),targets=activity?cardMatchingTargets(activity):[];
   const itemImages=activity?cardMatchingItemImages(activity):undefined;
   const answered=sheet.items.filter(item=>{const value=responses[item.id]||'';return item.type==='select'?item.options?.includes(value):Boolean(value.trim());}).length;
-  const bookReference=activity?activityBookReference(activity):'';
+  const bookReference=showBookReference&&activity?activityBookReference(activity):'';
   const progress=<><header className="sc-answer-sheet-heading"><h3>{t('worksheet.answerSheet')}</h3><span role="status">{t('worksheet.responseProgress',{answered:String(answered),total:String(sheet.items.length)})}</span></header>{bookReference&&<p className="sc-book-reference"><BookOpen size={18} aria-hidden="true"/>{bookReference}</p>}</>;
   const matchBlock=sheet.blocks?.find((b):b is Extract<NonNullable<ScheduledWorksheet['blocks']>[number],{type:'match'}>=>b.type==='match');
   const matchItemIdSet=new Set(targets.length?(matchBlock?.cardItemIds?.length?matchBlock.cardItemIds:sheet.items.map(i=>i.id)):[]);
@@ -27,10 +27,13 @@ export function WorksheetAnswers({sheet,responses,onChange,activity,maxLengths,r
   const matchSheet=targets.length?{...sheet,items:sheet.items.filter(i=>matchItemIdSet.has(i.id))}:sheet;
   return <div className={`sc-worksheet ${paired?'sc-worksheet-paired':''}`}>{progress}{targets.length>0&&<ScheduledCardMatching key={activity!.id} sheet={matchSheet} targets={targets} itemImages={itemImages} responses={responses} onChange={onChange}/>}<ol>{worksheetBlocks(remainingItems,sheet.blocks).map(block=>{
     const item=block.items[0];
-    if(block.context&&block.gaps)return <li key={item.id} className="sc-gap-paragraph">{block.section&&<strong className="sc-gap-section">{block.section}</strong>}<p lang="de">{block.context.split(/(\(\d+\)\s*_{3,})/g).map((part,i)=>{
+    if(block.context&&block.gaps){const parts=block.context.split(/(\(\d+\)\s*_{3,})/g);return <li key={item.id} className="sc-gap-paragraph">{block.section&&<strong className="sc-gap-section">{block.section}</strong>}<p lang="de">{parts.map((part,i)=>{
       const number=part.match(/^\((\d+)\)\s*_{3,}$/)?.[1],gap=block.gaps!.find(g=>g.number===number);
-      return gap?<span key={i} className="sc-inline-gap"><span>({number}) </span>{gapInput(gap.item,number)}</span>:part;
-    })}</p></li>;
+      if(!gap)return part;
+      const before=parts[i-1]&&!/\s$/.test(parts[i-1])?' ':'';
+      const after=parts[i+1]&&!/^[\s.,!?;:)\]]/.test(parts[i+1])?' ':'';
+      return <Fragment key={i}>{before}<span className="sc-inline-gap"><span>({number}) </span>{gapInput(gap.item,number)}</span>{after}</Fragment>;
+    })}</p></li>;}
     const rows=rowsById?.[item.id]||block.rows||writingRows(item);
     return <li key={item.id} className={rows>3?'sc-writing-long':undefined}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:singleGap(item)?<p className="sc-gap-sentence" lang="de">{item.prompt.split(/_{3,}/).map((part,i)=><span key={i}>{i>0&&gapInput(item)}{part}</span>)}</p>:<label><span className="sc-question-number">{sheet.items.indexOf(item)+1}</span>{prompt(item)}<textarea rows={rows} maxLength={maxLengths?.[item.id]||2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/><span className="sc-character-count">{t('worksheet.characters',{count:String((responses[item.id]||'').length)})}</span></label>}</li>;
   })}</ol></div>;
@@ -48,17 +51,14 @@ export function WorksheetSource({activity,showPictures=true}:{activity:Scheduled
     void import('pdfjs-dist').then(pdf=>{if(cancelled)return;pdf.GlobalWorkerOptions.workerSrc=workerUrl;task=pdf.getDocument({url:source.url!,httpHeaders:{Authorization:pb.authStore.token}});return task.promise;}).then(doc=>{if(!cancelled&&doc){if(page>doc.numPages){setError(true);return;}setDocument(doc);}}).catch(()=>{if(!cancelled)setError(true);});
     return()=>{cancelled=true;void task?.destroy();};
   },[source?.url,page]);
-  if(cardMatchingTargets(activity).length)return null;
-  // Reference material only exists to answer something: with no answer sheet on the
-  // activity there is nothing to reference, so neither the picture gallery nor the
-  // PDF page belongs on the page (e.g. the check-in/orientation activity).
-  if(!activity.worksheet)return null;
-  const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp)$/i.test(s.url));
-  if(showPictures&&reference?.sourceMaterialId&&images.some(image=>image.id===reference.sourceMaterialId)){
-    return <section className="sc-picture-reference" aria-label="Bilder · Gambar"><h3>Bilder · Gambar</h3>{reference.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className="sc-patient-figures" style={images.length===2?{gridTemplateColumns:'repeat(2,minmax(0,1fr))'}:undefined}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>;
-  }
-  if(!source?.url||!page||!source.url.toLowerCase().endsWith('.pdf'))return null;
-  return <details className="sc-worksheet-source" open={Boolean(activity.worksheet?.sourceMaterialId)}><summary>{t('worksheet.page',{page:String(page)})}{reference?.sourceLabel&&` · ${reference.sourceLabel}`}</summary>{document?<PDFPreview document={document} page={page}/>:<p role={error?'alert':'status'}>{t(error?'quizSource.previewFailed':'worksheet.loading')}</p>}<a href={`${source.url}#page=${page}`} target="_blank" rel="noreferrer">{source.title} · {t('studentClass.openMaterial')}</a></details>;
+  const targets=cardMatchingTargets(activity);
+  const consumedUrls=new Set<string>([...targets.map(target=>target.url).filter(Boolean),...Object.values(cardMatchingItemImages(activity))]);
+  const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp|gif|svg)$/i.test(s.url)&&!consumedUrls.has(s.url));
+  const legacyArzt=images.length===3&&images.every(image=>/\bBild [ABC]\b/i.test(image.title));
+  const pictures=showPictures&&images.length>0?<section className="sc-picture-reference" aria-label="Bilder · Gambar rujukan"><h3>Bilder · Gambar rujukan</h3>{reference?.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className={legacyArzt?'sc-patient-figures':'sc-reference-figures'} data-count={images.length}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>:null;
+  const showPdf=!targets.length&&Boolean(activity.worksheet)&&Boolean(source?.url)&&Boolean(page)&&Boolean(source?.url?.toLowerCase().endsWith('.pdf'));
+  if(!pictures&&!showPdf)return null;
+  return <>{pictures}{showPdf&&<details className="sc-worksheet-source" open={Boolean(activity.worksheet?.sourceMaterialId)}><summary>{t('worksheet.page',{page:String(page)})}{reference?.sourceLabel&&` · ${reference.sourceLabel}`}</summary>{document?<PDFPreview document={document} page={page!}/>:<p role={error?'alert':'status'}>{t(error?'quizSource.previewFailed':'worksheet.loading')}</p>}<a href={`${source!.url}#page=${page}`} target="_blank" rel="noreferrer">{source!.title} · {t('studentClass.openMaterial')}</a></details>}</>;
 }
 
 export function WorksheetEditor({value,onChange,materials}:{value?:ScheduledWorksheet;onChange:(sheet:ScheduledWorksheet|undefined)=>void;materials:{id:string;title:string}[]}){

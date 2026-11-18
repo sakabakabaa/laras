@@ -58,7 +58,7 @@ export function BuilderPublishDialog({ id, revision, envelope, busy, blocked, on
 			{warnings.length > 0 && <ul aria-label="Peringatan penerbitan">{warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
 			{issues.length > 0 && <p role="alert">Ada {issues.length} bagian belum siap. Tutup dialog dan tinjau draf.</p>}
 			<label className="bd-check"><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} disabled={busy || !details} />Saya sudah memeriksa audiens dan jadwal, dan ingin membuat kegiatan baru.</label>
-			<DialogFooter><button className="bd-secondary" disabled={busy} onClick={onClose}>Kembali meninjau</button><button className="bd-primary" disabled={busy || blocked || !details || !acknowledged || issues.length > 0} onClick={() => void onPublish()}>{busy ? 'Menerbitkan…' : 'Buat kegiatan baru'}</button></DialogFooter>
+			<DialogFooter><button className="bd-secondary" disabled={busy} onClick={onClose}>Kembali meninjau</button><button className="bd-primary" disabled={busy || blocked || !details || !acknowledged || issues.length > 0} onClick={() => void onPublish()}>{busy ? 'Menerbitkan…' : document.kind === 'kelas' ? 'Jadwalkan kelas terjadwal' : 'Buat kegiatan baru'}</button></DialogFooter>
 		</DialogContent>
 	</Dialog>;
 }

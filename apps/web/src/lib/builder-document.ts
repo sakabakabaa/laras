@@ -1256,127 +1256,16 @@ export function copyBuilder(
 	).document.delivery;
 	return next;
 }
+export { builderToScheduledPlan, scheduledStateToBuilder, type ScheduledActivityPlan, type ScheduledClassPlan, type ScheduledGradingPlan } from './builder-scheduled-bridge';
+import { scheduledStateToBuilder } from './builder-scheduled-bridge';
+
 /** Copies authored content only. Attempts, participants, grading and schedule are never copied. */
 export function copyScheduledToBuilder(
 	state: import('./scheduled-classes').ScheduledClassState,
 	context: BuilderDocument['context'],
 	origin: string,
 ): BuilderEnvelope {
-	const next = blankBuilder(
-		'kelas',
-		context.courseId,
-		context.meetingId,
-		context.sectionIds,
-	);
-	next.document.context = context;
-	next.document.title = (
-		(state.class?.title || state.session.title) + ' (salinan)'
-	).slice(0, 200);
-	next.document.instructions = rich(state.class?.instructions || '');
-	next.document.activities = [];
-	for (const source of state.activities) {
-		const activity = newActivity(source.title);
-		activity.required = source.required;
-		activity.plannedMinutes = source.minutes;
-		next.document.activities.push(activity);
-		if (source.content) {
-			const id = appendBlock(next, activity.id, 'instructions');
-			activity.blocks.find((b) => b.id === id)!.body = rich(source.content);
-		}
-		if (source.lesson) {
-			const id = appendBlock(next, activity.id, 'lesson');
-			activity.blocks.find((b) => b.id === id)!.lesson = structuredClone({
-				goal: source.lesson.goal,
-				steps: source.lesson.steps,
-				scenes: source.lesson.scenes,
-			});
-			for (const video of source.lesson.videos || []) {
-				const bid = appendBlock(next, activity.id, 'video'),
-					b = activity.blocks.find((b) => b.id === bid)!;
-				b.url = new URL(video.src, origin).href;
-				b.label = video.title.de;
-			}
-		}
-		if (source.url && source.url.startsWith('https://')) {
-			const bid = appendBlock(next, activity.id, 'reference'),
-				b = activity.blocks.find((b) => b.id === bid)!;
-			b.url = source.url;
-			b.label = 'Materi kegiatan';
-		}
-		const questions = source.kind === 'quiz' ? source.questions || [] : [];
-		for (const item of questions) {
-			const id = appendQuestion(next, 'single_choice'),
-				q = next.document.questionsById[id];
-			q.prompt = rich(item.text);
-			q.points = item.points;
-			q.options = item.options.map((label) => ({ id: uid(), label }));
-			next.privateKeys.answersByQuestionId[id] = {
-				strategy: 'single_choice',
-				correctOptionId: q.options[item.correctIndex]?.id || '',
-				explanation: rich(item.explanation || ''),
-			};
-			activity.blocks.push({
-				id: uid(),
-				type: 'question_group',
-				questionIds: [id],
-			});
-		}
-		for (const item of source.worksheet?.items || []) {
-			const key = source.worksheet?.answerKey?.items[item.id],
-				kind: QuestionKind =
-					item.type === 'select'
-						? 'single_choice'
-						: key?.mode === 'exact'
-							? 'short_answer'
-							: source.kind === 'exit_ticket'
-								? 'reflection'
-								: 'long_writing';
-			const id = appendQuestion(next, kind),
-				q = next.document.questionsById[id];
-			q.prompt = rich(
-				[item.prompt, item.translation].filter(Boolean).join('\n'),
-			);
-			if (item.type === 'select')
-				q.options = item.options!.map((label) => ({ id: uid(), label }));
-			if (key?.mode === 'exact') {
-				q.points = key.points;
-				next.privateKeys.answersByQuestionId[id] =
-					item.type === 'select'
-						? {
-								strategy: 'single_choice',
-								correctOptionId:
-									q.options?.find((o) => key.accepted.includes(o.label))?.id ||
-									'',
-							}
-						: {
-								strategy: 'exact_text',
-								accepted: [...key.accepted],
-								comparison: { ignoreCase: true, ignorePunctuation: true },
-							};
-			}
-			if (key?.mode === 'reference')
-				next.privateKeys.answersByQuestionId[id] = {
-					strategy: 'rubric',
-					modelAnswer: rich(key.modelAnswer || ''),
-					privateGuidance: rich(key.rubric || ''),
-				};
-			activity.blocks.push({
-				id: uid(),
-				type:
-					kind === 'long_writing'
-						? 'writing'
-						: kind === 'reflection'
-							? 'reflection'
-							: 'question_group',
-				...(kind === 'long_writing'
-					? { questionId: id }
-					: { questionIds: [id] }),
-			});
-		}
-		if (!activity.blocks.length)
-			appendBlock(next, activity.id, 'acknowledgement');
-	}
-	return next;
+	return scheduledStateToBuilder(state, context, origin, { isCopy: true });
 }
 
 /** Stable draft comparison: field order is irrelevant; activity/element order is meaningful. */

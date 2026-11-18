@@ -5,7 +5,7 @@ import { useBuilderAssetUrl } from './builder-media';
 import { plain, type BuilderBlock, type BuilderDocument, type BuilderImage } from '@/lib/builder-document';
 export function matchingPictures(block:BuilderBlock,images:BuilderImage[]|undefined){
  if(!images||!block.destinations||images.length!==block.destinations.length)return undefined;
- const result=block.destinations.map(dest=>images.find(img=>(img.caption.trim().toLowerCase()===dest.title.trim().toLowerCase()||img.caption.trim().match(/^([A-Z])(?:\s*[·.)-]|\s*$)/)?.[1]===dest.label)));
+ const result=block.destinations.map(dest=>images.find(img=>(img.caption.trim().toLowerCase()===dest.title.trim().toLowerCase()||(img.caption.trim().match(/\bBild ([A-Z])\b/i)?.[1]||img.caption.trim().match(/^([A-Z])(?:\s*[·.)-]|\s*$)/)?.[1])===dest.label)));
  if(result.some(img=>!img)||new Set(result.map(img=>img?.id)).size!==images.length)return undefined;
  return result as BuilderImage[];
 }

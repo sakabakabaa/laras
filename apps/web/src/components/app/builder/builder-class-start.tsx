@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useCachedQuery } from '@/hooks/use-cached-query';
 import pb from '@/lib/pocketbase-client';
-import { blankBuilder, builderRequest, copyBuilder, copyScheduledToBuilder, uid, type BuilderRecord } from '@/lib/builder-document';
+import { blankBuilder, builderRequest, copyBuilder, copyScheduledToBuilder, rich, scheduledStateToBuilder, uid, type BuilderRecord } from '@/lib/builder-document';
 import { scheduledRequest } from '@/lib/scheduled-classes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -38,7 +38,20 @@ export function BuilderClassStart({ authoring = true }: { authoring?: boolean } 
 			if (sourceSession) {
 				const state = await scheduledRequest(sourceSession, 'state');
 				if (!state.owner) throw new Error('Sesi ini tidak tersedia untuk disalin.');
-				envelope = copyScheduledToBuilder(state, context, window.location.origin);
+				if (sourceSession === meeting && (!state.class || state.class.status === 'draft')) {
+					if (state.activities.length > 0) {
+						envelope = scheduledStateToBuilder(state, context, window.location.origin, { isCopy: false });
+					} else if (state.class) {
+						envelope.document.title = (state.class.title || selectedMeeting.title).slice(0, 200);
+						envelope.document.instructions = rich(state.class.instructions || '');
+						envelope.document.delivery.startsAt = state.class.startsAt || envelope.document.delivery.startsAt;
+						envelope.document.delivery.endsAt = state.class.endsAt || envelope.document.delivery.endsAt;
+						envelope.document.delivery.checkInClosesAt = state.class.joinUntil || envelope.document.delivery.checkInClosesAt;
+						envelope.document.delivery.lateAfterMinutes = state.class.lateAfterMin ?? 10;
+					}
+				} else {
+					envelope = copyScheduledToBuilder(state, context, window.location.origin);
+				}
 			} else if (source) {
 				envelope = copyBuilder(await builderRequest<BuilderRecord>('get', { id: source }), 'kelas', context);
 			}

@@ -3,10 +3,30 @@ import type {ScheduledActivity} from './scheduled-classes';
 export type MatchingTarget={value:string;title:string;url:string};
 export function cardMatchingTargets(activity:ScheduledActivity):MatchingTarget[]{
   const items=activity.worksheet?.items;
-  if(!items?.length||items.some(i=>i.type!=='select'))return [];
+  if(!items?.length)return [];
+  const images=(activity.sources||[]).filter(s=>s.available&&s.id&&(s.url||s.filename)&&/\.(jpe?g|png|webp|gif|svg)$/i.test(s.url||s.filename||''));
+  const matchBlock=activity.worksheet?.blocks?.find((b):b is Extract<NonNullable<NonNullable<ScheduledActivity['worksheet']>['blocks']>[number],{type:'match'}>=>b.type==='match');
+  if(matchBlock&&matchBlock.destinations?.length>=2&&matchBlock.destinations.length<=6){
+    const matchItems=matchBlock.cardItemIds?.length?items.filter(i=>matchBlock.cardItemIds.includes(i.id)):items;
+    if(!matchItems.length||matchItems.some(i=>i.type!=='select'))return [];
+    const matchOptions=matchItems[0].options||[];
+    if(matchOptions.length<2||matchOptions.length>6||matchItems.some(i=>JSON.stringify(i.options)!==JSON.stringify(matchOptions)))return [];
+    const explicit=matchBlock.destinations.map(dest=>{
+      const value=dest.label;
+      const titleText=[dest.title?.de,dest.title?.id].filter(Boolean).join(' · ')||value;
+      const title=titleText.startsWith(`${value} ·`)||/\bBild /i.test(titleText)?titleText:`${value} · ${titleText}`;
+      if(dest.image){
+        const img=images.find(s=>s.id===dest.image);
+        if(!img)return null;
+        return {value,title,url:img.url||`/hcgi/platform/api/files/file_library/${img.id}/${encodeURIComponent(img.filename!)}`};
+      }
+      return {value,title,url:''};
+    });
+    if(explicit.every(Boolean))return explicit as MatchingTarget[];
+  }
+  if(items.some(i=>i.type!=='select'))return [];
   const options=items[0].options||[];
   if(options.length<2||options.length>4||items.some(i=>JSON.stringify(i.options)!==JSON.stringify(options)))return [];
-  const images=(activity.sources||[]).filter(s=>s.available&&s.id&&(s.url||s.filename)&&/\.(jpe?g|png|webp)$/i.test(s.url||s.filename||''));
   const targets=options.map(value=>{
     const matches=images.filter(s=>(s.title.match(/\bBild ([A-Z])\b/i)?.[1]||s.title.match(/^([A-Z])\s*·/)?.[1])===value);
     if(matches.length!==1)return null;
@@ -20,3 +40,4 @@ export function moveMatchingCard(responses:Record<string,string>,ids:string[],ta
   if(!ids.includes(id)||(target!==''&&!targets.some(t=>t.value===target)))return responses;
   const next={...responses};if(target)next[id]=target;else delete next[id];return next;
 }
+

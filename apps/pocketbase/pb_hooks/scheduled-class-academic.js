@@ -20,10 +20,24 @@ exports.attach = function(app,ctx,plan) {
   }
   return {course:{id:course,title:ctx.course.getString('title'),rps:ctx.course.getString('rps').slice(0,20000)},session:{id:ctx.session.id,title:ctx.session.getString('title'),week:ctx.session.getInt('week'),topic:ctx.session.getString('topic'),learningIndicator:ctx.session.getString('learningIndicator'),learningMaterial:ctx.session.getString('learningMaterial'),assessmentMethod:ctx.session.getString('assessmentMethod'),duration:ctx.session.getString('duration'),references:ctx.session.getString('references')},capturedAt:new Date().toISOString()};
 };
-exports.studentSources = function(app,sources,course) {
-  return (sources||[]).filter(s=>s.access==='student').flatMap(source=>{
+function explicitWorksheetAssets(worksheet) {
+  const assets = new Set();
+  for (const block of worksheet?.blocks || []) {
+    if ((block.type === 'image' || block.type === 'audio') && typeof block.asset === 'string') assets.add(block.asset);
+    if (block.type === 'match') {
+      for (const dest of block.destinations || []) {
+        if (typeof dest.image === 'string') assets.add(dest.image);
+      }
+    }
+  }
+  return assets;
+}
+exports.studentSources = function(app,sources,course,worksheet) {
+  const explicit = explicitWorksheetAssets(worksheet);
+  return (sources||[]).filter(s=>s.access==='student'||(explicit.has(s.id)&&!/\.pdf$/i.test(s.filename||''))).flatMap(source=>{
     let file;try{file=app.findRecordById('file_library',source.id);}catch(_){return [{id:source.id,title:source.title,version:source.version,available:false}];}
-    if(file.getString('access')!=='student'||!linked(file,'course').includes(course))return [];
+    const allowed=file.getString('access')==='student'||(explicit.has(source.id)&&!/\.pdf$/i.test(file.getString('file')||''));
+    if(!allowed||!linked(file,'course').includes(course))return [];
     const available=(file.getInt('version')||1)===source.version&&file.getString('file')===source.filename&&Boolean(source.filename);
     return [{id:source.id,title:source.title,version:source.version,available,...(available?{url:'/hcgi/platform/api/files/file_library/'+source.id+'/'+encodeURIComponent(source.filename)}:{})}];
   });

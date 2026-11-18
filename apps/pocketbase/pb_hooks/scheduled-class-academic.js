@@ -22,6 +22,9 @@ exports.attach = function(app,ctx,plan) {
 };
 function explicitWorksheetAssets(worksheet) {
   const assets = new Set();
+  for (const item of worksheet?.items || []) {
+    if (typeof item.image === 'string' && item.image) assets.add(item.image);
+  }
   for (const block of worksheet?.blocks || []) {
     if ((block.type === 'image' || block.type === 'audio') && typeof block.asset === 'string') assets.add(block.asset);
     if (block.type === 'match') {

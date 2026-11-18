@@ -36,6 +36,15 @@ export function cardMatchingTargets(activity:ScheduledActivity):MatchingTarget[]
   return targets.some(t=>!t)?[]:targets as MatchingTarget[];
 }
 
+export function cardMatchingItemImages(activity:ScheduledActivity):Record<string,string>{
+  const items=activity.worksheet?.items;
+  if(!items?.length)return {};
+  const byId=new Map((activity.sources||[]).filter(s=>s.available&&s.id&&(s.url||s.filename)&&/\.(jpe?g|png|webp|gif|svg)$/i.test(s.url||s.filename||'')).map(s=>[s.id!,s.url||`/hcgi/platform/api/files/file_library/${s.id}/${encodeURIComponent(s.filename!)}`]));
+  const out:Record<string,string>={};
+  for(const item of items)if(item.image&&byId.has(item.image))out[item.id]=byId.get(item.image)!;
+  return out;
+}
+
 export function moveMatchingCard(responses:Record<string,string>,ids:string[],targets:MatchingTarget[],id:string,target:string){
   if(!ids.includes(id)||(target!==''&&!targets.some(t=>t.value===target)))return responses;
   const next={...responses};if(target)next[id]=target;else delete next[id];return next;

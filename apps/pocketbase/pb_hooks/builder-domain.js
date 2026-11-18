@@ -311,6 +311,9 @@ function layoutBackground(value) {
 }
 function documentAssets(document) {
 	const assets = [];
+	for (const q of Object.values(document.questionsById || {})) {
+		if (q && q.image) assets.push({ asset: q.image, kind: 'image' });
+	}
 	for (const activity of document.activities || []) {
 		for (const block of activity.blocks || []) {
 			if (block.asset) assets.push({ asset: block.asset, kind: block.type });
@@ -593,6 +596,8 @@ function normalize(body) {
 					maxPoints: num(c.maxPoints),
 				})),
 			};
+		if (q.image !== undefined) out.image = asset(q.image);
+		if (q.url !== undefined) out.url = url(q.url);
 		questionsById[qid] = out;
 	}
 	let blockCount = 0;

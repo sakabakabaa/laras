@@ -254,6 +254,8 @@ export type BuilderQuestion = {
 	prompt: RichText;
 	required: boolean;
 	points: number;
+	image?: BuilderAsset;
+	url?: string;
 	options?: { id: string; label: string }[];
 	maxCharacters?: number;
 	rubric?: { criteria: { id: string; label: string; maxPoints: number }[] };
@@ -1500,7 +1502,7 @@ export function builderToScheduledPlan(envelope: BuilderEnvelope): ScheduledClas
 		const usedBlockIds = new Set<string>();
 		const materialIdSet = new Set<string>();
 		const addMaterialId = (id?: string) => {
-			if (isPocketBaseId(id) && materialIdSet.size < 8) {
+			if (isPocketBaseId(id) && materialIdSet.size < 40) {
 				materialIdSet.add(id);
 			}
 		};
@@ -1727,10 +1729,13 @@ export function builderToScheduledPlan(envelope: BuilderEnvelope): ScheduledClas
 					if (!q) continue;
 					const itemId = safeItemId(qid, 'match', qIdx, usedItemIds);
 					const { prompt, translation } = splitPromptAndTranslation(plain(q.prompt));
+					const cardImageId = q.image?.fileId || extractFileIdFromUrl(q.url);
+					if (cardImageId) addMaterialId(cardImageId);
 					items.push({
 						id: itemId,
 						prompt,
 						...(translation ? { translation } : {}),
+						...(isPocketBaseId(cardImageId) ? { image: cardImageId } : {}),
 						type: 'select',
 						options: optionLabels,
 					});
@@ -2035,10 +2040,17 @@ function populateQuestionFromWorksheetItem(
 	item: ScheduledWorksheet['items'][number],
 	key: WorksheetAnswerKeyEntry | undefined,
 	kind: QuestionKind,
+	sources?: ScheduledActivity['sources'],
 ): string {
 	const id = appendQuestion(envelope, kind);
 	const q = envelope.document.questionsById[id];
 	q.prompt = rich([item.prompt, item.translation].filter(Boolean).join('\n'));
+	if (item.image) {
+		const src = (sources || []).find((s) => s.id === item.image);
+		const asset = src ? sourceToAsset(src) : undefined;
+		if (asset) q.image = asset;
+		else if (src?.url && /^https:\/\//i.test(src.url)) q.url = src.url;
+	}
 	if (item.type === 'select' && kind === 'single_choice') {
 		q.options = (item.options || []).map((label) => ({ id: uid(), label }));
 	}
@@ -2294,7 +2306,7 @@ export function scheduledStateToBuilder(
 							const item = itemsById.get(itemId);
 							if (!item) continue;
 							const key = keys[item.id];
-							const qid = populateQuestionFromWorksheetItem(next, item, key, 'matching');
+							const qid = populateQuestionFromWorksheetItem(next, item, key, 'matching', source.sources);
 							const targetLabel = key?.mode === 'exact' ? key.accepted[0] : '';
 							if (targetLabel && destIdByLabel.has(targetLabel)) {
 								next.privateKeys.answersByQuestionId[qid].correctDestinationId = destIdByLabel.get(targetLabel)!;

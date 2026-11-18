@@ -7,12 +7,13 @@ import pb from '@/lib/pocketbase-client';
 import {useT} from '@/lib/i18n';
 import type {ScheduledActivity,ScheduledWorksheet} from '@/lib/scheduled-classes';
 import {singleGap,worksheetBlocks,writingRows} from '@/lib/worksheet-layout';
-import {cardMatchingTargets} from '@/lib/card-matching';
+import {cardMatchingItemImages,cardMatchingTargets} from '@/lib/card-matching';
 import {ScheduledCardMatching} from './scheduled-card-matching';
 import {PDFPreview} from './task-builders/quiz-source-builder';
 
 export function WorksheetAnswers({sheet,responses,onChange,activity,maxLengths,rowsById}:{maxLengths?:Record<string,number>;rowsById?:Record<string,number>;sheet:ScheduledWorksheet;activity?:ScheduledActivity;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void}){
   const t=useT(),group=useId(),targets=activity?cardMatchingTargets(activity):[];
+  const itemImages=activity?cardMatchingItemImages(activity):undefined;
   const answered=sheet.items.filter(item=>{const value=responses[item.id]||'';return item.type==='select'?item.options?.includes(value):Boolean(value.trim());}).length;
   const bookReference=activity?activityBookReference(activity):'';
   const progress=<><header className="sc-answer-sheet-heading"><h3>{t('worksheet.answerSheet')}</h3><span role="status">{t('worksheet.responseProgress',{answered:String(answered),total:String(sheet.items.length)})}</span></header>{bookReference&&<p className="sc-book-reference"><BookOpen size={18} aria-hidden="true"/>{bookReference}</p>}</>;
@@ -20,11 +21,11 @@ export function WorksheetAnswers({sheet,responses,onChange,activity,maxLengths,r
   const matchItemIdSet=new Set(targets.length?(matchBlock?.cardItemIds?.length?matchBlock.cardItemIds:sheet.items.map(i=>i.id)):[]);
   const remainingItems=targets.length?sheet.items.filter(i=>!matchItemIdSet.has(i.id)):sheet.items;
   const paired=remainingItems.length>1&&remainingItems.every((item,i)=>item.type==='text'&&item.prompt.match(/^([0-9]+)([ab])\./)?.[0]===`${Math.floor(i/2)+1}${i%2?'b':'a'}.`);
-  if(targets.length&&!remainingItems.length)return <>{progress}<ScheduledCardMatching key={activity!.id} sheet={sheet} targets={targets} responses={responses} onChange={onChange}/></>;
+  if(targets.length&&!remainingItems.length)return <>{progress}<ScheduledCardMatching key={activity!.id} sheet={sheet} targets={targets} itemImages={itemImages} responses={responses} onChange={onChange}/></>;
   const prompt=(item:ScheduledWorksheet['items'][number])=><><span lang="de">{item.prompt}</span>{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}</>;
   const gapInput=(item:ScheduledWorksheet['items'][number],number?:string)=><input className="sc-gap-input" type="text" aria-label={number?`Lücke ${number}: ${item.prompt}`:item.prompt} autoComplete="off" maxLength={maxLengths?.[item.id]||2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>;
   const matchSheet=targets.length?{...sheet,items:sheet.items.filter(i=>matchItemIdSet.has(i.id))}:sheet;
-  return <div className={`sc-worksheet ${paired?'sc-worksheet-paired':''}`}>{progress}{targets.length>0&&<ScheduledCardMatching key={activity!.id} sheet={matchSheet} targets={targets} responses={responses} onChange={onChange}/>}<ol>{worksheetBlocks(remainingItems,sheet.blocks).map(block=>{
+  return <div className={`sc-worksheet ${paired?'sc-worksheet-paired':''}`}>{progress}{targets.length>0&&<ScheduledCardMatching key={activity!.id} sheet={matchSheet} targets={targets} itemImages={itemImages} responses={responses} onChange={onChange}/>}<ol>{worksheetBlocks(remainingItems,sheet.blocks).map(block=>{
     const item=block.items[0];
     if(block.context&&block.gaps)return <li key={item.id} className="sc-gap-paragraph">{block.section&&<strong className="sc-gap-section">{block.section}</strong>}<p lang="de">{block.context.split(/(\(\d+\)\s*_{3,})/g).map((part,i)=>{
       const number=part.match(/^\((\d+)\)\s*_{3,}$/)?.[1],gap=block.gaps!.find(g=>g.number===number);

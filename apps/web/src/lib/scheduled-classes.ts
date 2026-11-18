@@ -21,7 +21,7 @@ export type WorksheetBlock =
   | {id:string;type:'writing';itemId:string;prompt:Bilingual;responseLength:'short'|'extended';rows?:number}
   | {id:string;type:'reflection';itemIds:string[];prompt:Bilingual};
 export type WorksheetAnswerKeyEntry = {mode:'exact';accepted:string[];points:number}|{mode:'reference';modelAnswer?:string;rubric?:string};
-export type ScheduledWorksheet = {sourceMaterialId?:string;sourcePage?:number;sourceLabel?:string;items:{id:string;prompt:string;translation?:string;type:'select'|'text';options?:string[]}[];blocks?:WorksheetBlock[];answerKey?:{version:1;items:Record<string,WorksheetAnswerKeyEntry>}};
+export type ScheduledWorksheet = {sourceMaterialId?:string;sourcePage?:number;sourceLabel?:string;items:{id:string;prompt:string;translation?:string;image?:string;type:'select'|'text';options?:string[]}[];blocks?:WorksheetBlock[];answerKey?:{version:1;items:Record<string,WorksheetAnswerKeyEntry>}};
 export type ScheduledActivity = {
   id: string; kind: ActivityKind; title: string; minutes: number; required: boolean;
   startsAt: string; endsAt: string; content?: string; url?: string; questions?: QuizQuestionEditable[];

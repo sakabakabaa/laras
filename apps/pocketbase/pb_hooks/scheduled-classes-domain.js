@@ -147,7 +147,8 @@ function worksheet(value, materials, kind) {
     if (!prompt || !['select', 'text'].includes(item.type)) fail('Lengkapi pertanyaan lembar kerja.');
     const options = item.type === 'select' && Array.isArray(item.options) ? item.options.map(o => text(o, 200)) : [];
     if (item.type === 'select' && (options.length < 2 || options.length > 6 || options.some(o => !o) || new Set(options).size !== options.length)) fail('Pilihan lembar kerja tidak valid.');
-    return {id: item.id, prompt, ...(item.translation ? {translation: text(item.translation,1000)} : {}), type: item.type, ...(item.type === 'select' ? {options} : {})};
+    const image = text(item.image, 15);
+    return {id: item.id, prompt, ...(item.translation ? {translation: text(item.translation,1000)} : {}), ...(image ? {image} : {}), type: item.type, ...(item.type === 'select' ? {options} : {})};
   });
   const sourceMaterialId = text(value.sourceMaterialId, 15);
   if (sourceMaterialId && (!materials.includes(sourceMaterialId) || !Number.isInteger(value.sourcePage) || value.sourcePage < 1 || value.sourcePage > 10000)) fail('Pilih materi terlampir dan nomor halaman PDF yang valid.');
@@ -199,11 +200,11 @@ function validatePlan(body, now, publish) {
         if (options.length < 2 || options.length > 6 || !Number.isInteger(q.correctIndex) || q.correctIndex < -1 || q.correctIndex >= options.length || (publish && (!text(q.text, 2000) || options.some(o => !o) || q.correctIndex < 0))) fail('Lengkapi soal, pilihan, dan kunci jawaban kuis.');
         const points = Number(q.points);
         if (!Number.isFinite(points) || points < 0 || (publish && points === 0) || points > 100) fail('Poin soal harus lebih dari 0 hingga 100.');
-        const evidence=q.sourceId&&ids(a.materialIds,8).includes(q.sourceId)?{sourceId:q.sourceId,sourceQuote:text(q.sourceQuote,2000)}:{};
+        const evidence=q.sourceId&&ids(a.materialIds,40).includes(q.sourceId)?{sourceId:q.sourceId,sourceQuote:text(q.sourceQuote,2000)}:{};
         return {id: 'q' + index, text: text(q.text, 2000), options, correctIndex: q.correctIndex, points, explanation: text(q.explanation, 2000),...evidence};
       });
     } else if (publish && !content && !url && !(a.kind==='material'&&(a.materialIds||[]).length)) fail('Isi materi atau instruksi kegiatan.');
-    const materialIds = ids(a.materialIds,8), sheet = worksheet(a.worksheet, materialIds, a.kind);
+    const materialIds = ids(a.materialIds,40), sheet = worksheet(a.worksheet, materialIds, a.kind);
     return {position, kind: a.kind, title: name, minutes, required: a.required !== false, materialIds,cpmkIds:ids(a.cpmkIds,20),subCpmkIds:ids(a.subCpmkIds,20), snapshot: {content, url, questions, ...(sheet ? {worksheet: sheet} : {})}};
   });
   const endsAt = startsAt + activities.reduce((sum, a) => sum + a.minutes * 60000, 0);

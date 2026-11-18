@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {cardMatchingTargets,moveMatchingCard} from '../src/lib/card-matching';
+import {cardMatchingItemImages,cardMatchingTargets,moveMatchingCard} from '../src/lib/card-matching';
 import type {ScheduledActivity} from '../src/lib/scheduled-classes';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
@@ -27,5 +27,15 @@ describe('image matching with existing response IDs',()=>{
     const a=activity(),markup=renderToStaticMarkup(createElement(ScheduledCardMatching,{sheet:a.worksheet!,targets:cardMatchingTargets(a),responses:{one:'A'},onChange:()=>{}}));
     const bank=markup.split('class="sc-match-bank ')[1].split('</section>')[0],targetA=markup.split('data-match-target="A"')[1].split('data-match-target="B"')[0];
     expect(bank).toContain('data-card-id="two"');expect(bank).not.toContain('data-card-id="one"');expect(targetA).toContain('data-card-id="one"');expect(markup.match(/data-card-id="one"/g)).toHaveLength(1);
+  });
+  it('resolves and renders individual card illustrations on deck cards when present',()=>{
+    const a=activity();
+    a.worksheet!.items[0].image='img000000000001';
+    a.sources!.push({id:'img000000000001',title:'Pen',version:1,available:true,filename:'pen.jpg'});
+    const itemImages=cardMatchingItemImages(a);
+    expect(itemImages).toEqual({one:'/hcgi/platform/api/files/file_library/img000000000001/pen.jpg'});
+    const markup=renderToStaticMarkup(createElement(ScheduledCardMatching,{sheet:a.worksheet!,targets:cardMatchingTargets(a),itemImages,responses:{},onChange:()=>{}}));
+    expect(markup).toContain('class="sc-match-deck-media"');
+    expect(markup).toContain('src="/hcgi/platform/api/files/file_library/img000000000001/pen.jpg"');
   });
 });

@@ -26,8 +26,23 @@
 .sc-student .sc-worksheet .sl-translation{font-size:13px;margin:0 0 4px;line-height:1.6}
 .sc-worksheet-paired>ol{grid-template-columns:repeat(2,minmax(0,1fr))}
 .sc-writing-long textarea{min-height:300px}
-.sc-student .sc-fields .sc-worksheet .sc-gap-input{width:14ch;background:var(--r-surface);border-radius:6px;min-height:44px}
-.sc-gap-paragraph .sc-gap-section{display:inline-flex;justify-content:center;align-items:center;min-width:28px;height:28px;border-radius:6px;background:var(--r-surface);border:1px solid var(--r-border);margin-bottom:12px}
+.sc-student .sc-fields .sc-worksheet .sc-gap-input{width:14ch;background:var(--r-surface);border-radius:8px;min-height:40px}
+.sc-student .sc-fields .sc-worksheet .sc-gap-input.is-filled{border-color:var(--r-success);background:var(--r-success-tint);color:var(--r-success);font-weight:650}
+.sc-page .sc-fields .sc-worksheet .sc-inline-gap{display:inline-flex;align-items:center;gap:6px;max-width:100%;margin:2px 4px;padding:3px 9px 3px 4px;border:1px solid var(--r-border);border-radius:8px;background:var(--r-surface);vertical-align:middle;line-height:1.4;transition:border-color .15s,background .15s,box-shadow .15s}
+.sc-page .sc-fields .sc-worksheet .sc-inline-gap:focus-within{border:1.5px solid var(--r-red-600);background:var(--r-surface);box-shadow:0 0 0 2px var(--r-red-tint-soft)}
+.sc-page .sc-fields .sc-worksheet .sc-inline-gap.is-filled:not(:focus-within){border:1.5px solid var(--r-success);background:var(--r-success-tint);color:var(--r-success)}
+.sc-inline-gap-num{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:5px;background:var(--r-surface-2);color:var(--r-ink-2);font-size:12px;font-weight:750;font-variant-numeric:tabular-nums;line-height:1;flex-shrink:0}
+.sc-inline-gap:focus-within .sc-inline-gap-num{background:var(--r-red-600);color:#fff}
+.sc-inline-gap.is-filled:not(:focus-within) .sc-inline-gap-num{background:var(--r-success);color:#fff}
+.sc-page .sc-fields .sc-worksheet .sc-inline-gap input.sc-gap-input{width:7.5ch;min-width:4ch;min-height:26px;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;outline:0;font-size:14px;font-weight:500;color:var(--r-ink);line-height:1.4}
+.sc-page .sc-fields .sc-worksheet .sc-inline-gap input.sc-gap-input::placeholder{color:var(--r-ink-2);opacity:.7;letter-spacing:.04em}
+.sc-page .sc-fields .sc-worksheet .sc-inline-gap input.sc-gap-input:focus-visible{outline:0}
+.sc-page .sc-fields .sc-worksheet .sc-inline-gap.is-filled:not(:focus-within) input.sc-gap-input{color:var(--r-success);font-weight:700}
+.sc-inline-gap-check{flex-shrink:0;color:var(--r-success)}
+.sc-inline-gap:focus-within .sc-inline-gap-check{display:none}
+.sc-worksheet-lead{margin:0 0 14px;font-weight:600;color:var(--r-ink)}
+.sc-gap-paragraph p+p{margin-top:8px}
+.sc-gap-paragraph .sc-gap-section{display:block;color:var(--r-red-600);font-size:13px;font-weight:700;line-height:1.4;margin-bottom:10px}
 .sc-student .sc-resources .sc-audio-source{padding:12px 16px;margin-block:10px}
 .sc-audio-source label{display:grid;grid-template-columns:90px minmax(0,1fr);align-items:center;gap:16px;font-weight:600;font-size:var(--r-type-label-size)}
 .sc-match-count{display:inline-grid;place-items:center;min-width:24px;height:24px;margin-inline-start:8px;padding:0 5px;box-sizing:border-box;font-size:12px;font-variant-numeric:tabular-nums;border-radius:999px;background:var(--r-surface);color:var(--r-ink-2);border:1px solid var(--r-border)}

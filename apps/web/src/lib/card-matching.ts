@@ -45,6 +45,83 @@ export function cardMatchingItemImages(activity:ScheduledActivity):Record<string
   return out;
 }
 
+export type KaufhausFloorSpec = {
+  value: string;
+  badge: string;
+  name: string;
+  tag?: string;
+  departments: string;
+  dividerBefore?: 'awning' | 'street';
+};
+
+export const KAUFHAUS_FLOORS: KaufhausFloorSpec[] = [
+  {
+    value: '5. Stock',
+    badge: '5',
+    name: '5. Stock',
+    departments: 'Alles für den Sport · Sportkleidung · Fitnessgeräte · Bademode · Café',
+  },
+  {
+    value: '4. Stock',
+    badge: '4',
+    name: '4. Stock',
+    departments: 'Computer · Technik · Fotozubehör · CDs · Elektrogeräte · Kasse',
+  },
+  {
+    value: '3. Stock',
+    badge: '3',
+    name: '3. Stock',
+    departments: 'Mode für Kinder und Jugendliche · Spielwaren',
+  },
+  {
+    value: '2. Stock',
+    badge: '2',
+    name: '2. Stock',
+    departments: 'Herrenmode · Anzüge · Hemden · Freizeitkleidung',
+  },
+  {
+    value: '1. Stock',
+    badge: '1',
+    name: '1. Stock',
+    departments: 'Damenmode · Freizeitkleidung · Abendkleidung · Schuhe für Sie & Ihn',
+  },
+  {
+    value: 'EG',
+    badge: 'EG',
+    name: 'Erdgeschoss',
+    tag: 'Pintu masuk',
+    departments: 'Kosmetik · Parfümerie · Uhren · Schmuck · Schreibwaren · Bücher · Zeitschriften · Kasse',
+    dividerBefore: 'awning',
+  },
+  {
+    value: 'UG',
+    badge: 'UG',
+    name: 'Untergeschoss',
+    tag: 'Bawah tanah',
+    departments: 'Lebensmittel · Alles für die Küche · Haushaltswaren',
+    dividerBefore: 'street',
+  },
+];
+
+const KAUFHAUS_VALUE_RE = /^(UG|EG|[1-5]\.\s*Stock)$/i;
+
+export function kaufhausTargetFloor(
+  target: Pick<MatchingTarget, 'value'> & { title?: string },
+): string | undefined {
+  const val = target.value.trim();
+  if (KAUFHAUS_VALUE_RE.test(val)) return val.toLowerCase();
+  const prefix = target.title?.split(' · ')[0]?.trim() || '';
+  if (KAUFHAUS_VALUE_RE.test(prefix)) return prefix.toLowerCase();
+  return undefined;
+}
+
+export function isKaufhausTargets(
+  targets: (Pick<MatchingTarget, 'value'> & { title?: string })[],
+): boolean {
+  if (targets.length < 2) return false;
+  return targets.every((target) => Boolean(kaufhausTargetFloor(target)));
+}
+
 export function moveMatchingCard(responses:Record<string,string>,ids:string[],targets:MatchingTarget[],id:string,target:string){
   if(!ids.includes(id)||(target!==''&&!targets.some(t=>t.value===target)))return responses;
   const next={...responses};if(target)next[id]=target;else delete next[id];return next;

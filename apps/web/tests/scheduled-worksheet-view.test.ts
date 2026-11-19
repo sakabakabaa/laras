@@ -38,4 +38,45 @@ describe('scheduled worksheet response feedback',()=>{
   expect(html).toContain('Wo <span class="sc-inline-gap">');
   expect(html).toContain('</span> es Tee?');
  });
+ it('splits dialog speaker turns onto separate lines, highlights filled gaps, and adds 12d placeholder',()=>{
+  const sheet2:ScheduledWorksheet={
+   items:[
+    {id:'g1',prompt:'Dialog A · Lücke 1: ...',type:'text'},
+    {id:'g2',prompt:'Dialog A · Lücke 2: ...',type:'text'},
+    {id:'w1',prompt:'Schreiben Sie einen Text über Ihre Stadt. (Ich lebe in …)',type:'text'},
+   ],
+   blocks:[
+    {id:'p1',type:'passage',prompt:{de:'Ergänzen Sie die Verben (1–8).'},sections:[{id:'s1',segments:[{type:'text',text:{de:'— Wo '}},{type:'gap',itemId:'g1'},{type:'text',text:{de:' es Tee? — Tee '}},{type:'gap',itemId:'g2'},{type:'text',text:{de:' wir im UG.'}}]}]},
+    {id:'wblock',type:'writing',itemId:'w1',responseLength:'extended',rows:10},
+   ],
+  };
+  const html=renderToStaticMarkup(createElement(WorksheetAnswers,{sheet:sheet2,responses:{g1:'gibt'},onChange:()=>{}}));
+  expect(html).toContain('class="sc-worksheet-lead"');
+  expect(html).toContain('Ergänzen Sie die Verben (1–8).');
+  expect(html).toContain('class="sc-gap-section">Dialog A</strong><p lang="de">— Wo ');
+  expect(html).toContain('</p><p lang="de">— Tee ');
+  expect(html).toContain('class="sc-gap-input is-filled"');
+  expect(html).toContain('placeholder="Ich lebe in ..."');
+ });
+ it('suppresses duplicate Orientierungstafel and Produkte images in Kaufhaus matching while keeping Tipp images',async()=>{
+  const {WorksheetSource}=await import('@/components/app/scheduled-worksheet');
+  const kaufhausAct={
+   id:'kact',title:'10b–10c · Im Kaufhaus',kind:'assignment' as const,required:true,minutes:20,startsAt:'',endsAt:'',
+   sources:[
+    {id:'t1',title:'Im Kaufhaus · Orientierungstafel (Stockwerke)',version:1,available:true,filename:'im_kaufhaus_tafel_1.jpg'},
+    {id:'p1',title:'Im Kaufhaus · Produkte (10a)',version:1,available:true,filename:'im_kaufhaus_produkte_1.jpg'},
+    {id:'tip1',title:'Im Kaufhaus · Informationen auf Tafeln verstehen',version:1,available:true,filename:'im_kaufhaus_tipp_1.jpg'},
+   ],
+   worksheet:{
+    items:[{id:'m1',prompt:'1. der Kugelschreiber',type:'select' as const,options:['EG','UG']}],
+    blocks:[{id:'mb',type:'match' as const,cardItemIds:['m1'],layout:'destinations-above' as const,destinations:[{id:'EG',label:'EG',title:{de:'Erdgeschoss'}},{id:'UG',label:'UG',title:{de:'Untergeschoss'}}]}],
+   },
+  };
+  const html=renderToStaticMarkup(createElement(WorksheetSource,{activity:kaufhausAct}));
+  expect(html).not.toContain('im_kaufhaus_tafel_1.jpg');
+  expect(html).not.toContain('im_kaufhaus_produkte_1.jpg');
+  expect(html).toContain('im_kaufhaus_tipp_1.jpg');
+  const hidden=renderToStaticMarkup(createElement(WorksheetSource,{activity:kaufhausAct,showPictures:false}));
+  expect(hidden).toBe('');
+ });
 });

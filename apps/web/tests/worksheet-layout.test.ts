@@ -20,4 +20,28 @@ describe('worksheet presentation without changing response identities',()=>{
     expect(writingRows(item('email','Ihre E-Mail: Schreiben Sie den vollständigen Text.'))).toBe(10);
     expect(writingRows(item('sentence','Schreiben Sie einen Satz.'))).toBe(3);
   });
+  it('preserves explicit Lücke numbering across passage sections, infers Dialog headings, and strips duplicate A/B prefixes',()=>{
+    const items=[
+      item('g1','Dialog A · Lücke 1: ...'),
+      item('g2','Dialog A · Lücke 2: ...'),
+      item('g4','Dialog B · Lücke 4: ...'),
+    ];
+    const blocks=worksheetBlocks(items,[{
+      id:'p1',
+      type:'passage',
+      prompt:{de:'Ergänzen Sie die Verben.'},
+      sections:[
+        {id:'s1',segments:[{type:'text',text:{de:'A · — Entschuldigung, wo '}},{type:'gap',itemId:'g1'},{type:'text',text:{de:' es Tee? — Tee '}},{type:'gap',itemId:'g2'},{type:'text',text:{de:' wir im UG.'}}]},
+        {id:'s2',segments:[{type:'text',text:{de:'B · — Wo '}},{type:'gap',itemId:'g4'},{type:'text',text:{de:' Sie Taschen?'}}]},
+      ],
+    }]);
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0].section).toBe('Dialog A');
+    expect(blocks[0].prompt).toBe('Ergänzen Sie die Verben.');
+    expect(blocks[0].context).toBe('— Entschuldigung, wo (1) ______ es Tee? — Tee (2) ______ wir im UG.');
+    expect(blocks[0].gaps?.map(g=>g.number)).toEqual(['1','2']);
+    expect(blocks[1].section).toBe('Dialog B');
+    expect(blocks[1].context).toBe('— Wo (4) ______ Sie Taschen?');
+    expect(blocks[1].gaps?.map(g=>g.number)).toEqual(['4']);
+  });
 });

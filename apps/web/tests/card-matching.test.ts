@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {cardMatchingItemImages,cardMatchingTargets,moveMatchingCard} from '../src/lib/card-matching';
+import {cardMatchingItemImages,cardMatchingTargets,isKaufhausTargets,kaufhausTargetFloor,moveMatchingCard} from '../src/lib/card-matching';
 import type {ScheduledActivity} from '../src/lib/scheduled-classes';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
@@ -44,5 +44,39 @@ describe('image matching with existing response IDs',()=>{
     const markup=renderToStaticMarkup(createElement(ScheduledCardMatching,{sheet,targets:textTargets,responses:{one:'A'},onChange:()=>{}}));
     expect(markup).toContain('kotak tujuan yang sesuai');
     expect(markup).toContain('sc-match-deck is-empty');
+  });
+  it('detects Kaufhaus floor targets and renders the interactive 7-story cross-section with deck on top',()=>{
+    const kaufhausTargets=[
+      {value:'5. Stock',title:'5. Stock · Sport & Café',url:''},
+      {value:'4. Stock',title:'4. Stock · Computer & Technik',url:''},
+      {value:'2. Stock',title:'2. Stock · Herrenmode',url:''},
+      {value:'EG',title:'EG · Kosmetik & Schreibwaren',url:''},
+      {value:'UG',title:'UG · Lebensmittel',url:''},
+    ];
+    expect(isKaufhausTargets(kaufhausTargets)).toBe(true);
+    expect(isKaufhausTargets([{value:'dest_1',title:'5. Stock · Sport'},{value:'dest_2',title:'EG · Kosmetik'}])).toBe(true);
+    expect(kaufhausTargetFloor({value:'dest_1',title:'UG · Lebensmittel'})).toBe('ug');
+    expect(isKaufhausTargets([{value:'A',title:'A · Text',url:''},{value:'B',title:'B · Text',url:''}])).toBe(false);
+    const sheet={items:[
+      {id:'k1',type:'select' as const,prompt:'1. der Kugelschreiber',translation:'1. pulpen',options:kaufhausTargets.map(t=>t.value)},
+      {id:'k2',type:'select' as const,prompt:'2. der Schal',translation:'2. syal',options:kaufhausTargets.map(t=>t.value)},
+    ]};
+    const html=renderToStaticMarkup(createElement(ScheduledCardMatching,{
+      sheet,
+      targets:kaufhausTargets,
+      itemImages:{k1:'/kugelschreiber.jpg'},
+      responses:{k1:'EG'},
+      onChange:()=>{},
+    }));
+    expect(html).toContain('sc-match-kaufhaus');
+    expect(html).toContain('sc-kaufhaus-building');
+    expect(html).toContain('sc-kaufhaus-awning');
+    expect(html).toContain('sc-kaufhaus-street');
+    expect(html).toContain('is-directory');
+    expect(html.indexOf('sc-match-bank')).toBeLessThan(html.indexOf('sc-kaufhaus-building'));
+    expect(html).toContain('sc-kaufhaus-chip');
+    expect(html).toContain('der Kugelschreiber');
+    expect(html).not.toContain('>1. der Kugelschreiber<');
+    expect(html).toContain('src="/kugelschreiber.jpg"');
   });
 });

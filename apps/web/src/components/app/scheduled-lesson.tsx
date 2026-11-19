@@ -12,13 +12,13 @@ function Conjugation(){
  const subject=['Ich','Du','Er','Wir','Ihr','Sie'][person],form=(verb==='must'?must:may)[person];
  return <div className="sl-conjugation"><div className="sl-controls"><label>{t('lesson.person')}<select aria-label={t('lesson.person')} value={person} onChange={e=>setPerson(Number(e.target.value))}>{persons.map((p,i)=><option key={p} value={i}>{p}</option>)}</select></label><label>{t('lesson.verb')}<select aria-label={t('lesson.verb')} value={verb} onChange={e=>setVerb(e.target.value as 'must'|'may')}><option value="must">müssen · harus</option><option value="may">dürfen · boleh</option></select></label></div><div className="sl-sentence" aria-live="polite"><strong>{subject}</strong><strong className="sl-word-modal">{form}</strong><span>Tee</span><strong className="sl-word-final">trinken.</strong></div><p className="sl-translation" lang="id">{['Saya','Kamu','Dia','Kami/kita','Kalian','Mereka/Anda'][person]} {verb==='must'?'harus':'boleh'} minum teh.</p><div className="sl-table-wrap"><table><caption>Konjugation · Konjugasi</caption><thead><tr><th>Person</th><th>müssen</th><th>dürfen</th></tr></thead><tbody>{persons.map((p,i)=><tr key={p} className={person===i?'is-selected':''}><th scope="row">{p}</th><td>{must[i]}</td><td>{may[i]}</td></tr>)}</tbody></table></div><Bilingual text={{de:'Bei nicht dürfen bleiben die Formen gleich: Du darfst nicht rauchen.',id:'Untuk nicht dürfen, bentuk konjugasi tetap sama: Kamu tidak boleh merokok.'}}/></div>;
 }
-function LessonVideos({videos,note}:{videos:LessonVideo[];note?:BilingualText}){
+export function LessonVideos({videos,note}:{videos:LessonVideo[];note?:BilingualText}){
  const [selected,setSelected]=useState(0),[failed,setFailed]=useState(false);
  const video=videos[selected];
  return <section className="sl-videos" aria-label="Lernvideos · Video pembelajaran">
   <header><span className="sl-eyebrow">Lernvideos · Video pembelajaran</span><h3>Tonton, jeda, lalu coba</h3></header>
   <nav className="sl-video-chapters" aria-label="Pilih video">{videos.map((v,i)=><button key={v.id} type="button" aria-pressed={selected===i} onClick={()=>{setSelected(i);setFailed(false);}}><span className="sl-video-number" aria-hidden="true">{i+1}</span><span><strong lang="de">{v.title.de}</strong><small lang="id">{v.title.id}</small></span><span className="sl-video-duration">{v.duration}</span></button>)}</nav>
-  <h4 className="sl-video-title" lang="de">{selected+1}. {video.title.de}</h4>
+  {videos.length>1&&<h4 className="sl-video-title" lang="de">{selected+1}. {video.title.de}</h4>}
   <video key={video.id} controls playsInline preload="metadata" poster={video.poster} aria-label={video.title.de} onError={()=>setFailed(true)}><source src={video.src} type="video/mp4"/>Browser Anda tidak mendukung video HTML5.</video>
   {failed&&<p role="alert">Video belum dapat diputar. Coba buka berkas melalui tautan berikut atau gunakan materi teks di bawah.</p>}
   <p className="sl-video-link"><a href={video.src} target="_blank" rel="noreferrer">Buka video di tab baru</a></p>

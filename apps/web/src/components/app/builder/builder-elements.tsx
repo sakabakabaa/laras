@@ -1334,8 +1334,11 @@ export function BuilderPreview({
 					<p>Referensi belum dipilih.</p>
 				);
 			case 'lesson':
-				return b.lesson?.scenes.length ? (
-					<ScheduledLessonView lesson={b.lesson} />
+				return b.lesson?.scenes.length || b.lesson?.videos?.length ? (
+					<ScheduledLessonView
+						lesson={b.lesson}
+						showScenes={!b.lesson.videos?.length}
+					/>
 				) : (
 					<p>Penjelasan belum diisi.</p>
 				);
@@ -1402,7 +1405,8 @@ export function BuilderPreview({
 	};
 	if (classroom) return <BuilderAnchorScope><div className={`bd-student-preview bd-classroom-content${themeClass}`} style={themeStyle as CSSProperties}>{d.activities.filter(a=>!activityId||a.id===activityId).map(a=>{
         const ordered = orderedBlocks.get(a.id) || [];
-        const hidden = new Set(ordered.filter((block, index) => block.type === 'image' && ordered[index + 1]?.type === 'matching' && matchingPictures(ordered[index + 1], block.images)).map(block => block.id));
+        const hasVideos = ordered.some(block => block.type === 'lesson' && Boolean(block.lesson?.videos?.length));
+        const hidden = new Set(ordered.filter((block, index) => block.type === 'image' && ((ordered[index + 1]?.type === 'matching' && matchingPictures(ordered[index + 1], block.images)) || hasVideos)).map(block => block.id));
         return <fieldset className="sc-fields" disabled={readOnly} key={a.id}><BuilderLayoutView activity={a} hideBlock={block => hidden.has(block.id)} renderBlock={b => <div className={`bd-preview-block bd-classroom-block is-${b.type}`}>{render(b)}</div>} /></fieldset>;
     })}</div></BuilderAnchorScope>;
 	return (

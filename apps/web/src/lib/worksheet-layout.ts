@@ -1,7 +1,7 @@
 import type {ScheduledWorksheet,WorksheetBlock as ExplicitBlock} from './scheduled-classes';
 
 type Item=ScheduledWorksheet['items'][number];
-export type WorksheetBlock={items:Item[];context?:string;section?:string;gaps?:{number:string;item:Item}[];rows?:number};
+export type WorksheetBlock={items:Item[];context?:string;section?:string;prompt?:string;gaps?:{number:string;item:Item}[];rows?:number};
 
 // Existing numbered gap worksheets keep their original response IDs. Only combine
 // adjacent prompts when every numbered blank has exactly one matching item, or when
@@ -16,17 +16,29 @@ export function worksheetBlocks(items:Item[],explicitBlocks?:ExplicitBlock[]):Wo
         for(const [sIdx,sec] of b.sections.entries()){
           const group:Item[]=[],gaps:{number:string;item:Item}[]=[];
           let gapCounter=0;
+          const inferredSection=sec.segments.map(seg=>seg.type==='gap'?byId.get(seg.itemId)?.prompt.match(/^(.+?)\s*·\s*Lücke\s+\d+\s*:/)?.[1]:'').find(Boolean);
+          const section=sec.heading?.de||sec.heading?.id||inferredSection||(b.sections.length>1?`Bagian ${sIdx+1}`:undefined);
+          let firstText=true;
           const context=sec.segments.map(seg=>{
-            if(seg.type==='text')return seg.text.de||seg.text.id||'';
+            if(seg.type==='text'){
+              let txt=seg.text.de||seg.text.id||'';
+              if(firstText){
+                firstText=false;
+                if(section&&/^Dialog\s+[A-Z]\b/i.test(section))txt=txt.replace(/^[A-Z]\s*·\s*/,'');
+              }
+              return txt;
+            }
+            firstText=false;
             const item=byId.get(seg.itemId);
             if(!item)return '';
             gapCounter++;
-            const num=String(gapCounter);
+            const explicitNum=item.prompt.match(/·\s*Lücke\s+(\d+)\s*:/)?.[1];
+            const num=explicitNum||String(gapCounter);
             group.push(item);gaps.push({number:num,item});seen.add(item.id);
             return `(${num}) ______`;
           }).join('');
           if(group.length){
-            out.push({items:group,section:sec.heading?.de||sec.heading?.id||(b.sections.length>1?`Bagian ${sIdx+1}`:undefined),context,gaps});
+            out.push({items:group,section,prompt:b.prompt?.de||b.prompt?.id,context,gaps});
           }
         }
       }else if(b.type==='gap'){
@@ -37,7 +49,8 @@ export function worksheetBlocks(items:Item[],explicitBlocks?:ExplicitBlock[]):Wo
           const item=byId.get(seg.itemId);
           if(!item)return '';
           gapCounter++;
-          const num=String(gapCounter);
+          const explicitNum=item.prompt.match(/·\s*Lücke\s+(\d+)\s*:/)?.[1];
+          const num=explicitNum||String(gapCounter);
           group.push(item);gaps.push({number:num,item});seen.add(item.id);
           return `(${num}) ______`;
         }).join('');

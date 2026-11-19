@@ -1,5 +1,5 @@
 import {activityBookReference} from '@/lib/scheduled-book-reference';
-import {BookOpen} from 'lucide-react';
+import {BookOpen,Check} from 'lucide-react';
 import {Fragment,useEffect,useId,useState} from 'react';
 import type {PDFDocumentProxy} from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -7,12 +7,13 @@ import pb from '@/lib/pocketbase-client';
 import {useT} from '@/lib/i18n';
 import type {ScheduledActivity,ScheduledWorksheet} from '@/lib/scheduled-classes';
 import {singleGap,worksheetBlocks,writingRows} from '@/lib/worksheet-layout';
-import {cardMatchingItemImages,cardMatchingTargets} from '@/lib/card-matching';
+import {cardMatchingItemImages,cardMatchingTargets,isKaufhausTargets} from '@/lib/card-matching';
 import {ScheduledCardMatching} from './scheduled-card-matching';
 import {PDFPreview} from './task-builders/quiz-source-builder';
 
 export function WorksheetAnswers({sheet,responses,onChange,activity,maxLengths,rowsById,showBookReference=true}:{maxLengths?:Record<string,number>;rowsById?:Record<string,number>;sheet:ScheduledWorksheet;activity?:ScheduledActivity;responses:Record<string,string>;onChange:(value:Record<string,string>)=>void;showBookReference?:boolean}){
   const t=useT(),group=useId(),targets=activity?cardMatchingTargets(activity):[];
+  const [focusedGap,setFocusedGap]=useState('');
   const itemImages=activity?cardMatchingItemImages(activity):undefined;
   const answered=sheet.items.filter(item=>{const value=responses[item.id]||'';return item.type==='select'?item.options?.includes(value):Boolean(value.trim());}).length;
   const bookReference=showBookReference&&activity?activityBookReference(activity):'';
@@ -23,19 +24,30 @@ export function WorksheetAnswers({sheet,responses,onChange,activity,maxLengths,r
   const paired=remainingItems.length>1&&remainingItems.every((item,i)=>item.type==='text'&&item.prompt.match(/^([0-9]+)([ab])\./)?.[0]===`${Math.floor(i/2)+1}${i%2?'b':'a'}.`);
   if(targets.length&&!remainingItems.length)return <>{progress}<ScheduledCardMatching key={activity!.id} sheet={sheet} targets={targets} itemImages={itemImages} responses={responses} onChange={onChange}/></>;
   const prompt=(item:ScheduledWorksheet['items'][number])=><><span lang="de">{item.prompt}</span>{item.translation&&<span className="sl-translation" lang="id">{item.translation}</span>}</>;
-  const gapInput=(item:ScheduledWorksheet['items'][number],number?:string)=><input className="sc-gap-input" type="text" aria-label={number?`Lücke ${number}: ${item.prompt}`:item.prompt} autoComplete="off" maxLength={maxLengths?.[item.id]||2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>;
+  const gapInput=(item:ScheduledWorksheet['items'][number],number?:string,inline=false)=>{
+    const value=responses[item.id]||'',filled=Boolean(value.trim()),focused=focusedGap===item.id;
+    const widthStyle=inline?{width:filled?`${Math.max(4.5,Math.min(20,value.trim().length+0.5))}ch`:focused?'8.5ch':'7.5ch'}:undefined;
+    return <input className={`sc-gap-input${filled?' is-filled':''}`} type="text" aria-label={number?`Lücke ${number}: ${item.prompt}`:item.prompt} autoComplete="off" maxLength={maxLengths?.[item.id]||2000} placeholder={inline?(focused?t('worksheet.typeWord'):'_______'):undefined} style={widthStyle} value={value} onFocus={()=>setFocusedGap(item.id)} onBlur={()=>setFocusedGap(prev=>prev===item.id?'':prev)} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/>;
+  };
   const matchSheet=targets.length?{...sheet,items:sheet.items.filter(i=>matchItemIdSet.has(i.id))}:sheet;
-  return <div className={`sc-worksheet ${paired?'sc-worksheet-paired':''}`}>{progress}{targets.length>0&&<ScheduledCardMatching key={activity!.id} sheet={matchSheet} targets={targets} itemImages={itemImages} responses={responses} onChange={onChange}/>}<ol>{worksheetBlocks(remainingItems,sheet.blocks).map(block=>{
+  const blocks=worksheetBlocks(remainingItems,sheet.blocks);
+  const gapLead=blocks.find(b=>b.prompt)?.prompt||(blocks.some(b=>Boolean(b.gaps?.length))&&activity?.content&&/^\s*Wortkasten\b/i.test(activity.content)?'Ergänzen Sie die Verben aus dem Kasten in der konjugierten Form (1–8).':'');
+  return <div className={`sc-worksheet ${paired?'sc-worksheet-paired':''}`}>{progress}{targets.length>0&&<ScheduledCardMatching key={activity!.id} sheet={matchSheet} targets={targets} itemImages={itemImages} responses={responses} onChange={onChange}/>}{gapLead&&<p className="sc-worksheet-lead" lang="de">{gapLead}</p>}<ol>{blocks.map(block=>{
     const item=block.items[0];
-    if(block.context&&block.gaps){const parts=block.context.split(/(\(\d+\)\s*_{3,})/g);return <li key={item.id} className="sc-gap-paragraph">{block.section&&<strong className="sc-gap-section">{block.section}</strong>}<p lang="de">{parts.map((part,i)=>{
-      const number=part.match(/^\((\d+)\)\s*_{3,}$/)?.[1],gap=block.gaps!.find(g=>g.number===number);
-      if(!gap)return part;
-      const before=parts[i-1]&&!/\s$/.test(parts[i-1])?' ':'';
-      const after=parts[i+1]&&!/^[\s.,!?;:)\]]/.test(parts[i+1])?' ':'';
-      return <Fragment key={i}>{before}<span className="sc-inline-gap"><span>({number}) </span>{gapInput(gap.item,number)}</span>{after}</Fragment>;
-    })}</p></li>;}
+    if(block.context&&block.gaps){
+      const turns=block.context.split(/\n+|(?<=[.!?])\s+(?=—\s)/g).filter(Boolean);
+      return <li key={item.id} className="sc-gap-paragraph">{block.section&&<strong className="sc-gap-section">{block.section}</strong>}{turns.map((turn,turnIdx)=>{const parts=turn.split(/(\(\d+\)\s*_{3,})/g);return <p key={turnIdx} lang="de">{parts.map((part,i)=>{
+        const number=part.match(/^\((\d+)\)\s*_{3,}$/)?.[1],gap=block.gaps!.find(g=>g.number===number);
+        if(!gap)return part;
+        const filled=Boolean((responses[gap.item.id]||'').trim());
+        const before=parts[i-1]&&!/\s$/.test(parts[i-1])?' ':'';
+        const after=parts[i+1]&&!/^[\s.,!?;:)\]]/.test(parts[i+1])?' ':'';
+        return <Fragment key={i}>{before}<span className={filled?'sc-inline-gap is-filled':'sc-inline-gap'}><span className="sc-inline-gap-num" aria-hidden="true">{number}</span>{gapInput(gap.item,number,true)}{filled&&<Check size={14} strokeWidth={2.5} className="sc-inline-gap-check" aria-hidden="true"/>}</span>{after}</Fragment>;
+      })}</p>;})}</li>;
+    }
     const rows=rowsById?.[item.id]||block.rows||writingRows(item);
-    return <li key={item.id} className={rows>3?'sc-writing-long':undefined}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:singleGap(item)?<p className="sc-gap-sentence" lang="de">{item.prompt.split(/_{3,}/).map((part,i)=><span key={i}>{i>0&&gapInput(item)}{part}</span>)}</p>:<label><span className="sc-question-number">{sheet.items.indexOf(item)+1}</span>{prompt(item)}<textarea rows={rows} maxLength={maxLengths?.[item.id]||2000} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/><span className="sc-character-count">{t('worksheet.characters',{count:String((responses[item.id]||'').length)})}</span></label>}</li>;
+    const placeholder=/\(Ich lebe in [….]{1,3}\)/i.test(item.prompt)?'Ich lebe in ...':undefined;
+    return <li key={item.id} className={rows>3?'sc-writing-long':undefined}>{item.type==='select'?<fieldset className="sc-worksheet-choice"><legend>{prompt(item)}</legend><div className="sc-worksheet-options">{item.options?.map(option=><label key={option} className="sc-option"><input type="radio" name={`${group}-${item.id}`} value={option} checked={responses[item.id]===option} onChange={()=>onChange({...responses,[item.id]:option})}/><span>{option}</span></label>)}</div></fieldset>:singleGap(item)?<p className="sc-gap-sentence" lang="de">{item.prompt.split(/_{3,}/).map((part,i)=><span key={i}>{i>0&&gapInput(item)}{part}</span>)}</p>:<label><span className="sc-question-number">{sheet.items.indexOf(item)+1}</span>{prompt(item)}<textarea rows={rows} maxLength={maxLengths?.[item.id]||2000} placeholder={placeholder} value={responses[item.id]||''} onChange={e=>onChange({...responses,[item.id]:e.target.value})}/><span className="sc-character-count">{t('worksheet.characters',{count:String((responses[item.id]||'').length)})}</span></label>}</li>;
   })}</ol></div>;
 }
 
@@ -52,8 +64,9 @@ export function WorksheetSource({activity,showPictures=true}:{activity:Scheduled
     return()=>{cancelled=true;void task?.destroy();};
   },[source?.url,page]);
   const targets=cardMatchingTargets(activity);
+  const kaufhausTargets=isKaufhausTargets(targets);
   const consumedUrls=new Set<string>([...targets.map(target=>target.url).filter(Boolean),...Object.values(cardMatchingItemImages(activity))]);
-  const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp|gif|svg)$/i.test(s.url)&&!consumedUrls.has(s.url));
+  const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp|gif|svg)$/i.test(s.url)&&!consumedUrls.has(s.url)&&!(kaufhausTargets&&(/Orientierungstafel|im_kaufhaus_tafel/i.test(`${s.title} ${s.filename||''}`)||/Produkte \(10a\)|im_kaufhaus_produkte/i.test(`${s.title} ${s.filename||''}`))));
   const legacyArzt=images.length===3&&images.every(image=>/\bBild [ABC]\b/i.test(image.title));
   const pictures=showPictures&&images.length>0?<section className="sc-picture-reference" aria-label="Bilder · Gambar rujukan"><h3>Bilder · Gambar rujukan</h3>{reference?.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className={legacyArzt?'sc-patient-figures':'sc-reference-figures'} data-count={images.length}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>:null;
   const showPdf=!targets.length&&Boolean(activity.worksheet)&&Boolean(source?.url)&&Boolean(page)&&Boolean(source?.url?.toLowerCase().endsWith('.pdf'));

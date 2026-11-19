@@ -80,3 +80,38 @@ it('offers an optional feedback field on exit tickets without changing other act
  expect(html).toContain('It does not affect your score or completion.');
  expect(render(fixture())).not.toContain('Learning feedback');
 });
+
+it('renders Wortkasten heading cleanly and prefers lesson videos over duplicate book images on worksheet activities',()=>{
+ const state=fixture();
+ state.activities=[{
+  ...state.activities[0],
+  kind:'assignment',
+  title:'12d · Schreiben Sie einen Text über Ihre Stadt',
+  content:'Schreiben Sie einen Text über Ihre Stadt.',
+  lesson:{
+   goal:{de:'Schreiben',id:'Menulis'},
+   steps:[{de:'Sehen Sie das Video an.',id:'Tonton video.'}],
+   videos:[{id:'v1',title:{de:'Eine Stadt vorstellen',id:'Kota'},src:'/media/lessons/im-kaufhaus/berlin-3-stadt.mp4',poster:'/media/lessons/im-kaufhaus/berlin-3-stadt.jpg',duration:'1:07'}],
+   scenes:[{kind:'sentence',title:{de:'Satzmodell',id:'Pola'},intro:{de:'Beispiel',id:'Contoh'},sentence:{words:['In Berlin'],roles:['Ort'],translation:'Di Berlin'}}],
+  },
+  sources:[{id:'img1',title:'Berlin Texte A-D',version:1,available:true,filename:'berlin_a_d.jpg'}],
+  worksheet:{items:[{id:'w1',type:'text',prompt:'Schreiben Sie (Ich lebe in …)'}]},
+ }];
+ const html12d=render(state);
+ expect(html12d).toContain('Lernvideos · Video pembelajaran');
+ expect(html12d).toContain('berlin-3-stadt.mp4');
+ expect(html12d).not.toContain('sc-picture-reference');
+ expect(html12d).not.toContain('sl-goal');
+ expect(html12d).not.toContain('sl-stage');
+
+ state.activities=[{
+  ...state.activities[0],
+  kind:'assignment',
+  title:'ÜB 11a · Wo finde ich ...?',
+  content:'Wortkasten / Pilihan kata: brauchen · finden · geben · kaufen · suchen',
+  worksheet:{items:[{id:'g1',type:'text',prompt:'Dialog A · Lücke 1: Wo ______ es Tee?'}]},
+ }];
+ const htmlUb11a=render(state);
+ expect(htmlUb11a).toContain('<h3>Wortkasten · Pilihan kata</h3>');
+ expect(htmlUb11a).toContain('brauchen · finden · geben · kaufen · suchen');
+});

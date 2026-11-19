@@ -117,6 +117,7 @@ it('renders Wortkasten heading cleanly and prefers lesson videos over duplicate 
   worksheet:{items:[{id:'g1',type:'text',prompt:'Dialog A · Lücke 1: Wo ______ es Tee?'}]},
  }];
  const htmlUb11a=render(state);
- expect(htmlUb11a).toContain('<h3>Wortkasten · Pilihan kata</h3>');
- expect(htmlUb11a).toContain('brauchen · finden · geben · kaufen · suchen');
+ expect(htmlUb11a).toContain('Wortkasten <span lang="id">· Pilihan kata</span>');
+ expect(htmlUb11a).toContain('sc-word-option-list');
+ for(const word of ['brauchen','finden','geben','kaufen','suchen'])expect(htmlUb11a).toContain(`lang="de">${word}</li>`);
 });

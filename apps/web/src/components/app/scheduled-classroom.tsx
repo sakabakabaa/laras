@@ -165,17 +165,17 @@ function StudentResults({activities,attempts}:{activities:ScheduledActivity[];at
   </section>;
 }
 
-function ActivityBrief({content}:{content:string}){
+export function ActivityBrief({content}:{content:string}){
   const t=useT(),parts=content.split(/\n\s*\n/).map(part=>part.trim()).filter(Boolean);
   const wortkasten=parts.length===1?parts[0].match(/^Wortkasten\s*(?:\/|·)\s*Pilihan kata\s*:\s*(.+)$/i):null;
-  if(wortkasten)return <section className="sc-activity-brief"><h3>Wortkasten · Pilihan kata</h3><ul className="sc-brief-steps"><li><Check size={18} aria-hidden="true"/><span>{wortkasten[1]}</span></li></ul></section>;
+  if(wortkasten)return <section className="sc-activity-brief sc-word-options"><h3>Wortkasten <span lang="id">· Pilihan kata</span></h3><p className="sc-word-options-hint">Gunakan kata-kata berikut untuk melengkapi dialog. Sesuaikan bentuk kata kerjanya.</p><ul className="sc-word-option-list" aria-label="Pilihan kata kerja">{wortkasten[1].split(/\s*[|·]\s*/).map((word,index)=><li key={index} lang="de">{word}</li>)}</ul></section>;
   const isEmailTask=parts[0]==='Sie können nicht zur Arbeit gehen.'&&parts[1]?.startsWith('Schreiben Sie eine E-Mail');
   const directions=isEmailTask?parts.slice(0,2):[],details=isEmailTask?parts.slice(2):parts;
   const pairedDetails: {de:string;translation?:string}[]=[];
   for(const part of details){
     const lines=part.split(/\n+/).filter(Boolean);
     for(const line of lines){
-      const translated=/^(Anda|Baca(?:lah)?|Dengarkan|Cocokkan|Tulis(?:lah)?|Tonton|Gunakan|Isi|Pelajari|Pada kolom|Refleksi dan|Jika |Sebutkan|Pilih|Lengkapi|Lihat|Check-in|Tunjukkan)\b/i.test(line);
+      const translated=/^(Di\s|Hari ini\s|Kerjakan|Anda|Baca(?:lah)?|Dengarkan|Cocokkan|Tulis(?:lah)?|Tonton|Gunakan|Isi|Pelajari|Pada kolom|Refleksi dan|Jika |Sebutkan|Pilih|Lengkapi|Lihat|Check-in|Tunjukkan)\b/i.test(line);
       const previous=pairedDetails[pairedDetails.length-1];
       if(translated&&previous&&!previous.translation)previous.translation=line;
       else pairedDetails.push({de:line});

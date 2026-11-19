@@ -8,8 +8,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCourseByRoute } from '@/hooks/use-course-route';
 import pb from '@/lib/pocketbase-client';
 
-export function clientLoader() {
-	return { user: requireAuth() };
+export function clientLoader({request}: Route.ClientLoaderArgs) {
+	const url = new URL(request.url);
+	return { user: requireAuth(`/login?next=${encodeURIComponent(url.pathname + url.search)}`) };
 }
 clientLoader.hydrate = true as const;
 

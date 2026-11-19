@@ -1,3 +1,11 @@
+FROM node:22-bookworm-slim AS lesson-videos
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+COPY scripts/watermark-lesson-videos.mjs /tools/watermark-lesson-videos.mjs
+COPY apps/web/public/media/lessons/im-kaufhaus /input
+RUN node /tools/watermark-lesson-videos.mjs /input /output "Novia Anjani Dewi"
+
 FROM node:22-bookworm-slim AS web-build
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -19,6 +27,8 @@ COPY --from=web-build /app/package.json /app/package-lock.json ./
 COPY --from=web-build /app/node_modules ./node_modules
 COPY --from=web-build /app/apps/web ./apps/web
 COPY --from=web-build /app/dist ./dist
+COPY --from=lesson-videos /output/ ./apps/web/public/media/lessons/im-kaufhaus/
+COPY --from=lesson-videos /output/ ./dist/apps/web/client/media/lessons/im-kaufhaus/
 EXPOSE 3000
 CMD ["npm", "run", "start", "--prefix", "apps/web"]
 

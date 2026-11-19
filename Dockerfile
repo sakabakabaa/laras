@@ -4,7 +4,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY scripts/watermark-lesson-videos.mjs /tools/watermark-lesson-videos.mjs
 COPY apps/web/public/media/lessons/im-kaufhaus /input
-RUN node /tools/watermark-lesson-videos.mjs /input /output "Novia Anjani Dewi"
+COPY apps/web/public/branding/upi-logo.png /tools/upi-logo.png
+RUN node /tools/watermark-lesson-videos.mjs /input /output /tools/upi-logo.png "Novia Anjani Dewi"
 
 FROM node:22-bookworm-slim AS web-build
 WORKDIR /app

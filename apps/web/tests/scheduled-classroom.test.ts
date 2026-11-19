@@ -121,3 +121,13 @@ it('renders Wortkasten heading cleanly and prefers lesson videos over duplicate 
  expect(htmlUb11a).toContain('sc-word-option-list');
  for(const word of ['brauchen','finden','geben','kaufen','suchen'])expect(htmlUb11a).toContain(`lang="de">${word}</li>`);
 });
+
+it('opens a later activity immediately after earlier work is submitted',()=>{
+ const state=fixture();state.activities[1]={...state.activities[1],content:'Future activity is ready now',questions:[]};
+ state.attempts=[{id:'done',activity:'read',student:'student',answers:{acknowledged:true},revision:1,status:'submitted',savedAt:iso(0),finalizedAt:iso(0),complete:true}];
+ const html=render(state);
+ expect(html).toContain('Future activity is ready now');
+ expect(html).toContain('Finish activity');
+ expect(html).not.toContain('waits for the next scheduled activity');
+ expect(html).toContain('Estimated 15 min');
+});

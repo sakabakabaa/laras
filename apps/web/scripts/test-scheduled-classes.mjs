@@ -128,6 +128,12 @@ try {
   s = await call(student, 'join'); assert.equal(s.participant.checkedInAt, joined); assertions++;
   await denied(wrongClass, 'join'); await denied(outsider, 'join');
   const material = s.activities[0].id, quiz = s.activities[1].id, writing = s.activities[2].id, exit = s.activities[3].id;
+  // Self-paced: the final activity is readable and submittable before its planned slot.
+  assert(Date.parse(s.activities[3].startsAt) > Date.parse(s.serverNow));
+  assert.equal(typeof s.activities[3].content, 'string'); assertions += 2;
+  const earlyExit = await call(second, 'submit', {activityId: exit, baseRevision: 0, requestId: randomUUID(), answers: {text: 'Completed ahead of the suggested schedule'}});
+  assert.equal(earlyExit.attempts.find(a=>a.activity===exit).status, 'submitted');
+  assert.equal(earlyExit.attempts.find(a=>a.activity===exit).complete, true); assertions += 2;
   await call(second, 'saveAnswer', {activityId: quiz, baseRevision: 0, requestId: randomUUID(), answers: {q0: 0}});
   const requestId = randomUUID();
   s = await call(student, 'submit', {activityId: material, baseRevision: 0, requestId, answers: {acknowledged: true}});

@@ -290,5 +290,18 @@ try {
   const forged=encodeURIComponent(JSON.stringify({token:student.token,record:{id:teacher.id,role:'faculty'}}));assert.equal((await fetch(privateUrl,{headers:{Cookie:'pb_auth='+forged}})).status,403);assertions++;
   assert.equal((await fetch(privateUrl,{headers:{Authorization:admin}})).status,200);assertions++;
   await ok(records('file_library')+'/'+retained.id,{restrictDownload:false,access:'student'},admin,'PATCH');assert.equal((await fetch(privateUrl)).status,200);assertions++;
+  const kaufhausMeeting = await create('class_sessions', {owner:teacher.id,course:course.id,title:'Kaufhaus 7 floors',week:4,section:a.id});
+  const sevenFloors=['5. Stock','4. Stock','3. Stock','2. Stock','1. Stock','EG','UG'];
+  const fiveFloors=['UG','EG','2. Stock','4. Stock','5. Stock'];
+  let khState=await ok(endpoint,{sessionId:kaufhausMeeting.id,action:'schedule',baseRevision:0,title:'Kaufhaus floors',startsAt:new Date(Date.now()+60000).toISOString(),joinUntil:new Date(Date.now()+90000).toISOString(),lateAfterMin:10,activities:[
+    {kind:'assignment',title:'7 floors',minutes:2,required:true,content:'Sort into 7 floors.',worksheet:{items:[{id:'f7',type:'select',prompt:'Parfüm',options:sevenFloors}],blocks:[{id:'m7',type:'match',layout:'destinations-above',cardItemIds:['f7'],destinations:sevenFloors.map(l=>({id:l,label:l,title:{de:l}}))}]}},
+    {kind:'assignment',title:'5-option legacy Kaufhaus',minutes:2,required:true,content:'Sort into floors.',worksheet:{items:[{id:'f5',type:'select',prompt:'Spielzeug',options:fiveFloors}],blocks:[{id:'m5',type:'match',layout:'destinations-above',cardItemIds:['f5'],destinations:fiveFloors.map(l=>({id:l,label:l,title:{de:l}}))}]}},
+  ]},teacher.token);
+  await ok(records('scheduled_classes')+'/'+khState.class.id,{startsAt:new Date(Date.now()-1000).toISOString(),endsAt:new Date(Date.now()+119000).toISOString(),joinUntil:new Date(Date.now()+60000).toISOString()},admin,'PATCH');
+  khState=await ok(endpoint,{sessionId:kaufhausMeeting.id,action:'join'},student.token);
+  const khSaved=await ok(endpoint,{sessionId:kaufhausMeeting.id,action:'saveAnswer',activityId:khState.activities[1].id,baseRevision:0,requestId:randomUUID(),answers:{responses:{f5:'3. Stock'}}},student.token);
+  assert.equal(khSaved.attempts.find(t=>t.activity===khState.activities[1].id).answers.responses.f5,'3. Stock');assertions++;
+  const khInvalid=await api(endpoint,{sessionId:kaufhausMeeting.id,action:'saveAnswer',activityId:khState.activities[1].id,baseRevision:1,requestId:randomUUID(),answers:{responses:{f5:'6. Stock'}}},student.token);
+  assert.equal(khInvalid.status,400);assertions++;
   console.log(`Scheduled classroom integration passed (${assertions} checks, ${binary ? 'including backend restart recovery' : 'external local backend'}).`);
 } catch (error) {await delay(300);console.error(logs.slice(-12000)); throw error;} finally {if (binary) await stop();}

@@ -7,7 +7,7 @@ import pb from '@/lib/pocketbase-client';
 import {useT} from '@/lib/i18n';
 import type {ScheduledActivity,ScheduledWorksheet} from '@/lib/scheduled-classes';
 import {singleGap,worksheetBlocks,writingRows} from '@/lib/worksheet-layout';
-import {cardMatchingItemImages,cardMatchingTargets,isKaufhausTargets} from '@/lib/card-matching';
+import {cardMatchingItemImages,cardMatchingTargets,isKaufhausFloorOptionList,isKaufhausFloorValue} from '@/lib/card-matching';
 import {ScheduledCardMatching} from './scheduled-card-matching';
 import {PDFPreview} from './task-builders/quiz-source-builder';
 
@@ -15,7 +15,7 @@ export function WorksheetAnswers({sheet,responses,onChange,activity,maxLengths,r
   const t=useT(),group=useId(),targets=activity?cardMatchingTargets(activity):[];
   const [focusedGap,setFocusedGap]=useState('');
   const itemImages=activity?cardMatchingItemImages(activity):undefined;
-  const answered=sheet.items.filter(item=>{const value=responses[item.id]||'';return item.type==='select'?item.options?.includes(value):Boolean(value.trim());}).length;
+  const answered=sheet.items.filter(item=>{const value=responses[item.id]||'';if(item.type!=='select')return Boolean(value.trim());return item.options?.includes(value)||(isKaufhausFloorOptionList(item.options)&&isKaufhausFloorValue(value));}).length;
   const bookReference=showBookReference&&activity?activityBookReference(activity):'';
   const progress=<><header className="sc-answer-sheet-heading"><h3>{t('worksheet.answerSheet')}</h3><span role="status">{t('worksheet.responseProgress',{answered:String(answered),total:String(sheet.items.length)})}</span></header>{bookReference&&<p className="sc-book-reference"><BookOpen size={18} aria-hidden="true"/>{bookReference}</p>}</>;
   const matchBlock=sheet.blocks?.find((b):b is Extract<NonNullable<ScheduledWorksheet['blocks']>[number],{type:'match'}>=>b.type==='match');
@@ -51,7 +51,7 @@ export function WorksheetAnswers({sheet,responses,onChange,activity,maxLengths,r
   })}</ol></div>;
 }
 
-export function WorksheetSource({activity,showPictures=true}:{activity:ScheduledActivity;showPictures?:boolean}){
+export function WorksheetSource({activity}:{activity:ScheduledActivity;showPictures?:boolean}){
   const reference=activity.lesson?.source||(activity.worksheet?.sourceMaterialId?activity.worksheet:undefined);
   const sources=(activity.sources||[]).map(source=>({...source,url:source.url||(source.filename&&source.id?`/hcgi/platform/api/files/file_library/${source.id}/${encodeURIComponent(source.filename)}`:undefined)}));
   const t=useT(),source=sources.find(s=>s.id===reference?.sourceMaterialId&&s.available&&s.url),page=reference?.sourcePage;
@@ -64,14 +64,9 @@ export function WorksheetSource({activity,showPictures=true}:{activity:Scheduled
     return()=>{cancelled=true;void task?.destroy();};
   },[source?.url,page]);
   const targets=cardMatchingTargets(activity);
-  const kaufhausTargets=isKaufhausTargets(targets);
-  const consumedUrls=new Set<string>([...targets.map(target=>target.url).filter(Boolean),...Object.values(cardMatchingItemImages(activity))]);
-  const images=sources.filter(s=>s.available&&s.url&&/\.(jpe?g|png|webp|gif|svg)$/i.test(s.url)&&!consumedUrls.has(s.url)&&!(kaufhausTargets&&(/Orientierungstafel|im_kaufhaus_tafel/i.test(`${s.title} ${s.filename||''}`)||/Produkte \(10a\)|im_kaufhaus_produkte/i.test(`${s.title} ${s.filename||''}`))));
-  const legacyArzt=images.length===3&&images.every(image=>/\bBild [ABC]\b/i.test(image.title));
-  const pictures=showPictures&&images.length>0?<section className="sc-picture-reference" aria-label="Bilder · Gambar rujukan"><h3>Bilder · Gambar rujukan</h3>{reference?.sourceLabel&&<p className="sl-translation">{reference.sourceLabel}</p>}<div className={legacyArzt?'sc-patient-figures':'sc-reference-figures'} data-count={images.length}>{images.map((image,i)=><figure key={image.id||i}><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt={image.title} loading="lazy"/></a><figcaption>{image.title.match(/Bild ([ABC])/i)?.[1]||image.title}</figcaption></figure>)}</div></section>:null;
   const showPdf=!targets.length&&Boolean(activity.worksheet)&&Boolean(source?.url)&&Boolean(page)&&Boolean(source?.url?.toLowerCase().endsWith('.pdf'));
-  if(!pictures&&!showPdf)return null;
-  return <>{pictures}{showPdf&&<details className="sc-worksheet-source" open={Boolean(activity.worksheet?.sourceMaterialId)}><summary>{t('worksheet.page',{page:String(page)})}{reference?.sourceLabel&&` · ${reference.sourceLabel}`}</summary>{document?<PDFPreview document={document} page={page!}/>:<p role={error?'alert':'status'}>{t(error?'quizSource.previewFailed':'worksheet.loading')}</p>}<a href={`${source!.url}#page=${page}`} target="_blank" rel="noreferrer">{source!.title} · {t('studentClass.openMaterial')}</a></details>}</>;
+  if(!showPdf)return null;
+  return <details className="sc-worksheet-source" open={Boolean(activity.worksheet?.sourceMaterialId)}><summary>{t('worksheet.page',{page:String(page)})}{reference?.sourceLabel&&` · ${reference.sourceLabel}`}</summary>{document?<PDFPreview document={document} page={page!}/>:<p role={error?'alert':'status'}>{t(error?'quizSource.previewFailed':'worksheet.loading')}</p>}<a href={`${source!.url}#page=${page}`} target="_blank" rel="noreferrer">{source!.title} · {t('studentClass.openMaterial')}</a></details>;
 }
 
 export function WorksheetEditor({value,onChange,materials}:{value?:ScheduledWorksheet;onChange:(sheet:ScheduledWorksheet|undefined)=>void;materials:{id:string;title:string}[]}){

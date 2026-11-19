@@ -6,11 +6,11 @@ export function cardMatchingTargets(activity:ScheduledActivity):MatchingTarget[]
   if(!items?.length)return [];
   const images=(activity.sources||[]).filter(s=>s.available&&s.id&&(s.url||s.filename)&&/\.(jpe?g|png|webp|gif|svg)$/i.test(s.url||s.filename||''));
   const matchBlock=activity.worksheet?.blocks?.find((b):b is Extract<NonNullable<NonNullable<ScheduledActivity['worksheet']>['blocks']>[number],{type:'match'}>=>b.type==='match');
-  if(matchBlock&&matchBlock.destinations?.length>=2&&matchBlock.destinations.length<=6){
+  if(matchBlock&&matchBlock.destinations?.length>=2&&matchBlock.destinations.length<=7){
     const matchItems=matchBlock.cardItemIds?.length?items.filter(i=>matchBlock.cardItemIds.includes(i.id)):items;
     if(!matchItems.length||matchItems.some(i=>i.type!=='select'))return [];
     const matchOptions=matchItems[0].options||[];
-    if(matchOptions.length<2||matchOptions.length>6||matchItems.some(i=>JSON.stringify(i.options)!==JSON.stringify(matchOptions)))return [];
+    if(matchOptions.length<2||matchOptions.length>7||matchItems.some(i=>JSON.stringify(i.options)!==JSON.stringify(matchOptions)))return [];
     const explicit=matchBlock.destinations.map(dest=>{
       const value=dest.label;
       const titleText=[dest.title?.de,dest.title?.id].filter(Boolean).join(' · ')||value;
@@ -22,7 +22,7 @@ export function cardMatchingTargets(activity:ScheduledActivity):MatchingTarget[]
       }
       return {value,title,url:''};
     });
-    if(explicit.every(Boolean))return explicit as MatchingTarget[];
+    if(explicit.every(Boolean))return expandKaufhausTargets(explicit as MatchingTarget[]);
   }
   if(items.some(i=>i.type!=='select'))return [];
   const options=items[0].options||[];
@@ -105,6 +105,14 @@ export const KAUFHAUS_FLOORS: KaufhausFloorSpec[] = [
 
 const KAUFHAUS_VALUE_RE = /^(UG|EG|[1-5]\.\s*Stock)$/i;
 
+export function isKaufhausFloorValue(value: string): boolean {
+  return KAUFHAUS_VALUE_RE.test(value.trim());
+}
+
+export function isKaufhausFloorOptionList(options?: string[]): boolean {
+  return Boolean(options && options.length >= 2 && options.every((option) => isKaufhausFloorValue(option)));
+}
+
 export function kaufhausTargetFloor(
   target: Pick<MatchingTarget, 'value'> & { title?: string },
 ): string | undefined {
@@ -120,6 +128,19 @@ export function isKaufhausTargets(
 ): boolean {
   if (targets.length < 2) return false;
   return targets.every((target) => Boolean(kaufhausTargetFloor(target)));
+}
+
+export function expandKaufhausTargets(targets: MatchingTarget[]): MatchingTarget[] {
+  if (!isKaufhausTargets(targets)) return targets;
+  const byFloor = new Map(targets.map((target) => [kaufhausTargetFloor(target)!, target]));
+  return KAUFHAUS_FLOORS.map(
+    (floor) =>
+      byFloor.get(floor.value.toLowerCase()) || {
+        value: floor.value,
+        title: `${floor.value} · ${floor.departments}`,
+        url: '',
+      },
+  );
 }
 
 export function moveMatchingCard(responses:Record<string,string>,ids:string[],targets:MatchingTarget[],id:string,target:string){

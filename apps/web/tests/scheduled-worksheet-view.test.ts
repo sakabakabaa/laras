@@ -29,8 +29,11 @@ describe('scheduled worksheet response feedback',()=>{
   const withoutRef=renderToStaticMarkup(createElement(WorksheetAnswers,{activity,sheet:activity.worksheet,responses:{},onChange:()=>{},showBookReference:false}));
   expect(withoutRef).not.toContain('sc-book-reference');
   const pics=renderToStaticMarkup(createElement(WorksheetSource,{activity}));
-  expect(pics).toContain('sc-picture-reference');
-  expect(pics).toContain('tafel.jpg');
+  expect(pics).not.toContain('sc-picture-reference');
+  expect(pics).not.toContain('tafel.jpg');
+  const pdfAct={...activity,lesson:{goal:{de:'x',id:'x'},steps:[],scenes:[],source:{sourceMaterialId:'pdf1',sourcePage:95,sourceLabel:'Kursbuch S. 95'}},sources:[{id:'pdf1',title:'Kursbuch',version:1,available:true,filename:'kb.pdf'}]};
+  const pdfHtml=renderToStaticMarkup(createElement(WorksheetSource,{activity:pdfAct}));
+  expect(pdfHtml).toContain('sc-worksheet-source');
  });
  it('adds a space before inline gap inputs when preceding text segment was trimmed',()=>{
   const gapSheet:ScheduledWorksheet={items:[{id:'g1',prompt:'Gap 1',type:'text'}],blocks:[{id:'b1',type:'gap',segments:[{type:'text',text:{de:'Wo'}},{type:'gap',itemId:'g1'},{type:'text',text:{de:'es Tee?'}}]}]};
@@ -58,7 +61,7 @@ describe('scheduled worksheet response feedback',()=>{
   expect(html).toContain('class="sc-gap-input is-filled"');
   expect(html).toContain('placeholder="Ich lebe in ..."');
  });
- it('suppresses duplicate Orientierungstafel and Produkte images in Kaufhaus matching while keeping Tipp images',async()=>{
+ it('removes Gambar rujukan on Kaufhaus and all image-only worksheets and counts expanded Kaufhaus floors in progress',async()=>{
   const {WorksheetSource}=await import('@/components/app/scheduled-worksheet');
   const kaufhausAct={
    id:'kact',title:'10b–10c · Im Kaufhaus',kind:'assignment' as const,required:true,minutes:20,startsAt:'',endsAt:'',
@@ -73,10 +76,8 @@ describe('scheduled worksheet response feedback',()=>{
    },
   };
   const html=renderToStaticMarkup(createElement(WorksheetSource,{activity:kaufhausAct}));
-  expect(html).not.toContain('im_kaufhaus_tafel_1.jpg');
-  expect(html).not.toContain('im_kaufhaus_produkte_1.jpg');
-  expect(html).toContain('im_kaufhaus_tipp_1.jpg');
-  const hidden=renderToStaticMarkup(createElement(WorksheetSource,{activity:kaufhausAct,showPictures:false}));
-  expect(hidden).toBe('');
+  expect(html).toBe('');
+  const progressHtml=renderToStaticMarkup(createElement(WorksheetAnswers,{activity:kaufhausAct,sheet:kaufhausAct.worksheet,responses:{m1:'3. Stock'},onChange:()=>{}}));
+  expect(progressHtml).toContain('1 of 1 answers filled in');
  });
 });

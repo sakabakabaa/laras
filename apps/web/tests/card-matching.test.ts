@@ -72,11 +72,24 @@ describe('image matching with existing response IDs',()=>{
     expect(html).toContain('sc-kaufhaus-building');
     expect(html).toContain('sc-kaufhaus-awning');
     expect(html).toContain('sc-kaufhaus-street');
-    expect(html).toContain('is-directory');
+    expect(html).not.toContain('is-directory');
+    expect(html).toContain('data-match-target="3. Stock"');
+    expect(html).toContain('data-match-target="1. Stock"');
+    expect(html).not.toContain('Info lantai');
     expect(html.indexOf('sc-match-bank')).toBeLessThan(html.indexOf('sc-kaufhaus-building'));
     expect(html).toContain('sc-kaufhaus-chip');
     expect(html).toContain('der Kugelschreiber');
     expect(html).not.toContain('>1. der Kugelschreiber<');
     expect(html).toContain('src="/kugelschreiber.jpg"');
+    const act5={
+      id:'10b',
+      worksheet:{
+        items:[{id:'k1',type:'select' as const,prompt:'1. das Parfüm',options:['UG','EG','2. Stock','4. Stock','5. Stock']}],
+        blocks:[{id:'mb',type:'match' as const,layout:'destinations-above' as const,cardItemIds:['k1'],destinations:['UG','EG','2. Stock','4. Stock','5. Stock'].map(l=>({id:l,label:l,title:{de:l}}))}],
+      },
+    } as ScheduledActivity;
+    const expanded=cardMatchingTargets(act5);
+    expect(expanded.map(t=>t.value)).toEqual(['5. Stock','4. Stock','3. Stock','2. Stock','1. Stock','EG','UG']);
+    expect(moveMatchingCard({},['k1'],expanded,'k1','3. Stock')).toEqual({k1:'3. Stock'});
   });
 });

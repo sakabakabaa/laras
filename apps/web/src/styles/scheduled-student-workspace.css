@@ -18,6 +18,7 @@
 .sc-answer-sheet-heading h3{margin:0;font-size:var(--r-type-card-size)}
 .sc-answer-sheet-heading>span{font-size:var(--r-type-meta-size);color:var(--r-ink-2);font-variant-numeric:tabular-nums}
 .sc-student .sc-worksheet ol{list-style:none;padding:0;margin:0;gap:16px}
+.sc-student .sc-worksheet .sc-card-matching+ol,.sc-student .sc-worksheet .sc-card-matching+.sc-worksheet-lead{margin-top:24px}
 .sc-student .sc-worksheet li{padding:18px;background:var(--r-surface-2);border-color:var(--r-border)}
 .sc-student .sc-worksheet label{margin:0;line-height:1.65;font-weight:500}
 .sc-student .sc-worksheet .sc-question-number{margin:0;font-weight:650;color:var(--r-red-600)}

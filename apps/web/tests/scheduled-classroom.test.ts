@@ -92,6 +92,7 @@ it('renders Wortkasten heading cleanly and prefers lesson videos over duplicate 
    goal:{de:'Schreiben',id:'Menulis'},
    steps:[{de:'Sehen Sie das Video an.',id:'Tonton video.'}],
    videos:[{id:'v1',title:{de:'Eine Stadt vorstellen',id:'Kota'},src:'/media/lessons/im-kaufhaus/berlin-3-stadt.mp4',poster:'/media/lessons/im-kaufhaus/berlin-3-stadt.jpg',duration:'1:07'}],
+   videoNote:{de:'Beschreibung DE',id:'Deskripsi ID'},
    scenes:[{kind:'sentence',title:{de:'Satzmodell',id:'Pola'},intro:{de:'Beispiel',id:'Contoh'},sentence:{words:['In Berlin'],roles:['Ort'],translation:'Di Berlin'}}],
   },
   sources:[{id:'img1',title:'Berlin Texte A-D',version:1,available:true,filename:'berlin_a_d.jpg'}],
@@ -101,6 +102,10 @@ it('renders Wortkasten heading cleanly and prefers lesson videos over duplicate 
  expect(html12d).toContain('Lernvideos · Video pembelajaran');
  expect(html12d).toContain('berlin-3-stadt.mp4');
  expect(html12d).not.toContain('sc-picture-reference');
+ expect(html12d).not.toContain('sl-video-link');
+ expect(html12d).not.toContain('Buka video di tab baru');
+ expect(html12d).not.toContain('sl-video-language-note');
+ expect(html12d).not.toContain('Deskripsi ID');
  expect(html12d).not.toContain('sl-goal');
  expect(html12d).not.toContain('sl-stage');
 

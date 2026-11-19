@@ -77,7 +77,7 @@ function worksheetBlocks(value, itemsById) {
         labels.add(label);
         return {id: text(destination.id, 80) || label, label, title: bilingual(destination.title), ...(text(destination.image, 15) ? {image: text(destination.image, 15)} : {})};
       });
-      if (destinations.length < 2 || destinations.length > 6) fail('Blok pencocokan memerlukan 2–6 tujuan.');
+      if (destinations.length < 2 || destinations.length > 7) fail('Blok pencocokan memerlukan 2–7 tujuan.');
       const cards = Array.isArray(block.cardItemIds) ? block.cardItemIds.filter(id => typeof id === 'string') : [];
       if (!cards.length || cards.length > 30) fail('Blok pencocokan memerlukan 1–30 kartu.');
       for (const id of cards) bump(id, 'pencocokan');
@@ -135,6 +135,13 @@ function worksheetBlocks(value, itemsById) {
   return blocks;
 }
 
+const KAUFHAUS_FLOOR_RE = /^(UG|EG|[1-5]\.\s*Stock)$/i;
+function isValidSelectAnswer(item, value) {
+  if (item.options.includes(value)) return true;
+  const isKaufhaus = Array.isArray(item.options) && item.options.length >= 2 && item.options.every(option => KAUFHAUS_FLOOR_RE.test(String(option || '').trim()));
+  return isKaufhaus && KAUFHAUS_FLOOR_RE.test(String(value || '').trim());
+}
+
 function worksheet(value, materials, kind) {
   if (value === undefined || value === null) return undefined;
   if (kind !== 'assignment' && kind !== 'exit_ticket') fail('Lembar kerja hanya untuk tugas atau refleksi.');
@@ -146,7 +153,7 @@ function worksheet(value, materials, kind) {
     const prompt = text(item.prompt, 1000);
     if (!prompt || !['select', 'text'].includes(item.type)) fail('Lengkapi pertanyaan lembar kerja.');
     const options = item.type === 'select' && Array.isArray(item.options) ? item.options.map(o => text(o, 200)) : [];
-    if (item.type === 'select' && (options.length < 2 || options.length > 6 || options.some(o => !o) || new Set(options).size !== options.length)) fail('Pilihan lembar kerja tidak valid.');
+    if (item.type === 'select' && (options.length < 2 || options.length > 7 || options.some(o => !o) || new Set(options).size !== options.length)) fail('Pilihan lembar kerja tidak valid.');
     const image = text(item.image, 15);
     return {id: item.id, prompt, ...(item.translation ? {translation: text(item.translation,1000)} : {}), ...(image ? {image} : {}), type: item.type, ...(item.type === 'select' ? {options} : {})};
   });
@@ -165,7 +172,7 @@ function worksheet(value, materials, kind) {
       if (!item || !entry || typeof entry !== 'object' || Array.isArray(entry)) fail('Kunci jawaban merujuk butir yang tidak tersedia.');
       if (entry.mode === 'exact') {
         const accepted = Array.isArray(entry.accepted) ? entry.accepted.map(value => text(value, 2000)).filter(Boolean) : [];
-        if (!accepted.length || (item.type === 'select' && accepted.some(value => !item.options.includes(value)))) fail('Jawaban yang diterima tidak valid.');
+        if (!accepted.length || (item.type === 'select' && accepted.some(value => !isValidSelectAnswer(item, value)))) fail('Jawaban yang diterima tidak valid.');
         const points = entry.points === undefined ? 1 : Number(entry.points);
         if (!Number.isFinite(points) || points <= 0 || points > 100) fail('Poin kunci jawaban harus lebih dari 0 hingga 100.');
         keyed[itemId] = {mode: 'exact', accepted: [...new Set(accepted)], points};
@@ -241,7 +248,7 @@ function cleanAnswers(activity, input) {
     for (const item of activity.snapshot.worksheet.items) {
       const value = raw && raw[item.id];
       if (value === undefined || value === '') continue;
-      if (typeof value !== 'string' || value.length > 2000 || (item.type === 'select' && !item.options.includes(value))) fail('Jawaban butir lembar kerja tidak valid.');
+      if (typeof value !== 'string' || value.length > 2000 || (item.type === 'select' && !isValidSelectAnswer(item, value))) fail('Jawaban butir lembar kerja tidak valid.');
       responses[item.id] = value.trim(); lines.push(item.prompt + '\n' + value.trim());
     }
     return {responses, text: lines.join('\n\n'), ...feedback};

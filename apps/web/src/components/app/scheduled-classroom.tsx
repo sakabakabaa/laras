@@ -171,7 +171,17 @@ function ActivityBrief({content}:{content:string}){
   if(wortkasten)return <section className="sc-activity-brief"><h3>Wortkasten · Pilihan kata</h3><ul className="sc-brief-steps"><li><Check size={18} aria-hidden="true"/><span>{wortkasten[1]}</span></li></ul></section>;
   const isEmailTask=parts[0]==='Sie können nicht zur Arbeit gehen.'&&parts[1]?.startsWith('Schreiben Sie eine E-Mail');
   const directions=isEmailTask?parts.slice(0,2):[],details=isEmailTask?parts.slice(2):parts;
-  return <section className="sc-activity-brief"><h3>{t('lesson.now')}</h3>{directions.map((part,index)=><p key={index} lang="de">{part}</p>)}{isEmailTask&&details.length>0&&<p lang="de">Verwenden Sie alle Angaben:</p>}<ul className="sc-brief-steps">{details.map((part,index)=><li key={index}><Check size={18} aria-hidden="true"/><span>{part}</span></li>)}</ul></section>;
+  const pairedDetails: {de:string;translation?:string}[]=[];
+  for(const part of details){
+    const lines=part.split(/\n+/).filter(Boolean);
+    for(const line of lines){
+      const translated=/^(Anda|Baca(?:lah)?|Dengarkan|Cocokkan|Tulis(?:lah)?|Tonton|Gunakan|Isi|Pelajari|Pada kolom|Refleksi dan|Jika |Sebutkan|Pilih|Lengkapi|Lihat|Check-in|Tunjukkan)\b/i.test(line);
+      const previous=pairedDetails[pairedDetails.length-1];
+      if(translated&&previous&&!previous.translation)previous.translation=line;
+      else pairedDetails.push({de:line});
+    }
+  }
+  return <section className="sc-activity-brief"><h3>{t('lesson.now')}</h3>{directions.map((part,index)=><p key={index} lang="de">{part}</p>)}{isEmailTask&&details.length>0&&<p lang="de">Verwenden Sie alle Angaben:</p>}<ul className="sc-brief-steps">{pairedDetails.map((part,index)=><li key={index}><Check size={18} aria-hidden="true"/><span><span lang="de">{part.de}</span>{part.translation&&<span className="sl-translation sc-direction-subtitle" lang="id">{part.translation}</span>}</span></li>)}</ul></section>;
 }
 
 export function ScheduledClassroom({state, now, onState, connected,preview=false,onPreviewNext,request=scheduledRequest,previewScope,initialActivityId}: {state: ScheduledClassState; now: number; onState: (s: ScheduledClassState) => void; connected: boolean;initialActivityId?:string;request?:ClassroomRequest;previewScope?:string;preview?:boolean;onPreviewNext?:(activityId:string)=>void}) {

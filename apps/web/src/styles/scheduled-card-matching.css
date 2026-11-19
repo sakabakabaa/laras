@@ -144,3 +144,36 @@
  .sc-kaufhaus-street{padding:7px 12px;font-size:11px}
 }
 
+
+/* Keep product cards alongside the building, with a compact sticky card on phones. */
+.sc-kaufhaus-workspace.has-product-images{display:grid;grid-template-columns:minmax(240px,.65fr) minmax(0,1.5fr);gap:20px;align-items:start}
+.sc-kaufhaus-workspace.has-product-images>.sc-match-bank{position:sticky;top:12px;z-index:20;background:var(--r-surface);margin:0}
+.has-product-images .sc-match-card.sc-match-deck-card{min-height:0;padding:18px;gap:14px}
+.has-product-images .sc-match-deck-body.has-media{flex-direction:column;align-items:flex-start}
+.has-product-images .sc-match-deck-copy>[lang=de]{font-size:24px}
+.has-product-images .sc-match-deck-copy>.sl-translation{font-size:15px;margin-top:8px}
+.has-product-images .sc-kaufhaus-floor{grid-template-columns:36px minmax(0,1fr);gap:10px;padding:12px}
+.has-product-images .sc-kaufhaus-dept-icon{display:none}
+.has-product-images .sc-kaufhaus-bay{grid-column:2}
+.sc-match-image-open{display:block;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in;color:var(--r-red-600)}
+.sc-match-image-open span{display:block;font-size:13px;margin-top:8px}
+.sc-match-image-open:focus-visible{outline:2px solid var(--r-red-600);outline-offset:4px}
+.form-modal.sc-match-image-modal{width:min(1000px,96vw);max-width:96vw;max-height:90dvh;overflow:auto;padding:20px}
+.sc-match-image-modal>button{display:block;margin:0 0 14px auto;min-height:44px}
+.sc-match-image-modal>img{display:block;width:100%;height:auto;background:white}
+.sc-direction-subtitle{margin-top:6px;font-size:.9em;line-height:1.65}
+@media(max-width:720px){
+ .sc-kaufhaus-workspace.has-product-images{display:block}
+ .sc-kaufhaus-workspace.has-product-images>.sc-match-bank{top:0;padding:6px 0;margin-bottom:12px;box-shadow:0 5px 10px rgb(0 0 0 / 6%)}
+ .has-product-images .sc-match-bank .sc-match-stack.sc-match-deck{min-height:0;padding:0}
+ .has-product-images .sc-match-card.sc-match-deck-card{padding:10px;gap:6px;border-radius:12px}
+ .has-product-images .sc-match-deck-body.has-media{flex-direction:row;align-items:center;gap:10px}
+ .has-product-images .sc-match-deck-media{width:48px;height:48px;padding:4px}
+ .has-product-images .sc-match-deck-copy>[lang=de]{font-size:18px}
+ .has-product-images .sc-match-deck-copy>.sl-translation{font-size:13px;margin-top:2px}
+ .has-product-images .sc-match-deck-meta>svg{width:16px;height:16px}
+ .has-product-images .sc-match-deck-number{font-size:12px;padding:2px 8px}
+ .has-product-images .sc-match-deck-front::before,.has-product-images .sc-match-deck-front::after{display:none}
+ .has-product-images .sc-kaufhaus-info{grid-column:2}
+}
+.sc-match-reading{font-size:16px;line-height:1.75;text-align:left;font-weight:400;color:var(--r-ink);margin:12px 0 0}.sc-match-target:has(.sc-match-reading)>header{display:block}.sc-match-target:has(.sc-match-reading) h3{margin-top:14px}.sc-match-targets:has(.sc-match-reading){grid-template-columns:repeat(2,minmax(0,1fr))}@media(max-width:600px){.sc-match-targets:has(.sc-match-reading){grid-template-columns:1fr}}

@@ -7,7 +7,7 @@ export type ActivityKind = 'material' | 'quiz' | 'assignment' | 'exit_ticket';
 export const ACTIVITY_LABELS: Record<ActivityKind, string> = {material: 'Materi', quiz: 'Kuis', assignment: 'Tugas', exit_ticket: 'Refleksi akhir'};
 export type Bilingual = {de?:string;id?:string};
 export type WorksheetSegment = {type:'text';text:Bilingual}|{type:'gap';itemId:string};
-export type WorksheetDestination = {id:string;label:string;title:Bilingual;image?:string};
+export type WorksheetDestination = {id:string;label:string;title:Bilingual;image?:string;readingText?:string};
 /** Presentation only. Never owns a response id - it references worksheet items. */
 export type WorksheetBlock =
   | {id:string;type:'acknowledgement';prompt?:Bilingual;storage:'answers.acknowledged'}

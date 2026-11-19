@@ -1,6 +1,6 @@
 import type {ScheduledActivity} from './scheduled-classes';
 
-export type MatchingTarget={value:string;title:string;url:string};
+export type MatchingTarget={value:string;title:string;url:string;readingText?:string};
 export function cardMatchingTargets(activity:ScheduledActivity):MatchingTarget[]{
   const items=activity.worksheet?.items;
   if(!items?.length)return [];
@@ -18,7 +18,7 @@ export function cardMatchingTargets(activity:ScheduledActivity):MatchingTarget[]
       if(dest.image){
         const img=images.find(s=>s.id===dest.image);
         if(!img)return null;
-        return {value,title,url:img.url||`/hcgi/platform/api/files/file_library/${img.id}/${encodeURIComponent(img.filename!)}`};
+        return {value,title,readingText:dest.readingText,url:img.url||`/hcgi/platform/api/files/file_library/${img.id}/${encodeURIComponent(img.filename!)}`};
       }
       return {value,title,url:''};
     });
